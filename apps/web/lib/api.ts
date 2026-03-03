@@ -158,6 +158,92 @@ export interface PublicSettings {
     favicon_url: string | null;
 }
 
+export interface StockMovementRecord {
+    id: string;
+    type: 'ENTRADA' | 'SAIDA' | 'AJUSTE';
+    quantity: number;
+    previous_stock: number;
+    new_stock: number;
+    reason: string;
+    order_id: string | null;
+    created_at: string;
+    created_by: { id: string; name: string };
+}
+
+export interface ProductRecord {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    price_cents: number;
+    stock_quantity: number;
+    minimum_stock: number;
+    category: string | null;
+    metal: string | null;
+    weight_grams: number | null;
+    is_active: boolean;
+    images: string[];
+    created_at: string;
+    updated_at: string;
+    is_low_stock: boolean;
+}
+
+export interface ProductDetailRecord extends ProductRecord {
+    recent_stock_movements: StockMovementRecord[];
+}
+
+export interface PaymentRecord {
+    id: string;
+    order_id: string;
+    mp_payment_id: string | null;
+    mp_preference_id: string | null;
+    amount_cents: number;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'REFUNDED';
+    payment_method: string | null;
+    paid_at: string | null;
+    idempotency_key: string;
+    created_at: string;
+    updated_at: string;
+    order: {
+        id: string;
+        order_number: string;
+        status: string;
+        assigned_to: { id: string; name: string };
+    };
+}
+
+export interface FinancialEntryRecord {
+    id: string;
+    type: 'ENTRADA' | 'SAIDA';
+    amount_cents: number;
+    category: string;
+    description: string;
+    order_id: string | null;
+    payment_id: string | null;
+    commission_user_id: string | null;
+    commission_amount_cents: number | null;
+    competence_date: string;
+    created_at: string;
+    created_by: { id: string; name: string };
+}
+
+export interface FinancialEntriesResponse extends ApiListResponse<FinancialEntryRecord> {
+    summary: {
+        total_in_cents: number;
+        total_out_cents: number;
+        balance_cents: number;
+    };
+}
+
+export interface PdvSaleResponse {
+    order_id: string;
+    payment_id: string;
+    receipt: {
+        order_number: string;
+        total_cents: number;
+    };
+}
+
 function getApiBaseUrl(): string {
     return process.env.ORION_API_URL ?? 'http://localhost:4000/api/v1';
 }

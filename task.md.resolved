@@ -56,6 +56,28 @@
   - [x] Frontend: tela `/pedidos` com criação rápida (pronta entrega e personalizado)
   - [x] Frontend: lista, detalhe e atualização de status de pedidos
   - [x] Frontend: tela `/producao` com fila, timeline e avanço de etapa
-- [ ] Bloco 6: Estoque + Financeiro + PDV
+- [x] Bloco 6: Estoque + Financeiro + PDV
+  - [x] Backend: `GET/POST /api/v1/products`, `GET /api/v1/products/:id`, `PATCH /api/v1/products/:id`, `POST /api/v1/products/:id/stock-adjust`
+  - [x] Backend: `GET/POST /api/v1/financial-entries`, `GET /api/v1/financial-entries/:id`
+  - [x] Backend: `GET/POST /api/v1/payments`, `GET /api/v1/payments/:id`, `PATCH /api/v1/payments/:id/status`
+  - [x] Backend: `POST /api/v1/pdv/sales`
+  - [x] Backend: serviço transacional para baixa de estoque + entrada financeira + idempotência básica por pagamento
+  - [x] Frontend: tela `/estoque` com catálogo interno, edição e ajuste de estoque
+  - [x] Frontend: tela `/financeiro` com resumo, filtros e despesa manual
+  - [x] Frontend: tela `/pdv` com carrinho operacional e recibo de venda
 - [ ] Bloco 7: Mercado Pago + IA + Dashboard
+  - [ ] Backend: `POST /api/v1/payments/link`
+  - [ ] Backend: `POST /api/v1/webhooks/mercadopago`
+  - [ ] Backend: `GET /api/v1/dashboard`
+  - [ ] Backend: `POST /api/v1/assistant/chat`
+  - [ ] Frontend: dashboard por role
+  - [ ] Frontend: ações de pagamento via Mercado Pago
+  - [ ] Frontend: dock/painel do assistente IA
 - [ ] Bloco 8: n8n + Landing Page + Deploy
+  - [ ] Infra: serviço `n8n` no `docker-compose`
+  - [ ] Backend: webhooks internos do n8n + handoff de conversa
+  - [ ] Frontend: landing pública
+  - [ ] Frontend: catálogo público
+  - [ ] Frontend/Backend: captação pública de leads
+  - [ ] Infra: NGINX final + stack completa de deploy
+  - [ ] Docs: `README.md` / `README-DEPLOY.md` operacionais
