@@ -25,17 +25,21 @@
 - [x] TypeScript compila sem erros (`tsc --noEmit` limpo)
 
 ## BLOCO 2 — Design System + Shell (Frontend)
-- [ ] Scaffold `apps/web/` — Next.js 14 + TypeScript + Tailwind + shadcn
-- [ ] tailwind.config.ts com paleta ORION
-- [ ] Instalar componentes shadcn/ui
-- [ ] Componentes base (StatusBadge, KpiCard, EmptyState, PageHeader)
-- [ ] Layout (AppShell, Sidebar, Topbar)
-- [ ] lib/utils.ts (formatadores)
-- [ ] Login page + CRM layout com auth guard
+- [x] Scaffold `apps/web/` — Next.js 14 + TypeScript + Tailwind + shadcn
+- [x] tailwind.config.ts com paleta ORION
+- [x] Base shadcn/ui preparada (`components.json` + primitives locais)
+- [x] Componentes base (StatusBadge, KpiCard, EmptyState, PageHeader)
+- [x] Layout (AppShell, Sidebar, Topbar)
+- [x] lib/utils.ts (formatadores)
+- [x] Login page + CRM layout com auth guard
 
 ## BLOCOS 3-8 — (planejado após Bloco 1+2)
-- [ ] Bloco 3: Leads + Clientes
-- [ ] Bloco 4: WhatsApp Inbox
+- [x] Bloco 3: Leads + Clientes
+  - [x] Backend: `GET/POST /api/v1/leads`, `GET /api/v1/leads/:id`, `PATCH /api/v1/leads/:id/stage`, `POST /api/v1/leads/:id/convert`
+  - [x] Backend: `GET/POST /api/v1/customers`, `GET /api/v1/customers/:id`
+  - [x] Frontend: Kanban de leads + painel lateral + criação rápida
+  - [x] Frontend: Lista de clientes + perfil detalhado
+- [x] Bloco 4: WhatsApp Inbox
 - [ ] Bloco 5: Pedidos + Produção
 - [ ] Bloco 6: Estoque + Financeiro + PDV
 - [ ] Bloco 7: Mercado Pago + IA + Dashboard

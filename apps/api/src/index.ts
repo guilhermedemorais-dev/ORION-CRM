@@ -14,8 +14,13 @@ import { closeRedis } from './db/redis.js';
 // Routes
 import healthRoutes from './routes/health.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import customersRoutes from './routes/customers.routes.js';
+import inboxRoutes from './routes/inbox.routes.js';
 import operatorRoutes from './routes/operator.routes.js';
+import leadsRoutes from './routes/leads.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
+import whatsappRoutes from './routes/whatsapp.routes.js';
+import { initializeWhatsAppWebhookWorker, shutdownWhatsAppWebhookWorker } from './workers/whatsappWebhook.worker.js';
 
 // ---- Bootstrap ----
 
@@ -62,8 +67,12 @@ app.use((req, _res, next) => {
 
 app.use('/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/leads', leadsRoutes);
+app.use('/api/v1/customers', customersRoutes);
+app.use('/api/v1/inbox', inboxRoutes);
 app.use('/api/v1/operator', operatorRoutes);
 app.use('/api/v1/settings', settingsRoutes);
+app.use('/api/v1/webhooks/whatsapp', whatsappRoutes);
 
 // 404 handler
 app.use((_req, res) => {
@@ -91,6 +100,7 @@ async function ensureSettingsSingleton(): Promise<void> {
 async function startServer(): Promise<void> {
     try {
         await ensureSettingsSingleton();
+        initializeWhatsAppWebhookWorker();
 
         server = app.listen(config.PORT, () => {
             logger.info({ port: config.PORT, env: config.NODE_ENV }, `🌟 ORION API running on port ${config.PORT}`);
@@ -112,12 +122,14 @@ const shutdown = async (signal: string) => {
 
     if (server) {
         server.close(async () => {
+            await shutdownWhatsAppWebhookWorker();
             await closePool();
             await closeRedis();
             logger.info('All connections closed.');
             process.exit(0);
         });
     } else {
+        await shutdownWhatsAppWebhookWorker();
         await closePool();
         await closeRedis();
         logger.info('All connections closed.');

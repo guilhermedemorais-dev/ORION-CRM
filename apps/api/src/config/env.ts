@@ -30,6 +30,7 @@ const envSchema = z.object({
     META_API_TOKEN: z.string().min(1).optional(),
     META_PHONE_NUMBER_ID: z.string().optional(),
     META_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
+    META_APP_SECRET: z.string().min(1).optional(),
 
     // OpenAI
     OPENAI_API_KEY: z.string().optional(),

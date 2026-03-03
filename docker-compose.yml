@@ -64,6 +64,21 @@ services:
     volumes:
       - uploads_data:/app/uploads
 
+  # ---- ORION Web (Next.js shell + CRM) ----
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      ORION_API_URL: http://api:4000/api/v1
+    depends_on:
+      api:
+        condition: service_started
+    networks:
+      - app_network
+
   # ---- NGINX (Reverse Proxy) ----
   nginx:
     image: nginx:alpine
@@ -77,6 +92,7 @@ services:
       - uploads_data:/app/uploads:ro
     depends_on:
       - api
+      - web
     networks:
       - app_network
 

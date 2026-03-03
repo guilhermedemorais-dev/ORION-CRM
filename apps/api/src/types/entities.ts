@@ -164,6 +164,58 @@ export interface Message {
     created_at: Date;
 }
 
+export interface InboxConversationSummary {
+    id: string;
+    whatsapp_number: string;
+    status: ConversationStatus;
+    assigned_to: {
+        id: string;
+        name: string;
+    } | null;
+    lead: {
+        id: string;
+        name: string | null;
+    } | null;
+    customer: {
+        id: string;
+        name: string;
+    } | null;
+    last_message_preview: string | null;
+    last_message_at: Date | null;
+    unread_count: number;
+}
+
+export interface InboxMessageView {
+    id: string;
+    meta_message_id: string | null;
+    direction: MessageDirection;
+    type: MessageType;
+    content: string | null;
+    media_url: string | null;
+    status: MessageStatus;
+    is_automated: boolean;
+    sent_by: {
+        id: string;
+        name: string;
+    } | null;
+    created_at: Date;
+}
+
+export interface InboxConversationThread {
+    conversation: Omit<InboxConversationSummary, 'last_message_preview' | 'last_message_at' | 'unread_count'>;
+    messages: InboxMessageView[];
+}
+
+export interface ParsedWhatsAppInboundEvent {
+    meta_message_id: string;
+    whatsapp_number: string;
+    profile_name: string | null;
+    type: MessageType;
+    content: string | null;
+    media_url: string | null;
+    received_at: string;
+}
+
 export interface Product {
     id: string;
     code: string;
