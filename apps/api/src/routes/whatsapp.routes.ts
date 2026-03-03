@@ -3,7 +3,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { AppError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 import {
-    assertMetaConfigured,
+    assertMetaWebhookConfigured,
     getMetaWebhookVerifyToken,
     verifyMetaSignature,
 } from '../services/meta-whatsapp.service.js';
@@ -15,7 +15,7 @@ router.get(
     '/',
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
-            assertMetaConfigured();
+            assertMetaWebhookConfigured();
 
             const verifyToken = req.query['hub.verify_token'];
             const challenge = req.query['hub.challenge'];
@@ -36,7 +36,7 @@ router.post(
     '/',
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
-            assertMetaConfigured();
+            assertMetaWebhookConfigured();
 
             const signatureHeader = req.header('X-Hub-Signature-256');
 

@@ -92,22 +92,64 @@ function getMetaConfig() {
     };
 }
 
+function getMetaWebhookConfig() {
+    const config = env();
+
+    if (!config.META_WEBHOOK_VERIFY_TOKEN || !config.META_APP_SECRET) {
+        throw AppError.serviceUnavailable(
+            'WHATSAPP_WEBHOOK_NOT_CONFIGURED',
+            'O webhook da Meta Cloud API ainda não foi configurado.'
+        );
+    }
+
+    return {
+        webhookVerifyToken: config.META_WEBHOOK_VERIFY_TOKEN,
+        appSecret: config.META_APP_SECRET,
+    };
+}
+
+function getMetaSendConfig() {
+    const config = env();
+
+    if (!config.META_API_TOKEN || !config.META_PHONE_NUMBER_ID) {
+        throw AppError.serviceUnavailable(
+            'WHATSAPP_NOT_CONFIGURED',
+            'A integração de envio com a Meta Cloud API ainda não foi configurada.'
+        );
+    }
+
+    return {
+        apiToken: config.META_API_TOKEN,
+        phoneNumberId: config.META_PHONE_NUMBER_ID,
+    };
+}
+
 export function assertMetaConfigured(): void {
     getMetaConfig();
 }
 
+export function assertMetaWebhookConfigured(): void {
+    getMetaWebhookConfig();
+}
+
 export function getMetaWebhookVerifyToken(): string {
-    return getMetaConfig().webhookVerifyToken;
+    return getMetaWebhookConfig().webhookVerifyToken;
 }
 
 export function verifyMetaSignature(rawBody: string, signature: string): boolean {
-    const { appSecret } = getMetaConfig();
+    const { appSecret } = getMetaWebhookConfig();
 
     if (!signature.startsWith('sha256=')) {
         return false;
     }
 
-    const provided = Buffer.from(signature.slice('sha256='.length), 'hex');
+    const digest = signature.slice('sha256='.length);
+
+    if (!/^[a-f0-9]{64}$/i.test(digest)) {
+        return false;
+    }
+
+    const provided = Buffer.from(digest, 'hex');
     const expected = Buffer.from(
         crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex'),
         'hex'
@@ -186,12 +228,13 @@ export function parseWebhookPayload(payload: unknown): ParsedWhatsAppInboundEven
 }
 
 export async function sendTextMessage(input: { to: string; text: string }): Promise<{ meta_message_id: string }> {
-    const { apiToken, phoneNumberId } = getMetaConfig();
+    const { apiToken, phoneNumberId } = getMetaSendConfig();
 
     let response: Response;
 
     try {
         response = await fetch(`https://graph.facebook.com/v20.0/${phoneNumberId}/messages`, {
+            signal: AbortSignal.timeout(10_000),
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${apiToken}`,

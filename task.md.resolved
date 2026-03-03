@@ -40,7 +40,22 @@
   - [x] Frontend: Kanban de leads + painel lateral + criação rápida
   - [x] Frontend: Lista de clientes + perfil detalhado
 - [x] Bloco 4: WhatsApp Inbox
-- [ ] Bloco 5: Pedidos + Produção
+  - [x] Backend: `GET /api/v1/inbox/conversations`
+  - [x] Backend: `GET /api/v1/inbox/conversations/:id`
+  - [x] Backend: `POST /api/v1/inbox/conversations/:id/messages`
+  - [x] Backend: `POST /api/v1/inbox/conversations/:id/assign`
+  - [x] Backend: `POST /api/v1/inbox/conversations/:id/close`
+  - [x] Backend: `GET /api/v1/webhooks/whatsapp` (challenge)
+  - [x] Backend: `POST /api/v1/webhooks/whatsapp` + BullMQ worker
+  - [x] Frontend: tela `/inbox` com lista + thread + polling
+  - [x] Frontend: ações de assumir, encerrar e enviar mensagem
+- [x] Bloco 5: Pedidos + Produção
+  - [x] Backend: `GET/POST /api/v1/orders`, `GET /api/v1/orders/:id`, `PATCH /api/v1/orders/:id/status`
+  - [x] Backend: `GET /api/v1/production-orders`, `GET /api/v1/production-orders/:id`, `POST /api/v1/production-orders/:id/advance`
+  - [x] Backend: criação de `production_orders` ao aprovar pedido personalizado
+  - [x] Frontend: tela `/pedidos` com criação rápida (pronta entrega e personalizado)
+  - [x] Frontend: lista, detalhe e atualização de status de pedidos
+  - [x] Frontend: tela `/producao` com fila, timeline e avanço de etapa
 - [ ] Bloco 6: Estoque + Financeiro + PDV
 - [ ] Bloco 7: Mercado Pago + IA + Dashboard
 - [ ] Bloco 8: n8n + Landing Page + Deploy

@@ -11,6 +11,22 @@ const STATUS_CONFIG = {
     AGUARDANDO_HUMANO: { label: 'Aguardando humano', color: 'bg-orange-100 text-orange-700 border-orange-200' },
     EM_ATENDIMENTO: { label: 'Em atendimento', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
     ENCERRADA: { label: 'Encerrada', color: 'bg-gray-100 text-gray-600 border-gray-200' },
+    RASCUNHO: { label: 'Rascunho', color: 'bg-slate-100 text-slate-700 border-slate-200' },
+    AGUARDANDO_PAGAMENTO: { label: 'Aguard. pagamento', color: 'bg-amber-100 text-amber-800 border-amber-200' },
+    PAGO: { label: 'Pago', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+    SEPARANDO: { label: 'Separando', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+    ENVIADO: { label: 'Enviado', color: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
+    RETIRADO: { label: 'Retirado', color: 'bg-lime-100 text-lime-800 border-lime-200' },
+    CANCELADO: { label: 'Cancelado', color: 'bg-rose-100 text-rose-800 border-rose-200' },
+    AGUARDANDO_APROVACAO_DESIGN: { label: 'Aguard. aprovação', color: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200' },
+    APROVADO: { label: 'Aprovado', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+    EM_PRODUCAO: { label: 'Em produção', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
+    CONTROLE_QUALIDADE: { label: 'Qualidade', color: 'bg-violet-100 text-violet-800 border-violet-200' },
+    PENDENTE: { label: 'Pendente', color: 'bg-slate-100 text-slate-700 border-slate-200' },
+    EM_ANDAMENTO: { label: 'Em andamento', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+    PAUSADA: { label: 'Pausada', color: 'bg-amber-100 text-amber-800 border-amber-200' },
+    CONCLUIDA: { label: 'Concluída', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+    REPROVADA: { label: 'Reprovada', color: 'bg-rose-100 text-rose-800 border-rose-200' },
 } as const;
 
 export function StatusBadge({ status }: { status: keyof typeof STATUS_CONFIG }) {

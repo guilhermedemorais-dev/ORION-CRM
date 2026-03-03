@@ -72,6 +72,85 @@ export interface InboxConversationResponse {
     messages: InboxMessageRecord[];
 }
 
+export interface OrderItemRecord {
+    id: string;
+    order_id: string;
+    product_id: string | null;
+    description: string;
+    quantity: number;
+    unit_price_cents: number;
+    total_price_cents: number;
+}
+
+export interface OrderRecord {
+    id: string;
+    order_number: string;
+    type: 'PRONTA_ENTREGA' | 'PERSONALIZADO';
+    status:
+        | 'RASCUNHO'
+        | 'AGUARDANDO_PAGAMENTO'
+        | 'PAGO'
+        | 'SEPARANDO'
+        | 'ENVIADO'
+        | 'RETIRADO'
+        | 'CANCELADO'
+        | 'AGUARDANDO_APROVACAO_DESIGN'
+        | 'APROVADO'
+        | 'EM_PRODUCAO'
+        | 'CONTROLE_QUALIDADE';
+    total_amount_cents: number;
+    discount_cents: number;
+    final_amount_cents: number;
+    delivery_type: 'RETIRADA' | 'ENTREGA';
+    estimated_delivery_at: string | null;
+    created_at: string;
+    updated_at: string;
+    notes: string | null;
+    customer: { id: string; name: string };
+    assigned_to: { id: string; name: string };
+    production_order_id: string | null;
+    custom_details?: {
+        id: string;
+        design_description: string | null;
+        metal_type: string | null;
+        production_deadline: string | null;
+        approved_at: string | null;
+        approved_by_customer: boolean | null;
+    } | null;
+    order_items?: OrderItemRecord[];
+}
+
+export interface ProductionStepRecord {
+    id: string;
+    step_name: string;
+    completed_at: string;
+    notes: string | null;
+    approved: boolean;
+    rejection_reason: string | null;
+    completed_by: { id: string; name: string };
+}
+
+export interface ProductionOrderRecord {
+    id: string;
+    order_id: string;
+    current_step: string;
+    status: 'PENDENTE' | 'EM_ANDAMENTO' | 'PAUSADA' | 'CONCLUIDA' | 'REPROVADA';
+    deadline: string | null;
+    notes: string | null;
+    created_at: string;
+    updated_at: string;
+    assigned_to: { id: string; name: string } | null;
+    order: {
+        id: string;
+        order_number: string;
+        status: string;
+        customer_name: string;
+    };
+    progress_percent: number;
+    is_overdue: boolean;
+    steps?: ProductionStepRecord[];
+}
+
 export interface PublicSettings {
     company_name: string;
     logo_url: string | null;
