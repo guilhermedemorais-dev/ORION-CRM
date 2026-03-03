@@ -244,6 +244,28 @@ export interface PdvSaleResponse {
     };
 }
 
+export interface DashboardPayload {
+    role: 'ADMIN' | 'ATENDENTE' | 'PRODUCAO' | 'FINANCEIRO';
+    kpis: Record<string, number>;
+    alerts: Record<string, number>;
+    activity: Array<{
+        kind: string;
+        label: string;
+        created_at: string;
+    }>;
+}
+
+export interface AssistantChatResponse {
+    answer: string;
+    tools_used: string[];
+}
+
+export interface PaymentLinkResponse {
+    payment_id: string;
+    payment_url: string;
+    preference_id: string;
+}
+
 function getApiBaseUrl(): string {
     return process.env.ORION_API_URL ?? 'http://localhost:4000/api/v1';
 }

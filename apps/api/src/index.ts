@@ -14,9 +14,12 @@ import { closeRedis } from './db/redis.js';
 // Routes
 import healthRoutes from './routes/health.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import assistantRoutes from './routes/assistant.routes.js';
 import customersRoutes from './routes/customers.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
 import financialRoutes from './routes/financial.routes.js';
 import inboxRoutes from './routes/inbox.routes.js';
+import mercadopagoRoutes from './routes/mercadopago.routes.js';
 import ordersRoutes from './routes/orders.routes.js';
 import operatorRoutes from './routes/operator.routes.js';
 import leadsRoutes from './routes/leads.routes.js';
@@ -73,11 +76,14 @@ app.use((req, _res, next) => {
 
 app.use('/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/assistant', assistantRoutes);
 app.use('/api/v1/leads', leadsRoutes);
 app.use('/api/v1/customers', customersRoutes);
+app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/products', productsRoutes);
 app.use('/api/v1/financial-entries', financialRoutes);
 app.use('/api/v1/payments', paymentsRoutes);
+app.use('/api/v1', mercadopagoRoutes);
 app.use('/api/v1/pdv', pdvRoutes);
 app.use('/api/v1/inbox', inboxRoutes);
 app.use('/api/v1/orders', ordersRoutes);
