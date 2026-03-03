@@ -1,4 +1,5 @@
 import {
+    createMercadoPagoPaymentLinkAction,
     createCustomOrderAction,
     createReadyOrderAction,
     updateOrderStatusAction,
@@ -30,6 +31,8 @@ const orderStatuses: OrderRecord['status'][] = [
     'EM_PRODUCAO',
     'CONTROLE_QUALIDADE',
 ];
+
+const paymentEligibleStatuses: OrderRecord['status'][] = ['RASCUNHO', 'AGUARDANDO_PAGAMENTO'];
 
 export default async function OrdersPage({
     searchParams,
@@ -286,6 +289,19 @@ export default async function OrdersPage({
                                         Atualizar status
                                     </Button>
                                 </form>
+
+                                {paymentEligibleStatuses.includes(selectedOrder.status) ? (
+                                    <form action={createMercadoPagoPaymentLinkAction}>
+                                        <input type="hidden" name="order_id" value={selectedOrder.id} />
+                                        <Button type="submit" className="w-full justify-center">
+                                            Gerar link Mercado Pago
+                                        </Button>
+                                    </form>
+                                ) : (
+                                    <div className="rounded-lg border border-dashed border-canvas-border px-4 py-3 text-sm text-gray-500">
+                                        O link do Mercado Pago fica disponível enquanto o pedido estiver em rascunho ou aguardando pagamento.
+                                    </div>
+                                )}
                             </div>
                         </Card>
                     ) : (

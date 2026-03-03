@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { AssistantDock } from '@/components/layout/AssistantDock';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 
@@ -21,6 +22,7 @@ export function AppShell({
                 <Topbar userName={user.name} />
                 <main className="flex-1 overflow-auto p-6">{children}</main>
             </div>
+            <AssistantDock userRole={user.role} />
         </div>
     );
 }

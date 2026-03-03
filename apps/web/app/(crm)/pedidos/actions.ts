@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
+import type { PaymentLinkResponse } from '@/lib/api';
 import { apiRequest } from '@/lib/api';
 
 const createReadyOrderSchema = z.object({
@@ -42,6 +43,10 @@ const updateOrderStatusSchema = z.object({
         'EM_PRODUCAO',
         'CONTROLE_QUALIDADE',
     ]),
+});
+
+const createPaymentLinkSchema = z.object({
+    order_id: z.string().uuid(),
 });
 
 function redirectWithError(message: string, selected?: string): never {
@@ -177,4 +182,28 @@ export async function updateOrderStatusAction(formData: FormData) {
     revalidatePath('/pedidos');
     revalidatePath('/producao');
     redirect(`/pedidos?selected=${data.order_id}`);
+}
+
+export async function createMercadoPagoPaymentLinkAction(formData: FormData) {
+    const parsed = createPaymentLinkSchema.safeParse({
+        order_id: formData.get('order_id'),
+    });
+
+    if (!parsed.success) {
+        redirectWithError('Não foi possível gerar o link de pagamento.');
+    }
+
+    try {
+        const payment = await apiRequest<PaymentLinkResponse>('/payments/link', {
+            method: 'POST',
+            body: JSON.stringify({
+                order_id: parsed.data.order_id,
+            }),
+        });
+
+        redirect(payment.payment_url);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Falha ao gerar link de pagamento.';
+        redirectWithError(message, parsed.data.order_id);
+    }
 }

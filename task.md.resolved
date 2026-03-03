@@ -65,14 +65,14 @@
   - [x] Frontend: tela `/estoque` com catálogo interno, edição e ajuste de estoque
   - [x] Frontend: tela `/financeiro` com resumo, filtros e despesa manual
   - [x] Frontend: tela `/pdv` com carrinho operacional e recibo de venda
-- [ ] Bloco 7: Mercado Pago + IA + Dashboard
+- [x] Bloco 7: Mercado Pago + IA + Dashboard
   - [x] Backend: `POST /api/v1/payments/link`
   - [x] Backend: `POST /api/v1/webhooks/mercadopago`
   - [x] Backend: `GET /api/v1/dashboard`
   - [x] Backend: `POST /api/v1/assistant/chat`
   - [x] Frontend: dashboard por role
-  - [ ] Frontend: ações de pagamento via Mercado Pago
-  - [ ] Frontend: dock/painel do assistente IA
+  - [x] Frontend: ações de pagamento via Mercado Pago
+  - [x] Frontend: dock/painel do assistente IA
 - [ ] Bloco 8: n8n + Landing Page + Deploy
   - [ ] Infra: serviço `n8n` no `docker-compose`
   - [ ] Backend: webhooks internos do n8n + handoff de conversa
