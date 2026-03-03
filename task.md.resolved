@@ -1,0 +1,42 @@
+# ORION CRM — Build Task List
+
+## BLOCO 1 — Fundação (Backend)
+- [x] Ler PRDs completos (ORION-CRM-PRD-v1.2, BUILD-GUIDE, Fase0)
+- [x] Scaffold `apps/api/` — Express + TypeScript
+- [x] Criar todas as SQL migrations (Seção 5 do PRD)
+  - [x] settings (singleton + INSERT inicial)
+  - [x] users, refresh_tokens
+  - [x] leads, customers, conversations, messages
+  - [x] products, orders, order_items, custom_order_details
+  - [x] production_orders, production_steps
+  - [x] payments, stock_movements, financial_entries
+  - [x] audit_logs (com REVOKE DELETE)
+  - [x] automation_flows, automation_executions
+  - [x] operator_webhook_log
+- [x] Middleware: auth (JWT), rbac, audit, rateLimit, instanceStatus
+- [x] POST /api/v1/auth/login
+- [x] POST /api/v1/auth/refresh
+- [x] POST /api/v1/operator/webhook (provisioning)
+- [x] GET /health + GET /api/v1/operator/health
+- [x] GET/PUT /api/v1/settings + GET /settings/public + POST /api/v1/settings/logo
+- [x] docker-compose.yml base (postgres, redis, api, nginx)
+- [x] nginx/nginx.conf
+- [x] .env.example documentado (Bloco 1 + roadmap)
+- [x] TypeScript compila sem erros (`tsc --noEmit` limpo)
+
+## BLOCO 2 — Design System + Shell (Frontend)
+- [ ] Scaffold `apps/web/` — Next.js 14 + TypeScript + Tailwind + shadcn
+- [ ] tailwind.config.ts com paleta ORION
+- [ ] Instalar componentes shadcn/ui
+- [ ] Componentes base (StatusBadge, KpiCard, EmptyState, PageHeader)
+- [ ] Layout (AppShell, Sidebar, Topbar)
+- [ ] lib/utils.ts (formatadores)
+- [ ] Login page + CRM layout com auth guard
+
+## BLOCOS 3-8 — (planejado após Bloco 1+2)
+- [ ] Bloco 3: Leads + Clientes
+- [ ] Bloco 4: WhatsApp Inbox
+- [ ] Bloco 5: Pedidos + Produção
+- [ ] Bloco 6: Estoque + Financeiro + PDV
+- [ ] Bloco 7: Mercado Pago + IA + Dashboard
+- [ ] Bloco 8: n8n + Landing Page + Deploy

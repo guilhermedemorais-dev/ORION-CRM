@@ -1,0 +1,90 @@
+# Backend deployável do Bloco 1 (sem frontend e serviços de fases futuras).
+services:
+  # ---- PostgreSQL ----
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: orion
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orion_dev_password}
+      POSTGRES_DB: orion_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orion -d orion_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---- Redis ----
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---- ORION API (Node.js + Express) ----
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: sh -c "npm run db:migrate && node dist/index.js"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-4000}
+      DATABASE_URL: postgres://orion:${POSTGRES_PASSWORD:-orion_dev_password}@postgres:5432/orion_db
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_me_12345678901234567890}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_change_me_123456789012345}
+      OPERATOR_WEBHOOK_SECRET: ${OPERATOR_WEBHOOK_SECRET:-dev_operator_secret_change_me_123456789012}
+      APP_URL: ${APP_URL:-http://localhost}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-5}
+      UPLOAD_PATH: ${UPLOAD_PATH:-/app/uploads}
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app_network
+    volumes:
+      - uploads_data:/app/uploads
+
+  # ---- NGINX (Reverse Proxy) ----
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - uploads_data:/app/uploads:ro
+    depends_on:
+      - api
+    networks:
+      - app_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_data:
+
+networks:
+  app_network:
+    driver: bridge

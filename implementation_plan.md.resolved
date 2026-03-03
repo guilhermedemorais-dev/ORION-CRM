@@ -1,0 +1,162 @@
+# Block 1 — Fundação Backend
+
+O projeto é greenfield (vazio). Bloco 1 cria toda a fundação do backend: API Express + TypeScript, banco de dados com todas as tabelas, auth JWT, RBAC, middleware de auditoria, endpoints essenciais, Docker Compose e NGINX.
+
+## Proposed Changes
+
+### Backend Scaffold (`apps/api/`)
+
+#### [NEW] [package.json](file:///home/guimp/Documentos/Orion-CRM/apps/api/package.json)
+Express + TypeScript project setup com dependências: `express`, `pg`, `redis`, `ioredis`, `bullmq`, `bcrypt`, `jsonwebtoken`, `zod`, `uuid`, `helmet`, `cors`, `pino`.
+
+#### [NEW] [tsconfig.json](file:///home/guimp/Documentos/Orion-CRM/apps/api/tsconfig.json)
+TypeScript strict mode, target ES2022, module NodeNext.
+
+#### [NEW] [src/index.ts](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/index.ts)
+Entry point: env validation no boot (exit se missing), Express app com middlewares globais (helmet, cors, JSON, requestId), route mounting, error handler, graceful shutdown.
+
+---
+
+### Database Migrations (`apps/api/src/db/migrations/`)
+
+Migrations SQL numeradas, uma por grupo de tabelas, criando todas as 16+ tabelas definidas na Seção 5 do PRD:
+
+#### [NEW] [001_settings.sql](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/db/migrations/001_settings.sql)
+Tabela `settings` (singleton) + INSERT com defaults. Inclui ENUMs `plan_type`, `instance_status`.
+
+#### [NEW] [002_users.sql](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/db/migrations/002_users.sql)
+Tabelas `users` e `refresh_tokens`. ENUMs `user_role`, `user_status`.
+
+#### [NEW] [003_leads_customers.sql](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/db/migrations/003_leads_customers.sql)
+Tabelas `leads`, `customers`. ENUMs `lead_stage`, `lead_source`. Extensão `pg_trgm` para busca por nome.
+
+#### [NEW] [004_conversations_messages.sql](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/db/migrations/004_conversations_messages.sql)
+Tabelas `conversations`, `messages`. ENUMs `conversation_status`, `message_direction`, `message_type`, `message_status`.
+
+#### [NEW] [005_products.sql](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/db/migrations/005_products.sql)
+Tabela `products` com índices GIN trgm para busca.
+
+#### [NEW] [006_orders.sql](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/db/migrations/006_orders.sql)
+Tabelas `orders`, `order_items`, `custom_order_details`. ENUMs `order_type`, `order_status`, `delivery_type`. Colunas `GENERATED ALWAYS` para `total_price_cents`.
+
+#### [NEW] [007_production.sql](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/db/migrations/007_production.sql)
+Tabelas `production_orders`, `production_steps`. ENUM `production_status`.
+
+#### [NEW] [008_payments.sql](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/db/migrations/008_payments.sql)
+Tabela `payments`. ENUM `payment_status`.
+
+#### [NEW] [009_stock_financial.sql](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/db/migrations/009_stock_financial.sql)
+Tabelas `stock_movements`, `financial_entries`. ENUMs `stock_movement_type`, `financial_entry_type`.
+
+#### [NEW] [010_audit_logs.sql](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/db/migrations/010_audit_logs.sql)
+Tabela `audit_logs` (BIGSERIAL PK) + **REVOKE DELETE ON audit_logs FROM PUBLIC**.
+
+#### [NEW] [011_automation.sql](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/db/migrations/011_automation.sql)
+Tabelas `automation_flows`, `automation_executions`. ENUMs `flow_status`, `execution_status`.
+
+#### [NEW] [012_operator_webhook.sql](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/db/migrations/012_operator_webhook.sql)
+Tabela `operator_webhook_log`.
+
+#### [NEW] [migrate.ts](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/db/migrate.ts)
+Script de execução de migrations em ordem numérica contra o PostgreSQL, com tabela `_migrations` para tracking.
+
+---
+
+### Database Connection + Queries
+
+#### [NEW] [src/db/pool.ts](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/db/pool.ts)
+pg Pool singleton com connection count adequado.
+
+#### [NEW] [src/db/queries/](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/db/queries/)
+Queries por módulo: `settings.queries.ts`, `users.queries.ts`, `auth.queries.ts`.
+
+---
+
+### Middleware
+
+#### [NEW] [src/middleware/requestId.ts](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/middleware/requestId.ts)
+Gera UUID v4 por request, adiciona a `req` e ao response header.
+
+#### [NEW] [src/middleware/auth.ts](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/middleware/auth.ts)
+Verifica Bearer JWT, extrai payload (id, role, email), anexa a `req.user`.
+
+#### [NEW] [src/middleware/rbac.ts](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/middleware/rbac.ts)
+`requireRole(['ADMIN','ATENDENTE'])` — middleware factory. Retorna 403 se role não autorizado.
+
+#### [NEW] [src/middleware/instanceStatus.ts](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/middleware/instanceStatus.ts)
+Verifica `settings.status` no Redis cache. Se `suspended` → 403. Roda ANTES do auth. Exceptions: `/operator/webhook`, `/operator/health`.
+
+#### [NEW] [src/middleware/audit.ts](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/middleware/audit.ts)
+Helper para registrar ações de escrita no `audit_logs`.
+
+#### [NEW] [src/middleware/rateLimit.ts](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/middleware/rateLimit.ts)
+Rate limiter simples em memória (Map + sliding window), configurável por rota.
+
+#### [NEW] [src/middleware/errorHandler.ts](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/middleware/errorHandler.ts)
+Global error handler: formato padrão da Seção 9.1. Nunca expõe stack, SQL, ou secrets.
+
+---
+
+### Routes
+
+#### [NEW] [src/routes/auth.routes.ts](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/routes/auth.routes.ts)
+`POST /auth/login` — validação Zod, bcrypt compare, JWT sign, refresh token rotation com httpOnly cookie.
+`POST /auth/refresh` — refresh token rotation com detecção de roubo.
+
+#### [NEW] [src/routes/operator.routes.ts](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/routes/operator.routes.ts)
+`POST /operator/webhook` — HMAC validation, idempotência, actions (provision, suspend, reactivate, update_plan, decommission).
+`GET /operator/health` — status check autenticado com Bearer OPERATOR_WEBHOOK_SECRET.
+
+#### [NEW] [src/routes/settings.routes.ts](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/routes/settings.routes.ts)
+`GET /settings` — ADMIN only, retorna config da instância.
+`PUT /settings` — ADMIN only, atualiza branding, invalida cache Redis.
+`POST /settings/logo` — ADMIN only, upload multipart com validação MIME magic bytes.
+`GET /settings/public` — público, retorna company_name + logo_url + primary_color.
+
+#### [NEW] [src/routes/health.routes.ts](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/routes/health.routes.ts)
+`GET /health` — verifica DB + Redis, retorna status.
+
+---
+
+### Types
+
+#### [NEW] [src/types/](file:///home/guimp/Documentos/Orion-CRM/apps/api/src/types/)
+`express.d.ts` — extending Express Request with `user`, `requestId`.
+`entities.ts` — interfaces TypeScript para todas as entidades.
+
+---
+
+### Infrastructure
+
+#### [NEW] [docker-compose.yml](file:///home/guimp/Documentos/Orion-CRM/docker-compose.yml)
+Services: `api` (Node.js :4000), `postgres` (:5432), `redis` (:6379), `nginx` (:80/:443).
+Networks: `app_network`.
+
+#### [NEW] [nginx/nginx.conf](file:///home/guimp/Documentos/Orion-CRM/nginx/nginx.conf)
+Reverse proxy para API (/api → :4000). Não expõe n8n ou Evolution API. SSL ready.
+
+#### [NEW] [apps/api/Dockerfile](file:///home/guimp/Documentos/Orion-CRM/apps/api/Dockerfile)
+Multi-stage: builder (npm ci + tsc) → runner (node:20 alpine).
+
+#### [NEW] [.env.example](file:///home/guimp/Documentos/Orion-CRM/.env.example)
+Todas as variáveis documentadas conforme Seção 12.2 do PRD.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+
+1. **TypeScript compilation**: `cd apps/api && npx tsc --noEmit` — should pass with zero errors
+2. **Docker Compose startup**: `docker compose up -d --build` → verify all containers healthy
+3. **Database migrations**: `docker compose exec api npm run db:migrate` — all 12 migrations run successfully
+4. **Health check**: `curl http://localhost:4000/health` → `{"status":"ok","db":"ok","redis":"ok"}`
+
+### Manual Verification
+
+1. **Login flow**: Use `curl` to POST to `/api/v1/auth/login` with admin credentials (created via provision webhook) and verify JWT is returned
+2. **Operator webhook**: POST to `/api/v1/operator/webhook` with valid HMAC signature and `provision` action → verify admin user created
+3. **RBAC**: Login as non-admin user, attempt to access `/api/v1/settings` → should get 403
+4. **Settings**: Login as ADMIN, GET/PUT settings → verify branding updates work
+5. **Rate limiting**: Send 11+ login requests rapidly → verify 429 response
+6. **Instance suspension**: Use operator webhook to suspend → verify all auth requests return 403
