@@ -1,0 +1,50 @@
+{
+  "name": "WF-A-novo-lead",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "orion-lead-captured",
+        "responseMode": "onReceived"
+      },
+      "id": "WebhookLead",
+      "name": "Webhook Lead Capturado",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? $json;\nreturn [{ json: { resumo: `Novo lead recebido: ${body.name ?? 'Sem nome'} (${body.whatsapp_number ?? 'sem telefone'})`, payload: body } }];"
+      },
+      "id": "NormalizeLead",
+      "name": "Normalizar Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        280
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Lead Capturado": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "pinData": {},
+  "versionId": "wf-a-novo-lead-v1"
+}

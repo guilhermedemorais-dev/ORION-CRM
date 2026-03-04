@@ -12,6 +12,7 @@ import {
     closeConversation,
     getConversationById,
     getConversationThread,
+    handoffConversation,
     listConversations,
     type CurrentUser,
 } from '../services/inbox.service.js';
@@ -258,6 +259,48 @@ router.post(
             await createAuditLog({
                 userId: currentUser.id,
                 action: 'ASSIGN_CONVERSATION',
+                entityType: 'conversations',
+                entityId: params.data.id,
+                oldValue: {
+                    status: before.status,
+                    assigned_to: before.assigned_to?.id ?? null,
+                },
+                newValue: {
+                    status: updated.status,
+                    assigned_to: updated.assigned_to?.id ?? null,
+                },
+                req,
+            });
+
+            res.json({
+                conversation: updated,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+router.post(
+    '/conversations/:id/handoff',
+    authenticate,
+    requireRole(['ADMIN', 'ATENDENTE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const params = conversationParamsSchema.safeParse(req.params);
+
+            if (!params.success) {
+                next(AppError.badRequest('Conversa inválida.'));
+                return;
+            }
+
+            const currentUser = getCurrentUser(req);
+            const before = await getConversationById(params.data.id, currentUser);
+            const updated = await handoffConversation(params.data.id, currentUser);
+
+            await createAuditLog({
+                userId: currentUser.id,
+                action: 'HANDOFF_CONVERSATION',
                 entityType: 'conversations',
                 entityId: params.data.id,
                 oldValue: {

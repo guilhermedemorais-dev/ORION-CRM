@@ -20,8 +20,10 @@ import dashboardRoutes from './routes/dashboard.routes.js';
 import financialRoutes from './routes/financial.routes.js';
 import inboxRoutes from './routes/inbox.routes.js';
 import mercadopagoRoutes from './routes/mercadopago.routes.js';
+import n8nRoutes from './routes/n8n.routes.js';
 import ordersRoutes from './routes/orders.routes.js';
 import operatorRoutes from './routes/operator.routes.js';
+import publicRoutes from './routes/public.routes.js';
 import leadsRoutes from './routes/leads.routes.js';
 import paymentsRoutes from './routes/payments.routes.js';
 import pdvRoutes from './routes/pdv.routes.js';
@@ -77,6 +79,7 @@ app.use((req, _res, next) => {
 app.use('/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/assistant', assistantRoutes);
+app.use('/api/v1/public', publicRoutes);
 app.use('/api/v1/leads', leadsRoutes);
 app.use('/api/v1/customers', customersRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
@@ -89,6 +92,7 @@ app.use('/api/v1/inbox', inboxRoutes);
 app.use('/api/v1/orders', ordersRoutes);
 app.use('/api/v1/production-orders', productionRoutes);
 app.use('/api/v1/operator', operatorRoutes);
+app.use('/api/v1/n8n', n8nRoutes);
 app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/webhooks/whatsapp', whatsappRoutes);
 

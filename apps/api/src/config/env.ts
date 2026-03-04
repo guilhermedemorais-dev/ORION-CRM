@@ -41,6 +41,7 @@ const envSchema = z.object({
 
     // n8n
     N8N_API_KEY: z.string().optional(),
+    N8N_WEBHOOK_URL: z.string().url().optional(),
 
     // SMTP
     SMTP_HOST: z.string().optional(),

@@ -633,3 +633,30 @@ export async function closeConversation(
 
     return getConversationById(conversationId, currentUser);
 }
+
+export async function handoffConversation(
+    conversationId: string,
+    currentUser: CurrentUser
+): Promise<Omit<InboxConversationSummary, 'unread_count'>> {
+    const row = await getConversationRowById(conversationId);
+
+    if (!row) {
+        throw AppError.notFound('Conversa não encontrada.');
+    }
+
+    if (currentUser.role !== 'ADMIN' && row.assigned_user_id !== currentUser.id) {
+        throw AppError.forbidden('Você só pode devolver para a fila conversas atribuídas a você.');
+    }
+
+    await query(
+        `UPDATE conversations
+         SET
+           status = 'AGUARDANDO_HUMANO',
+           assigned_to = NULL,
+           updated_at = NOW()
+         WHERE id = $1`,
+        [conversationId]
+    );
+
+    return getConversationById(conversationId, currentUser);
+}

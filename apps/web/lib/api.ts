@@ -266,6 +266,29 @@ export interface PaymentLinkResponse {
     preference_id: string;
 }
 
+export interface PublicCatalogProduct {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    price_cents: number;
+    category: string | null;
+    metal: string | null;
+    weight_grams: number | null;
+    images: string[];
+    stock_quantity: number;
+    minimum_stock: number;
+    is_available: boolean;
+    cover_image: string | null;
+}
+
+export interface LeadCapturePayload {
+    name: string;
+    whatsapp_number: string;
+    email?: string;
+    notes?: string;
+}
+
 function getApiBaseUrl(): string {
     return process.env.ORION_API_URL ?? 'http://localhost:4000/api/v1';
 }
@@ -295,6 +318,85 @@ export async function fetchPublicSettings(): Promise<PublicSettings> {
     }
 
     return parseJson<PublicSettings>(response);
+}
+
+export async function fetchPublicCatalog(params?: {
+    q?: string;
+    category?: string;
+    limit?: number;
+}): Promise<{
+    data: PublicCatalogProduct[];
+    meta: {
+        total: number;
+        limit: number;
+    };
+}> {
+    const query = new URLSearchParams();
+
+    if (params?.q) {
+        query.set('q', params.q);
+    }
+
+    if (params?.category) {
+        query.set('category', params.category);
+    }
+
+    if (params?.limit) {
+        query.set('limit', String(params.limit));
+    }
+
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    const response = await fetch(`${getApiBaseUrl()}/public/catalog${suffix}`, {
+        cache: 'no-store',
+    });
+
+    if (!response.ok) {
+        return {
+            data: [],
+            meta: {
+                total: 0,
+                limit: params?.limit ?? 24,
+            },
+        };
+    }
+
+    return parseJson<{
+        data: PublicCatalogProduct[];
+        meta: {
+            total: number;
+            limit: number;
+        };
+    }>(response);
+}
+
+export async function capturePublicLead(payload: LeadCapturePayload): Promise<{
+    duplicate_prevented: boolean;
+    automation_triggered: boolean;
+    automation_failed: boolean;
+    fallback_whatsapp_url: string;
+}> {
+    const response = await fetch(`${getApiBaseUrl()}/public/leads`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+        body: JSON.stringify(payload),
+    });
+
+    const data = await parseJson<Record<string, unknown>>(response);
+
+    if (!response.ok) {
+        const message = typeof data.message === 'string' ? data.message : 'Falha ao enviar seus dados.';
+        throw new Error(message);
+    }
+
+    return {
+        duplicate_prevented: Boolean(data.duplicate_prevented),
+        automation_triggered: Boolean(data.automation_triggered),
+        automation_failed: Boolean(data.automation_failed),
+        fallback_whatsapp_url: typeof data.fallback_whatsapp_url === 'string' ? data.fallback_whatsapp_url : 'https://wa.me/55',
+    };
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {

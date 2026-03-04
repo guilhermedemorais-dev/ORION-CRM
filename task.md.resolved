@@ -73,11 +73,11 @@
   - [x] Frontend: dashboard por role
   - [x] Frontend: ações de pagamento via Mercado Pago
   - [x] Frontend: dock/painel do assistente IA
-- [ ] Bloco 8: n8n + Landing Page + Deploy
-  - [ ] Infra: serviço `n8n` no `docker-compose`
-  - [ ] Backend: webhooks internos do n8n + handoff de conversa
-  - [ ] Frontend: landing pública
-  - [ ] Frontend: catálogo público
-  - [ ] Frontend/Backend: captação pública de leads
-  - [ ] Infra: NGINX final + stack completa de deploy
-  - [ ] Docs: `README.md` / `README-DEPLOY.md` operacionais
+- [x] Bloco 8: n8n + Landing Page + Deploy
+  - [x] Infra: serviço `n8n` no `docker-compose`
+  - [x] Backend: webhooks internos do n8n + handoff de conversa
+  - [x] Frontend: landing pública
+  - [x] Frontend: catálogo público
+  - [x] Frontend/Backend: captação pública de leads
+  - [x] Infra: NGINX final + stack completa de deploy
+  - [x] Docs: `README.md` / `README-DEPLOY.md` operacionais
