@@ -50,3 +50,38 @@ export function buildStoreWhatsAppMessage(
         .replaceAll('{{product_name}}', values.product_name)
         .replaceAll('{{product_url}}', values.product_url);
 }
+
+export function normalizeStoreCustomerPhone(phone: string | null | undefined, fallbackSeed: string): string {
+    const digits = (phone ?? '').replace(/\D/g, '');
+
+    if (digits.length >= 12 && digits.startsWith('55')) {
+        return `+${digits}`;
+    }
+
+    if (digits.length >= 8) {
+        return `+55${digits}`;
+    }
+
+    const fallbackDigits = fallbackSeed.replace(/\D/g, '').padEnd(11, '0').slice(0, 11);
+    return `+55${fallbackDigits}`;
+}
+
+export function buildStoreCrmOrderNotes(input: {
+    storeOrderId: string;
+    paymentId: string | null;
+    existingNotes?: string | null;
+}): string {
+    const lines = [
+        input.existingNotes?.trim(),
+        'Origem: Loja ORION',
+        `Store order: ${input.storeOrderId}`,
+        input.paymentId ? `Pagamento MP: ${input.paymentId}` : null,
+    ].filter((value): value is string => Boolean(value && value.trim().length > 0));
+
+    if (input.existingNotes?.trim()) {
+        const [first, ...rest] = lines;
+        return [first, rest.join('\n')].filter(Boolean).join('\n\n');
+    }
+
+    return lines.join('\n');
+}

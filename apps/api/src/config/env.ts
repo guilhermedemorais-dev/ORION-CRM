@@ -31,6 +31,7 @@ const envSchema = z.object({
 
     // OpenAI
     OPENAI_API_KEY: z.string().optional(),
+    ANTHROPIC_API_KEY: z.string().optional(),
 
     // Mercado Pago
     MP_ACCESS_TOKEN: z.string().optional(),

@@ -11,6 +11,7 @@ import {
     PencilLine,
     PlusCircle,
     Settings,
+    Store,
     ShoppingBag,
     UserCheck,
     Users,
@@ -42,6 +43,7 @@ const navGroups = [
         items: [
             { icon: Zap, label: 'Automações', href: '/automacoes' },
             { icon: BarChart3, label: 'Analytics', href: '/analytics' },
+            { icon: Store, label: 'Loja', href: '/settings/loja' },
             { icon: Settings, label: 'Ajustes', href: '/ajustes' },
         ],
     },
@@ -69,7 +71,13 @@ export function Sidebar({
 }) {
     const visibleGroups = navGroups.map((group) => ({
         ...group,
-        items: group.items.filter((item) => item.href !== '/analytics' || userRole === 'ADMIN'),
+        items: group.items.filter((item) => {
+            if (item.href === '/analytics' || item.href === '/settings/loja') {
+                return userRole === 'ADMIN';
+            }
+
+            return true;
+        }),
     })).filter((group) => group.items.length > 0);
 
     return (

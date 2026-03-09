@@ -1,13 +1,15 @@
 import { Router } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
-import { query } from '../db/pool.js';
+import { env } from '../config/env.js';
+import { query, transaction } from '../db/pool.js';
 import { AppError } from '../lib/errors.js';
 import { authenticate } from '../middleware/auth.js';
 import { createAuditLog } from '../middleware/audit.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { requireRole } from '../middleware/rbac.js';
 import { normalizeStoreSlug } from '../services/store.service.js';
+import { canSimulateStorePayments, createSimulatedApprovedStoreOrder } from '../services/store-order-sync.service.js';
 
 const router = Router();
 
@@ -81,6 +83,12 @@ const updateStoreProductSchema = createStoreProductSchema.partial().refine(
     'Informe ao menos um campo para atualizar.'
 );
 
+const simulateApprovedOrderSchema = z.object({
+    customer_name: z.string().trim().min(2).max(255).optional(),
+    customer_email: z.string().trim().email().max(255).optional(),
+    customer_phone: z.string().trim().min(8).max(30).optional(),
+}).default({});
+
 interface StoreConfigRow {
     id: string;
     is_active: boolean;
@@ -148,6 +156,9 @@ interface StoreOrderRow {
     product_name: string;
     mp_preference_id: string | null;
     mp_payment_id: string | null;
+    customer_id: string | null;
+    crm_order_id: string | null;
+    crm_payment_id: string | null;
     status: 'pending' | 'approved' | 'rejected' | 'refunded' | 'cancelled';
     customer_name: string | null;
     customer_email: string | null;
@@ -562,6 +573,100 @@ router.delete(
     }
 );
 
+router.post(
+    '/products/:id/simulate-approved-order',
+    rateLimit({ windowMs: 60 * 1000, max: 20, name: 'store-simulate-approved-order' }),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            if (!canSimulateStorePayments(env().NODE_ENV)) {
+                next(AppError.forbidden('Simulação de pagamentos da loja desabilitada em produção.'));
+                return;
+            }
+
+            const params = uuidParamsSchema.safeParse(req.params);
+            if (!params.success) {
+                next(AppError.badRequest('Produto da loja inválido para simulação.'));
+                return;
+            }
+
+            const parsed = simulateApprovedOrderSchema.safeParse(req.body ?? {});
+            if (!parsed.success) {
+                next(AppError.badRequest(
+                    'Dados inválidos para a simulação da loja.',
+                    parsed.error.errors.map((error) => ({ field: error.path.join('.'), message: error.message }))
+                ));
+                return;
+            }
+
+            const order = await transaction(async (client) => {
+                const simulation = await createSimulatedApprovedStoreOrder(client, {
+                    storeProductId: params.data.id,
+                    customerName: parsed.data.customer_name,
+                    customerEmail: parsed.data.customer_email,
+                    customerPhone: parsed.data.customer_phone,
+                });
+
+                const result = await client.query<StoreOrderRow>(
+                    `SELECT
+                        so.id,
+                        so.store_product_id,
+                        sp.name AS product_name,
+                        so.mp_preference_id,
+                        so.mp_payment_id,
+                        so.customer_id,
+                        so.crm_order_id,
+                        so.crm_payment_id,
+                        so.status,
+                        so.customer_name,
+                        so.customer_email,
+                        so.customer_phone,
+                        so.shipping_address,
+                        so.amount_cents,
+                        so.paid_at,
+                        so.created_at,
+                        so.updated_at
+                     FROM store_orders so
+                     INNER JOIN store_products sp ON sp.id = so.store_product_id
+                     WHERE so.id = $1
+                     LIMIT 1`,
+                    [simulation.storeOrderId]
+                );
+
+                return result.rows[0] ?? null;
+            });
+
+            if (!order) {
+                next(AppError.serviceUnavailable(
+                    'STORE_SIMULATION_READ_FAILED',
+                    'A simulação foi criada, mas o pedido não pôde ser relido.'
+                ));
+                return;
+            }
+
+            if (req.user) {
+                await createAuditLog({
+                    userId: req.user.id,
+                    action: 'CREATE',
+                    entityType: 'store_orders',
+                    entityId: order.id,
+                    oldValue: null,
+                    newValue: {
+                        mode: 'simulated-approved-order',
+                        store_product_id: order.store_product_id,
+                        crm_order_id: order.crm_order_id,
+                        crm_payment_id: order.crm_payment_id,
+                    },
+                    req,
+                });
+            }
+
+            res.status(201).json(order);
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
 router.get(
     '/products',
     async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -811,6 +916,9 @@ router.get(
                     sp.name AS product_name,
                     so.mp_preference_id,
                     so.mp_payment_id,
+                    so.customer_id,
+                    so.crm_order_id,
+                    so.crm_payment_id,
                     so.status,
                     so.customer_name,
                     so.customer_email,
@@ -851,6 +959,9 @@ router.get(
                     sp.name AS product_name,
                     so.mp_preference_id,
                     so.mp_payment_id,
+                    so.customer_id,
+                    so.crm_order_id,
+                    so.crm_payment_id,
                     so.status,
                     so.customer_name,
                     so.customer_email,

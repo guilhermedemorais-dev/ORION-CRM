@@ -2,6 +2,13 @@ import 'server-only';
 
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
+import type {
+    StoreCheckoutPreferenceResponse,
+    StorePublicCategory,
+    StorePublicConfig,
+    StoreProductsResponse,
+    StorePublicProduct,
+} from '@/lib/store-types';
 
 export interface ApiListResponse<T> {
     data: T[];
@@ -516,6 +523,148 @@ export async function capturePublicLead(payload: LeadCapturePayload): Promise<{
         automation_triggered: Boolean(data.automation_triggered),
         automation_failed: Boolean(data.automation_failed),
         fallback_whatsapp_url: typeof data.fallback_whatsapp_url === 'string' ? data.fallback_whatsapp_url : 'https://wa.me/55',
+    };
+}
+
+export async function fetchStorefrontConfig(): Promise<StorePublicConfig> {
+    const response = await fetch(`${getApiBaseUrl()}/store/config`, {
+        cache: 'no-store',
+    });
+
+    if (!response.ok) {
+        return {
+            is_active: false,
+            theme: 'light',
+            accent_color: '#BFA06A',
+            logo_url: null,
+            store_name: 'Minha Joalheria',
+            slogan: null,
+            custom_domain: null,
+            hero_image_url: null,
+            hero_title: 'Coleção ORION',
+            hero_subtitle: null,
+            hero_cta_label: 'Ver Coleção',
+            wa_number: null,
+            seo_title: 'Minha Joalheria',
+            seo_description: null,
+        };
+    }
+
+    return parseJson<StorePublicConfig>(response);
+}
+
+export async function fetchStorefrontCategories(): Promise<{ data: StorePublicCategory[] }> {
+    const response = await fetch(`${getApiBaseUrl()}/store/categories`, {
+        cache: 'no-store',
+    });
+
+    if (!response.ok) {
+        return { data: [] };
+    }
+
+    return parseJson<{ data: StorePublicCategory[] }>(response);
+}
+
+export async function fetchStorefrontProducts(params?: {
+    search?: string;
+    category?: string;
+    badge?: 'novo' | 'sale' | 'hot';
+    featured?: boolean;
+    is_custom?: boolean;
+    page?: number;
+    limit?: number;
+}): Promise<StoreProductsResponse> {
+    const query = new URLSearchParams();
+
+    if (params?.search) {
+        query.set('search', params.search);
+    }
+    if (params?.category) {
+        query.set('category', params.category);
+    }
+    if (params?.badge) {
+        query.set('badge', params.badge);
+    }
+    if (typeof params?.featured === 'boolean') {
+        query.set('featured', String(params.featured));
+    }
+    if (typeof params?.is_custom === 'boolean') {
+        query.set('is_custom', String(params.is_custom));
+    }
+    if (params?.page) {
+        query.set('page', String(params.page));
+    }
+    if (params?.limit) {
+        query.set('limit', String(params.limit));
+    }
+
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    const response = await fetch(`${getApiBaseUrl()}/store/products${suffix}`, {
+        cache: 'no-store',
+    });
+
+    if (!response.ok) {
+        return {
+            data: [],
+            meta: {
+                total: 0,
+                page: params?.page ?? 1,
+                limit: params?.limit ?? 12,
+                pages: 1,
+            },
+        };
+    }
+
+    return parseJson<StoreProductsResponse>(response);
+}
+
+export async function fetchStorefrontProduct(slug: string): Promise<StorePublicProduct | null> {
+    const response = await fetch(`${getApiBaseUrl()}/store/products/${slug}`, {
+        cache: 'no-store',
+    });
+
+    if (!response.ok) {
+        return null;
+    }
+
+    return parseJson<StorePublicProduct>(response);
+}
+
+export async function createStoreCheckoutPreference(payload: {
+    product_id: string;
+    customer_name: string;
+    customer_email?: string;
+    customer_phone?: string;
+    shipping_address: {
+        cep: string;
+        street: string;
+        number: string;
+        complement?: string;
+        neighborhood: string;
+        city: string;
+        state: string;
+    };
+}): Promise<StoreCheckoutPreferenceResponse> {
+    const response = await fetch(`${getApiBaseUrl()}/store/checkout/preference`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+        body: JSON.stringify(payload),
+    });
+
+    const data = await parseJson<Record<string, unknown>>(response);
+
+    if (!response.ok) {
+        const message = typeof data.message === 'string' ? data.message : 'Falha ao iniciar o checkout.';
+        throw new Error(message);
+    }
+
+    return {
+        store_order_id: String(data.store_order_id ?? ''),
+        preference_id: String(data.preference_id ?? ''),
+        payment_url: String(data.payment_url ?? ''),
     };
 }
 

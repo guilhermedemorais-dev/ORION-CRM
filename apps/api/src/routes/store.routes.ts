@@ -1,14 +1,19 @@
 import { Router } from 'express';
 import type { NextFunction, Request, Response } from 'express';
+import type { PoolClient } from 'pg';
 import { z } from 'zod';
 import { env } from '../config/env.js';
 import { query, transaction } from '../db/pool.js';
 import { AppError } from '../lib/errors.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { createPaymentPreference, fetchMercadoPagoPayment, verifyMercadoPagoSignature } from '../services/mercadopago.service.js';
+import { applyApprovedPaymentEffects, createPaymentRecord, generateOrderNumber } from '../services/order-financial.service.js';
+import { syncApprovedStoreOrderToCrm as runStoreOrderCrmSync } from '../services/store-order-sync.service.js';
 import {
+    buildStoreCrmOrderNotes,
     buildStoreWhatsAppMessage,
     isStoreProductAvailable,
+    normalizeStoreCustomerPhone,
     resolveStorePriceCents,
 } from '../services/store.service.js';
 
@@ -115,6 +120,28 @@ interface StoreOrderRow {
     mp_payment_id: string | null;
     status: 'pending' | 'approved' | 'rejected' | 'refunded' | 'cancelled';
     amount_cents: number;
+    customer_id: string | null;
+    crm_order_id: string | null;
+    crm_payment_id: string | null;
+}
+
+interface StoreOrderSyncRow {
+    id: string;
+    store_product_id: string;
+    stock_product_id: string | null;
+    product_name: string;
+    customer_name: string | null;
+    customer_email: string | null;
+    customer_phone: string | null;
+    shipping_address: Record<string, unknown> | null;
+    amount_cents: number;
+    customer_id: string | null;
+    crm_order_id: string | null;
+    crm_payment_id: string | null;
+}
+
+interface ActiveCommercialUserRow {
+    id: string;
 }
 
 function mapStoreConfig(row: StoreConfigRow | null) {
@@ -206,6 +233,240 @@ function mapStoreOrderStatus(status: string): StoreOrderRow['status'] {
     if (status === 'refunded') return 'refunded';
     if (status === 'cancelled') return 'cancelled';
     return 'pending';
+}
+
+async function resolveStoreAssigneeUserId(client: PoolClient): Promise<string> {
+    const result = await client.query<ActiveCommercialUserRow>(
+        `SELECT id
+         FROM users
+         WHERE status = 'active'
+           AND role IN ('ADMIN', 'ATENDENTE')
+         ORDER BY CASE WHEN role = 'ADMIN' THEN 0 ELSE 1 END, created_at ASC
+         LIMIT 1`
+    );
+
+    const userId = result.rows[0]?.id;
+    if (!userId) {
+        throw AppError.serviceUnavailable(
+            'STORE_SYNC_WITHOUT_ASSIGNEE',
+            'Nenhum usuário comercial ativo disponível para receber pedidos da loja.'
+        );
+    }
+
+    return userId;
+}
+
+async function resolveStoreCustomerId(
+    client: PoolClient,
+    storeOrder: StoreOrderSyncRow,
+    assignedTo: string
+): Promise<string> {
+    if (storeOrder.customer_id) {
+        return storeOrder.customer_id;
+    }
+
+    if (storeOrder.customer_email) {
+        const emailMatch = await client.query<{ id: string }>(
+            `SELECT id
+             FROM customers
+             WHERE email = $1
+             LIMIT 1`,
+            [storeOrder.customer_email]
+        );
+
+        if (emailMatch.rows[0]?.id) {
+            return emailMatch.rows[0].id;
+        }
+    }
+
+    const normalizedPhone = normalizeStoreCustomerPhone(storeOrder.customer_phone, storeOrder.id);
+    const phoneMatch = await client.query<{ id: string }>(
+        `SELECT id
+         FROM customers
+         WHERE whatsapp_number = $1
+         LIMIT 1`,
+        [normalizedPhone]
+    );
+
+    if (phoneMatch.rows[0]?.id) {
+        return phoneMatch.rows[0].id;
+    }
+
+    const created = await client.query<{ id: string }>(
+        `INSERT INTO customers (
+            name,
+            whatsapp_number,
+            email,
+            address,
+            assigned_to,
+            notes
+         ) VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id`,
+        [
+            storeOrder.customer_name?.trim() || `Cliente Loja ${storeOrder.id.slice(0, 8)}`,
+            normalizedPhone,
+            storeOrder.customer_email ?? null,
+            storeOrder.shipping_address ? JSON.stringify(storeOrder.shipping_address) : null,
+            assignedTo,
+            `Cliente criado automaticamente a partir da loja pública. Store order ${storeOrder.id}.`,
+        ]
+    );
+
+    const customerId = created.rows[0]?.id;
+    if (!customerId) {
+        throw AppError.serviceUnavailable(
+            'STORE_CUSTOMER_CREATE_FAILED',
+            'Não foi possível criar o cliente da loja pública.'
+        );
+    }
+
+    return customerId;
+}
+
+async function createCrmOrderFromStoreOrder(
+    client: PoolClient,
+    storeOrder: StoreOrderSyncRow,
+    customerId: string,
+    assignedTo: string,
+    paymentId: string
+): Promise<string> {
+    if (storeOrder.crm_order_id) {
+        return storeOrder.crm_order_id;
+    }
+
+    if (!storeOrder.stock_product_id) {
+        throw AppError.conflict(
+            'STORE_PRODUCT_NOT_LINKED',
+            'O produto da loja precisa estar vinculado a um produto de estoque para gerar pedido.'
+        );
+    }
+
+    const orderNumber = generateOrderNumber();
+    const created = await client.query<{ id: string }>(
+        `INSERT INTO orders (
+            order_number,
+            type,
+            status,
+            customer_id,
+            assigned_to,
+            total_amount_cents,
+            discount_cents,
+            final_amount_cents,
+            notes,
+            delivery_type,
+            delivery_address
+         ) VALUES ($1, 'PRONTA_ENTREGA', 'AGUARDANDO_PAGAMENTO', $2, $3, $4, 0, $4, $5, 'ENTREGA', $6)
+         RETURNING id`,
+        [
+            orderNumber,
+            customerId,
+            assignedTo,
+            storeOrder.amount_cents,
+            buildStoreCrmOrderNotes({
+                storeOrderId: storeOrder.id,
+                paymentId,
+                existingNotes: null,
+            }),
+            storeOrder.shipping_address ? JSON.stringify(storeOrder.shipping_address) : null,
+        ]
+    );
+
+    const orderId = created.rows[0]?.id;
+    if (!orderId) {
+        throw AppError.serviceUnavailable(
+            'STORE_ORDER_SYNC_FAILED',
+            'Não foi possível gerar o pedido interno da loja.'
+        );
+    }
+
+    await client.query(
+        `INSERT INTO order_items (
+            order_id,
+            product_id,
+            description,
+            quantity,
+            unit_price_cents
+         ) VALUES ($1, $2, $3, 1, $4)`,
+        [orderId, storeOrder.stock_product_id, storeOrder.product_name, storeOrder.amount_cents]
+    );
+
+    return orderId;
+}
+
+async function syncApprovedStoreOrderToCrm(
+    client: PoolClient,
+    storeOrderId: string,
+    paymentPayload: Awaited<ReturnType<typeof fetchMercadoPagoPayment>>
+): Promise<void> {
+    const result = await client.query<StoreOrderSyncRow>(
+        `SELECT
+            so.id,
+            so.store_product_id,
+            sp.stock_product_id,
+            sp.name AS product_name,
+            so.customer_name,
+            so.customer_email,
+            so.customer_phone,
+            so.shipping_address,
+            so.amount_cents,
+            so.customer_id,
+            so.crm_order_id,
+            so.crm_payment_id
+         FROM store_orders so
+         INNER JOIN store_products sp ON sp.id = so.store_product_id
+         WHERE so.id = $1
+         LIMIT 1
+         FOR UPDATE`,
+        [storeOrderId]
+    );
+
+    const storeOrder = result.rows[0];
+    if (!storeOrder) {
+        throw AppError.notFound('Pedido da loja não encontrado para sincronização.');
+    }
+
+    const assignedTo = await resolveStoreAssigneeUserId(client);
+    const customerId = await resolveStoreCustomerId(client, storeOrder, assignedTo);
+    const orderId = await createCrmOrderFromStoreOrder(
+        client,
+        storeOrder,
+        customerId,
+        assignedTo,
+        paymentPayload.paymentId
+    );
+
+    const payment = await createPaymentRecord(client, {
+        orderId,
+        amountCents: storeOrder.amount_cents,
+        status: 'APPROVED',
+        paymentMethod: 'LINK_PAGAMENTO',
+        idempotencyKey: `store:${storeOrder.id}:${paymentPayload.paymentId}`,
+        webhookPayload: {
+            source: 'storefront',
+            store_order_id: storeOrder.id,
+            mercado_pago_payment_id: paymentPayload.paymentId,
+            mercado_pago_status: paymentPayload.status,
+        },
+    });
+
+    await applyApprovedPaymentEffects(client, {
+        paymentId: payment.id,
+        orderId,
+        amountCents: storeOrder.amount_cents,
+        paymentMethod: 'LINK_PAGAMENTO',
+        actorUserId: assignedTo,
+    });
+
+    await client.query(
+        `UPDATE store_orders
+         SET
+            customer_id = $2,
+            crm_order_id = $3,
+            crm_payment_id = $4,
+            updated_at = NOW()
+         WHERE id = $1`,
+        [storeOrder.id, customerId, orderId, payment.id]
+    );
 }
 
 async function fetchStoreConfig(): Promise<StoreConfigRow | null> {
@@ -644,19 +905,47 @@ router.post(
                 return;
             }
 
-            const result = await query<StoreOrderRow>(
-                `UPDATE store_orders
-                 SET
-                    mp_payment_id = $2,
-                    status = $3,
-                    paid_at = CASE WHEN $3 = 'approved' THEN NOW() ELSE paid_at END,
-                    updated_at = NOW()
-                 WHERE id = $1
-                 RETURNING id, mp_preference_id, mp_payment_id, status, amount_cents`,
-                [paymentPayload.orderId, paymentPayload.paymentId, mapStoreOrderStatus(paymentPayload.status)]
-            );
+            const mappedStatus = mapStoreOrderStatus(paymentPayload.status);
+            const syncedOrder = await transaction(async (client) => {
+                const result = await client.query<StoreOrderRow>(
+                    `UPDATE store_orders
+                     SET
+                        mp_payment_id = $2,
+                        status = $3,
+                        paid_at = CASE WHEN $3 = 'approved' THEN COALESCE(paid_at, NOW()) ELSE paid_at END,
+                        updated_at = NOW()
+                     WHERE id = $1
+                     RETURNING
+                        id,
+                        mp_preference_id,
+                        mp_payment_id,
+                        status,
+                        amount_cents,
+                        customer_id,
+                        crm_order_id,
+                        crm_payment_id`,
+                    [paymentPayload.orderId, paymentPayload.paymentId, mappedStatus]
+                );
 
-            if (!result.rows[0]) {
+                const storeOrder = result.rows[0];
+                if (!storeOrder) {
+                    return null;
+                }
+
+                if (mappedStatus === 'approved') {
+                    await runStoreOrderCrmSync(client, storeOrder.id, {
+                        paymentId: paymentPayload.paymentId,
+                        status: 'approved',
+                        amountCents: paymentPayload.amountCents,
+                        paymentMethod: paymentPayload.paymentMethod,
+                        orderId: paymentPayload.orderId ?? storeOrder.id,
+                    });
+                }
+
+                return storeOrder;
+            });
+
+            if (!syncedOrder) {
                 res.status(202).json({ ok: true, ignored: true });
                 return;
             }

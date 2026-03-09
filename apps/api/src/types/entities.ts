@@ -558,6 +558,9 @@ export interface StoreOrder {
     store_product_id: string;
     mp_preference_id: string | null;
     mp_payment_id: string | null;
+    customer_id: string | null;
+    crm_order_id: string | null;
+    crm_payment_id: string | null;
     status: StoreOrderStatus;
     customer_name: string | null;
     customer_email: string | null;

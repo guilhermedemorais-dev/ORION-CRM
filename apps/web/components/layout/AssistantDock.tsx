@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
@@ -14,14 +14,25 @@ interface ChatMessage {
     role: 'assistant' | 'user';
     content: string;
     toolsUsed?: string[];
+    usage?: {
+        inputTokens: number;
+        outputTokens: number;
+        latencyMs: number;
+    };
 }
 
-function createMessage(role: ChatMessage['role'], content: string, toolsUsed?: string[]): ChatMessage {
+function createMessage(
+    role: ChatMessage['role'],
+    content: string,
+    toolsUsed?: string[],
+    usage?: ChatMessage['usage']
+): ChatMessage {
     return {
         id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         role,
         content,
         toolsUsed,
+        usage,
     };
 }
 
@@ -36,6 +47,7 @@ export function AssistantDock({ userRole }: AssistantDockProps) {
     const [open, setOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [input, setInput] = useState('');
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const [messages, setMessages] = useState<ChatMessage[]>([
         createMessage(
             'assistant',
@@ -48,6 +60,29 @@ export function AssistantDock({ userRole }: AssistantDockProps) {
         () => `Escopo atual: ${roleSummary(userRole)}.`,
         [userRole]
     );
+
+    useEffect(() => {
+        function handleKeydown(event: KeyboardEvent) {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+                event.preventDefault();
+                setOpen((current) => !current);
+                return;
+            }
+
+            if (event.key === 'Escape') {
+                setOpen(false);
+            }
+        }
+
+        window.addEventListener('keydown', handleKeydown);
+        return () => window.removeEventListener('keydown', handleKeydown);
+    }, []);
+
+    useEffect(() => {
+        if (open) {
+            textareaRef.current?.focus();
+        }
+    }, [open]);
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -92,8 +127,15 @@ export function AssistantDock({ userRole }: AssistantDockProps) {
             const toolsUsed = Array.isArray(payload?.tools_used)
                 ? payload.tools_used.filter((item: unknown): item is string => typeof item === 'string')
                 : undefined;
+            const usage = payload?.usage && typeof payload.usage === 'object'
+                ? {
+                    inputTokens: typeof payload.usage.inputTokens === 'number' ? payload.usage.inputTokens : 0,
+                    outputTokens: typeof payload.usage.outputTokens === 'number' ? payload.usage.outputTokens : 0,
+                    latencyMs: typeof payload.usage.latencyMs === 'number' ? payload.usage.latencyMs : 0,
+                }
+                : undefined;
 
-            setMessages((current) => [...current, createMessage('assistant', content, toolsUsed)].slice(-20));
+            setMessages((current) => [...current, createMessage('assistant', content, toolsUsed, usage)].slice(-20));
         } catch {
             setMessages((current) => [
                 ...current,
@@ -148,12 +190,26 @@ export function AssistantDock({ userRole }: AssistantDockProps) {
                                     Tools: {message.toolsUsed.join(', ')}
                                 </p>
                             ) : null}
+                            {message.usage ? (
+                                <p className="mt-1 text-[11px] uppercase tracking-[0.16em] opacity-60">
+                                    {message.usage.inputTokens} in · {message.usage.outputTokens} out · {message.usage.latencyMs}ms
+                                </p>
+                            ) : null}
                         </article>
                     ))}
+                    {isSubmitting ? (
+                        <article className="mr-8 rounded-2xl bg-canvas-card px-4 py-3 text-sm text-gray-800">
+                            <div className="space-y-2">
+                                <div className="h-3 w-32 animate-pulse rounded-full bg-gray-200" />
+                                <div className="h-3 w-48 animate-pulse rounded-full bg-gray-200" />
+                            </div>
+                        </article>
+                    ) : null}
                 </div>
 
                 <form onSubmit={handleSubmit} className="border-t border-canvas-border px-5 py-4">
                     <textarea
+                        ref={textareaRef}
                         value={input}
                         onChange={(event) => setInput(event.target.value)}
                         rows={3}

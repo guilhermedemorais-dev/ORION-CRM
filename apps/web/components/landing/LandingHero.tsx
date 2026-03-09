@@ -23,10 +23,10 @@ export function LandingHero({
 
                     <div className="mt-8 flex flex-wrap gap-3">
                         <a
-                            href="/catalogo"
+                            href="/loja"
                             className="inline-flex items-center rounded-full bg-brand-gold px-5 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-surface-sidebar transition hover:bg-brand-gold-light"
                         >
-                            Ver catalogo
+                            Ver loja
                         </a>
                         <a
                             href={ctaHref}

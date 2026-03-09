@@ -34,7 +34,7 @@ export default async function LandingPage({
                         <p className="text-sm font-medium text-gray-900">{settings.company_name}</p>
                     </div>
                     <nav className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-                        <a href="/catalogo" className="transition hover:text-gray-900">Catalogo</a>
+                        <a href="/loja" className="transition hover:text-gray-900">Loja</a>
                         <a href="#captacao" className="transition hover:text-gray-900">Atendimento</a>
                         <a
                             href={session ? '/dashboard' : '/login'}
@@ -80,7 +80,7 @@ export default async function LandingPage({
                                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-gold-dark">Vitrine</p>
                                     <h2 className="mt-2 font-serif text-3xl text-gray-900">Catalogo publico em tempo real</h2>
                                 </div>
-                                <a href="/catalogo" className="text-sm font-semibold text-gray-700 underline underline-offset-4">
+                                <a href="/loja" className="text-sm font-semibold text-gray-700 underline underline-offset-4">
                                     Ver tudo
                                 </a>
                             </div>
