@@ -9,13 +9,19 @@ import { runAssistant } from '../services/assistant.service.js';
 const router = Router();
 
 const assistantChatSchema = z.object({
-    message: z.string().trim().min(1).max(4000),
+    message: z.string().trim().min(1).max(4000).optional(),
+    messages: z.array(z.object({
+        role: z.enum(['user', 'assistant']),
+        content: z.string().trim().min(1).max(4000),
+    })).max(20).optional(),
+}).refine((data) => Boolean(data.message) || (Array.isArray(data.messages) && data.messages.length > 0), {
+    message: 'Envie uma mensagem para o assistente.',
 });
 
 router.post(
     '/chat',
     authenticate,
-    rateLimit({ windowMs: 60 * 1000, max: 30, name: 'assistant-chat' }),
+    rateLimit({ windowMs: 60 * 1000, max: 20, name: 'assistant-chat' }),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             if (!req.user) {
@@ -33,6 +39,7 @@ router.post(
                 userId: req.user.id,
                 role: req.user.role,
                 message: parsed.data.message,
+                messages: parsed.data.messages,
             });
 
             res.json(result);

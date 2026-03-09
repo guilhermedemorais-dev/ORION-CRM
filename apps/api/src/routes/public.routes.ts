@@ -45,6 +45,36 @@ interface PublicLeadRow {
     created_at: Date;
 }
 
+async function resolveDefaultPipelineId(): Promise<string> {
+    const result = await query<{ id: string }>(
+        `SELECT id
+         FROM pipelines
+         WHERE slug = 'leads'
+         LIMIT 1`
+    );
+
+    const id = result.rows[0]?.id;
+    if (!id) {
+        throw AppError.serviceUnavailable('PIPELINE_NOT_READY', 'Pipeline padrão ainda não foi inicializado.');
+    }
+
+    return id;
+}
+
+async function resolveDefaultStageId(pipelineId: string): Promise<string | null> {
+    const result = await query<{ id: string }>(
+        `SELECT id
+         FROM pipeline_stages
+         WHERE pipeline_id = $1
+           AND position = 1
+         ORDER BY created_at ASC
+         LIMIT 1`,
+        [pipelineId]
+    );
+
+    return result.rows[0]?.id ?? null;
+}
+
 function normalizeWhatsappNumber(input: string): string | null {
     const trimmed = input.trim();
     if (!trimmed) {
@@ -207,21 +237,27 @@ router.post(
             let duplicatePrevented = false;
 
             if (!lead) {
+                const pipelineId = await resolveDefaultPipelineId();
+                const stageId = await resolveDefaultStageId(pipelineId);
                 const inserted = await query<PublicLeadRow>(
                     `INSERT INTO leads (
                         whatsapp_number,
                         name,
                         email,
                         stage,
+                        pipeline_id,
+                        stage_id,
                         source,
                         notes,
                         last_interaction_at
-                     ) VALUES ($1, $2, $3, 'NOVO', 'OUTRO', $4, NOW())
+                     ) VALUES ($1, $2, $3, 'NOVO', $4, $5, 'OUTRO', $6, NOW())
                      RETURNING id, name, whatsapp_number, email, source, created_at`,
                     [
                         normalizedWhatsapp,
                         parsed.data.name,
                         parsed.data.email ?? null,
+                        pipelineId,
+                        stageId,
                         parsed.data.notes ?? 'Lead captado pela landing pública.',
                     ]
                 );

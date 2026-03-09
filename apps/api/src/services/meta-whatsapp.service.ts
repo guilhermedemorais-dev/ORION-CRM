@@ -213,8 +213,12 @@ export function parseWebhookPayload(payload: unknown): ParsedWhatsAppInboundEven
 
                 events.push({
                     meta_message_id: message.id,
+                    channel: 'whatsapp',
+                    external_conversation_id: whatsappNumber,
                     whatsapp_number: whatsappNumber,
                     profile_name: profileName,
+                    contact_phone: whatsappNumber,
+                    contact_handle: null,
                     type: mappedType,
                     content: getInboundContent(message, mappedType),
                     media_url: null,

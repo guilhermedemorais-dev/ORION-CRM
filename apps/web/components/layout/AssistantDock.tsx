@@ -59,7 +59,12 @@ export function AssistantDock({ userRole }: AssistantDockProps) {
 
         setInput('');
         setIsSubmitting(true);
-        setMessages((current) => [...current, createMessage('user', message)]);
+        const nextHistory = [...messages, createMessage('user', message)];
+        setMessages(nextHistory);
+
+        const payloadMessages = nextHistory
+            .map((entry) => ({ role: entry.role, content: entry.content }))
+            .slice(-20);
 
         try {
             const response = await fetch('/internal/assistant', {
@@ -67,7 +72,10 @@ export function AssistantDock({ userRole }: AssistantDockProps) {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message }),
+                body: JSON.stringify({
+                    message,
+                    messages: payloadMessages,
+                }),
             });
 
             if (response.status === 401) {
@@ -85,12 +93,12 @@ export function AssistantDock({ userRole }: AssistantDockProps) {
                 ? payload.tools_used.filter((item: unknown): item is string => typeof item === 'string')
                 : undefined;
 
-            setMessages((current) => [...current, createMessage('assistant', content, toolsUsed)]);
+            setMessages((current) => [...current, createMessage('assistant', content, toolsUsed)].slice(-20));
         } catch {
             setMessages((current) => [
                 ...current,
                 createMessage('assistant', 'Falha de comunicação com o assistente. Tente novamente.'),
-            ]);
+            ].slice(-20));
         } finally {
             setIsSubmitting(false);
         }

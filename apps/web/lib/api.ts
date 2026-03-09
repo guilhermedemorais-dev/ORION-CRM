@@ -19,6 +19,17 @@ export interface LeadRecord {
     whatsapp_number: string;
     email: string | null;
     stage: 'NOVO' | 'QUALIFICADO' | 'PROPOSTA_ENVIADA' | 'NEGOCIACAO' | 'CONVERTIDO' | 'PERDIDO';
+    pipeline_id: string;
+    stage_id?: string | null;
+    stage_name?: string | null;
+    stage_color?: string | null;
+    stage_is_won?: boolean | null;
+    stage_is_lost?: boolean | null;
+    estimated_value?: number;
+    quick_note?: string | null;
+    custom_fields?: Record<string, unknown>;
+    open_tasks_count?: number;
+    last_task_at?: string | null;
     source: 'WHATSAPP' | 'BALCAO' | 'INDICACAO' | 'OUTRO';
     notes: string | null;
     converted_customer_id: string | null;
@@ -26,6 +37,32 @@ export interface LeadRecord {
     created_at: string;
     updated_at: string;
     assigned_to: { id: string; name: string } | null;
+}
+
+export interface PipelineStageRecord {
+    id: string;
+    pipeline_id?: string;
+    name: string;
+    color: string;
+    position: number;
+    is_won: boolean;
+    is_lost: boolean;
+    created_at: string;
+}
+
+export interface PipelineRecord {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    icon: string;
+    is_active: boolean;
+    is_default: boolean;
+    flow_json: Record<string, unknown>;
+    published_at: string | null;
+    created_by: string | null;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface CustomerRecord {
@@ -44,11 +81,19 @@ export interface CustomerRecord {
 
 export interface InboxConversationRecord {
     id: string;
+    channel: 'whatsapp' | 'instagram' | 'telegram' | 'tiktok' | 'messenger';
+    external_id: string;
     whatsapp_number: string;
+    contact_name: string | null;
+    contact_phone: string | null;
+    contact_handle: string | null;
     status: 'BOT' | 'AGUARDANDO_HUMANO' | 'EM_ATENDIMENTO' | 'ENCERRADA';
     assigned_to: { id: string; name: string } | null;
+    assigned_at: string | null;
     lead: { id: string; name: string | null } | null;
     customer: { id: string; name: string } | null;
+    pipeline: { id: string; slug: string; name: string } | null;
+    stage: { id: string; name: string; color: string } | null;
     last_message_preview: string | null;
     last_message_at: string | null;
     unread_count: number;
@@ -57,12 +102,16 @@ export interface InboxConversationRecord {
 export interface InboxMessageRecord {
     id: string;
     meta_message_id: string | null;
+    external_id: string | null;
     direction: 'INBOUND' | 'OUTBOUND';
     type: 'TEXT' | 'IMAGE' | 'DOCUMENT' | 'AUDIO' | 'TEMPLATE';
     content: string | null;
     media_url: string | null;
+    media_mime: string | null;
+    media_size: number | null;
     status: 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
     is_automated: boolean;
+    is_quick_reply: boolean;
     sent_by: { id: string; name: string } | null;
     created_at: string;
 }
@@ -70,6 +119,24 @@ export interface InboxMessageRecord {
 export interface InboxConversationResponse {
     conversation: Omit<InboxConversationRecord, 'unread_count'>;
     messages: InboxMessageRecord[];
+}
+
+export interface QuickReplyRecord {
+    id: string;
+    title: string;
+    body: string;
+    category: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ChannelIntegrationRecord {
+    id: string;
+    channel: 'whatsapp' | 'instagram' | 'telegram' | 'tiktok' | 'messenger';
+    is_active: boolean;
+    webhook_url: string | null;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface OrderItemRecord {
@@ -258,6 +325,59 @@ export interface DashboardPayload {
 export interface AssistantChatResponse {
     answer: string;
     tools_used: string[];
+}
+
+export interface AutomationFlowListItem {
+    id: string;
+    name: string;
+    active: boolean;
+    is_system: boolean;
+    tags: string[];
+    nodes_count: number;
+    created_at: string | null;
+    updated_at: string | null;
+    execution_count: number;
+    error_count: number;
+    last_execution_at: string | null;
+    status: 'draft' | 'active' | 'inactive' | 'error' | string;
+}
+
+export interface AutomationFlowDetail {
+    id: string;
+    name: string;
+    active: boolean;
+    is_system: boolean;
+    tags: string[];
+    nodes: Array<Record<string, unknown>>;
+    connections: Record<string, unknown>;
+    settings?: Record<string, unknown>;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface AutomationExecution {
+    id: string;
+    status?: string;
+    startedAt?: string;
+    stoppedAt?: string;
+    finished?: boolean;
+    mode?: string;
+}
+
+export interface AutomationCatalogItem {
+    key: string;
+    label: string;
+    group: 'triggers' | 'actions' | 'control';
+    n8n_type: string;
+    description: string;
+    parameters: string[];
+}
+
+export interface AutomationCatalogGroup {
+    key: 'triggers' | 'actions' | 'control';
+    label: string;
+    description: string;
+    items: AutomationCatalogItem[];
 }
 
 export interface PaymentLinkResponse {

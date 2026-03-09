@@ -35,6 +35,9 @@ export function MessageBubble({ message }: { message: InboxMessageRecord }) {
                 {message.is_automated ? (
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] opacity-80">Automático</p>
                 ) : null}
+                {message.is_quick_reply ? (
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] opacity-80">Pronta</p>
+                ) : null}
 
                 <p className="whitespace-pre-wrap break-words">{getMessageFallback(message)}</p>
 

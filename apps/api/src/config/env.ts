@@ -18,19 +18,16 @@ const envSchema = z.object({
     OPERATOR_WEBHOOK_SECRET: z.string().min(32),
     OPERATOR_INSTANCE_ID: z.string().optional(),
 
-    // Activepieces
-    ACTIVEPIECES_API_KEY: z.string().optional(),
-    ACTIVEPIECES_URL: z.string().url().optional(),
-
-    // Python AI
-    PYTHON_AI_URL: z.string().url().optional(),
-    PYTHON_AI_SECRET: z.string().optional(),
-
     // Meta Cloud API (WhatsApp)
     META_API_TOKEN: z.string().min(1).optional(),
     META_PHONE_NUMBER_ID: z.string().optional(),
     META_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
     META_APP_SECRET: z.string().min(1).optional(),
+
+    // Evolution API (WhatsApp instance management)
+    EVOLUTION_URL: z.string().url().optional(),
+    EVOLUTION_API_KEY: z.string().optional(),
+    EVOLUTION_INSTANCE: z.string().optional(),
 
     // OpenAI
     OPENAI_API_KEY: z.string().optional(),
@@ -40,6 +37,7 @@ const envSchema = z.object({
     MP_WEBHOOK_SECRET: z.string().optional(),
 
     // n8n
+    N8N_URL: z.string().url().optional(),
     N8N_API_KEY: z.string().optional(),
     N8N_WEBHOOK_URL: z.string().url().optional(),
 

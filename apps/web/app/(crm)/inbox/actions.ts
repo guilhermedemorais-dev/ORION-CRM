@@ -10,7 +10,9 @@ const conversationSchema = z.object({
 });
 
 const sendMessageSchema = conversationSchema.extend({
-    text: z.string().trim().min(1).max(4096),
+    text: z.string().trim().min(1).max(4096).optional(),
+    kind: z.enum(['TEXT', 'IDENTIFICATION']).default('TEXT'),
+    quick_reply_id: z.string().uuid().optional(),
 });
 
 function buildConversationRedirect(conversationId: string, error?: string): string {
@@ -29,6 +31,8 @@ export async function sendInboxMessageAction(formData: FormData) {
     const parsed = sendMessageSchema.safeParse({
         conversation_id: formData.get('conversation_id'),
         text: formData.get('text'),
+        kind: formData.get('kind'),
+        quick_reply_id: formData.get('quick_reply_id'),
     });
 
     if (!parsed.success) {
@@ -41,6 +45,8 @@ export async function sendInboxMessageAction(formData: FormData) {
             method: 'POST',
             body: JSON.stringify({
                 text: parsed.data.text,
+                kind: parsed.data.kind,
+                quick_reply_id: parsed.data.quick_reply_id,
             }),
         });
     } catch (error) {

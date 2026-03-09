@@ -1,16 +1,20 @@
 import { ConversationList } from '@/components/modules/inbox/ConversationList';
 import { ConversationThread } from '@/components/modules/inbox/ConversationThread';
 import { InboxEmptyState } from '@/components/modules/inbox/InboxEmptyState';
+import { InboxRealtimeBridge } from '@/components/modules/inbox/InboxRealtimeBridge';
 import { PageHeader } from '@/components/ui/PageHeader';
 import type {
     ApiListResponse,
+    ChannelIntegrationRecord,
     InboxConversationRecord,
     InboxConversationResponse,
+    QuickReplyRecord,
 } from '@/lib/api';
 import { apiRequest } from '@/lib/api';
 import { requireSession } from '@/lib/auth';
 
 interface InboxSearchParams {
+    channel?: InboxConversationRecord['channel'] | '';
     q?: string;
     status?: InboxConversationRecord['status'] | '';
     conversation?: string;
@@ -49,9 +53,17 @@ export default async function InboxPage({
         query.set('status', searchParams.status);
     }
 
+    if (searchParams?.channel) {
+        query.set('channel', searchParams.channel);
+    }
+
     const conversationResponse = await apiRequest<ApiListResponse<InboxConversationRecord>>(
         `/inbox/conversations?${query.toString()}`
     );
+    const [channelResponse, quickReplyResponse] = await Promise.all([
+        apiRequest<ApiListResponse<ChannelIntegrationRecord>>('/inbox/channels'),
+        apiRequest<ApiListResponse<QuickReplyRecord>>('/inbox/quick-replies'),
+    ]);
 
     const initialSelectedId = searchParams?.conversation ?? conversationResponse.data[0]?.id ?? null;
     let selectedThread = await fetchSelectedConversation(initialSelectedId);
@@ -64,6 +76,7 @@ export default async function InboxPage({
 
     return (
         <div className="space-y-6">
+            <InboxRealtimeBridge />
             <PageHeader
                 title="Inbox"
                 description="Atendimento operacional do WhatsApp com fila, thread unificada e resposta direta pela Meta Cloud API."
@@ -78,13 +91,19 @@ export default async function InboxPage({
             <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
                 <ConversationList
                     conversations={conversationResponse.data}
+                    channels={channelResponse.data}
                     selectedConversationId={selectedConversationId}
+                    channel={searchParams?.channel ?? ''}
                     search={searchParams?.q ?? ''}
                     status={searchParams?.status ?? ''}
                 />
 
                 {selectedThread ? (
-                    <ConversationThread thread={selectedThread} currentUser={session.user} />
+                    <ConversationThread
+                        thread={selectedThread}
+                        currentUser={session.user}
+                        quickReplies={quickReplyResponse.data}
+                    />
                 ) : (
                     <InboxEmptyState />
                 )}

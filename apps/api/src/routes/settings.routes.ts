@@ -12,6 +12,11 @@ import { requireRole } from '../middleware/rbac.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { createAuditLog } from '../middleware/audit.js';
 import { invalidateSettingsCache } from '../middleware/instanceStatus.js';
+import {
+    disconnectEvolutionInstance,
+    fetchEvolutionQrCode,
+    fetchEvolutionStatus,
+} from '../services/evolution.service.js';
 import type { Settings } from '../types/entities.js';
 
 const router = Router();
@@ -32,6 +37,13 @@ const updateSettingsSchema = z.object({
 
 const uploadBrandingSchema = z.object({
     type: z.enum(['logo', 'favicon']),
+});
+
+const updateNotificationsSchema = z.object({
+    notify_new_lead_whatsapp: z.boolean().optional(),
+    notify_order_paid: z.boolean().optional(),
+    notify_production_delayed: z.boolean().optional(),
+    notify_low_stock: z.boolean().optional(),
 });
 
 const brandingUpload = multer({
@@ -65,11 +77,16 @@ function runBrandingUpload(req: Request, res: Response): Promise<void> {
     });
 }
 
-function detectBrandingFile(buffer: Buffer): { ext: 'png' | 'svg'; mimeType: string } | null {
+function detectBrandingFile(buffer: Buffer): { ext: 'png' | 'jpg' | 'svg'; mimeType: string } | null {
     const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const jpgSignature = Buffer.from([0xff, 0xd8, 0xff]);
 
     if (buffer.length >= pngSignature.length && buffer.subarray(0, pngSignature.length).equals(pngSignature)) {
         return { ext: 'png', mimeType: 'image/png' };
+    }
+
+    if (buffer.length >= jpgSignature.length && buffer.subarray(0, jpgSignature.length).equals(jpgSignature)) {
+        return { ext: 'jpg', mimeType: 'image/jpeg' };
     }
 
     const asText = buffer.toString('utf8').trim();
@@ -125,7 +142,9 @@ router.get(
         try {
             const result = await query<Settings>(
                 `SELECT company_name, logo_url, favicon_url, primary_color, secondary_color,
-                cnpj, phone, address, instagram, whatsapp_greeting, email_from_name, plan
+                cnpj, phone, address, instagram, whatsapp_greeting, email_from_name,
+                notify_new_lead_whatsapp, notify_order_paid, notify_production_delayed, notify_low_stock,
+                plan
          FROM settings LIMIT 1`
             );
             const settings = result.rows[0];
@@ -201,7 +220,9 @@ router.put(
             // Return updated settings
             const result = await query<Settings>(
                 `SELECT company_name, logo_url, favicon_url, primary_color, secondary_color,
-                cnpj, phone, address, instagram, whatsapp_greeting, email_from_name, plan
+                cnpj, phone, address, instagram, whatsapp_greeting, email_from_name,
+                notify_new_lead_whatsapp, notify_order_paid, notify_production_delayed, notify_low_stock,
+                plan
          FROM settings LIMIT 1`
             );
 
@@ -239,7 +260,7 @@ router.post(
 
             const fileInfo = detectBrandingFile(req.file.buffer);
             if (!fileInfo) {
-                next(AppError.badRequest('Formato inválido. Envie PNG ou SVG válido.'));
+                next(AppError.badRequest('Formato inválido. Envie PNG, JPG ou SVG válido.'));
                 return;
             }
 
@@ -288,6 +309,136 @@ router.post(
                 type: parsed.data.type,
                 url: publicPath,
             });
+        } catch (err) {
+            next(err);
+        }
+    }
+);
+
+// ---- PATCH /settings/notifications (ADMIN only) ----
+
+router.patch(
+    '/notifications',
+    authenticate,
+    requireRole(['ADMIN']),
+    rateLimit({ windowMs: 60 * 1000, max: 20, name: 'settings-notifications-update' }),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const parsed = updateNotificationsSchema.safeParse(req.body);
+            if (!parsed.success) {
+                next(AppError.badRequest(
+                    'Verifique os campos informados.',
+                    parsed.error.errors.map((error) => ({ field: error.path.join('.'), message: error.message }))
+                ));
+                return;
+            }
+
+            const fields = Object.entries(parsed.data).filter(([, value]) => value !== undefined);
+            if (fields.length === 0) {
+                next(AppError.badRequest('Nenhum campo de notificação para atualizar.'));
+                return;
+            }
+
+            const oldResult = await query<Settings>('SELECT * FROM settings LIMIT 1');
+            const oldSettings = oldResult.rows[0];
+
+            const values = fields.map(([, value]) => value);
+            const setClauses = fields.map(([key], index) => `${key} = $${index + 1}`);
+            setClauses.push('updated_at = NOW()');
+
+            const updatedResult = await query<Settings>(
+                `UPDATE settings
+                 SET ${setClauses.join(', ')}
+                 RETURNING
+                    notify_new_lead_whatsapp,
+                    notify_order_paid,
+                    notify_production_delayed,
+                    notify_low_stock`,
+                values
+            );
+
+            await invalidateSettingsCache();
+
+            if (req.user) {
+                await createAuditLog({
+                    userId: req.user.id,
+                    action: 'UPDATE_NOTIFICATIONS',
+                    entityType: 'settings',
+                    entityId: oldSettings?.id || null,
+                    oldValue: oldSettings
+                        ? {
+                            notify_new_lead_whatsapp: oldSettings.notify_new_lead_whatsapp,
+                            notify_order_paid: oldSettings.notify_order_paid,
+                            notify_production_delayed: oldSettings.notify_production_delayed,
+                            notify_low_stock: oldSettings.notify_low_stock,
+                        }
+                        : null,
+                    newValue: updatedResult.rows[0] as unknown as Record<string, unknown>,
+                    req,
+                });
+            }
+
+            res.json(updatedResult.rows[0]);
+        } catch (err) {
+            next(err);
+        }
+    }
+);
+
+// ---- WhatsApp / Evolution status (ADMIN only) ----
+
+router.get(
+    '/whatsapp/status',
+    authenticate,
+    requireRole(['ADMIN']),
+    rateLimit({ windowMs: 60 * 1000, max: 120, name: 'settings-whatsapp-status' }),
+    async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const payload = await fetchEvolutionStatus();
+            res.json(payload);
+        } catch (err) {
+            next(err);
+        }
+    }
+);
+
+router.get(
+    '/whatsapp/qrcode',
+    authenticate,
+    requireRole(['ADMIN']),
+    rateLimit({ windowMs: 60 * 1000, max: 30, name: 'settings-whatsapp-qrcode' }),
+    async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const payload = await fetchEvolutionQrCode();
+            res.json(payload);
+        } catch (err) {
+            next(err);
+        }
+    }
+);
+
+router.post(
+    '/whatsapp/disconnect',
+    authenticate,
+    requireRole(['ADMIN']),
+    rateLimit({ windowMs: 60 * 1000, max: 15, name: 'settings-whatsapp-disconnect' }),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            await disconnectEvolutionInstance();
+
+            if (req.user) {
+                await createAuditLog({
+                    userId: req.user.id,
+                    action: 'DISCONNECT_WHATSAPP',
+                    entityType: 'settings',
+                    entityId: null,
+                    oldValue: null,
+                    newValue: { provider: 'evolution' },
+                    req,
+                });
+            }
+
+            res.json({ success: true });
         } catch (err) {
             next(err);
         }

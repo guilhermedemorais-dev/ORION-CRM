@@ -9,6 +9,8 @@ interface CreatePreferenceInput {
     orderNumber: string;
     amountCents: number;
     payerEmail?: string | null;
+    itemTitle?: string;
+    externalReference?: string;
 }
 
 interface MercadoPagoPreferenceResponse {
@@ -116,14 +118,14 @@ export async function createPaymentPreference(
             items: [
                 {
                     id: input.orderId,
-                    title: `Pedido ${input.orderNumber}`,
+                    title: input.itemTitle ?? `Pedido ${input.orderNumber}`,
                     quantity: 1,
                     unit_price: Number((input.amountCents / 100).toFixed(2)),
                     currency_id: 'BRL',
                 },
             ],
             payer: input.payerEmail ? { email: input.payerEmail } : undefined,
-            external_reference: input.orderId,
+            external_reference: input.externalReference ?? input.orderId,
         }),
     }).catch(() => {
         throw AppError.serviceUnavailable(

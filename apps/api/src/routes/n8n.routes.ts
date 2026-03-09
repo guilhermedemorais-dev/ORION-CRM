@@ -16,10 +16,13 @@ const orderStatusSchema = z.object({
 });
 
 const newMessageSchema = z.object({
-    whatsapp_number: z.string().trim().min(8).max(25),
+    channel: z.enum(['whatsapp', 'instagram', 'telegram', 'tiktok', 'messenger']).default('whatsapp'),
+    whatsapp_number: z.string().trim().min(1).max(80),
     content: z.string().trim().min(1).max(4096),
     profile_name: z.string().trim().max(255).optional(),
     external_message_id: z.string().trim().min(4).max(255).optional(),
+    external_conversation_id: z.string().trim().min(2).max(255).optional(),
+    contact_handle: z.string().trim().max(100).optional(),
 });
 
 function assertN8nAuthorized(req: Request): void {
@@ -53,6 +56,17 @@ function normalizeWhatsapp(input: string): string {
     return `+${digits}`;
 }
 
+function normalizeChannelContact(
+    channel: 'whatsapp' | 'instagram' | 'telegram' | 'tiktok' | 'messenger',
+    input: string
+): string {
+    if (channel === 'whatsapp') {
+        return normalizeWhatsapp(input);
+    }
+
+    return input.trim();
+}
+
 router.post(
     '/webhook/new-message',
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -67,7 +81,14 @@ router.post(
 
             const inbound = {
                 meta_message_id: parsed.data.external_message_id ?? `n8n-${Date.now()}`,
-                whatsapp_number: normalizeWhatsapp(parsed.data.whatsapp_number),
+                channel: parsed.data.channel,
+                external_conversation_id: parsed.data.external_conversation_id
+                    ?? normalizeChannelContact(parsed.data.channel, parsed.data.whatsapp_number),
+                whatsapp_number: normalizeChannelContact(parsed.data.channel, parsed.data.whatsapp_number),
+                contact_phone: parsed.data.channel === 'whatsapp'
+                    ? normalizeWhatsapp(parsed.data.whatsapp_number)
+                    : null,
+                contact_handle: parsed.data.contact_handle ?? null,
                 type: 'TEXT' as const,
                 content: parsed.data.content,
                 media_url: null,

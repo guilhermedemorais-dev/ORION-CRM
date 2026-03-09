@@ -81,3 +81,23 @@
   - [x] Frontend/Backend: captação pública de leads
   - [x] Infra: NGINX final + stack completa de deploy
   - [x] Docs: `README.md` / `README-DEPLOY.md` operacionais
+
+## BLOCO 9 — Automações n8n (MVP operacional)
+- [x] Backend: `N8N_URL` no env/config + `N8N_API_KEY` para autenticação
+- [x] Backend: serviço `n8n.service.ts` para CRUD de workflows e listagem de execuções
+- [x] Backend: `routes/automations.routes.ts` com:
+  - [x] `GET /api/v1/automations`
+  - [x] `GET /api/v1/automations/:workflowId`
+  - [x] `POST /api/v1/automations`
+  - [x] `PUT /api/v1/automations/:workflowId`
+  - [x] `PATCH /api/v1/automations/:workflowId/toggle`
+  - [x] `DELETE /api/v1/automations/:workflowId` (protegendo flows de sistema)
+  - [x] `GET /api/v1/automations/:workflowId/executions`
+- [x] Backend: seed de flows de sistema no boot (`WF-A/B/C/D`)
+- [x] Frontend: tela `/automacoes` com listagem, criação, edição JSON, ativação/desativação, exclusão e histórico
+
+## BLOCO 10 — Assistente IA interno (v2 operacional)
+- [x] Backend: endpoint aceita `messages[]` + `message` (compat)
+- [x] Backend: RBAC por role em consultas de leads, pedidos, produção, financeiro, comissões, conversão e top produtos
+- [x] Backend: logs de uso do assistente (`assistant_logs`) com latência e funções chamadas
+- [x] Frontend: dock envia histórico curto (até 20 mensagens) para contexto

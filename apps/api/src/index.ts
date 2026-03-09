@@ -15,6 +15,7 @@ import { closeRedis } from './db/redis.js';
 import healthRoutes from './routes/health.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import assistantRoutes from './routes/assistant.routes.js';
+import automationsRoutes from './routes/automations.routes.js';
 import customersRoutes from './routes/customers.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import financialRoutes from './routes/financial.routes.js';
@@ -23,6 +24,8 @@ import mercadopagoRoutes from './routes/mercadopago.routes.js';
 import n8nRoutes from './routes/n8n.routes.js';
 import ordersRoutes from './routes/orders.routes.js';
 import operatorRoutes from './routes/operator.routes.js';
+import pipelineRoutes from './routes/pipeline.routes.js';
+import pipelinesRoutes from './routes/pipelines.routes.js';
 import publicRoutes from './routes/public.routes.js';
 import leadsRoutes from './routes/leads.routes.js';
 import paymentsRoutes from './routes/payments.routes.js';
@@ -30,8 +33,12 @@ import pdvRoutes from './routes/pdv.routes.js';
 import productsRoutes from './routes/products.routes.js';
 import productionRoutes from './routes/production.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
+import storeRoutes from './routes/store.routes.js';
+import storeSettingsRoutes from './routes/store-settings.routes.js';
+import usersRoutes from './routes/users.routes.js';
 import whatsappRoutes from './routes/whatsapp.routes.js';
 import { initializeWhatsAppWebhookWorker, shutdownWhatsAppWebhookWorker } from './workers/whatsappWebhook.worker.js';
+import { seedN8nSystemWorkflows } from './startup/seed-n8n-workflows.js';
 
 // ---- Bootstrap ----
 
@@ -79,12 +86,15 @@ app.use((req, _res, next) => {
 app.use('/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/assistant', assistantRoutes);
+app.use('/api/v1/automations', automationsRoutes);
 app.use('/api/v1/public', publicRoutes);
+app.use('/api/v1/store', storeRoutes);
 app.use('/api/v1/leads', leadsRoutes);
 app.use('/api/v1/customers', customersRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/products', productsRoutes);
 app.use('/api/v1/financial-entries', financialRoutes);
+app.use('/api/v1/financeiro', financialRoutes);
 app.use('/api/v1/payments', paymentsRoutes);
 app.use('/api/v1', mercadopagoRoutes);
 app.use('/api/v1/pdv', pdvRoutes);
@@ -93,7 +103,11 @@ app.use('/api/v1/orders', ordersRoutes);
 app.use('/api/v1/production-orders', productionRoutes);
 app.use('/api/v1/operator', operatorRoutes);
 app.use('/api/v1/n8n', n8nRoutes);
+app.use('/api/v1/pipeline', pipelineRoutes);
+app.use('/api/v1/pipelines', pipelinesRoutes);
+app.use('/api/v1/settings/store', storeSettingsRoutes);
 app.use('/api/v1/settings', settingsRoutes);
+app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/webhooks/whatsapp', whatsappRoutes);
 
 // 404 handler
@@ -123,6 +137,7 @@ async function startServer(): Promise<void> {
     try {
         await ensureSettingsSingleton();
         initializeWhatsAppWebhookWorker();
+        await seedN8nSystemWorkflows();
 
         server = app.listen(config.PORT, () => {
             logger.info({ port: config.PORT, env: config.NODE_ENV }, `🌟 ORION API running on port ${config.PORT}`);

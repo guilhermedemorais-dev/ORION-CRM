@@ -1,8 +1,10 @@
 import type { QueryResultRow } from 'pg';
 import { query } from '../db/pool.js';
 import { AppError } from '../lib/errors.js';
+import { publishInboxEvent } from './inbox-events.service.js';
 import type {
     ConversationStatus,
+    InboxChannel,
     InboxConversationSummary,
     InboxConversationThread,
     InboxMessageView,
@@ -22,6 +24,7 @@ export interface CurrentUser {
 
 export interface ListInboxConversationsParams {
     status?: ConversationStatus;
+    channel?: InboxChannel;
     q?: string;
     assigned_to?: string;
     page: number;
@@ -30,36 +33,76 @@ export interface ListInboxConversationsParams {
 
 interface ConversationSummaryRow extends QueryResultRow {
     id: string;
+    channel: InboxChannel;
+    external_id: string;
     whatsapp_number: string;
+    contact_name: string | null;
+    contact_phone: string | null;
+    contact_handle: string | null;
     status: ConversationStatus;
     assigned_user_id: string | null;
     assigned_user_name: string | null;
+    assigned_at: Date | null;
     lead_id: string | null;
     lead_name: string | null;
     customer_id: string | null;
     customer_name: string | null;
+    pipeline_id: string | null;
+    pipeline_name: string | null;
+    pipeline_slug: string | null;
+    stage_id: string | null;
+    stage_name: string | null;
+    stage_color: string | null;
     last_message_preview: string | null;
     last_message_at: Date | null;
+    unread_count: number;
 }
 
 interface MessageRow extends QueryResultRow {
     id: string;
     meta_message_id: string | null;
+    external_id: string | null;
     direction: MessageDirection;
     type: MessageType;
     content: string | null;
     media_url: string | null;
+    media_mime: string | null;
+    media_size: number | null;
     status: MessageStatus;
     is_automated: boolean;
+    is_quick_reply: boolean;
     created_at: Date;
     sent_by_user_id: string | null;
     sent_by_user_name: string | null;
 }
 
+interface QuickReplyRow extends QueryResultRow {
+    id: string;
+    title: string;
+    body: string;
+    category: string | null;
+    created_at: Date;
+    updated_at: Date;
+}
+
+interface ChannelIntegrationRow extends QueryResultRow {
+    id: string;
+    channel: InboxChannel;
+    is_active: boolean;
+    webhook_url: string | null;
+    created_at: Date;
+    updated_at: Date;
+}
+
 function mapConversation(row: ConversationSummaryRow): InboxConversationSummary {
     return {
         id: row.id,
+        channel: row.channel,
+        external_id: row.external_id,
         whatsapp_number: row.whatsapp_number,
+        contact_name: row.contact_name,
+        contact_phone: row.contact_phone,
+        contact_handle: row.contact_handle,
         status: row.status,
         assigned_to: row.assigned_user_id && row.assigned_user_name
             ? {
@@ -67,6 +110,7 @@ function mapConversation(row: ConversationSummaryRow): InboxConversationSummary 
                 name: row.assigned_user_name,
             }
             : null,
+        assigned_at: row.assigned_at,
         lead: row.lead_id
             ? {
                 id: row.lead_id,
@@ -79,9 +123,23 @@ function mapConversation(row: ConversationSummaryRow): InboxConversationSummary 
                 name: row.customer_name,
             }
             : null,
+        pipeline: row.pipeline_id && row.pipeline_name && row.pipeline_slug
+            ? {
+                id: row.pipeline_id,
+                slug: row.pipeline_slug,
+                name: row.pipeline_name,
+            }
+            : null,
+        stage: row.stage_id && row.stage_name && row.stage_color
+            ? {
+                id: row.stage_id,
+                name: row.stage_name,
+                color: row.stage_color,
+            }
+            : null,
         last_message_preview: row.last_message_preview,
         last_message_at: row.last_message_at,
-        unread_count: 0,
+        unread_count: row.unread_count,
     };
 }
 
@@ -89,12 +147,16 @@ function mapMessage(row: MessageRow): InboxMessageView {
     return {
         id: row.id,
         meta_message_id: row.meta_message_id,
+        external_id: row.external_id,
         direction: row.direction,
         type: row.type,
         content: row.content,
         media_url: row.media_url,
+        media_mime: row.media_mime,
+        media_size: row.media_size,
         status: row.status,
         is_automated: row.is_automated,
+        is_quick_reply: row.is_quick_reply,
         sent_by: row.sent_by_user_id && row.sent_by_user_name
             ? {
                 id: row.sent_by_user_id,
@@ -103,6 +165,61 @@ function mapMessage(row: MessageRow): InboxMessageView {
             : null,
         created_at: row.created_at,
     };
+}
+
+async function resolveDefaultLeadContext(): Promise<{
+    pipelineId: string;
+    stageId: string | null;
+}> {
+    const pipelineResult = await query<{ id: string }>(
+        `SELECT id
+         FROM pipelines
+         WHERE slug = 'leads'
+         ORDER BY is_default DESC, created_at ASC
+         LIMIT 1`
+    );
+
+    const pipelineId = pipelineResult.rows[0]?.id;
+    if (!pipelineId) {
+        throw AppError.serviceUnavailable('PIPELINE_DEFAULT_MISSING', 'Pipeline padrão de leads não encontrado.');
+    }
+
+    const stageResult = await query<{ id: string }>(
+        `SELECT id
+         FROM pipeline_stages
+         WHERE pipeline_id = $1
+         ORDER BY position ASC
+         LIMIT 1`,
+        [pipelineId]
+    );
+
+    return {
+        pipelineId,
+        stageId: stageResult.rows[0]?.id ?? null,
+    };
+}
+
+export async function getQuickReplyById(id: string): Promise<QuickReplyRow | null> {
+    const result = await query<QuickReplyRow>(
+        `SELECT id, title, body, category, created_at, updated_at
+         FROM quick_replies
+         WHERE id = $1
+         LIMIT 1`,
+        [id]
+    );
+
+    return result.rows[0] ?? null;
+}
+
+export async function buildIdentificationMessage(currentUser: CurrentUser): Promise<string> {
+    const settingsResult = await query<{ company_name: string }>(
+        'SELECT company_name FROM settings LIMIT 1'
+    );
+
+    const companyName = settingsResult.rows[0]?.company_name?.trim() || 'ORION';
+    const roleLabel = currentUser.role === 'ADMIN' ? 'gestor' : 'atendente';
+
+    return `Olá! Sou ${currentUser.name}, ${roleLabel} da ${companyName}. Vou seguir com o seu atendimento por aqui.`;
 }
 
 function buildScopedConversationFilter(currentUser: CurrentUser, values: unknown[], alias = 'c'): string | null {
@@ -133,20 +250,35 @@ async function getConversationRowById(conversationId: string): Promise<Conversat
     const result = await query<ConversationSummaryRow>(
         `SELECT
             c.id,
+            c.channel,
+            c.external_id,
             c.whatsapp_number,
+            c.contact_name,
+            c.contact_phone,
+            c.contact_handle,
             c.status,
             c.last_message_at,
+            c.unread_count,
             assigned_user.id AS assigned_user_id,
             assigned_user.name AS assigned_user_name,
+            c.assigned_at,
             l.id AS lead_id,
             l.name AS lead_name,
             cu.id AS customer_id,
             cu.name AS customer_name,
+            p.id AS pipeline_id,
+            p.name AS pipeline_name,
+            p.slug AS pipeline_slug,
+            ps.id AS stage_id,
+            ps.name AS stage_name,
+            ps.color AS stage_color,
             last_message.content AS last_message_preview
           FROM conversations c
           LEFT JOIN users assigned_user ON assigned_user.id = c.assigned_to
           LEFT JOIN leads l ON l.id = c.lead_id
           LEFT JOIN customers cu ON cu.id = c.customer_id
+          LEFT JOIN pipelines p ON p.id = c.pipeline_id
+          LEFT JOIN pipeline_stages ps ON ps.id = c.stage_id
           LEFT JOIN LATERAL (
             SELECT m.content
             FROM messages m
@@ -166,24 +298,34 @@ async function resolveConversationLinks(inbound: ParsedWhatsAppInboundEvent): Pr
     leadId: string | null;
     customerId: string | null;
 }> {
+    const contactPhone = inbound.contact_phone ?? inbound.whatsapp_number;
     const customerResult = await query<{ id: string }>(
         'SELECT id FROM customers WHERE whatsapp_number = $1 LIMIT 1',
-        [inbound.whatsapp_number]
+        [contactPhone]
     );
     const customerId = customerResult.rows[0]?.id ?? null;
 
     const leadResult = await query<{ id: string }>(
         'SELECT id FROM leads WHERE whatsapp_number = $1 LIMIT 1',
-        [inbound.whatsapp_number]
+        [contactPhone]
     );
     let leadId = leadResult.rows[0]?.id ?? null;
 
     if (!leadId && !customerId) {
+        const defaultLeadContext = await resolveDefaultLeadContext();
         const createdLead = await query<{ id: string }>(
-            `INSERT INTO leads (whatsapp_number, name, source, stage, last_interaction_at)
-             VALUES ($1, $2, 'WHATSAPP', 'NOVO', NOW())
+            `INSERT INTO leads (
+                whatsapp_number,
+                name,
+                source,
+                stage,
+                pipeline_id,
+                stage_id,
+                last_interaction_at
+             )
+             VALUES ($1, $2, 'WHATSAPP', 'NOVO', $3, $4, NOW())
              RETURNING id`,
-            [inbound.whatsapp_number, inbound.profile_name]
+            [contactPhone, inbound.profile_name, defaultLeadContext.pipelineId, defaultLeadContext.stageId]
         );
         leadId = createdLead.rows[0]?.id ?? null;
     } else if (leadId) {
@@ -234,11 +376,18 @@ export async function listConversations(
         filters.push(`c.assigned_to = $${baseValues.length}`);
     }
 
+    if (params.channel) {
+        baseValues.push(params.channel);
+        filters.push(`c.channel = $${baseValues.length}::inbox_channel`);
+    }
+
     if (params.q) {
         baseValues.push(`%${params.q}%`);
         const searchIndex = baseValues.length;
         filters.push(`(
             c.whatsapp_number ILIKE $${searchIndex}
+            OR COALESCE(c.contact_name, '') ILIKE $${searchIndex}
+            OR COALESCE(c.contact_handle, '') ILIKE $${searchIndex}
             OR COALESCE(l.name, '') ILIKE $${searchIndex}
             OR COALESCE(cu.name, '') ILIKE $${searchIndex}
         )`);
@@ -264,20 +413,35 @@ export async function listConversations(
     const result = await query<ConversationSummaryRow>(
         `SELECT
             c.id,
+            c.channel,
+            c.external_id,
             c.whatsapp_number,
+            c.contact_name,
+            c.contact_phone,
+            c.contact_handle,
             c.status,
             c.last_message_at,
+            c.unread_count,
             assigned_user.id AS assigned_user_id,
             assigned_user.name AS assigned_user_name,
+            c.assigned_at,
             l.id AS lead_id,
             l.name AS lead_name,
             cu.id AS customer_id,
             cu.name AS customer_name,
+            p.id AS pipeline_id,
+            p.name AS pipeline_name,
+            p.slug AS pipeline_slug,
+            ps.id AS stage_id,
+            ps.name AS stage_name,
+            ps.color AS stage_color,
             last_message.content AS last_message_preview
           FROM conversations c
           LEFT JOIN users assigned_user ON assigned_user.id = c.assigned_to
           LEFT JOIN leads l ON l.id = c.lead_id
           LEFT JOIN customers cu ON cu.id = c.customer_id
+          LEFT JOIN pipelines p ON p.id = c.pipeline_id
+          LEFT JOIN pipeline_stages ps ON ps.id = c.stage_id
           LEFT JOIN LATERAL (
             SELECT m.content
             FROM messages m
@@ -320,11 +484,19 @@ export async function getConversationById(
 
     return {
         id: summary.id,
+        channel: summary.channel,
+        external_id: summary.external_id,
         whatsapp_number: summary.whatsapp_number,
+        contact_name: summary.contact_name,
+        contact_phone: summary.contact_phone,
+        contact_handle: summary.contact_handle,
         status: summary.status,
         assigned_to: summary.assigned_to,
+        assigned_at: summary.assigned_at,
         lead: summary.lead,
         customer: summary.customer,
+        pipeline: summary.pipeline,
+        stage: summary.stage,
         last_message_preview: summary.last_message_preview,
         last_message_at: summary.last_message_at,
     };
@@ -336,16 +508,27 @@ export async function getConversationThread(
 ): Promise<InboxConversationThread> {
     const conversation = await getConversationById(conversationId, currentUser);
 
+    await query(
+        `UPDATE conversations
+         SET unread_count = 0
+         WHERE id = $1`,
+        [conversationId]
+    );
+
     const messagesResult = await query<MessageRow>(
         `SELECT
             m.id,
             m.meta_message_id,
+            m.external_id,
             m.direction,
             m.type,
             m.content,
             m.media_url,
+            m.media_mime,
+            m.media_size,
             m.status,
             m.is_automated,
+            m.is_quick_reply,
             m.created_at,
             sender.id AS sent_by_user_id,
             sender.name AS sent_by_user_name
@@ -359,11 +542,19 @@ export async function getConversationThread(
     return {
         conversation: {
             id: conversation.id,
+            channel: conversation.channel,
+            external_id: conversation.external_id,
             whatsapp_number: conversation.whatsapp_number,
+            contact_name: conversation.contact_name,
+            contact_phone: conversation.contact_phone,
+            contact_handle: conversation.contact_handle,
             status: conversation.status,
             assigned_to: conversation.assigned_to,
+            assigned_at: conversation.assigned_at,
             lead: conversation.lead,
             customer: conversation.customer,
+            pipeline: conversation.pipeline,
+            stage: conversation.stage,
         },
         messages: messagesResult.rows.map(mapMessage),
     };
@@ -373,11 +564,27 @@ export async function upsertConversationFromInbound(inbound: ParsedWhatsAppInbou
     id: string;
 }> {
     const links = await resolveConversationLinks(inbound);
+    let linkedLead: { pipeline_id: string; stage_id: string | null } | null = null;
+    if (links.leadId) {
+        const leadContext = await query<{ pipeline_id: string; stage_id: string | null }>(
+            `SELECT pipeline_id, stage_id
+             FROM leads
+             WHERE id = $1
+             LIMIT 1`,
+            [links.leadId]
+        );
+        linkedLead = leadContext.rows[0] ?? null;
+    }
+    const contactPhone = inbound.contact_phone ?? inbound.whatsapp_number;
 
     const existingConversation = await query<{ id: string }>(
         `SELECT id
          FROM conversations
-         WHERE whatsapp_number = $1
+         WHERE channel = $1::inbox_channel
+           AND (
+             external_id = $2
+             OR ($1 = 'whatsapp' AND whatsapp_number = $3)
+           )
            AND status <> 'ENCERRADA'
          ORDER BY
            CASE status
@@ -388,7 +595,7 @@ export async function upsertConversationFromInbound(inbound: ParsedWhatsAppInbou
            END,
            updated_at DESC
          LIMIT 1`,
-        [inbound.whatsapp_number]
+        [inbound.channel, inbound.external_conversation_id, contactPhone]
     );
 
     const currentConversationId = existingConversation.rows[0]?.id;
@@ -397,33 +604,77 @@ export async function upsertConversationFromInbound(inbound: ParsedWhatsAppInbou
         await query(
             `UPDATE conversations
              SET
-               lead_id = COALESCE($2, lead_id),
-               customer_id = COALESCE($3, customer_id),
+               contact_name = COALESCE($2, contact_name),
+               contact_phone = COALESCE($3, contact_phone),
+               contact_handle = COALESCE($4, contact_handle),
+               lead_id = COALESCE($5, lead_id),
+               customer_id = COALESCE($6, customer_id),
+               pipeline_id = COALESCE($7, pipeline_id),
+               stage_id = COALESCE($8, stage_id),
                last_message_at = NOW(),
                updated_at = NOW()
              WHERE id = $1`,
-            [currentConversationId, links.leadId, links.customerId]
+            [
+                currentConversationId,
+                inbound.profile_name,
+                contactPhone,
+                inbound.contact_handle,
+                links.leadId,
+                links.customerId,
+                linkedLead?.pipeline_id ?? null,
+                linkedLead?.stage_id ?? null,
+            ]
         );
+
+        publishInboxEvent({
+            type: 'conversation.updated',
+            conversationId: currentConversationId,
+            source: 'inbound',
+        });
 
         return { id: currentConversationId };
     }
 
     const createdConversation = await query<{ id: string }>(
         `INSERT INTO conversations (
+            channel,
+            external_id,
             whatsapp_number,
+            contact_name,
+            contact_phone,
+            contact_handle,
             lead_id,
             customer_id,
+            pipeline_id,
+            stage_id,
             status,
             last_message_at
-          ) VALUES ($1, $2, $3, 'BOT', NOW())
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'BOT', NOW())
           RETURNING id`,
-        [inbound.whatsapp_number, links.leadId, links.customerId]
+        [
+            inbound.channel,
+            inbound.external_conversation_id,
+            contactPhone,
+            inbound.profile_name,
+            contactPhone,
+            inbound.contact_handle,
+            links.leadId,
+            links.customerId,
+            linkedLead?.pipeline_id ?? null,
+            linkedLead?.stage_id ?? null,
+        ]
     );
 
     const createdConversationId = createdConversation.rows[0]?.id;
     if (!createdConversationId) {
         throw AppError.serviceUnavailable('INBOX_WRITE_FAILED', 'Não foi possível criar a conversa.');
     }
+
+    publishInboxEvent({
+        type: 'conversation.created',
+        conversationId: createdConversationId,
+        source: 'inbound',
+    });
 
     return {
         id: createdConversationId,
@@ -433,9 +684,12 @@ export async function upsertConversationFromInbound(inbound: ParsedWhatsAppInbou
 export async function appendInboundMessage(input: {
     conversationId: string;
     metaMessageId: string;
+    externalId?: string | null;
     type: MessageType;
     content: string | null;
     mediaUrl: string | null;
+    mediaMime?: string | null;
+    mediaSize?: number | null;
     isAutomated?: boolean;
 }): Promise<InboxMessageView | null> {
     try {
@@ -443,41 +697,61 @@ export async function appendInboundMessage(input: {
             `INSERT INTO messages (
                 conversation_id,
                 meta_message_id,
+                external_id,
                 direction,
                 type,
                 content,
                 media_url,
+                media_mime,
+                media_size,
                 status,
-                is_automated
-              ) VALUES ($1, $2, 'INBOUND', $3, $4, $5, 'READ', $6)
+                is_automated,
+                is_quick_reply
+              ) VALUES ($1, $2, $3, 'INBOUND', $4, $5, $6, $7, $8, 'READ', $9, false)
               RETURNING
                 id,
                 meta_message_id,
+                external_id,
                 direction,
                 type,
                 content,
                 media_url,
+                media_mime,
+                media_size,
                 status,
                 is_automated,
+                is_quick_reply,
                 created_at,
                 NULL::uuid AS sent_by_user_id,
                 NULL::text AS sent_by_user_name`,
             [
                 input.conversationId,
                 input.metaMessageId,
+                input.externalId ?? input.metaMessageId,
                 input.type,
                 input.content,
                 input.mediaUrl,
+                input.mediaMime ?? null,
+                input.mediaSize ?? null,
                 input.isAutomated ?? false,
             ]
         );
 
         await query(
             `UPDATE conversations
-             SET last_message_at = NOW(), updated_at = NOW()
+             SET
+               last_message_at = NOW(),
+               unread_count = unread_count + 1,
+               updated_at = NOW()
              WHERE id = $1`,
             [input.conversationId]
         );
+
+        publishInboxEvent({
+            type: 'message.created',
+            conversationId: input.conversationId,
+            source: 'inbound',
+        });
 
         const row = result.rows[0];
         if (!row) {
@@ -499,44 +773,54 @@ export async function appendInboundMessage(input: {
 export async function appendOutboundMessage(input: {
     conversationId: string;
     metaMessageId: string | null;
+    externalId?: string | null;
     type: MessageType;
     content: string;
     sentBy: string;
     sentByName: string;
     status: MessageStatus;
     isAutomated: boolean;
+    isQuickReply?: boolean;
 }): Promise<InboxMessageView> {
     const result = await query<MessageRow>(
         `INSERT INTO messages (
             conversation_id,
             meta_message_id,
+            external_id,
             direction,
             type,
             content,
             sent_by,
             status,
-            is_automated
-          ) VALUES ($1, $2, 'OUTBOUND', $3, $4, $5, $6, $7)
+            is_automated,
+            is_quick_reply
+          ) VALUES ($1, $2, $3, 'OUTBOUND', $4, $5, $6, $7, $8, $9)
           RETURNING
             id,
             meta_message_id,
+            external_id,
             direction,
             type,
             content,
             media_url,
+            media_mime,
+            media_size,
             status,
             is_automated,
+            is_quick_reply,
             created_at,
-            $5::uuid AS sent_by_user_id,
-            $8::text AS sent_by_user_name`,
+            $6::uuid AS sent_by_user_id,
+            $10::text AS sent_by_user_name`,
         [
             input.conversationId,
             input.metaMessageId,
+            input.externalId ?? input.metaMessageId,
             input.type,
             input.content,
             input.sentBy,
             input.status,
             input.isAutomated,
+            input.isQuickReply ?? false,
             input.sentByName,
         ]
     );
@@ -545,11 +829,18 @@ export async function appendOutboundMessage(input: {
         `UPDATE conversations
          SET
            status = 'EM_ATENDIMENTO',
+           unread_count = 0,
            last_message_at = NOW(),
            updated_at = NOW()
          WHERE id = $1`,
         [input.conversationId]
     );
+
+    publishInboxEvent({
+        type: 'message.created',
+        conversationId: input.conversationId,
+        source: input.isAutomated ? 'system' : 'outbound',
+    });
 
     const row = result.rows[0];
     if (!row) {
@@ -596,11 +887,18 @@ export async function assignConversationToCurrentUser(
         `UPDATE conversations
          SET
            assigned_to = $2,
+           assigned_at = NOW(),
            status = 'EM_ATENDIMENTO',
            updated_at = NOW()
          WHERE id = $1`,
         [conversationId, assignedTo]
     );
+
+    publishInboxEvent({
+        type: 'conversation.updated',
+        conversationId,
+        source: 'system',
+    });
 
     return getConversationById(conversationId, {
         ...currentUser,
@@ -631,6 +929,12 @@ export async function closeConversation(
         [conversationId]
     );
 
+    publishInboxEvent({
+        type: 'conversation.updated',
+        conversationId,
+        source: 'system',
+    });
+
     return getConversationById(conversationId, currentUser);
 }
 
@@ -653,10 +957,156 @@ export async function handoffConversation(
          SET
            status = 'AGUARDANDO_HUMANO',
            assigned_to = NULL,
+           assigned_at = NULL,
            updated_at = NOW()
          WHERE id = $1`,
         [conversationId]
     );
 
+    publishInboxEvent({
+        type: 'conversation.updated',
+        conversationId,
+        source: 'system',
+    });
+
     return getConversationById(conversationId, currentUser);
+}
+
+export async function listQuickReplies(search?: string): Promise<Array<{
+    id: string;
+    title: string;
+    body: string;
+    category: string | null;
+    created_at: Date;
+    updated_at: Date;
+}>> {
+    const values: unknown[] = [];
+    let whereClause = '';
+
+    if (search?.trim()) {
+        values.push(`%${search.trim()}%`);
+        whereClause = `WHERE (
+            title ILIKE $1
+            OR body ILIKE $1
+            OR COALESCE(category, '') ILIKE $1
+        )`;
+    }
+
+    const result = await query<QuickReplyRow>(
+        `SELECT id, title, body, category, created_at, updated_at
+         FROM quick_replies
+         ${whereClause}
+         ORDER BY category NULLS LAST, title ASC`,
+        values
+    );
+
+    return result.rows;
+}
+
+export async function createQuickReply(input: {
+    title: string;
+    body: string;
+    category?: string | null;
+    createdBy: string;
+}): Promise<QuickReplyRow> {
+    const result = await query<QuickReplyRow>(
+        `INSERT INTO quick_replies (title, body, category, created_by)
+         VALUES ($1, $2, NULLIF($3, ''), $4)
+         RETURNING id, title, body, category, created_at, updated_at`,
+        [input.title, input.body, input.category ?? null, input.createdBy]
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+        throw AppError.serviceUnavailable('INBOX_QUICK_REPLY_WRITE_FAILED', 'Não foi possível criar a mensagem pronta.');
+    }
+
+    return row;
+}
+
+export async function updateQuickReply(input: {
+    id: string;
+    title: string;
+    body: string;
+    category?: string | null;
+}): Promise<QuickReplyRow> {
+    const result = await query<QuickReplyRow>(
+        `UPDATE quick_replies
+         SET
+           title = $2,
+           body = $3,
+           category = NULLIF($4, ''),
+           updated_at = NOW()
+         WHERE id = $1
+         RETURNING id, title, body, category, created_at, updated_at`,
+        [input.id, input.title, input.body, input.category ?? null]
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+        throw AppError.notFound('Mensagem pronta não encontrada.');
+    }
+
+    return row;
+}
+
+export async function deleteQuickReply(id: string): Promise<void> {
+    const result = await query<{ id: string }>(
+        `DELETE FROM quick_replies
+         WHERE id = $1
+         RETURNING id`,
+        [id]
+    );
+
+    if (!result.rows[0]) {
+        throw AppError.notFound('Mensagem pronta não encontrada.');
+    }
+}
+
+export async function listChannelIntegrations(): Promise<Array<{
+    id: string;
+    channel: InboxChannel;
+    is_active: boolean;
+    webhook_url: string | null;
+    created_at: Date;
+    updated_at: Date;
+}>> {
+    const result = await query<ChannelIntegrationRow>(
+        `SELECT id, channel, is_active, webhook_url, created_at, updated_at
+         FROM channel_integrations
+         ORDER BY
+           CASE channel
+             WHEN 'whatsapp' THEN 1
+             WHEN 'instagram' THEN 2
+             WHEN 'telegram' THEN 3
+             WHEN 'tiktok' THEN 4
+             ELSE 5
+           END`
+    );
+
+    return result.rows;
+}
+
+export async function updateChannelIntegration(input: {
+    channel: InboxChannel;
+    isActive: boolean;
+    webhookUrl?: string | null;
+}): Promise<ChannelIntegrationRow> {
+    const result = await query<ChannelIntegrationRow>(
+        `UPDATE channel_integrations
+         SET
+           is_active = $2,
+           webhook_url = COALESCE($3, webhook_url),
+           updated_at = NOW()
+         WHERE channel = $1::inbox_channel
+         RETURNING id, channel, is_active, webhook_url, created_at, updated_at`,
+        [input.channel, input.isActive, input.webhookUrl ?? null]
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+        throw AppError.notFound('Integração de canal não encontrada.');
+    }
+
+    return row;
 }
