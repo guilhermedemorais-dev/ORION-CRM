@@ -67,6 +67,11 @@ export function Sidebar({
     userName: string;
     userRole: string;
 }) {
+    const visibleGroups = navGroups.map((group) => ({
+        ...group,
+        items: group.items.filter((item) => item.href !== '/analytics' || userRole === 'ADMIN'),
+    })).filter((group) => group.items.length > 0);
+
     return (
         <aside className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-white/5 bg-surface-sidebar text-white">
             <div className="border-b border-white/5 px-5 py-5">
@@ -137,7 +142,7 @@ export function Sidebar({
                     </div>
                 </div>
 
-                {navGroups.map((group) => (
+                {visibleGroups.map((group) => (
                     <div key={group.label ?? 'main'} className="mb-6 last:mb-0">
                         {group.label ? (
                             <p className="mb-3 px-3 text-[11px] font-medium uppercase tracking-[0.2em] text-gray-500">

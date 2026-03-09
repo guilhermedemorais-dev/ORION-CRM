@@ -14,6 +14,7 @@ import { closeRedis } from './db/redis.js';
 // Routes
 import healthRoutes from './routes/health.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import analyticsRoutes from './routes/analytics.routes.js';
 import assistantRoutes from './routes/assistant.routes.js';
 import automationsRoutes from './routes/automations.routes.js';
 import customersRoutes from './routes/customers.routes.js';
@@ -85,6 +86,7 @@ app.use((req, _res, next) => {
 
 app.use('/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/assistant', assistantRoutes);
 app.use('/api/v1/automations', automationsRoutes);
 app.use('/api/v1/public', publicRoutes);
