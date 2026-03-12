@@ -95,6 +95,32 @@ export function Sidebar({
             </div>
 
             <nav className="flex-1 overflow-y-auto px-4 py-5">
+                {visibleGroups.length > 0 ? (
+                    <div key={visibleGroups[0].label ?? 'main'} className="mb-6">
+                        {visibleGroups[0].label ? (
+                            <p className="mb-3 px-3 text-[11px] font-medium uppercase tracking-[0.2em] text-gray-500">
+                                {visibleGroups[0].label}
+                            </p>
+                        ) : null}
+                        <div className="space-y-1">
+                            {visibleGroups[0].items.map((item) => {
+                                const Icon = item.icon;
+
+                                return (
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-white/5 hover:text-white"
+                                    >
+                                        <Icon className="h-4 w-4 text-brand-gold" />
+                                        <span>{item.label}</span>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ) : null}
+
                 <div className="mb-6">
                     <div className="mb-3 px-3 text-[11px] font-medium uppercase tracking-[0.2em] text-gray-500">
                         Pipeline
@@ -150,7 +176,7 @@ export function Sidebar({
                     </div>
                 </div>
 
-                {visibleGroups.map((group) => (
+                {visibleGroups.slice(1).map((group) => (
                     <div key={group.label ?? 'main'} className="mb-6 last:mb-0">
                         {group.label ? (
                             <p className="mb-3 px-3 text-[11px] font-medium uppercase tracking-[0.2em] text-gray-500">

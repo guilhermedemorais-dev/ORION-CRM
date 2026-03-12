@@ -21,8 +21,10 @@ import customersRoutes from './routes/customers.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import financialRoutes from './routes/financial.routes.js';
 import inboxRoutes from './routes/inbox.routes.js';
+import integrationsRoutes from './routes/integrations.routes.js';
 import mercadopagoRoutes from './routes/mercadopago.routes.js';
 import n8nRoutes from './routes/n8n.routes.js';
+import notificationsRoutes from './routes/notifications.routes.js';
 import ordersRoutes from './routes/orders.routes.js';
 import operatorRoutes from './routes/operator.routes.js';
 import pipelineRoutes from './routes/pipeline.routes.js';
@@ -38,6 +40,7 @@ import storeRoutes from './routes/store.routes.js';
 import storeSettingsRoutes from './routes/store-settings.routes.js';
 import usersRoutes from './routes/users.routes.js';
 import whatsappRoutes from './routes/whatsapp.routes.js';
+import whatsappAdminRoutes from './routes/whatsapp-admin.routes.js';
 import { initializeWhatsAppWebhookWorker, shutdownWhatsAppWebhookWorker } from './workers/whatsappWebhook.worker.js';
 import { seedN8nSystemWorkflows } from './startup/seed-n8n-workflows.js';
 
@@ -101,6 +104,8 @@ app.use('/api/v1/payments', paymentsRoutes);
 app.use('/api/v1', mercadopagoRoutes);
 app.use('/api/v1/pdv', pdvRoutes);
 app.use('/api/v1/inbox', inboxRoutes);
+app.use('/api/v1/integrations', integrationsRoutes);
+app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/orders', ordersRoutes);
 app.use('/api/v1/production-orders', productionRoutes);
 app.use('/api/v1/operator', operatorRoutes);
@@ -109,8 +114,10 @@ app.use('/api/v1/pipeline', pipelineRoutes);
 app.use('/api/v1/pipelines', pipelinesRoutes);
 app.use('/api/v1/settings/store', storeSettingsRoutes);
 app.use('/api/v1/settings', settingsRoutes);
+app.use('/api/v1/org', settingsRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/webhooks/whatsapp', whatsappRoutes);
+app.use('/api/v1/whatsapp', whatsappAdminRoutes);
 
 // 404 handler
 app.use((_req, res) => {

@@ -16,8 +16,10 @@ export function Switch({ checked, onCheckedChange, className, disabled, ...props
             aria-checked={checked}
             disabled={disabled}
             className={cn(
-                'relative inline-flex h-6 w-11 items-center rounded-full transition',
-                checked ? 'bg-brand-gold' : 'bg-gray-300',
+                'relative inline-flex h-5 w-9 items-center rounded-full border transition',
+                checked
+                    ? 'border-brand-gold bg-brand-gold'
+                    : 'border-white/10 bg-white/10',
                 disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
                 className
             )}
@@ -30,8 +32,8 @@ export function Switch({ checked, onCheckedChange, className, disabled, ...props
         >
             <span
                 className={cn(
-                    'inline-block h-5 w-5 transform rounded-full bg-white shadow transition',
-                    checked ? 'translate-x-5' : 'translate-x-0.5'
+                    'inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition',
+                    checked ? 'translate-x-[18px]' : 'translate-x-0.5'
                 )}
             />
         </button>

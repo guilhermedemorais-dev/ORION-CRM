@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>ORION — Settings · Loja</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#080809;color:#F0EBE3;display:flex;flex-direction:column;align-items:center;padding:40px 20px 80px;gap:40px}
+
+/* ── SHELL ── */
+.shell{width:1100px;background:#0F0F11;border-radius:16px;border:1px solid rgba(255,255,255,0.06);overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,0.7)}
+
+/* ── TOP BAR ── */
+.topbar{height:52px;background:#0A0A0C;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;padding:0 24px;gap:16px}
+.topbar-logo{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:700;color:#BFA06A;letter-spacing:2px;text-transform:uppercase}
+.topbar-sep{width:1px;height:18px;background:rgba(255,255,255,0.1)}
+.topbar-path{font-size:12px;color:#A09A94;display:flex;align-items:center;gap:6px}
+.topbar-path span{color:#F0EBE3;font-weight:500}
+.topbar-actions{margin-left:auto;display:flex;gap:10px;align-items:center}
+.btn-preview{height:30px;padding:0 14px;border-radius:7px;background:transparent;border:1px solid rgba(255,255,255,0.12);font-size:11px;font-weight:600;color:#A09A94;display:flex;align-items:center;gap:6px;cursor:pointer}
+.btn-save{height:30px;padding:0 16px;border-radius:7px;background:#BFA06A;border:none;font-size:11px;font-weight:700;color:#0A0A0C;display:flex;align-items:center;gap:6px;cursor:pointer}
+
+/* ── LAYOUT ── */
+.layout{display:flex;min-height:600px}
+
+/* ── SIDEBAR TABS ── */
+.sidebar{width:200px;background:#0A0A0C;border-right:1px solid rgba(255,255,255,0.06);padding:16px 0;flex-shrink:0}
+.sidebar-section{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#3a3a42;padding:0 16px;margin:16px 0 6px}
+.sidebar-section:first-child{margin-top:0}
+.tab-item{height:36px;padding:0 16px;display:flex;align-items:center;gap:10px;font-size:12px;font-weight:500;color:#A09A94;cursor:pointer;border-left:2px solid transparent;transition:all 0.15s}
+.tab-item:hover{color:#F0EBE3;background:rgba(255,255,255,0.03)}
+.tab-item.on{color:#F0EBE3;background:rgba(191,160,106,0.08);border-left-color:#BFA06A;font-weight:600}
+.tab-icon{width:16px;height:16px;opacity:0.6;flex-shrink:0}
+.tab-item.on .tab-icon{opacity:1}
+
+/* ── CONTENT AREA ── */
+.content{flex:1;padding:24px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
+
+/* ── SECTION CARD ── */
+.card{background:#131316;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden}
+.card-header{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:12px;font-weight:700;color:#F0EBE3;text-transform:uppercase;letter-spacing:1px}
+.card-subtitle{font-size:11px;color:#A09A94;margin-top:1px}
+.card-body{padding:18px}
+
+/* ── FORM ELEMENTS ── */
+.form-grid{display:grid;gap:14px}
+.form-grid.cols2{grid-template-columns:1fr 1fr}
+.form-grid.cols3{grid-template-columns:1fr 1fr 1fr}
+.form-field{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#A09A94}
+.form-input{height:38px;background:#0F0F11;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:0 12px;font-size:13px;color:#F0EBE3;font-family:'Inter',sans-serif;display:flex;align-items:center}
+.form-input.focus{border-color:rgba(191,160,106,0.5)}
+.form-textarea{min-height:72px;background:#0F0F11;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 12px;font-size:13px;color:#F0EBE3;font-family:'Inter',sans-serif;line-height:1.5;display:flex;align-items:flex-start}
+.form-select{height:38px;background:#0F0F11;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:0 12px;font-size:13px;color:#F0EBE3;display:flex;align-items:center;justify-content:space-between}
+.form-hint{font-size:10px;color:#4a4a54;margin-top:2px}
+
+/* TOGGLE */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.toggle-row:last-child{border-bottom:none;padding-bottom:0}
+.toggle-info{display:flex;flex-direction:column;gap:2px}
+.toggle-label{font-size:13px;font-weight:500;color:#F0EBE3}
+.toggle-desc{font-size:11px;color:#A09A94}
+.toggle{width:36px;height:20px;background:rgba(191,160,106,0.3);border-radius:10px;position:relative;flex-shrink:0}
+.toggle.on{background:#BFA06A}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:7px;background:#fff;transition:left 0.15s}
+.toggle.on::after{left:19px}
+
+/* COLOR PICKER PREVIEW */
+.color-preview{width:38px;height:38px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.color-row{display:flex;gap:8px;align-items:center}
+.color-swatches{display:flex;gap:6px}
+.swatch{width:24px;height:24px;border-radius:6px;cursor:pointer;border:1.5px solid transparent}
+.swatch.on{border-color:#fff}
+
+/* UPLOAD ZONE */
+.upload-zone{border:1.5px dashed rgba(255,255,255,0.12);border-radius:10px;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;min-height:100px}
+.upload-zone:hover{border-color:rgba(191,160,106,0.4);background:rgba(191,160,106,0.03)}
+.upload-icon{color:#A09A94}
+.upload-text{font-size:12px;color:#A09A94;text-align:center}
+.upload-hint{font-size:10px;color:#3a3a42}
+.upload-preview{width:100%;height:120px;border-radius:8px;overflow:hidden;position:relative;background:linear-gradient(135deg,#1c1408,#2a1e0a);display:flex;align-items:center;justify-content:center}
+.upload-preview-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;opacity:0}
+.upload-preview:hover .upload-preview-overlay{opacity:1}
+
+/* THEME SELECTOR */
+.theme-options{display:flex;gap:12px}
+.theme-card{flex:1;border-radius:10px;overflow:hidden;border:2px solid rgba(255,255,255,0.08);cursor:pointer;position:relative}
+.theme-card.on{border-color:#BFA06A}
+.theme-preview-dark{height:70px;background:linear-gradient(135deg,#0A0A0C,#1A1A1E);display:flex;align-items:center;justify-content:center;gap:6px}
+.theme-preview-light{height:70px;background:linear-gradient(135deg,#F9F7F4,#FFFFFF);display:flex;align-items:center;justify-content:center;gap:6px}
+.theme-dot{width:8px;height:8px;border-radius:50%}
+.theme-label{padding:8px 10px;background:#1A1A1E;font-size:11px;font-weight:600;color:#F0EBE3;display:flex;align-items:center;justify-content:space-between}
+.theme-check{width:16px;height:16px;border-radius:8px;background:#BFA06A;display:flex;align-items:center;justify-content:center}
+
+/* TABLE */
+.table{width:100%;border-collapse:collapse}
+.table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#A09A94;padding:8px 12px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.06)}
+.table td{padding:10px 12px;font-size:12px;color:#F0EBE3;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle}
+.table tr:last-child td{border-bottom:none}
+.table tr:hover td{background:rgba(255,255,255,0.02)}
+.pill{height:20px;padding:0 8px;border-radius:10px;font-size:10px;font-weight:700;display:inline-flex;align-items:center}
+.pill-green{background:rgba(76,175,130,0.15);color:#4CAF82}
+.pill-amber{background:rgba(240,160,64,0.15);color:#F0A040}
+.pill-gray{background:rgba(255,255,255,0.06);color:#A09A94}
+.pill-gold{background:rgba(191,160,106,0.15);color:#BFA06A}
+.row-actions{display:flex;gap:6px}
+.icon-btn{width:28px;height:28px;border-radius:7px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#A09A94}
+.icon-btn:hover{background:rgba(255,255,255,0.08);color:#F0EBE3}
+
+/* DRAG HANDLE */
+.drag-handle{width:16px;height:16px;display:flex;flex-direction:column;justify-content:center;gap:3px;cursor:grab;opacity:0.3}
+.drag-handle span{display:block;width:12px;height:1.5px;background:#F0EBE3;border-radius:1px}
+
+/* PRODUCT ROW THUMB */
+.prod-thumb{width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0}
+.prod-thumb-img{width:100%;height:100%;background:linear-gradient(135deg,#1c1408,#2a1e0a);display:flex;align-items:center;justify-content:center}
+
+/* BADGE TAG */
+.badge-tag{height:18px;padding:0 7px;border-radius:9px;font-size:9px;font-weight:800;text-transform:uppercase;display:inline-flex;align-items:center}
+.badge-novo{background:rgba(74,158,255,0.2);color:#4A9EFF}
+.badge-custom{background:rgba(191,160,106,0.2);color:#BFA06A}
+.badge-sale{background:rgba(224,82,82,0.2);color:#E05252}
+
+/* INLINE TOGGLE SMALL */
+.toggle-sm{width:28px;height:16px;border-radius:8px;background:rgba(255,255,255,0.1);position:relative;flex-shrink:0;cursor:pointer}
+.toggle-sm.on{background:#BFA06A}
+.toggle-sm::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:6px;background:#fff}
+.toggle-sm.on::after{left:14px}
+
+/* CTA AREA */
+.btn-add{height:34px;padding:0 14px;border-radius:8px;background:rgba(191,160,106,0.1);border:1px solid rgba(191,160,106,0.25);font-size:11px;font-weight:700;color:#BFA06A;display:flex;align-items:center;gap:6px;cursor:pointer}
+.btn-add:hover{background:rgba(191,160,106,0.18)}
+
+/* DOMAIN STATUS */
+.domain-status{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:8px;font-size:12px}
+.domain-status.pending{background:rgba(240,160,64,0.08);border:1px solid rgba(240,160,64,0.2);color:#F0A040}
+.domain-status.verified{background:rgba(76,175,130,0.08);border:1px solid rgba(76,175,130,0.2);color:#4CAF82}
+
+/* DNS TABLE */
+.dns-table{width:100%;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.06)}
+.dns-row{display:grid;grid-template-columns:80px 80px 1fr;border-bottom:1px solid rgba(255,255,255,0.04)}
+.dns-row:last-child{border-bottom:none}
+.dns-cell{padding:10px 12px;font-size:11px}
+.dns-head{background:#0A0A0C;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#A09A94}
+.dns-val{font-family:monospace;color:#F0EBE3;font-size:11px}
+.dns-copy{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:#BFA06A;cursor:pointer;margin-top:2px}
+
+/* MP KEY */
+.mp-key-row{display:flex;gap:8px;align-items:center}
+.mp-key-input{flex:1;height:38px;background:#0F0F11;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:0 12px;font-size:12px;color:#A09A94;font-family:monospace;display:flex;align-items:center;letter-spacing:1px}
+.mp-key-toggle{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;color:#A09A94;cursor:pointer;flex-shrink:0}
+
+/* SECTION DIVIDER */
+.divider{height:1px;background:rgba(255,255,255,0.04);margin:4px 0}
+
+/* LABEL */
+.section-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#2a2a32;text-align:center}
+
+/* PIPELINE SELECT */
+.pipeline-select-row{display:flex;gap:10px}
+.pipeline-option{flex:1;padding:12px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.08);cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.pipeline-option.on{border-color:#BFA06A;background:rgba(191,160,106,0.06)}
+.pipeline-option-name{font-size:13px;font-weight:600;color:#F0EBE3}
+.pipeline-option-stages{font-size:10px;color:#A09A94}
+
+/* WA PREVIEW */
+.wa-preview{background:#0e1a13;border-radius:10px;padding:14px;border:1px solid rgba(37,211,102,0.15)}
+.wa-preview-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#4CAF82;margin-bottom:10px}
+.wa-bubble{background:#1a3020;border-radius:0 10px 10px 10px;padding:10px 12px;font-size:12px;color:#d4f0dc;line-height:1.6;max-width:85%;display:inline-block}
+.wa-bubble strong{color:#4CAF82}
+
+/* CHAR COUNT */
+.char-count{font-size:10px;color:#4a4a54;text-align:right;margin-top:3px}
+</style>
+</head>
+<body>
+
+<div class="section-label">ORION CRM — /settings/loja · Painel de Configuração da Loja</div>
+
+<!-- ══════════════════════════════
+     TAB 1 — IDENTIDADE
+══════════════════════════════ -->
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar-logo">ORION</div>
+    <div class="topbar-sep"></div>
+    <div class="topbar-path">Ajustes <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg> <span>Loja</span></div>
+    <div class="topbar-actions">
+      <div class="btn-preview"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Ver Loja</div>
+      <div class="btn-save"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Salvar</div>
+    </div>
+  </div>
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-section">Aparência</div>
+      <div class="tab-item on">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        Identidade
+      </div>
+      <div class="tab-item">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        Hero Banner
+      </div>
+      <div class="sidebar-section">Catálogo</div>
+      <div class="tab-item">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h8M4 18h4"/></svg>
+        Categorias
+      </div>
+      <div class="tab-item">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        Produtos
+      </div>
+      <div class="sidebar-section">Integrações</div>
+      <div class="tab-item">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Pagamentos
+      </div>
+      <div class="tab-item">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>
+        WhatsApp
+      </div>
+      <div class="tab-item">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        Domínio
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- LOJA ATIVA -->
+      <div class="card">
+        <div class="card-body">
+          <div class="toggle-row" style="padding-top:0">
+            <div class="toggle-info">
+              <div class="toggle-label">Loja pública ativa</div>
+              <div class="toggle-desc">Quando desativada, a URL /loja retorna 404 para visitantes</div>
+            </div>
+            <div class="toggle on"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IDENTIDADE VISUAL -->
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Identidade Visual</div><div class="card-subtitle">Logo, nome e informações básicas da loja</div></div>
+        </div>
+        <div class="card-body">
+          <div class="form-grid cols2">
+            <div class="form-field" style="grid-column:1/-1">
+              <div class="form-label">Logo da loja</div>
+              <div style="display:flex;gap:14px;align-items:flex-start">
+                <div style="width:80px;height:80px;border-radius:12px;background:#1A1A1E;border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                  <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:#BFA06A;letter-spacing:2px">OR</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;flex:1">
+                  <div class="upload-zone" style="min-height:60px;padding:14px">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A09A94" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <div class="upload-text">Solte o arquivo aqui ou <span style="color:#BFA06A">clique para enviar</span></div>
+                    <div class="upload-hint">PNG, SVG ou JPG · Máx 2MB · Recomendado 200×200px</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">Nome da loja</div>
+              <div class="form-input focus">ORION Joalheria</div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">Slogan</div>
+              <div class="form-input">Joias únicas para momentos eternos</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TEMA -->
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Tema e Cores</div><div class="card-subtitle">Aparência visual da loja pública</div></div>
+        </div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:16px">
+          <div class="form-field">
+            <div class="form-label">Tema base</div>
+            <div class="theme-options">
+              <div class="theme-card on">
+                <div class="theme-preview-dark">
+                  <div class="theme-dot" style="background:#0A0A0C;border:1px solid rgba(255,255,255,0.2)"></div>
+                  <div class="theme-dot" style="background:#BFA06A"></div>
+                  <div class="theme-dot" style="background:#F0EBE3"></div>
+                </div>
+                <div class="theme-label">Dark Luxury <div class="theme-check"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0A0A0C" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div></div>
+              </div>
+              <div class="theme-card">
+                <div class="theme-preview-light">
+                  <div class="theme-dot" style="background:#F9F7F4;border:1px solid rgba(0,0,0,0.15)"></div>
+                  <div class="theme-dot" style="background:#BFA06A"></div>
+                  <div class="theme-dot" style="background:#1A1A1C"></div>
+                </div>
+                <div class="theme-label" style="background:#EFEFEC;color:#1A1A1C">Light Clean</div>
+              </div>
+            </div>
+          </div>
+          <div class="form-field">
+            <div class="form-label">Cor de destaque</div>
+            <div class="color-row">
+              <div class="color-preview" style="background:#BFA06A">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.5)" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              </div>
+              <div class="form-input focus" style="width:100px">#BFA06A</div>
+              <div class="color-swatches">
+                <div class="swatch on" style="background:#BFA06A"></div>
+                <div class="swatch" style="background:#C0C0C0"></div>
+                <div class="swatch" style="background:#E05252"></div>
+                <div class="swatch" style="background:#4A9EFF"></div>
+                <div class="swatch" style="background:#4CAF82"></div>
+              </div>
+            </div>
+            <div class="form-hint">Aplicada em botões, preços e destaques da loja</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     TAB 2 — HERO BANNER
+══════════════════════════════ -->
+<div class="section-label">Tab: Hero Banner</div>
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar-logo">ORION</div>
+    <div class="topbar-sep"></div>
+    <div class="topbar-path">Ajustes <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg> <span>Loja · Hero Banner</span></div>
+    <div class="topbar-actions">
+      <div class="btn-preview"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Ver Loja</div>
+      <div class="btn-save"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Salvar</div>
+    </div>
+  </div>
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-section">Aparência</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Identidade</div>
+      <div class="tab-item on"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Hero Banner</div>
+      <div class="sidebar-section">Catálogo</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h8M4 18h4"/></svg>Categorias</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Produtos</div>
+      <div class="sidebar-section">Integrações</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Pagamentos</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>WhatsApp</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Domínio</div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Imagem do Hero</div><div class="card-subtitle">Exibida no topo da loja pública · Ideal 1440×600px</div></div></div>
+        <div class="card-body">
+          <div class="upload-preview">
+            <svg width="60" height="60" viewBox="0 0 100 100" fill="none" stroke="#BFA06A" stroke-width="1" opacity="0.2"><circle cx="50" cy="50" r="30"/><circle cx="50" cy="50" r="18"/><circle cx="50" cy="50" r="6"/></svg>
+            <div style="position:absolute;bottom:10px;left:10px;background:rgba(0,0,0,0.6);border-radius:6px;padding:4px 10px;font-size:10px;color:#F0EBE3">hero-capa-2026.jpg · 1440×600 · 840KB</div>
+            <div class="upload-preview-overlay">
+              <div class="btn-add" style="background:rgba(0,0,0,0.7)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Trocar imagem</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Textos do Banner</div></div></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-field">
+              <div class="form-label">Eyebrow (texto acima do título)</div>
+              <div class="form-input focus">Nova Coleção 2026</div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">Título principal</div>
+              <div class="form-input">Eternamente Único</div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">Subtítulo</div>
+              <div class="form-textarea">Joias exclusivas em ouro 18k, criadas para celebrar momentos que duram para sempre.</div>
+              <div class="char-count">62 / 120</div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">Label do botão CTA</div>
+              <div class="form-input">Ver Coleção</div>
+              <div class="form-hint">Máx. 30 caracteres</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     TAB 3 — CATEGORIAS
+══════════════════════════════ -->
+<div class="section-label">Tab: Categorias</div>
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar-logo">ORION</div>
+    <div class="topbar-sep"></div>
+    <div class="topbar-path">Ajustes <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg> <span>Loja · Categorias</span></div>
+    <div class="topbar-actions">
+      <div class="btn-add">+ Nova Categoria</div>
+    </div>
+  </div>
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-section">Aparência</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Identidade</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Hero Banner</div>
+      <div class="sidebar-section">Catálogo</div>
+      <div class="tab-item on"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h8M4 18h4"/></svg>Categorias</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Produtos</div>
+      <div class="sidebar-section">Integrações</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Pagamentos</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>WhatsApp</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Domínio</div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">Categorias da Loja</div><div class="card-subtitle">Arraste para reordenar · Aparece como tabs na loja pública</div></div>
+        </div>
+        <div class="card-body" style="padding:0">
+          <table class="table">
+            <thead><tr><th style="width:32px"></th><th>Categoria</th><th>Slug</th><th>Produtos</th><th>Ativa</th><th style="width:80px">Ações</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><div class="drag-handle"><span></span><span></span><span></span></div></td>
+                <td><div style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#1c1408,#2a1e0a)"></div><span>Anéis</span></div></td>
+                <td><span style="font-family:monospace;font-size:11px;color:#A09A94">aneis</span></td>
+                <td><span class="pill pill-gold">9</span></td>
+                <td><div class="toggle-sm on"></div></td>
+                <td><div class="row-actions"><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E05252" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg></div></div></td>
+              </tr>
+              <tr>
+                <td><div class="drag-handle"><span></span><span></span><span></span></div></td>
+                <td><div style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#0a1a18,#0e2a24)"></div><span>Colares</span></div></td>
+                <td><span style="font-family:monospace;font-size:11px;color:#A09A94">colares</span></td>
+                <td><span class="pill pill-gold">6</span></td>
+                <td><div class="toggle-sm on"></div></td>
+                <td><div class="row-actions"><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E05252" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div></div></td>
+              </tr>
+              <tr>
+                <td><div class="drag-handle"><span></span><span></span><span></span></div></td>
+                <td><div style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#180a1a,#240e28)"></div><span>Brincos</span></div></td>
+                <td><span style="font-family:monospace;font-size:11px;color:#A09A94">brincos</span></td>
+                <td><span class="pill pill-gold">5</span></td>
+                <td><div class="toggle-sm on"></div></td>
+                <td><div class="row-actions"><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E05252" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div></div></td>
+              </tr>
+              <tr>
+                <td><div class="drag-handle"><span></span><span></span><span></span></div></td>
+                <td><div style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#1a100a,#2a1808)"></div><span>Personalizados</span></div></td>
+                <td><span style="font-family:monospace;font-size:11px;color:#A09A94">personalizados</span></td>
+                <td><span class="pill pill-gold">4</span></td>
+                <td><div class="toggle-sm on"></div></td>
+                <td><div class="row-actions"><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E05252" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div></div></td>
+              </tr>
+              <tr>
+                <td><div class="drag-handle"><span></span><span></span><span></span></div></td>
+                <td><div style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#0a0a14,#14141e)"></div><span>Pulseiras</span></div></td>
+                <td><span style="font-family:monospace;font-size:11px;color:#A09A94">pulseiras</span></td>
+                <td><span class="pill pill-gray">0</span></td>
+                <td><div class="toggle-sm"></div></td>
+                <td><div class="row-actions"><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E05252" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     TAB 4 — PRODUTOS
+══════════════════════════════ -->
+<div class="section-label">Tab: Produtos</div>
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar-logo">ORION</div>
+    <div class="topbar-sep"></div>
+    <div class="topbar-path">Ajustes <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg> <span>Loja · Produtos</span></div>
+    <div class="topbar-actions">
+      <div class="btn-add">+ Novo Produto</div>
+    </div>
+  </div>
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-section">Aparência</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Identidade</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Hero Banner</div>
+      <div class="sidebar-section">Catálogo</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h8M4 18h4"/></svg>Categorias</div>
+      <div class="tab-item on"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Produtos</div>
+      <div class="sidebar-section">Integrações</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Pagamentos</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>WhatsApp</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Domínio</div>
+    </div>
+    <div class="content">
+      <!-- FILTROS -->
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="form-input" style="width:220px;gap:8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A09A94" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span style="color:#A09A94;font-size:12px">Buscar produto...</span></div>
+        <div class="form-select" style="width:140px;font-size:12px">Todas categorias <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+        <div class="form-select" style="width:120px;font-size:12px">Todos os tipos <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+        <div style="margin-left:auto;font-size:11px;color:#A09A94">24 produtos</div>
+      </div>
+
+      <div class="card">
+        <div class="card-body" style="padding:0">
+          <table class="table">
+            <thead><tr><th style="width:32px"></th><th>Produto</th><th>Categoria</th><th>Tipo</th><th>Preço</th><th>Badge</th><th>Publicado</th><th style="width:80px">Ações</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><div class="drag-handle"><span></span><span></span><span></span></div></td>
+                <td><div style="display:flex;align-items:center;gap:10px"><div class="prod-thumb"><div class="prod-thumb-img"><svg width="16" height="16" viewBox="0 0 100 100" fill="none" stroke="#BFA06A" stroke-width="2" opacity=".4"><circle cx="50" cy="50" r="28"/><circle cx="50" cy="50" r="14"/></svg></div></div><div><div style="font-size:12px;font-weight:600">Anel Solitário OB 18k</div><div style="font-size:10px;color:#A09A94">anel-solitario-ob-18k</div></div></div></td>
+                <td><span style="font-size:11px;color:#A09A94">Anéis</span></td>
+                <td><span class="pill pill-gray" style="font-size:9px">Pronto</span></td>
+                <td><span style="font-size:12px;font-weight:600;color:#D4B87E">R$ 4.800</span></td>
+                <td><span class="badge-tag badge-novo">Novo</span></td>
+                <td><div class="toggle-sm on"></div></td>
+                <td><div class="row-actions"><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E05252" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div></div></td>
+              </tr>
+              <tr>
+                <td><div class="drag-handle"><span></span><span></span><span></span></div></td>
+                <td><div style="display:flex;align-items:center;gap:10px"><div class="prod-thumb"><div class="prod-thumb-img" style="background:linear-gradient(135deg,#180a1a,#240e28)"><svg width="16" height="16" viewBox="0 0 100 100" fill="none" stroke="#BFA06A" stroke-width="2" opacity=".4"><ellipse cx="50" cy="50" rx="30" ry="18"/></svg></div></div><div><div style="font-size:12px;font-weight:600">Colar Gravado Personalizado</div><div style="font-size:10px;color:#A09A94">colar-gravado-personalizado</div></div></div></td>
+                <td><span style="font-size:11px;color:#A09A94">Personalizados</span></td>
+                <td><span class="pill pill-gold" style="font-size:9px">Custom</span></td>
+                <td><span style="font-size:11px;color:#A09A94">A partir de R$ 1.800</span></td>
+                <td>—</td>
+                <td><div class="toggle-sm on"></div></td>
+                <td><div class="row-actions"><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E05252" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div></div></td>
+              </tr>
+              <tr>
+                <td><div class="drag-handle"><span></span><span></span><span></span></div></td>
+                <td><div style="display:flex;align-items:center;gap:10px"><div class="prod-thumb"><div class="prod-thumb-img" style="background:linear-gradient(135deg,#0a1a18,#0e2a24)"><svg width="16" height="16" viewBox="0 0 100 100" fill="none" stroke="#BFA06A" stroke-width="2" opacity=".4"><polygon points="50,20 65,45 80,45 68,60 73,80 50,67 27,80 32,60 20,45 35,45"/></svg></div></div><div><div style="font-size:12px;font-weight:600">Brinco Star Diamante</div><div style="font-size:10px;color:#A09A94">brinco-star-diamante</div></div></div></td>
+                <td><span style="font-size:11px;color:#A09A94">Brincos</span></td>
+                <td><span class="pill pill-gray" style="font-size:9px">Pronto</span></td>
+                <td><span style="font-size:12px;font-weight:600;color:#D4B87E">R$ 1.890</span></td>
+                <td>—</td>
+                <td><div class="toggle-sm"></div></td>
+                <td><div class="row-actions"><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E05252" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     TAB 5 — PAGAMENTOS
+══════════════════════════════ -->
+<div class="section-label">Tab: Pagamentos (Mercado Pago)</div>
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar-logo">ORION</div><div class="topbar-sep"></div>
+    <div class="topbar-path">Ajustes <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg><span>Loja · Pagamentos</span></div>
+    <div class="topbar-actions"><div class="btn-save"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Salvar</div></div>
+  </div>
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-section">Aparência</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Identidade</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Hero Banner</div>
+      <div class="sidebar-section">Catálogo</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h8M4 18h4"/></svg>Categorias</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Produtos</div>
+      <div class="sidebar-section">Integrações</div>
+      <div class="tab-item on"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Pagamentos</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>WhatsApp</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Domínio</div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Mercado Pago</div><div class="card-subtitle">Credenciais para processar pagamentos de produtos prontos</div></div><div style="display:flex;align-items:center;gap:8px"><div class="pill pill-green">● Conectado</div></div></div>
+        <div class="card-body">
+          <div class="form-grid" style="gap:14px">
+            <div class="form-field">
+              <div class="form-label">Access Token (produção)</div>
+              <div class="mp-key-row">
+                <div class="mp-key-input">APP_USR-••••••••••••••••••••••••••••••••••••••••</div>
+                <div class="mp-key-toggle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+              </div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">Public Key (produção)</div>
+              <div class="mp-key-row">
+                <div class="mp-key-input">APP_USR-••••••••-••••-••••-••••-••••••••••••</div>
+                <div class="mp-key-toggle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+              </div>
+            </div>
+            <div class="divider" style="grid-column:1/-1"></div>
+            <div class="form-field">
+              <div class="form-label">URL após pagamento aprovado</div>
+              <div class="form-input">https://orionjoalheria.com.br/loja/pedido/sucesso</div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">URL após pagamento rejeitado</div>
+              <div class="form-input">https://orionjoalheria.com.br/loja/pedido/falha</div>
+            </div>
+            <div class="form-field" style="grid-column:1/-1">
+              <div class="form-label">Webhook URL (somente leitura)</div>
+              <div class="form-input" style="color:#A09A94;font-family:monospace;font-size:11px;justify-content:space-between">https://app.orion.io/api/store/webhook/mercadopago <span style="color:#BFA06A;font-size:10px;cursor:pointer">Copiar</span></div>
+              <div class="form-hint">Configure esta URL no painel do Mercado Pago → Notificações IPN/Webhook</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Métodos de Pagamento</div></div></div>
+        <div class="card-body">
+          <div class="toggle-row">
+            <div class="toggle-info"><div class="toggle-label">Cartão de crédito</div><div class="toggle-desc">Visa, Mastercard, Elo, Amex · até 12x</div></div>
+            <div class="toggle on"></div>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info"><div class="toggle-label">PIX</div><div class="toggle-desc">Pagamento instantâneo · aprovação imediata</div></div>
+            <div class="toggle on"></div>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info"><div class="toggle-label">Boleto bancário</div><div class="toggle-desc">Prazo de compensação: 1–3 dias úteis</div></div>
+            <div class="toggle"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     TAB 6 — WHATSAPP
+══════════════════════════════ -->
+<div class="section-label">Tab: WhatsApp (Produtos Personalizados → AURORA)</div>
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar-logo">ORION</div><div class="topbar-sep"></div>
+    <div class="topbar-path">Ajustes <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg><span>Loja · WhatsApp</span></div>
+    <div class="topbar-actions"><div class="btn-save"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Salvar</div></div>
+  </div>
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-section">Aparência</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Identidade</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Hero Banner</div>
+      <div class="sidebar-section">Catálogo</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h8M4 18h4"/></svg>Categorias</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Produtos</div>
+      <div class="sidebar-section">Integrações</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Pagamentos</div>
+      <div class="tab-item on"><svg class="tab-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>WhatsApp</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Domínio</div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Número WhatsApp</div><div class="card-subtitle">Destino das solicitações de produtos personalizados</div></div></div>
+        <div class="card-body">
+          <div class="form-grid cols2">
+            <div class="form-field">
+              <div class="form-label">Número (com DDI)</div>
+              <div class="form-input focus">+55 21 98765-4321</div>
+              <div class="form-hint">Formato: +55 + DDD + número · sem espaços ou hífens</div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">Nome exibido</div>
+              <div class="form-input">ORION Joalheria</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Template de Mensagem</div><div class="card-subtitle">Mensagem pré-preenchida quando cliente clica em "Solicitar via WhatsApp"</div></div></div>
+        <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <div class="form-field">
+              <div class="form-label">Template</div>
+              <div class="form-textarea" style="min-height:90px">Olá! Tenho interesse em uma peça personalizada.
+Produto base: {{product_name}}
+Link: {{product_url}}</div>
+              <div class="char-count">85 / 300</div>
+            </div>
+            <div style="margin-top:10px;padding:10px;background:#0F0F11;border-radius:8px;border:1px solid rgba(255,255,255,0.06)">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A09A94;margin-bottom:6px">Variáveis disponíveis</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <span style="font-family:monospace;font-size:11px;background:rgba(191,160,106,0.1);color:#BFA06A;padding:2px 8px;border-radius:4px">{{product_name}}</span>
+                <span style="font-family:monospace;font-size:11px;background:rgba(191,160,106,0.1);color:#BFA06A;padding:2px 8px;border-radius:4px">{{product_url}}</span>
+                <span style="font-family:monospace;font-size:11px;background:rgba(191,160,106,0.1);color:#BFA06A;padding:2px 8px;border-radius:4px">{{store_name}}</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A09A94;margin-bottom:8px">Preview</div>
+            <div class="wa-preview">
+              <div class="wa-preview-label">💬 WhatsApp · Cliente enviará:</div>
+              <div class="wa-bubble">Olá! Tenho interesse em uma peça personalizada.<br>Produto base: <strong>Colar Gravado Personalizado</strong><br>Link: <strong>orion.app/loja/produto/colar-gravado</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Pipeline de Leads</div><div class="card-subtitle">Onde AURORA criará os leads qualificados via n8n</div></div></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+          <div class="pipeline-select-row">
+            <div class="pipeline-option on">
+              <div class="pipeline-option-name">Leads Joalheria</div>
+              <div class="pipeline-option-stages">Novo → Qualificado → Proposta → Fechado</div>
+            </div>
+            <div class="pipeline-option">
+              <div class="pipeline-option-name">Personalizados Premium</div>
+              <div class="pipeline-option-stages">Solicitação → Orçamento → Produção → Entrega</div>
+            </div>
+          </div>
+          <div class="form-field">
+            <div class="form-label">Etapa inicial dos leads criados</div>
+            <div class="form-select" style="font-size:12px">Novo Lead (1ª etapa) <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     TAB 7 — DOMÍNIO
+══════════════════════════════ -->
+<div class="section-label">Tab: Domínio Customizado</div>
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar-logo">ORION</div><div class="topbar-sep"></div>
+    <div class="topbar-path">Ajustes <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg><span>Loja · Domínio</span></div>
+    <div class="topbar-actions"><div class="btn-save"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Salvar</div></div>
+  </div>
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-section">Aparência</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Identidade</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Hero Banner</div>
+      <div class="sidebar-section">Catálogo</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h8M4 18h4"/></svg>Categorias</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Produtos</div>
+      <div class="sidebar-section">Integrações</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Pagamentos</div>
+      <div class="tab-item"><svg class="tab-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>WhatsApp</div>
+      <div class="tab-item on"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Domínio</div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">URL Padrão</div></div></div>
+        <div class="card-body">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="form-input" style="flex:1;font-family:monospace;font-size:12px;color:#A09A94">app.orion.io/loja/orion-joalheria</div>
+            <div class="btn-add" style="flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Abrir</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Domínio Customizado</div><div class="card-subtitle">Aponte seu domínio próprio para a loja</div></div></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+          <div class="form-field">
+            <div class="form-label">Seu domínio</div>
+            <div style="display:flex;gap:8px">
+              <div class="form-input focus" style="flex:1;font-family:monospace">orionjoalheria.com.br</div>
+              <div class="btn-add" style="flex-shrink:0">Verificar DNS</div>
+            </div>
+          </div>
+
+          <div class="domain-status pending">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Aguardando propagação DNS · Verificação automática a cada 1 hora
+          </div>
+
+          <div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A09A94;margin-bottom:8px">Configure no seu provedor de DNS</div>
+            <div class="dns-table">
+              <div class="dns-row">
+                <div class="dns-cell dns-head">Tipo</div>
+                <div class="dns-cell dns-head">Nome</div>
+                <div class="dns-cell dns-head">Valor</div>
+              </div>
+              <div class="dns-row">
+                <div class="dns-cell"><span class="pill pill-gold">CNAME</span></div>
+                <div class="dns-cell"><span class="dns-val">www</span></div>
+                <div class="dns-cell"><span class="dns-val">stores.orion.app</span><div class="dns-copy"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copiar</div></div>
+              </div>
+              <div class="dns-row">
+                <div class="dns-cell"><span class="pill pill-gray">A</span></div>
+                <div class="dns-cell"><span class="dns-val">@</span></div>
+                <div class="dns-cell"><span class="dns-val">189.112.43.22</span><div class="dns-copy"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copiar</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="padding:12px;background:#0F0F11;border-radius:8px;border:1px solid rgba(255,255,255,0.06);font-size:11px;color:#A09A94;line-height:1.7">
+            💡 A propagação DNS pode levar de <strong style="color:#F0EBE3">alguns minutos até 48 horas</strong> dependendo do seu provedor. Após verificação, HTTPS é ativado automaticamente via Let's Encrypt.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

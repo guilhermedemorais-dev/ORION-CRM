@@ -9,9 +9,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<ButtonVariant, string> = {
-    primary: 'bg-brand-gold text-surface-sidebar hover:bg-brand-gold-dark',
-    secondary: 'bg-canvas-card text-gray-900 border border-canvas-border hover:border-brand-gold-light',
-    ghost: 'bg-transparent text-gray-600 hover:bg-white hover:text-gray-900',
+    primary: 'border border-brand-gold bg-brand-gold text-[#0A0A0C] hover:bg-brand-gold-light hover:border-brand-gold-light',
+    secondary: 'border border-white/10 bg-white/5 text-[color:var(--orion-text)] hover:border-[color:var(--orion-gold-border)] hover:bg-[color:var(--orion-gold-bg)] hover:text-brand-gold',
+    ghost: 'border border-transparent bg-transparent text-[color:var(--orion-text-secondary)] hover:bg-white/5 hover:text-[color:var(--orion-text)]',
 };
 
 export function Button({
@@ -26,7 +26,7 @@ export function Button({
         <button
             type={type}
             className={cn(
-                'inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                'inline-flex h-9 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-35',
                 variants[variant],
                 className
             )}

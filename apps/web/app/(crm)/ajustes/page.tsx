@@ -2,7 +2,16 @@ import { redirect } from 'next/navigation';
 import { AjustesClient } from '@/components/modules/settings/AjustesClient';
 import { apiRequest } from '@/lib/api';
 import { requireSession } from '@/lib/auth';
-import type { AdminSettings, AdminUser, AdminUsersResponse } from '@/lib/ajustes-types';
+import type { AdminSettings, AdminUser, AdminUsersResponse, AjustesTab } from '@/lib/ajustes-types';
+
+const validTabs = new Set<AjustesTab>([
+    'empresa',
+    'usuarios',
+    'whatsapp',
+    'notificacoes',
+    'integracoes',
+    'fiscal',
+]);
 
 const fallbackSettings: AdminSettings = {
     company_name: 'Minha Joalheria',
@@ -23,8 +32,16 @@ const fallbackSettings: AdminSettings = {
     plan: 'starter',
 };
 
-export default async function AjustesPage() {
+export default async function AjustesPage({
+    searchParams,
+}: {
+    searchParams?: { tab?: string };
+}) {
     const session = requireSession();
+    const requestedTab = searchParams?.tab;
+    const initialTab: AjustesTab = requestedTab && validTabs.has(requestedTab as AjustesTab)
+        ? requestedTab as AjustesTab
+        : 'empresa';
 
     if (session.user.role !== 'ADMIN') {
         redirect('/dashboard');
@@ -34,7 +51,7 @@ export default async function AjustesPage() {
     let users: AdminUser[] = [];
 
     try {
-        settings = await apiRequest<AdminSettings>('/settings');
+        settings = await apiRequest<AdminSettings>('/org/settings');
     } catch {
         settings = fallbackSettings;
     }
@@ -48,6 +65,7 @@ export default async function AjustesPage() {
 
     return (
         <AjustesClient
+            initialTab={initialTab}
             initialSettings={settings}
             initialUsers={users}
             currentUserId={session.user.id}

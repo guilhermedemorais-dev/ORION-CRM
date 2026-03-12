@@ -13,8 +13,8 @@ export function EmptyState({
     return (
         <Card className="border-dashed text-center">
             <div className="mx-auto max-w-md py-6">
-                <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-                <p className="mt-2 text-sm text-gray-500">{description}</p>
+                <h3 className="text-base font-semibold text-[color:var(--orion-text)]">{title}</h3>
+                <p className="mt-2 text-sm text-[color:var(--orion-text-secondary)]">{description}</p>
                 {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
             </div>
         </Card>

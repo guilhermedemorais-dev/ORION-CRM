@@ -10,10 +10,11 @@ export function PageHeader({
     actions?: ReactNode;
 }) {
     return (
-        <div className="mb-6 flex flex-col gap-4 border-b border-canvas-border pb-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-4 border-b border-white/5 pb-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <h1 className="font-serif text-2xl font-semibold text-gray-900">{title}</h1>
-                {description ? <p className="mt-2 text-sm text-gray-500">{description}</p> : null}
+                <p className="orion-section-label">ORION CRM</p>
+                <h1 className="mt-2 font-serif text-3xl font-semibold text-[color:var(--orion-text)]">{title}</h1>
+                {description ? <p className="mt-2 max-w-3xl text-sm leading-7 text-[color:var(--orion-text-secondary)]">{description}</p> : null}
             </div>
             {actions ? <div className="flex flex-wrap items-center gap-3">{actions}</div> : null}
         </div>

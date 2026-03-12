@@ -182,7 +182,11 @@ function formatDateOnly(date: Date): string {
     return `${year}-${month}-${day}`;
 }
 
-function parseDateValue(value: string): Date {
+function parseDateValue(value: string | Date): Date {
+    if (value instanceof Date) {
+        return value;
+    }
+
     if (value.includes('T')) {
         return new Date(value);
     }

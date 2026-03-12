@@ -12,6 +12,8 @@ export function formatCurrencyFromCents(value: number): string {
     }).format(value / 100);
 }
 
+export const ORION_TIME_ZONE = 'America/Sao_Paulo';
+
 export function formatDate(value: string | Date | null | undefined): string {
     if (!value) {
         return 'Sem data';
@@ -25,6 +27,7 @@ export function formatDate(value: string | Date | null | undefined): string {
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        timeZone: ORION_TIME_ZONE,
     }).format(date);
 }
 

@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORION Financeiro — Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --gold: #C8A97A;
+    --gold-light: #E8D5B0;
+    --gold-dark: #A8895A;
+    --sidebar: #0F0F0F;
+    --canvas: #F8F7F5;
+    --white: #FFFFFF;
+    --border: #E8E5E0;
+    --text: #111827;
+    --muted: #6B7280;
+    --green: #10B981;
+    --green-bg: #D1FAE5;
+    --red: #EF4444;
+    --red-bg: #FEE2E2;
+    --blue: #3B82F6;
+    --amber: #F59E0B;
+  }
+  body { font-family: 'Inter', sans-serif; background: var(--canvas); color: var(--text); min-height: 100vh; }
+
+  /* TOPBAR */
+  .topbar {
+    height: 56px; background: var(--white); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 28px;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .page-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; }
+  .period-selector {
+    display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+  }
+  .period-btn {
+    padding: 6px 14px; font-size: 12px; font-weight: 500; background: var(--white);
+    border: none; cursor: pointer; color: var(--muted); transition: all 0.15s;
+  }
+  .period-btn.active { background: var(--gold); color: #000; font-weight: 700; }
+  .btn-primary {
+    height: 36px; padding: 0 16px; background: var(--gold); border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* MAIN */
+  .main { padding: 24px 28px; display: flex; flex-direction: column; gap: 24px; }
+
+  /* KPI CARDS */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .kpi-card {
+    background: var(--white); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; position: relative; overflow: hidden;
+  }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .kpi-card.receitas::before { background: var(--green); }
+  .kpi-card.despesas::before { background: var(--red); }
+  .kpi-card.saldo::before { background: var(--gold); }
+  .kpi-card.comissoes::before { background: var(--blue); }
+  .kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin-bottom: 8px; }
+  .kpi-value { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .kpi-value.green { color: var(--green); }
+  .kpi-value.red { color: var(--red); }
+  .kpi-value.gold { color: var(--gold-dark); }
+  .kpi-value.blue { color: var(--blue); }
+  .kpi-delta { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+  .delta-up { color: var(--green); }
+  .delta-down { color: var(--red); }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* CHARTS ROW */
+  .charts-row { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
+  .chart-card {
+    background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+  }
+  .chart-title { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .chart-sub { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+
+  /* FAKE BAR CHART */
+  .bar-chart { display: flex; align-items: flex-end; gap: 10px; height: 140px; }
+  .bar-group { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+  .bars { display: flex; gap: 3px; align-items: flex-end; height: 120px; }
+  .bar { border-radius: 4px 4px 0 0; width: 14px; transition: all 0.2s; cursor: pointer; }
+  .bar:hover { opacity: 0.8; }
+  .bar.receita { background: var(--green); }
+  .bar.despesa { background: var(--red-bg); border: 1px solid #FCA5A5; }
+  .bar-label { font-size: 10px; color: var(--muted); }
+  .chart-legend { display: flex; gap: 16px; margin-top: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* DONUT */
+  .donut-wrap { display: flex; flex-direction: column; align-items: center; }
+  .donut-svg { margin: 8px 0; }
+  .donut-center { font-family: 'Playfair Display', serif; font-size: 13px; fill: var(--text); font-weight: 700; }
+  .donut-legend { width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  .donut-row { display: flex; align-items: center; justify-content: space-between; }
+  .donut-label { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+  .donut-pct { font-size: 12px; font-weight: 700; color: var(--text); }
+  .donut-bar-bg { height: 4px; background: var(--canvas); border-radius: 2px; margin-top: 2px; }
+  .donut-bar-fill { height: 4px; border-radius: 2px; }
+
+  /* COMISSÕES */
+  .comissoes-card {
+    background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+  }
+  .comissoes-list { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+  .comissao-row {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+    background: var(--canvas); border-radius: 8px; border: 1px solid var(--border);
+  }
+  .comissao-avatar {
+    width: 34px; height: 34px; border-radius: 50%; background: var(--gold-light);
+    display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;
+    color: var(--gold-dark); flex-shrink: 0;
+  }
+  .comissao-info { flex: 1; }
+  .comissao-name { font-size: 13px; font-weight: 600; }
+  .comissao-meta { font-size: 11px; color: var(--muted); }
+  .comissao-valor { text-align: right; }
+  .comissao-valor-num { font-size: 14px; font-weight: 700; color: var(--blue); font-family: 'Playfair Display', serif; }
+  .comissao-pct { font-size: 11px; color: var(--muted); }
+  .comissao-bar-wrap { width: 80px; }
+  .comissao-bar-bg { height: 5px; background: var(--border); border-radius: 3px; }
+  .comissao-bar-fill { height: 5px; border-radius: 3px; background: var(--blue); }
+
+  /* LANÇAMENTOS TABLE */
+  .table-card {
+    background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+  }
+  .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .table-filters { display: flex; gap: 8px; }
+  .filter-pill {
+    padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    border: 1px solid var(--border); background: var(--white); color: var(--muted);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .filter-pill.active { background: var(--gold); border-color: var(--gold); color: #000; font-weight: 700; }
+  .search-input {
+    height: 34px; border: 1px solid var(--border); border-radius: 8px; padding: 0 12px;
+    font-size: 13px; font-family: 'Inter', sans-serif; outline: none; width: 200px;
+  }
+  .search-input:focus { border-color: var(--gold); }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--muted); padding: 8px 12px; border-bottom: 1px solid var(--border);
+  }
+  td { padding: 12px 12px; font-size: 13px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--canvas); }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+  }
+  .badge.receita { background: var(--green-bg); color: #065F46; }
+  .badge.despesa { background: var(--red-bg); color: #991B1B; }
+  .badge.pendente { background: #FEF3C7; color: #92400E; }
+  .valor-pos { color: var(--green); font-weight: 700; font-family: 'Playfair Display', serif; }
+  .valor-neg { color: var(--red); font-weight: 700; font-family: 'Playfair Display', serif; }
+  .comprovante-btn { color: var(--gold-dark); font-size: 12px; cursor: pointer; font-weight: 500; }
+  .pagination { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
+  .page-info { font-size: 12px; color: var(--muted); }
+  .page-btns { display: flex; gap: 4px; }
+  .page-btn {
+    width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--white); font-size: 12px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+  }
+  .page-btn.active { background: var(--gold); border-color: var(--gold); font-weight: 700; }
+
+  /* MODAL NOVO LANÇAMENTO */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex;
+    align-items: center; justify-content: center; z-index: 100;
+  }
+  .modal {
+    background: var(--white); border-radius: 16px; padding: 28px; width: 440px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+  .form-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-input, .form-select {
+    height: 38px; border: 1px solid var(--border); border-radius: 8px; padding: 0 12px;
+    font-size: 13px; font-family: 'Inter', sans-serif; outline: none; width: 100%;
+    background: var(--white);
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--gold); }
+  .type-toggle { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .type-btn {
+    flex: 1; height: 38px; border: none; font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s;
+    background: var(--white); color: var(--muted);
+  }
+  .type-btn.receita.active { background: var(--green-bg); color: #065F46; }
+  .type-btn.despesa.active { background: var(--red-bg); color: #991B1B; }
+  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-cancel {
+    flex: 1; height: 40px; border: 1.5px solid var(--border); border-radius: 8px;
+    background: none; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;
+  }
+  .btn-save {
+    flex: 1; height: 40px; border: none; border-radius: 8px; background: var(--gold);
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;
+  }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <span style="font-size:20px">💰</span>
+    <span class="page-title">Financeiro</span>
+    <div class="period-selector">
+      <button class="period-btn">7d</button>
+      <button class="period-btn active">Mar</button>
+      <button class="period-btn">Trim</button>
+      <button class="period-btn">Ano</button>
+    </div>
+  </div>
+  <button class="btn-primary" onclick="document.getElementById('modal').style.display='flex'">
+    + Novo Lançamento
+  </button>
+</div>
+
+<div class="main">
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div class="kpi-card receitas">
+      <div class="kpi-label">Receitas</div>
+      <div class="kpi-value green">R$ 34.820</div>
+      <div class="kpi-delta delta-up">▲ 18% vs mês anterior</div>
+      <div class="kpi-sub">47 lançamentos</div>
+    </div>
+    <div class="kpi-card despesas">
+      <div class="kpi-label">Despesas</div>
+      <div class="kpi-value red">R$ 12.340</div>
+      <div class="kpi-delta delta-down">▲ 5% vs mês anterior</div>
+      <div class="kpi-sub">23 lançamentos</div>
+    </div>
+    <div class="kpi-card saldo">
+      <div class="kpi-label">Saldo do Mês</div>
+      <div class="kpi-value gold">R$ 22.480</div>
+      <div class="kpi-delta delta-up">▲ 28% vs mês anterior</div>
+      <div class="kpi-sub">Ticket médio R$ 740</div>
+    </div>
+    <div class="kpi-card comissoes">
+      <div class="kpi-label">Comissões a Pagar</div>
+      <div class="kpi-value blue">R$ 2.088</div>
+      <div class="kpi-delta" style="color:var(--muted)">3 atendentes</div>
+      <div class="kpi-sub">Vencimento 31/03</div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-row">
+
+    <!-- BAR CHART -->
+    <div class="chart-card">
+      <div class="chart-title">Receitas vs Despesas</div>
+      <div class="chart-sub">Comparativo diário — Março 2026</div>
+      <div class="bar-chart">
+        <div class="bar-group"><div class="bars"><div class="bar receita" style="height:60px"></div><div class="bar despesa" style="height:25px"></div></div><div class="bar-label">01</div></div>
+        <div class="bar-group"><div class="bars"><div class="bar receita" style="height:90px"></div><div class="bar despesa" style="height:30px"></div></div><div class="bar-label">02</div></div>
+        <div class="bar-group"><div class="bars"><div class="bar receita" style="height:40px"></div><div class="bar despesa" style="height:40px"></div></div><div class="bar-label">03</div></div>
+        <div class="bar-group"><div class="bars"><div class="bar receita" style="height:100px"></div><div class="bar despesa" style="height:20px"></div></div><div class="bar-label">04</div></div>
+        <div class="bar-group"><div class="bars"><div class="bar receita" style="height:75px"></div><div class="bar despesa" style="height:35px"></div></div><div class="bar-label">05</div></div>
+        <div class="bar-group"><div class="bars"><div class="bar receita" style="height:50px"></div><div class="bar despesa" style="height:50px"></div></div><div class="bar-label">06</div></div>
+        <div class="bar-group"><div class="bars"><div class="bar receita" style="height:110px"></div><div class="bar despesa" style="height:15px"></div></div><div class="bar-label">07</div></div>
+        <div class="bar-group"><div class="bars"><div class="bar receita" style="height:80px"></div><div class="bar despesa" style="height:45px"></div></div><div class="bar-label">08</div></div>
+        <div class="bar-group"><div class="bars"><div class="bar receita" style="height:95px"></div><div class="bar despesa" style="height:25px"></div></div><div class="bar-label">09</div></div>
+        <div class="bar-group"><div class="bars"><div class="bar receita" style="height:65px"></div><div class="bar despesa" style="height:55px"></div></div><div class="bar-label">10</div></div>
+        <div class="bar-group"><div class="bars"><div class="bar receita" style="height:120px"></div><div class="bar despesa" style="height:30px"></div></div><div class="bar-label">11</div></div>
+        <div class="bar-group"><div class="bars"><div class="bar receita" style="height:85px"></div><div class="bar despesa" style="height:20px"></div></div><div class="bar-label">12</div></div>
+        <div class="bar-group"><div class="bars"><div class="bar receita" style="height:70px"></div><div class="bar despesa" style="height:40px"></div></div><div class="bar-label">13</div></div>
+        <div class="bar-group"><div class="bars"><div class="bar receita" style="height:45px"></div><div class="bar despesa" style="height:60px"></div></div><div class="bar-label">14</div></div>
+      </div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Receitas</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FCA5A5"></div> Despesas</div>
+      </div>
+    </div>
+
+    <!-- DONUT: CATEGORIAS DE DESPESA -->
+    <div class="chart-card">
+      <div class="chart-title">Despesas por Categoria</div>
+      <div class="chart-sub">Distribuição — Março 2026</div>
+      <div class="donut-wrap">
+        <svg class="donut-svg" width="140" height="140" viewBox="0 0 140 140">
+          <circle cx="70" cy="70" r="52" fill="none" stroke="#E8E5E0" stroke-width="18"/>
+          <circle cx="70" cy="70" r="52" fill="none" stroke="#C8A97A" stroke-width="18" stroke-dasharray="130 196" stroke-dashoffset="49" transform="rotate(-90 70 70)"/>
+          <circle cx="70" cy="70" r="52" fill="none" stroke="#3B82F6" stroke-width="18" stroke-dasharray="72 254" stroke-dashoffset="-81" transform="rotate(-90 70 70)"/>
+          <circle cx="70" cy="70" r="52" fill="none" stroke="#F59E0B" stroke-width="18" stroke-dasharray="46 280" stroke-dashoffset="-153" transform="rotate(-90 70 70)"/>
+          <circle cx="70" cy="70" r="52" fill="none" stroke="#10B981" stroke-width="18" stroke-dasharray="34 292" stroke-dashoffset="-199" transform="rotate(-90 70 70)"/>
+          <text x="70" y="66" text-anchor="middle" class="donut-center" font-size="11" fill="#6B7280">Total</text>
+          <text x="70" y="82" text-anchor="middle" font-family="Playfair Display" font-size="14" font-weight="700" fill="#111827">R$12.340</text>
+        </svg>
+        <div class="donut-legend">
+          <div>
+            <div class="donut-row"><div class="donut-label"><div class="legend-dot" style="background:#C8A97A"></div>Materiais</div><div class="donut-pct">42%</div></div>
+            <div class="donut-bar-bg"><div class="donut-bar-fill" style="width:42%;background:#C8A97A"></div></div>
+          </div>
+          <div>
+            <div class="donut-row"><div class="donut-label"><div class="legend-dot" style="background:#3B82F6"></div>Aluguel/Infra</div><div class="donut-pct">23%</div></div>
+            <div class="donut-bar-bg"><div class="donut-bar-fill" style="width:23%;background:#3B82F6"></div></div>
+          </div>
+          <div>
+            <div class="donut-row"><div class="donut-label"><div class="legend-dot" style="background:#F59E0B"></div>Marketing</div><div class="donut-pct">15%</div></div>
+            <div class="donut-bar-bg"><div class="donut-bar-fill" style="width:15%;background:#F59E0B"></div></div>
+          </div>
+          <div>
+            <div class="donut-row"><div class="donut-label"><div class="legend-dot" style="background:#10B981"></div>Outros</div><div class="donut-pct">11%</div></div>
+            <div class="donut-bar-bg"><div class="donut-bar-fill" style="width:11%;background:#10B981"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- COMISSÕES + TABELA -->
+  <div style="display:grid;grid-template-columns:340px 1fr;gap:16px">
+
+    <!-- COMISSÕES -->
+    <div class="comissoes-card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="chart-title">Comissões</div>
+        <span style="font-size:12px;color:var(--muted)">5% por venda</span>
+      </div>
+      <div class="comissoes-list">
+        <div class="comissao-row">
+          <div class="comissao-avatar">JS</div>
+          <div class="comissao-info">
+            <div class="comissao-name">João Silva</div>
+            <div class="comissao-meta">18 vendas · R$ 18.400</div>
+          </div>
+          <div class="comissao-bar-wrap">
+            <div class="comissao-bar-bg"><div class="comissao-bar-fill" style="width:90%"></div></div>
+          </div>
+          <div class="comissao-valor">
+            <div class="comissao-valor-num">R$ 920</div>
+            <div class="comissao-pct">5%</div>
+          </div>
+        </div>
+        <div class="comissao-row">
+          <div class="comissao-avatar">ML</div>
+          <div class="comissao-info">
+            <div class="comissao-name">Maria Lima</div>
+            <div class="comissao-meta">14 vendas · R$ 11.600</div>
+          </div>
+          <div class="comissao-bar-wrap">
+            <div class="comissao-bar-bg"><div class="comissao-bar-fill" style="width:63%"></div></div>
+          </div>
+          <div class="comissao-valor">
+            <div class="comissao-valor-num">R$ 580</div>
+            <div class="comissao-pct">5%</div>
+          </div>
+        </div>
+        <div class="comissao-row">
+          <div class="comissao-avatar">CA</div>
+          <div class="comissao-info">
+            <div class="comissao-name">Carlos Alves</div>
+            <div class="comissao-meta">12 vendas · R$ 11.760</div>
+          </div>
+          <div class="comissao-bar-wrap">
+            <div class="comissao-bar-bg"><div class="comissao-bar-fill" style="width:58%"></div></div>
+          </div>
+          <div class="comissao-valor">
+            <div class="comissao-valor-num">R$ 588</div>
+            <div class="comissao-pct">5%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABELA DE LANÇAMENTOS -->
+    <div class="table-card">
+      <div class="table-header">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="chart-title">Lançamentos</div>
+          <div class="table-filters">
+            <div class="filter-pill active">Todos</div>
+            <div class="filter-pill">Receitas</div>
+            <div class="filter-pill">Despesas</div>
+            <div class="filter-pill">Pendentes</div>
+          </div>
+        </div>
+        <input class="search-input" type="text" placeholder="🔍 Buscar lançamento...">
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Categoria</th>
+            <th>Data</th>
+            <th>Tipo</th>
+            <th>Valor</th>
+            <th>Comprovante</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Venda PDV #0089</strong><br><span style="font-size:11px;color:var(--muted)">João Silva</span></td>
+            <td style="color:var(--muted)">Venda balcão</td>
+            <td style="color:var(--muted)">07/03</td>
+            <td><span class="badge receita">↑ Receita</span></td>
+            <td class="valor-pos">+ R$ 2.650,00</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><strong>Anel personalizado #P041</strong><br><span style="font-size:11px;color:var(--muted)">Maria Lima</span></td>
+            <td style="color:var(--muted)">Pedido</td>
+            <td style="color:var(--muted)">06/03</td>
+            <td><span class="badge receita">↑ Receita</span></td>
+            <td class="valor-pos">+ R$ 3.200,00</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><strong>Compra de matéria-prima</strong><br><span style="font-size:11px;color:var(--muted)">Fornecedor Ouro SA</span></td>
+            <td style="color:var(--muted)">Materiais</td>
+            <td style="color:var(--muted)">05/03</td>
+            <td><span class="badge despesa">↓ Despesa</span></td>
+            <td class="valor-neg">− R$ 4.800,00</td>
+            <td><span class="comprovante-btn">📎 Ver</span></td>
+          </tr>
+          <tr>
+            <td><strong>Aluguel março</strong><br><span style="font-size:11px;color:var(--muted)">Imobiliária Pinheiros</span></td>
+            <td style="color:var(--muted)">Aluguel/Infra</td>
+            <td style="color:var(--muted)">05/03</td>
+            <td><span class="badge despesa">↓ Despesa</span></td>
+            <td class="valor-neg">− R$ 2.800,00</td>
+            <td><span class="comprovante-btn">📎 Ver</span></td>
+          </tr>
+          <tr>
+            <td><strong>Link Mercado Pago #MP022</strong><br><span style="font-size:11px;color:var(--muted)">Carlos Alves</span></td>
+            <td style="color:var(--muted)">Pedido</td>
+            <td style="color:var(--muted)">04/03</td>
+            <td><span class="badge pendente">⏳ Pendente</span></td>
+            <td style="color:var(--amber);font-weight:700;font-family:'Playfair Display',serif">R$ 1.890,00</td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="pagination">
+        <span class="page-info">Mostrando 5 de 70 lançamentos</span>
+        <div class="page-btns">
+          <div class="page-btn">←</div>
+          <div class="page-btn active">1</div>
+          <div class="page-btn">2</div>
+          <div class="page-btn">3</div>
+          <div class="page-btn">→</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL NOVO LANÇAMENTO -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal">
+    <div class="modal-title">Novo Lançamento</div>
+    <div class="form-row">
+      <div class="form-label">Tipo</div>
+      <div class="type-toggle">
+        <button class="type-btn receita active">↑ Receita</button>
+        <button class="type-btn despesa">↓ Despesa</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-label">Descrição</div>
+      <input class="form-input" type="text" placeholder="Ex: Venda de aliança, Aluguel...">
+    </div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin-bottom:0">
+        <div class="form-label">Valor (R$)</div>
+        <input class="form-input" type="text" placeholder="0,00">
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <div class="form-label">Data</div>
+        <input class="form-input" type="date" value="2026-03-07">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-label">Categoria</div>
+      <select class="form-select">
+        <option>Venda balcão</option>
+        <option>Pedido personalizado</option>
+        <option>Materiais</option>
+        <option>Aluguel/Infra</option>
+        <option>Marketing</option>
+        <option>Outros</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-label">Comprovante (opcional)</div>
+      <input class="form-input" type="file" style="padding:6px 12px;height:auto">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="document.getElementById('modal').style.display='none'">Cancelar</button>
+      <button class="btn-save">Salvar Lançamento</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+  document.querySelectorAll('.filter-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+    });
+  });
+  document.querySelectorAll('.period-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

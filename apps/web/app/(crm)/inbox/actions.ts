@@ -103,3 +103,26 @@ export async function closeConversationAction(formData: FormData) {
     revalidatePath('/inbox');
     redirect(buildConversationRedirect(parsed.data.conversation_id));
 }
+
+export async function handoffConversationAction(formData: FormData) {
+    const parsed = conversationSchema.safeParse({
+        conversation_id: formData.get('conversation_id'),
+    });
+
+    if (!parsed.success) {
+        redirect('/inbox?error=Conversa%20inválida%20para%20transferir.');
+    }
+
+    try {
+        await apiRequest(`/inbox/conversations/${parsed.data.conversation_id}/handoff`, {
+            method: 'POST',
+            body: JSON.stringify({}),
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Falha ao devolver a conversa para a fila.';
+        redirect(buildConversationRedirect(parsed.data.conversation_id, message));
+    }
+
+    revalidatePath('/inbox');
+    redirect(buildConversationRedirect(parsed.data.conversation_id));
+}

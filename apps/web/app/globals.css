@@ -3,7 +3,40 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
+  --font-orion-sans: 'Inter', 'DM Sans', system-ui, sans-serif;
+  --font-orion-serif: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  --font-orion-accent-serif: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+  --font-orion-alt-sans: 'DM Sans', 'Inter', system-ui, sans-serif;
+  --font-orion-mono: 'JetBrains Mono', 'IBM Plex Mono', 'SFMono-Regular', monospace;
+  --orion-gold: #bfa06a;
+  --orion-gold-light: #d4b87e;
+  --orion-gold-dark: #8b7145;
+  --orion-gold-bg: rgba(191, 160, 106, 0.08);
+  --orion-gold-border: rgba(191, 160, 106, 0.22);
+  --orion-void: #080809;
+  --orion-base: #0f0f11;
+  --orion-surface: #131316;
+  --orion-elevated: #1a1a1e;
+  --orion-nav: #0a0a0c;
+  --orion-hover: rgba(255, 255, 255, 0.03);
+  --orion-active: rgba(191, 160, 106, 0.08);
+  --orion-border-subtle: rgba(255, 255, 255, 0.04);
+  --orion-border-low: rgba(255, 255, 255, 0.06);
+  --orion-border-mid: rgba(255, 255, 255, 0.1);
+  --orion-border-strong: rgba(255, 255, 255, 0.16);
+  --orion-text: #f0ebe3;
+  --orion-text-secondary: #a09a94;
+  --orion-text-muted: #4a4a54;
+  --orion-text-disabled: #2a2a32;
+  --orion-green: #4caf82;
+  --orion-red: #e05252;
+  --orion-amber: #f0a040;
+  --orion-blue: #4a9eff;
+  --orion-purple: #9c6fde;
+  --orion-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --orion-shadow-popover: 0 16px 40px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4);
+  --orion-shadow-dialog: 0 32px 80px rgba(0, 0, 0, 0.8);
 }
 
 * {
@@ -14,9 +47,13 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  background: #f8f7f5;
-  color: #111827;
-  font-family: Inter, system-ui, sans-serif;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at top, rgba(191, 160, 106, 0.08), transparent 34%),
+    linear-gradient(180deg, #0b0b0d 0%, #080809 100%);
+  color: var(--orion-text);
+  font-family: var(--font-orion-sans), system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
 }
 
 a {
@@ -29,4 +66,214 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-orion-mono), monospace;
+}
+
+::selection {
+  background: rgba(191, 160, 106, 0.22);
+  color: var(--orion-text);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+
+@layer base {
+  body {
+    @apply antialiased;
+  }
+}
+
+@layer components {
+  .orion-page {
+    @apply space-y-6;
+  }
+
+  .orion-panel {
+    background: var(--orion-surface);
+    border: 1px solid var(--orion-border-low);
+    border-radius: 16px;
+    box-shadow: var(--orion-shadow-card);
+  }
+
+  .orion-section-label {
+    color: var(--orion-text-secondary);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .orion-chip {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--orion-border-mid);
+    border-radius: 999px;
+    color: var(--orion-text-secondary);
+  }
+
+  .orion-grid-pattern {
+    background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.06) 1px, transparent 0);
+    background-size: 24px 24px;
+  }
+}
+
+.orion-crm {
+  background:
+    radial-gradient(circle at top, rgba(191, 160, 106, 0.08), transparent 28%),
+    linear-gradient(180deg, #0d0d10 0%, #080809 100%);
+  color: var(--orion-text);
+}
+
+.orion-crm .bg-canvas {
+  background-color: var(--orion-void) !important;
+}
+
+.orion-crm .bg-canvas-card,
+.orion-crm .bg-white {
+  background-color: var(--orion-surface) !important;
+}
+
+.orion-crm .bg-white\/70 {
+  background-color: rgba(19, 19, 22, 0.7) !important;
+}
+
+.orion-crm .bg-white\/80 {
+  background-color: rgba(19, 19, 22, 0.8) !important;
+}
+
+.orion-crm .bg-white\/90 {
+  background-color: rgba(19, 19, 22, 0.9) !important;
+}
+
+.orion-crm .bg-gray-50,
+.orion-crm .bg-gray-100,
+.orion-crm .bg-\[\#FBFBFD\],
+.orion-crm .bg-\[\#F4F6FB\],
+.orion-crm .bg-\[\#F5F6FA\],
+.orion-crm .bg-\[\#ECEFF5\],
+.orion-crm .bg-\[\#F9FAFC\],
+.orion-crm .bg-\[\#F3F4F8\] {
+  background-color: var(--orion-elevated) !important;
+}
+
+.orion-crm .bg-emerald-50 {
+  background-color: rgba(76, 175, 130, 0.12) !important;
+}
+
+.orion-crm .bg-blue-50 {
+  background-color: rgba(74, 158, 255, 0.12) !important;
+}
+
+.orion-crm .bg-slate-100 {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.orion-crm .bg-red-50,
+.orion-crm .bg-rose-50 {
+  background-color: rgba(224, 82, 82, 0.12) !important;
+}
+
+.orion-crm .bg-amber-50 {
+  background-color: rgba(240, 160, 64, 0.12) !important;
+}
+
+.orion-crm .border-emerald-100,
+.orion-crm .border-emerald-200 {
+  border-color: rgba(76, 175, 130, 0.18) !important;
+}
+
+.orion-crm .border-blue-200 {
+  border-color: rgba(74, 158, 255, 0.18) !important;
+}
+
+.orion-crm .border-slate-200,
+.orion-crm .border-gray-200 {
+  border-color: var(--orion-border-mid) !important;
+}
+
+.orion-crm .border-red-200,
+.orion-crm .border-rose-200,
+.orion-crm .border-rose-100 {
+  border-color: rgba(224, 82, 82, 0.18) !important;
+}
+
+.orion-crm .border-amber-200,
+.orion-crm .border-amber-100 {
+  border-color: rgba(240, 160, 64, 0.18) !important;
+}
+
+.orion-crm .text-gray-900,
+.orion-crm .text-gray-800,
+.orion-crm .text-gray-700 {
+  color: var(--orion-text) !important;
+}
+
+.orion-crm .text-gray-600,
+.orion-crm .text-gray-500,
+.orion-crm .text-gray-400 {
+  color: var(--orion-text-secondary) !important;
+}
+
+.orion-crm .text-emerald-700,
+.orion-crm .text-emerald-800,
+.orion-crm .text-emerald-900 {
+  color: var(--orion-green) !important;
+}
+
+.orion-crm .text-blue-700,
+.orion-crm .text-blue-900 {
+  color: var(--orion-blue) !important;
+}
+
+.orion-crm .text-red-700,
+.orion-crm .text-rose-700,
+.orion-crm .text-rose-800,
+.orion-crm .text-rose-900 {
+  color: var(--orion-red) !important;
+}
+
+.orion-crm .text-amber-700,
+.orion-crm .text-amber-800,
+.orion-crm .text-amber-900 {
+  color: var(--orion-amber) !important;
+}
+
+.orion-crm .text-slate-700,
+.orion-crm .text-slate-500 {
+  color: var(--orion-text-secondary) !important;
+}
+
+.orion-crm .border-canvas-border,
+.orion-crm .divide-canvas-border > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--orion-border-low) !important;
+}
+
+.orion-crm .shadow-card {
+  box-shadow: var(--orion-shadow-card) !important;
+}
+
+.orion-crm .shadow-card-hover {
+  box-shadow: var(--orion-shadow-popover) !important;
+}
+
+.orion-crm input,
+.orion-crm select,
+.orion-crm textarea {
+  caret-color: var(--orion-gold);
 }

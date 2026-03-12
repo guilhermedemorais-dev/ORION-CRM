@@ -1,103 +1,319 @@
-# ORION CRM — Build Task List
+# ORION CRM — Histórico Resolvido e Pendências
 
-## BLOCO 1 — Fundação (Backend)
-- [x] Ler PRDs completos (ORION-CRM-PRD-v1.2, BUILD-GUIDE, Fase0)
-- [x] Scaffold `apps/api/` — Express + TypeScript
-- [x] Criar todas as SQL migrations (Seção 5 do PRD)
-  - [x] settings (singleton + INSERT inicial)
-  - [x] users, refresh_tokens
-  - [x] leads, customers, conversations, messages
-  - [x] products, orders, order_items, custom_order_details
-  - [x] production_orders, production_steps
-  - [x] payments, stock_movements, financial_entries
-  - [x] audit_logs (com REVOKE DELETE)
-  - [x] automation_flows, automation_executions
-  - [x] operator_webhook_log
-- [x] Middleware: auth (JWT), rbac, audit, rateLimit, instanceStatus
-- [x] POST /api/v1/auth/login
-- [x] POST /api/v1/auth/refresh
-- [x] POST /api/v1/operator/webhook (provisioning)
-- [x] GET /health + GET /api/v1/operator/health
-- [x] GET/PUT /api/v1/settings + GET /settings/public + POST /api/v1/settings/logo
-- [x] docker-compose.yml base (postgres, redis, api, nginx)
-- [x] nginx/nginx.conf
-- [x] .env.example documentado (Bloco 1 + roadmap)
-- [x] TypeScript compila sem erros (`tsc --noEmit` limpo)
+## Status Atual
+- Branch atual: `feat/orion-evolution-foundations`
+- Últimos commits desta trilha:
+  - `27f19fc` `feat(orion): advance storefront and assistant operations`
+  - `d9be155` `feat(analytics): add sales dashboard foundation`
+  - `792a452` `feat(orion): deliver crm evolution foundations`
+- Fonte funcional do roadmap atual: `PRD.DOCS`
+- Fonte visual canônica do projeto:
+  - `PRD.DOCS/Designer Systems/ORION-DESIGN-SYSTEM.html`
+  - todo mockup `.html` salvo dentro de `PRD.DOCS/`
+- Estado honesto do projeto:
+  - Base histórica dos blocos 1-10: concluída
+  - Phase 0: concluída
+  - Phase 1: concluída
+  - Phase 2: parcial
+  - Phase 3: parcial avançada
+  - Phase 4: parcial
 
-## BLOCO 2 — Design System + Shell (Frontend)
-- [x] Scaffold `apps/web/` — Next.js 14 + TypeScript + Tailwind + shadcn
-- [x] tailwind.config.ts com paleta ORION
-- [x] Base shadcn/ui preparada (`components.json` + primitives locais)
-- [x] Componentes base (StatusBadge, KpiCard, EmptyState, PageHeader)
-- [x] Layout (AppShell, Sidebar, Topbar)
-- [x] lib/utils.ts (formatadores)
-- [x] Login page + CRM layout com auth guard
+## Como Ler Este Arquivo
+- `Banco`: schema, migrations, colunas, tabelas e dados persistidos
+- `API/Backend`: regras de negócio, serviços, endpoints, integrações e automações
+- `Frontend/UI`: páginas, componentes, widgets e mudanças visuais navegáveis
 
-## BLOCOS 3-8 — (planejado após Bloco 1+2)
-- [x] Bloco 3: Leads + Clientes
-  - [x] Backend: `GET/POST /api/v1/leads`, `GET /api/v1/leads/:id`, `PATCH /api/v1/leads/:id/stage`, `POST /api/v1/leads/:id/convert`
-  - [x] Backend: `GET/POST /api/v1/customers`, `GET /api/v1/customers/:id`
-  - [x] Frontend: Kanban de leads + painel lateral + criação rápida
-  - [x] Frontend: Lista de clientes + perfil detalhado
-- [x] Bloco 4: WhatsApp Inbox
-  - [x] Backend: `GET /api/v1/inbox/conversations`
-  - [x] Backend: `GET /api/v1/inbox/conversations/:id`
-  - [x] Backend: `POST /api/v1/inbox/conversations/:id/messages`
-  - [x] Backend: `POST /api/v1/inbox/conversations/:id/assign`
-  - [x] Backend: `POST /api/v1/inbox/conversations/:id/close`
-  - [x] Backend: `GET /api/v1/webhooks/whatsapp` (challenge)
-  - [x] Backend: `POST /api/v1/webhooks/whatsapp` + BullMQ worker
-  - [x] Frontend: tela `/inbox` com lista + thread + polling
-  - [x] Frontend: ações de assumir, encerrar e enviar mensagem
-- [x] Bloco 5: Pedidos + Produção
-  - [x] Backend: `GET/POST /api/v1/orders`, `GET /api/v1/orders/:id`, `PATCH /api/v1/orders/:id/status`
-  - [x] Backend: `GET /api/v1/production-orders`, `GET /api/v1/production-orders/:id`, `POST /api/v1/production-orders/:id/advance`
-  - [x] Backend: criação de `production_orders` ao aprovar pedido personalizado
-  - [x] Frontend: tela `/pedidos` com criação rápida (pronta entrega e personalizado)
-  - [x] Frontend: lista, detalhe e atualização de status de pedidos
-  - [x] Frontend: tela `/producao` com fila, timeline e avanço de etapa
-- [x] Bloco 6: Estoque + Financeiro + PDV
-  - [x] Backend: `GET/POST /api/v1/products`, `GET /api/v1/products/:id`, `PATCH /api/v1/products/:id`, `POST /api/v1/products/:id/stock-adjust`
-  - [x] Backend: `GET/POST /api/v1/financial-entries`, `GET /api/v1/financial-entries/:id`
-  - [x] Backend: `GET/POST /api/v1/payments`, `GET /api/v1/payments/:id`, `PATCH /api/v1/payments/:id/status`
-  - [x] Backend: `POST /api/v1/pdv/sales`
-  - [x] Backend: serviço transacional para baixa de estoque + entrada financeira + idempotência básica por pagamento
-  - [x] Frontend: tela `/estoque` com catálogo interno, edição e ajuste de estoque
-  - [x] Frontend: tela `/financeiro` com resumo, filtros e despesa manual
-  - [x] Frontend: tela `/pdv` com carrinho operacional e recibo de venda
-- [x] Bloco 7: Mercado Pago + IA + Dashboard
-  - [x] Backend: `POST /api/v1/payments/link`
-  - [x] Backend: `POST /api/v1/webhooks/mercadopago`
-  - [x] Backend: `GET /api/v1/dashboard`
-  - [x] Backend: `POST /api/v1/assistant/chat`
-  - [x] Frontend: dashboard por role
-  - [x] Frontend: ações de pagamento via Mercado Pago
-  - [x] Frontend: dock/painel do assistente IA
-- [x] Bloco 8: n8n + Landing Page + Deploy
-  - [x] Infra: serviço `n8n` no `docker-compose`
-  - [x] Backend: webhooks internos do n8n + handoff de conversa
-  - [x] Frontend: landing pública
-  - [x] Frontend: catálogo público
-  - [x] Frontend/Backend: captação pública de leads
-  - [x] Infra: NGINX final + stack completa de deploy
-  - [x] Docs: `README.md` / `README-DEPLOY.md` operacionais
+## Regra Visual do Projeto
+- A pasta `PRD.DOCS/Designer Systems/` agora faz parte do canon do ORION.
+- O arquivo `PRD.DOCS/Designer Systems/ORION-DESIGN-SYSTEM.html` define o design system base.
+- Todo mockup anexado em `PRD.DOCS/` deve ser seguido como especificação visual da tela correspondente.
+- Qualquer diferença entre código e mockup deve ser tratada como gap, não como liberdade criativa.
 
-## BLOCO 9 — Automações n8n (MVP operacional)
-- [x] Backend: `N8N_URL` no env/config + `N8N_API_KEY` para autenticação
-- [x] Backend: serviço `n8n.service.ts` para CRUD de workflows e listagem de execuções
-- [x] Backend: `routes/automations.routes.ts` com:
-  - [x] `GET /api/v1/automations`
-  - [x] `GET /api/v1/automations/:workflowId`
-  - [x] `POST /api/v1/automations`
-  - [x] `PUT /api/v1/automations/:workflowId`
-  - [x] `PATCH /api/v1/automations/:workflowId/toggle`
-  - [x] `DELETE /api/v1/automations/:workflowId` (protegendo flows de sistema)
-  - [x] `GET /api/v1/automations/:workflowId/executions`
-- [x] Backend: seed de flows de sistema no boot (`WF-A/B/C/D`)
-- [x] Frontend: tela `/automacoes` com listagem, criação, edição JSON, ativação/desativação, exclusão e histórico
+## Mapa Rápido Por Camada
 
-## BLOCO 10 — Assistente IA interno (v2 operacional)
-- [x] Backend: endpoint aceita `messages[]` + `message` (compat)
-- [x] Backend: RBAC por role em consultas de leads, pedidos, produção, financeiro, comissões, conversão e top produtos
-- [x] Backend: logs de uso do assistente (`assistant_logs`) com latência e funções chamadas
-- [x] Frontend: dock envia histórico curto (até 20 mensagens) para contexto
+### Banco
+- [x] Base histórica do CRM já existia e foi consolidada
+- [x] Pipeline foundation em código
+  - `017_pipelines_foundation.sql`
+- [x] Inbox multicanal foundation em código
+  - `018_inbox_multichannel_foundation.sql`
+- [x] Loja pública foundation em código
+  - `019_store_foundation.sql`
+- [x] Rastreabilidade de sync da loja -> CRM em código
+  - `020_store_order_crm_sync.sql`
+- [ ] Migrations novas ainda precisam ser aplicadas no banco real
+
+### API / Backend
+- [x] Pipeline canônico com `/api/v1/pipelines/*`
+- [x] Inbox v2 foundation + SSE realtime
+- [x] Automações com catálogo/backend n8n base
+- [x] Financeiro canônico `/api/v1/financeiro/*`
+- [x] Loja pública com checkout, webhook e sync interno
+- [x] Simulação local de venda aprovada para teste sem produção
+- [x] Analytics de vendas `/api/v1/analytics/sales`
+- [x] Assistente IA com tool/fallback/RBAC/usage
+
+### Frontend / UI
+- [x] Shell do CRM já foi alterado em partes centrais
+- [x] Pipeline novo já existe visualmente
+  - `/pipeline/[slug]`
+  - `/pipeline/[slug]/builder`
+- [x] Inbox já foi alterado visualmente
+  - `/inbox`
+- [x] Automações já têm interface nova parcial
+  - `/automacoes`
+- [x] Financeiro já tem dashboard novo
+  - `/financeiro`
+- [x] Analytics já tem dashboard novo
+  - `/analytics`
+- [x] Loja pública já existe visualmente
+  - `/loja`
+  - `/loja/produto/[slug]`
+- [x] Admin da loja já existe visualmente
+  - `/settings/loja`
+- [x] Assistente IA já aparece no shell como dock/widget
+- [ ] Ainda faltam fechamentos visuais em automações, inbox multicanal e analytics completo
+
+## Importante Sobre Mudança Visual
+- Se você está olhando só a página pública principal/landing, faz sentido não ter percebido muita mudança visual.
+- Grande parte do que entrou recentemente aparece em rotas internas do CRM e em módulos novos, não necessariamente na página que você está atualizando agora.
+- Onde já há mudança visual relevante hoje:
+  - `/pipeline/[slug]`
+  - `/inbox`
+  - `/automacoes`
+  - `/financeiro`
+  - `/analytics`
+  - `/loja`
+  - `/loja/produto/[slug]`
+  - `/settings/loja`
+- Onde a mudança ainda é mais de backend/banco do que de interface final:
+  - integrações reais do Mercado Pago
+  - multicanal real além de WhatsApp
+  - builder visual final das automações
+  - tabs restantes do analytics
+
+## Histórico Entregue
+
+### Base original do sistema
+- [x] Bloco 1: fundação backend
+  - API Express + TypeScript
+  - migrations principais do CRM
+  - auth, RBAC, audit, rate limit
+  - settings, operator webhook, health, docker-compose, nginx, `.env.example`
+- [x] Bloco 2: design system + shell frontend
+  - Next.js 14 + Tailwind + componentes base
+  - layout do CRM com auth guard
+- [x] Bloco 3: leads + clientes
+  - CRUD e pipeline inicial
+  - lista e detalhe de clientes
+- [x] Bloco 4: inbox WhatsApp base
+  - lista, thread, assign, close, webhook e worker
+- [x] Bloco 5: pedidos + produção
+  - pedidos pronta entrega e personalizados
+  - fila de produção e avanço de etapa
+- [x] Bloco 6: estoque + financeiro + PDV
+  - produtos, ajustes de estoque, financeiro, pagamentos e PDV
+- [x] Bloco 7: Mercado Pago + IA + dashboard inicial
+  - link de pagamento, webhook MP, dashboard e assistente
+- [x] Bloco 8: n8n + landing + deploy
+  - n8n no compose, landing pública, catálogo público, captura de leads, docs operacionais
+- [x] Bloco 9: automações n8n MVP
+  - CRUD de workflows, toggle, execuções e seed dos flows de sistema
+- [x] Bloco 10: assistente IA v2 operacional
+  - histórico curto, RBAC, logs de uso
+
+### Fase 0 — Consolidação do roadmap novo
+Status: concluída
+
+- [x] Documento mestre do roadmap criado
+- [x] Matriz de rastreabilidade dos PRDs criada
+- [x] Lote 1 do Pipeline detalhado
+- [x] Canon definido com base nos PRDs salvos no workspace
+
+Arquivos gerados:
+- `docs/roadmap/orion-master-roadmap.md`
+- `docs/roadmap/orion-prd-traceability.md`
+- `docs/roadmap/lote-1-pipeline-foundation.md`
+
+### Fase 1 — Pipeline Foundation
+Status: concluída
+
+Banco:
+- [x] Migration `017_pipelines_foundation.sql`
+- [x] Modelo canônico `pipelines`
+- [x] `pipeline_id` em leads/stages
+- [x] Seeds base de pipelines
+
+API/Backend:
+- [x] API `/api/v1/pipelines/*`
+- [x] compatibilidade temporária com `/leads`
+
+Frontend/UI:
+- [x] Sidebar dinâmica por pipeline
+- [x] rota canônica `/pipeline/[slug]`
+- [x] builder inicial `/pipeline/[slug]/builder`
+
+Principais arquivos:
+- `apps/api/src/db/migrations/017_pipelines_foundation.sql`
+- `apps/api/src/routes/pipelines.routes.ts`
+- `apps/api/src/services/pipelines.service.ts`
+- `apps/web/app/(crm)/pipeline/[slug]/page.tsx`
+- `apps/web/app/(crm)/pipeline/[slug]/builder/page.tsx`
+
+### Fase 2 — Inbox v2 + Automações
+Status: parcial
+
+Banco:
+- [x] Migration `018_inbox_multichannel_foundation.sql`
+- [x] base multicanal de inbox
+
+API/Backend:
+- [x] quick replies
+- [x] channel integrations
+- [x] inbox realtime por SSE
+- [x] catálogo backend de automações
+
+Frontend/UI:
+- [x] interface nova parcial do inbox
+- [x] realtime conectado no frontend
+- [x] catálogo/preview de automações
+
+Principais arquivos:
+- `apps/api/src/db/migrations/018_inbox_multichannel_foundation.sql`
+- `apps/api/src/routes/inbox.routes.ts`
+- `apps/api/src/services/inbox.service.ts`
+- `apps/api/src/services/inbox-events.service.ts`
+- `apps/api/src/routes/automations.routes.ts`
+- `apps/api/src/services/automation-catalog.service.ts`
+- `apps/web/app/(crm)/inbox/page.tsx`
+- `apps/web/components/modules/inbox/InboxRealtimeBridge.tsx`
+- `apps/web/app/(crm)/automacoes/page.tsx`
+
+Ainda falta:
+- [ ] operação real ponta a ponta para canais além de WhatsApp
+- [ ] builder visual final de automações com drag-and-drop real
+- [ ] fechamento completo de ações operacionais do inbox previstas no PRD
+
+### Fase 3 — Financeiro + Loja
+Status: parcial avançada
+
+Banco:
+- [x] Migration `019_store_foundation.sql`
+- [x] migration `020_store_order_crm_sync.sql`
+- [ ] aplicar migrations 019 e 020 no banco real
+
+API/Backend:
+- [x] API canônica `/api/v1/financeiro/*`
+- [x] compatibilidade com rotas legadas
+- [x] checkout público via preferência MP
+- [x] sync `store_order -> customer -> crm order -> payment -> stock`
+- [x] simulação local de venda aprovada fora de produção
+
+Frontend/UI:
+- [x] dashboard novo do financeiro com KPIs, gráficos, ranking e tabela
+- [x] rotas públicas `/loja` e `/loja/produto/[slug]`
+- [x] rota admin `/settings/loja`
+- [x] `/catalogo` redirecionando para `/loja`
+
+Principais arquivos:
+- `apps/api/src/services/financeiro.service.ts`
+- `apps/api/src/routes/financial.routes.ts`
+- `apps/web/app/(crm)/financeiro/page.tsx`
+- `apps/web/components/modules/finance/FinanceiroClient.tsx`
+- `apps/api/src/db/migrations/019_store_foundation.sql`
+- `apps/api/src/db/migrations/020_store_order_crm_sync.sql`
+- `apps/api/src/routes/store.routes.ts`
+- `apps/api/src/routes/store-settings.routes.ts`
+- `apps/api/src/services/store-order-sync.service.ts`
+- `apps/web/app/loja/page.tsx`
+- `apps/web/app/loja/produto/[slug]/page.tsx`
+- `apps/web/app/(crm)/settings/loja/page.tsx`
+- `apps/web/components/modules/store/StoreSettingsClient.tsx`
+
+Ainda falta:
+- [ ] aplicar migrations 019 e 020 no banco real
+- [ ] validar checkout real com Mercado Pago em ambiente conectado
+- [ ] validar webhook real com retorno financeiro/estoque em ambiente conectado
+- [ ] upload físico de comprovante no financeiro
+
+### Fase 4 — Analytics + Assistente IA
+Status: parcial
+
+Banco:
+- [ ] sem migration nova crítica nesta fase até agora
+
+API/Backend:
+- [x] tab/base de vendas com filtros e Recharts
+- [x] backend `/api/v1/analytics/sales`
+- [x] fallback por tools com prioridade melhorada
+- [x] `usage` no retorno
+- [x] RBAC de tools reforçado
+- [x] cobertura de testes do assistente
+
+Frontend/UI:
+- [x] tela `/analytics` restrita a admin
+- [x] widget do assistente com `Ctrl+K`, `Esc`, skeleton e exibição de uso
+
+Principais arquivos:
+- `apps/api/src/services/analytics.service.ts`
+- `apps/api/src/routes/analytics.routes.ts`
+- `apps/web/app/(crm)/analytics/page.tsx`
+- `apps/web/components/modules/analytics/AnalyticsClient.tsx`
+- `apps/api/src/services/assistant.service.ts`
+- `apps/api/src/services/assistant.service.test.ts`
+- `apps/web/components/layout/AssistantDock.tsx`
+
+Ainda falta:
+- [ ] tabs restantes do analytics
+- [ ] validação final do assistente em ambiente real com chave/config definitiva
+- [ ] fechar o escopo final do rebuild do assistant conforme PRD
+
+## Verificações Executadas
+- [x] `apps/api`: `npm test`
+- [x] `apps/api`: `npm run typecheck -- --pretty false`
+- [x] `apps/web`: `npm run typecheck`
+
+Último estado verificado antes deste registro:
+- API: `8/8` testes verdes
+- API typecheck: verde
+- Web typecheck: verde
+
+## Pendências Reais para Fechar 100%
+
+### Infra / Banco
+- [ ] rodar migrations novas no banco real
+  - `017_pipelines_foundation.sql`
+  - `018_inbox_multichannel_foundation.sql`
+  - `019_store_foundation.sql`
+  - `020_store_order_crm_sync.sql`
+
+### Phase 2
+- [ ] builder visual final das automações
+- [ ] multicanal real além do WhatsApp
+- [ ] validação operacional completa do inbox novo
+
+### Phase 3
+- [ ] teste real de checkout Mercado Pago
+- [ ] teste real de webhook Mercado Pago
+- [ ] validação de baixa de estoque e criação de pedido com dados reais
+- [ ] upload real de comprovante no financeiro
+
+### Phase 4
+- [ ] tabs restantes do analytics
+- [ ] validação final do assistente em ambiente real
+
+## Como Testar Hoje Sem Produção
+- [x] Loja: usar `Simular venda` em `/settings/loja`
+  - cria `store_order`
+  - gera cliente
+  - cria pedido CRM
+  - cria pagamento interno
+  - baixa estoque
+- [x] Assistente: abrir dock e testar perguntas por role
+- [x] Analytics: validar `/analytics`
+- [x] Pipeline: validar `/pipeline/[slug]` e builder inicial
+
+## Observações
+- Os arquivos de `PRD.DOCS` continuam fora dos commits de código.
+- O roadmap novo está avançado, mas ainda não está 100% encerrado.
+- Este arquivo deve ser atualizado sempre que uma fase parcial virar concluída ou quando uma pendência operacional for eliminada.

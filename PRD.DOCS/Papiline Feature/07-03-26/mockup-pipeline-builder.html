@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORION — Pipeline Menu + Builder Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --gold: #C8A97A;
+    --gold-light: #E8D5B0;
+    --gold-dark: #A8895A;
+    --sidebar: #0F0F0F;
+    --sidebar-card: #1A1A1A;
+    --sidebar-hover: #222222;
+    --canvas: #F8F7F5;
+    --white: #FFFFFF;
+    --border: #E8E5E0;
+    --text: #111827;
+    --muted: #6B7280;
+    --green: #10B981;
+    --red: #EF4444;
+  }
+
+  body { font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; background: var(--canvas); }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    width: 220px; background: var(--sidebar); display: flex;
+    flex-direction: column; flex-shrink: 0; overflow-y: auto;
+  }
+  .sidebar::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+  .sidebar-logo {
+    padding: 22px 18px 18px;
+    border-bottom: 1px solid #1F1F1F;
+  }
+  .logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px; font-weight: 700; color: var(--gold);
+    letter-spacing: 0.5px;
+  }
+  .logo-sub { font-size: 10px; color: #444; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+
+  .sidebar-section { padding: 16px 0 4px; }
+  .section-label {
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.2px; color: #444; padding: 0 18px 6px;
+  }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 18px; cursor: pointer; border-radius: 0;
+    transition: all 0.15s; position: relative;
+    color: #888; font-size: 13px; font-weight: 500;
+    text-decoration: none;
+  }
+  .nav-item:hover { background: var(--sidebar-hover); color: #ccc; }
+  .nav-item.active {
+    color: var(--gold);
+    background: linear-gradient(90deg, rgba(200,169,122,0.12) 0%, transparent 100%);
+  }
+  .nav-item.active::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2.5px; background: var(--gold); border-radius: 0 2px 2px 0;
+  }
+  .nav-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+
+  /* PIPELINE ITEMS */
+  .pipeline-item {
+    display: flex; align-items: center; padding: 6px 18px 6px 36px;
+    cursor: pointer; transition: all 0.15s; color: #777; font-size: 12px;
+    font-weight: 500; gap: 8px; group: true;
+  }
+  .pipeline-item:hover { background: var(--sidebar-hover); color: #bbb; }
+  .pipeline-item.active { color: var(--gold); }
+  .pipeline-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #444; flex-shrink: 0; transition: background 0.15s;
+  }
+  .pipeline-item.active .pipeline-dot,
+  .pipeline-item:hover .pipeline-dot { background: var(--gold); }
+  .pipeline-name { flex: 1; }
+
+  /* MASTER ACTIONS — só visíveis no hover (modo mestre) */
+  .master-actions {
+    display: none; align-items: center; gap: 4px; margin-left: auto;
+  }
+  .pipeline-item:hover .master-actions { display: flex; }
+  .action-btn {
+    width: 20px; height: 20px; border-radius: 4px; display: flex;
+    align-items: center; justify-content: center; font-size: 10px;
+    cursor: pointer; transition: all 0.15s; color: #666;
+    background: transparent; border: none;
+  }
+  .action-btn:hover.edit { color: var(--gold); background: rgba(200,169,122,0.15); }
+  .action-btn:hover.disable { color: #F59E0B; background: rgba(245,158,11,0.15); }
+  .action-btn:hover.delete { color: var(--red); background: rgba(239,68,68,0.15); }
+
+  .pipeline-disabled { opacity: 0.4; }
+  .pipeline-disabled .pipeline-dot { background: #333 !important; }
+
+  .add-pipeline-btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 18px 6px 36px; cursor: pointer;
+    color: #444; font-size: 11px; font-weight: 500;
+    transition: all 0.15s; margin-top: 2px;
+  }
+  .add-pipeline-btn:hover { color: var(--gold); }
+  .add-icon {
+    width: 14px; height: 14px; border-radius: 3px; border: 1px dashed #444;
+    display: flex; align-items: center; justify-content: center; font-size: 10px;
+    transition: all 0.15s; flex-shrink: 0;
+  }
+  .add-pipeline-btn:hover .add-icon { border-color: var(--gold); color: var(--gold); }
+
+  .sidebar-bottom {
+    margin-top: auto; padding: 16px 18px;
+    border-top: 1px solid #1F1F1F;
+  }
+  .user-row { display: flex; align-items: center; gap: 10px; }
+  .user-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--gold-dark); display: flex; align-items: center;
+    justify-content: center; font-size: 11px; font-weight: 700; color: #000;
+    flex-shrink: 0;
+  }
+  .user-name { font-size: 12px; color: #888; }
+  .user-role { font-size: 10px; color: #444; }
+  .master-badge {
+    margin-left: auto; background: rgba(200,169,122,0.15);
+    color: var(--gold); font-size: 9px; font-weight: 700;
+    padding: 2px 6px; border-radius: 10px; letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* ─── MAIN CONTENT ─── */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* TOPBAR */
+  .topbar {
+    height: 52px; background: var(--white); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; flex-shrink: 0;
+  }
+  .topbar-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .btn-gold {
+    height: 34px; padding: 0 16px; background: var(--gold); border: none;
+    border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer;
+    font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 6px;
+  }
+
+  /* ─── TABS ─── */
+  .view-tabs {
+    display: flex; border-bottom: 1px solid var(--border);
+    background: var(--white); padding: 0 24px;
+  }
+  .tab {
+    padding: 10px 16px; font-size: 13px; font-weight: 500; cursor: pointer;
+    color: var(--muted); border-bottom: 2px solid transparent;
+    transition: all 0.15s; margin-bottom: -1px;
+  }
+  .tab.active { color: var(--gold-dark); border-bottom-color: var(--gold); font-weight: 700; }
+
+  /* ─── BUILDER PAGE ─── */
+  .builder-layout {
+    flex: 1; display: grid; grid-template-columns: 1fr 320px;
+    overflow: hidden;
+  }
+
+  /* CANVAS AREA */
+  .canvas-area {
+    background: #FAFAF9;
+    background-image:
+      radial-gradient(circle, #E8E5E0 1px, transparent 1px);
+    background-size: 24px 24px;
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* TOOLBAR */
+  .canvas-toolbar {
+    position: absolute; top: 16px; left: 16px;
+    display: flex; gap: 6px; z-index: 10;
+  }
+  .toolbar-btn {
+    height: 32px; padding: 0 12px; background: var(--white);
+    border: 1px solid var(--border); border-radius: 7px;
+    font-size: 11px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 5px; color: var(--text);
+    font-family: 'Inter', sans-serif; transition: all 0.15s;
+  }
+  .toolbar-btn:hover { border-color: var(--gold); color: var(--gold-dark); }
+  .toolbar-btn.active { background: var(--gold); border-color: var(--gold); color: #000; }
+
+  /* ZOOM */
+  .canvas-zoom {
+    position: absolute; bottom: 16px; left: 16px;
+    display: flex; gap: 4px; z-index: 10;
+  }
+  .zoom-btn {
+    width: 28px; height: 28px; background: var(--white);
+    border: 1px solid var(--border); border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; cursor: pointer; color: var(--muted);
+  }
+  .zoom-label { height: 28px; padding: 0 8px; background: var(--white); border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; font-size: 11px; color: var(--muted); }
+
+  /* NODES */
+  .flow-canvas { position: relative; width: 640px; height: 420px; }
+
+  .flow-node {
+    position: absolute; background: var(--white);
+    border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; min-width: 160px; cursor: grab;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .flow-node:hover { border-color: var(--gold); box-shadow: 0 4px 16px rgba(200,169,122,0.15); }
+  .flow-node.trigger { border-color: #10B981; border-left: 3px solid #10B981; }
+  .flow-node.stage { border-color: var(--gold); border-left: 3px solid var(--gold); }
+  .flow-node.action { border-color: #3B82F6; border-left: 3px solid #3B82F6; }
+  .flow-node.condition { border-color: #F59E0B; border-left: 3px solid #F59E0B; }
+  .flow-node.skill { border-color: #8B5CF6; border-left: 3px solid #8B5CF6; }
+
+  .node-type { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 4px; }
+  .node-type.trigger { color: #10B981; }
+  .node-type.stage { color: var(--gold-dark); }
+  .node-type.action { color: #3B82F6; }
+  .node-type.condition { color: #F59E0B; }
+  .node-type.skill { color: #8B5CF6; }
+  .node-title { font-size: 12px; font-weight: 700; color: var(--text); }
+  .node-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .node-handle {
+    position: absolute; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--white); border: 2px solid #ccc;
+  }
+  .node-handle.out { right: -5px; top: 50%; transform: translateY(-50%); }
+  .node-handle.in { left: -5px; top: 50%; transform: translateY(-50%); }
+
+  /* SVG CONNECTIONS */
+  .connections { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+  /* NODE PALETTE */
+  .node-palette {
+    position: absolute; top: 16px; right: 16px;
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px; width: 140px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08); z-index: 10;
+  }
+  .palette-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin-bottom: 8px; }
+  .palette-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+    border-radius: 6px; cursor: grab; font-size: 11px; font-weight: 600;
+    margin-bottom: 4px; transition: all 0.15s; color: var(--text);
+  }
+  .palette-item:hover { background: var(--canvas); }
+  .palette-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ─── AI CHAT SIDEBAR ─── */
+  .ai-sidebar {
+    background: var(--white); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .ai-header {
+    padding: 16px 18px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .ai-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, #1A1A1A, #333);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+    box-shadow: 0 0 0 2px var(--gold);
+  }
+  .ai-name { font-size: 13px; font-weight: 700; }
+  .ai-status { font-size: 11px; color: var(--green); display: flex; align-items: center; gap: 4px; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  .ai-badge {
+    margin-left: auto; background: rgba(139,92,246,0.1);
+    color: #8B5CF6; font-size: 9px; font-weight: 700;
+    padding: 2px 7px; border-radius: 10px; letter-spacing: 0.5px;
+  }
+
+  .ai-messages {
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .ai-messages::-webkit-scrollbar { width: 3px; }
+  .ai-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .msg { display: flex; flex-direction: column; gap: 4px; }
+  .msg.ai { align-items: flex-start; }
+  .msg.user { align-items: flex-end; }
+  .msg-bubble {
+    max-width: 240px; padding: 10px 12px; border-radius: 10px;
+    font-size: 12px; line-height: 1.5;
+  }
+  .msg.ai .msg-bubble {
+    background: var(--canvas); border: 1px solid var(--border);
+    color: var(--text); border-radius: 4px 10px 10px 10px;
+  }
+  .msg.user .msg-bubble {
+    background: var(--gold); color: #000; font-weight: 500;
+    border-radius: 10px 4px 10px 10px;
+  }
+  .msg-time { font-size: 10px; color: var(--muted); }
+
+  /* SUGGESTIONS */
+  .ai-suggestions {
+    padding: 0 16px 12px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .suggestion-label { font-size: 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+  .suggestion-chip {
+    padding: 7px 10px; background: var(--canvas); border: 1px solid var(--border);
+    border-radius: 7px; font-size: 11px; cursor: pointer; color: var(--text);
+    transition: all 0.15s; font-weight: 500;
+  }
+  .suggestion-chip:hover { border-color: var(--gold); color: var(--gold-dark); background: rgba(200,169,122,0.05); }
+
+  /* INPUT */
+  .ai-input-area {
+    padding: 12px 16px; border-top: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: flex-end;
+  }
+  .ai-input {
+    flex: 1; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; font-family: 'Inter', sans-serif;
+    outline: none; resize: none; min-height: 36px; max-height: 80px;
+    transition: border-color 0.15s; line-height: 1.4;
+  }
+  .ai-input:focus { border-color: var(--gold); }
+  .ai-send {
+    width: 34px; height: 34px; background: var(--gold); border: none;
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; cursor: pointer; flex-shrink: 0; transition: all 0.15s;
+  }
+  .ai-send:hover { background: var(--gold-dark); }
+
+  /* EMPTY STATE DO CANVAS */
+  .canvas-empty {
+    text-align: center; color: var(--muted);
+    pointer-events: none; display: none;
+  }
+  .canvas-empty-icon { font-size: 40px; opacity: 0.2; margin-bottom: 12px; }
+  .canvas-empty-text { font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">ORION CRM</div>
+    <div class="logo-sub">Joalheria</div>
+  </div>
+
+  <!-- GERAL -->
+  <div class="sidebar-section">
+    <div class="nav-item">
+      <span class="nav-icon">▦</span> Dashboard
+    </div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="sidebar-section">
+    <div class="section-label">Pipeline</div>
+
+    <!-- Leads pipeline -->
+    <div class="pipeline-item active">
+      <div class="pipeline-dot"></div>
+      <span class="pipeline-name">Leads</span>
+      <div class="master-actions">
+        <button class="action-btn edit" title="Editar">✏️</button>
+        <button class="action-btn disable" title="Desativar">⏸</button>
+        <button class="action-btn delete" title="Apagar">🗑</button>
+      </div>
+    </div>
+
+    <!-- Pedidos pipeline -->
+    <div class="pipeline-item">
+      <div class="pipeline-dot"></div>
+      <span class="pipeline-name">Pedidos</span>
+      <div class="master-actions">
+        <button class="action-btn edit" title="Editar">✏️</button>
+        <button class="action-btn disable" title="Desativar">⏸</button>
+        <button class="action-btn delete" title="Apagar">🗑</button>
+      </div>
+    </div>
+
+    <!-- Produção pipeline -->
+    <div class="pipeline-item">
+      <div class="pipeline-dot"></div>
+      <span class="pipeline-name">Produção</span>
+      <div class="master-actions">
+        <button class="action-btn edit" title="Editar">✏️</button>
+        <button class="action-btn disable" title="Desativar">⏸</button>
+        <button class="action-btn delete" title="Apagar">🗑</button>
+      </div>
+    </div>
+
+    <!-- Pipeline desativado (só visível pro mestre) -->
+    <div class="pipeline-item pipeline-disabled">
+      <div class="pipeline-dot"></div>
+      <span class="pipeline-name">Pós-venda</span>
+      <span style="font-size:9px;color:#444;margin-left:auto">off</span>
+    </div>
+
+    <!-- Botão add (só mestre) -->
+    <div class="add-pipeline-btn">
+      <div class="add-icon">+</div>
+      <span>Novo pipeline</span>
+    </div>
+  </div>
+
+  <!-- COMERCIAL -->
+  <div class="sidebar-section">
+    <div class="section-label">Comercial</div>
+    <div class="nav-item"><span class="nav-icon">👥</span> Clientes</div>
+    <div class="nav-item"><span class="nav-icon">💬</span> Inbox</div>
+  </div>
+
+  <!-- OPERAÇÃO -->
+  <div class="sidebar-section">
+    <div class="section-label">Operação</div>
+    <div class="nav-item"><span class="nav-icon">$</span> Financeiro</div>
+    <div class="nav-item"><span class="nav-icon">📦</span> Estoque</div>
+    <div class="nav-item"><span class="nav-icon">🖥</span> PDV</div>
+  </div>
+
+  <!-- SISTEMA -->
+  <div class="sidebar-section">
+    <div class="section-label">Sistema</div>
+    <div class="nav-item"><span class="nav-icon">⚡</span> Automações</div>
+    <div class="nav-item"><span class="nav-icon">📊</span> Analytics</div>
+    <div class="nav-item"><span class="nav-icon">⚙</span> Ajustes</div>
+  </div>
+
+  <!-- USER -->
+  <div class="sidebar-bottom">
+    <div class="user-row">
+      <div class="user-avatar">GM</div>
+      <div>
+        <div class="user-name">Guilherme</div>
+        <div class="user-role">Admin</div>
+      </div>
+      <div class="master-badge">Mestre</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:18px">🔀</span>
+      <span class="topbar-title">Pipeline — Leads</span>
+      <span style="font-size:11px;padding:2px 8px;background:rgba(200,169,122,0.12);color:var(--gold-dark);border-radius:20px;font-weight:600">Builder</span>
+    </div>
+    <div class="topbar-right">
+      <button class="toolbar-btn">↩ Desfazer</button>
+      <button class="toolbar-btn">👁 Preview</button>
+      <button class="btn-gold">▶ Publicar Pipeline</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="view-tabs">
+    <div class="tab active">⬡ Fluxo</div>
+    <div class="tab">⚙ Configurações</div>
+    <div class="tab">📋 Etapas</div>
+    <div class="tab">📈 Métricas</div>
+  </div>
+
+  <!-- BUILDER LAYOUT -->
+  <div class="builder-layout">
+
+    <!-- CANVAS -->
+    <div class="canvas-area">
+
+      <!-- TOOLBAR -->
+      <div class="canvas-toolbar">
+        <button class="toolbar-btn active">↖ Selecionar</button>
+        <button class="toolbar-btn">✋ Mover</button>
+        <button class="toolbar-btn">+ Adicionar nó</button>
+      </div>
+
+      <!-- ZOOM -->
+      <div class="canvas-zoom">
+        <div class="zoom-btn">−</div>
+        <div class="zoom-label">100%</div>
+        <div class="zoom-btn">+</div>
+        <div class="zoom-btn">⊡</div>
+      </div>
+
+      <!-- NODE PALETTE -->
+      <div class="node-palette">
+        <div class="palette-label">Nós</div>
+        <div class="palette-item"><div class="palette-dot" style="background:#10B981"></div>Gatilho</div>
+        <div class="palette-item"><div class="palette-dot" style="background:var(--gold)"></div>Etapa</div>
+        <div class="palette-item"><div class="palette-dot" style="background:#3B82F6"></div>Ação</div>
+        <div class="palette-item"><div class="palette-dot" style="background:#F59E0B"></div>Condição</div>
+        <div class="palette-item"><div class="palette-dot" style="background:#8B5CF6"></div>Skill IA</div>
+        <div class="palette-item"><div class="palette-dot" style="background:#EC4899"></div>n8n Flow</div>
+      </div>
+
+      <!-- FLOW NODES -->
+      <div class="flow-canvas">
+
+        <!-- SVG connections -->
+        <svg class="connections" width="640" height="420">
+          <!-- Trigger → Novo -->
+          <path d="M 196 60 C 230 60 230 110 264 110" stroke="#10B981" stroke-width="1.5" fill="none" stroke-dasharray="4 2" opacity="0.6"/>
+          <!-- Novo → Qualificado -->
+          <path d="M 424 110 C 460 110 460 190 264 190" stroke="var(--gold)" stroke-width="1.5" fill="none" opacity="0.5"/>
+          <!-- Qualificado → Skill IA -->
+          <path d="M 424 190 C 460 190 490 250 490 250" stroke="#8B5CF6" stroke-width="1.5" fill="none" stroke-dasharray="4 2" opacity="0.6"/>
+          <!-- Qualificado → Proposta -->
+          <path d="M 424 190 C 460 190 460 280 264 280" stroke="var(--gold)" stroke-width="1.5" fill="none" opacity="0.5"/>
+          <!-- Proposta → n8n -->
+          <path d="M 424 280 C 470 280 490 340 490 340" stroke="#EC4899" stroke-width="1.5" fill="none" stroke-dasharray="4 2" opacity="0.6"/>
+          <!-- Proposta → Ganhou -->
+          <path d="M 424 280 C 460 280 460 370 264 370" stroke="#10B981" stroke-width="1.5" fill="none" opacity="0.5"/>
+        </svg>
+
+        <!-- TRIGGER -->
+        <div class="flow-node trigger" style="left:40px;top:38px;width:156px">
+          <div class="node-type trigger">Gatilho</div>
+          <div class="node-title">Lead recebido</div>
+          <div class="node-sub">WhatsApp · n8n</div>
+          <div class="node-handle out"></div>
+        </div>
+
+        <!-- ETAPA: Novo -->
+        <div class="flow-node stage" style="left:264px;top:82px;width:160px">
+          <div class="node-type stage">Etapa</div>
+          <div class="node-title">Novo</div>
+          <div class="node-sub">Entrada automática</div>
+          <div class="node-handle in"></div>
+          <div class="node-handle out"></div>
+        </div>
+
+        <!-- ETAPA: Qualificado -->
+        <div class="flow-node stage" style="left:264px;top:162px;width:160px">
+          <div class="node-type stage">Etapa</div>
+          <div class="node-title">Qualificado</div>
+          <div class="node-sub">IA valida interesse</div>
+          <div class="node-handle in"></div>
+          <div class="node-handle out"></div>
+        </div>
+
+        <!-- SKILL IA -->
+        <div class="flow-node skill" style="left:464px;top:228px;width:150px">
+          <div class="node-type skill">Skill IA</div>
+          <div class="node-title">Qualificador</div>
+          <div class="node-sub">Analisa perfil do lead</div>
+          <div class="node-handle in"></div>
+        </div>
+
+        <!-- ETAPA: Proposta -->
+        <div class="flow-node stage" style="left:264px;top:252px;width:160px">
+          <div class="node-type stage">Etapa</div>
+          <div class="node-title">Proposta Enviada</div>
+          <div class="node-sub">Aguarda resposta</div>
+          <div class="node-handle in"></div>
+          <div class="node-handle out"></div>
+        </div>
+
+        <!-- n8n Flow -->
+        <div class="flow-node" style="left:464px;top:318px;width:150px;border-color:#EC4899;border-left:3px solid #EC4899">
+          <div class="node-type" style="color:#EC4899">n8n Flow</div>
+          <div class="node-title">Seguimento WA</div>
+          <div class="node-sub">Envia mensagem 24h</div>
+          <div class="node-handle in"></div>
+        </div>
+
+        <!-- ETAPA: Ganhou -->
+        <div class="flow-node" style="left:264px;top:342px;width:160px;border-color:#10B981;border-left:3px solid #10B981">
+          <div class="node-type" style="color:#10B981">Etapa Final</div>
+          <div class="node-title">Convertido ✓</div>
+          <div class="node-sub">Cria pedido automático</div>
+          <div class="node-handle in"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- AI CHAT SIDEBAR -->
+    <div class="ai-sidebar">
+      <div class="ai-header">
+        <div class="ai-avatar">✦</div>
+        <div>
+          <div class="ai-name">ORION IA</div>
+          <div class="ai-status"><div class="status-dot"></div>online</div>
+        </div>
+        <div class="ai-badge">Pipeline AI</div>
+      </div>
+
+      <div class="ai-messages">
+        <div class="msg ai">
+          <div class="msg-bubble">Olá! Sou o assistente de pipeline. Descreva em linguagem natural como você quer que o fluxo funcione e eu monto tudo pra você. 🔀</div>
+          <div class="msg-time">agora</div>
+        </div>
+
+        <div class="msg user">
+          <div class="msg-bubble">Quando chegar um lead pelo WhatsApp, quero que a IA qualifique ele e se tiver interesse manda uma proposta automática</div>
+          <div class="msg-time">14:31</div>
+        </div>
+
+        <div class="msg ai">
+          <div class="msg-bubble">Entendido! Criei o fluxo com:<br><br>
+            1. <strong>Gatilho</strong> — Lead recebido via WhatsApp<br>
+            2. <strong>Skill IA</strong> — Qualificador analisa interesse<br>
+            3. <strong>Etapa</strong> — Qualificado → Proposta<br>
+            4. <strong>n8n Flow</strong> — Envia proposta via WA<br><br>
+            Quer adicionar um follow-up automático se não responder em 24h?
+          </div>
+          <div class="msg-time">14:31</div>
+        </div>
+      </div>
+
+      <div class="ai-suggestions">
+        <div class="suggestion-label">Sugestões</div>
+        <div class="suggestion-chip">+ Adicionar follow-up 24h sem resposta</div>
+        <div class="suggestion-chip">+ Criar etapa de negociação</div>
+        <div class="suggestion-chip">+ Notificar atendente ao qualificar</div>
+      </div>
+
+      <div class="ai-input-area">
+        <textarea class="ai-input" placeholder="Descreva uma mudança no fluxo..."></textarea>
+        <button class="ai-send">↑</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

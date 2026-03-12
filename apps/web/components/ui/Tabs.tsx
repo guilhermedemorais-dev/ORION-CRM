@@ -65,7 +65,7 @@ export function TabsList({ className, ...props }: HTMLAttributes<HTMLDivElement>
     return (
         <div
             className={cn(
-                'inline-flex w-full flex-wrap gap-1 rounded-lg border border-canvas-border bg-white p-1 sm:w-auto',
+                'inline-flex w-full flex-wrap gap-1 rounded-lg border border-white/5 bg-[color:var(--orion-surface)] p-1 sm:w-auto',
                 className
             )}
             {...props}
@@ -89,8 +89,8 @@ export function TabsTrigger({ className, value, children, ...props }: TabsTrigge
             className={cn(
                 'rounded-md px-3 py-2 text-sm font-medium transition',
                 isActive
-                    ? 'bg-brand-gold text-surface-sidebar'
-                    : 'text-gray-600 hover:bg-canvas hover:text-gray-900',
+                    ? 'bg-brand-gold text-[#0A0A0C]'
+                    : 'text-[color:var(--orion-text-secondary)] hover:bg-white/5 hover:text-[color:var(--orion-text)]',
                 className
             )}
             onClick={() => setValue(value)}

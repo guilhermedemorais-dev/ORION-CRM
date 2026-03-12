@@ -2,7 +2,6 @@ import { ConversationList } from '@/components/modules/inbox/ConversationList';
 import { ConversationThread } from '@/components/modules/inbox/ConversationThread';
 import { InboxEmptyState } from '@/components/modules/inbox/InboxEmptyState';
 import { InboxRealtimeBridge } from '@/components/modules/inbox/InboxRealtimeBridge';
-import { PageHeader } from '@/components/ui/PageHeader';
 import type {
     ApiListResponse,
     ChannelIntegrationRecord,
@@ -12,6 +11,7 @@ import type {
 } from '@/lib/api';
 import { apiRequest } from '@/lib/api';
 import { requireSession } from '@/lib/auth';
+import type { AdminUser, AdminUsersResponse } from '@/lib/ajustes-types';
 
 interface InboxSearchParams {
     channel?: InboxConversationRecord['channel'] | '';
@@ -64,6 +64,16 @@ export default async function InboxPage({
         apiRequest<ApiListResponse<ChannelIntegrationRecord>>('/inbox/channels'),
         apiRequest<ApiListResponse<QuickReplyRecord>>('/inbox/quick-replies'),
     ]);
+    let attendants: AdminUser[] = [];
+
+    if (session.user.role === 'ADMIN') {
+        try {
+            const usersPayload = await apiRequest<AdminUsersResponse>('/users');
+            attendants = usersPayload.data;
+        } catch {
+            attendants = [];
+        }
+    }
 
     const initialSelectedId = searchParams?.conversation ?? conversationResponse.data[0]?.id ?? null;
     let selectedThread = await fetchSelectedConversation(initialSelectedId);
@@ -75,20 +85,16 @@ export default async function InboxPage({
     const selectedConversationId = selectedThread?.conversation.id ?? conversationResponse.data[0]?.id ?? null;
 
     return (
-        <div className="space-y-6">
+        <div className="min-h-[calc(100vh-7rem)]">
             <InboxRealtimeBridge />
-            <PageHeader
-                title="Inbox"
-                description="Atendimento operacional do WhatsApp com fila, thread unificada e resposta direta pela Meta Cloud API."
-            />
 
             {searchParams?.error ? (
-                <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                     {searchParams.error}
                 </div>
             ) : null}
 
-            <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+            <div className="grid min-h-[calc(100vh-10rem)] gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
                 <ConversationList
                     conversations={conversationResponse.data}
                     channels={channelResponse.data}
@@ -96,6 +102,7 @@ export default async function InboxPage({
                     channel={searchParams?.channel ?? ''}
                     search={searchParams?.q ?? ''}
                     status={searchParams?.status ?? ''}
+                    currentUserId={session.user.id}
                 />
 
                 {selectedThread ? (
@@ -103,6 +110,7 @@ export default async function InboxPage({
                         thread={selectedThread}
                         currentUser={session.user}
                         quickReplies={quickReplyResponse.data}
+                        attendants={attendants}
                     />
                 ) : (
                     <InboxEmptyState />

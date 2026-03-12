@@ -47,6 +47,31 @@ function parseNodes(flow: Record<string, unknown>): Array<{ id: string; type: st
         .filter((node): node is { id: string; type: string; position: [number, number] } => Boolean(node));
 }
 
+function nodeAccent(type: string) {
+    switch (type) {
+        case 'entry':
+            return {
+                border: '#10B981',
+                label: 'TRIGGER',
+            };
+        case 'qualify':
+            return {
+                border: '#C8A97A',
+                label: 'STAGE',
+            };
+        case 'close':
+            return {
+                border: '#3B82F6',
+                label: 'ACTION',
+            };
+        default:
+            return {
+                border: '#8B5CF6',
+                label: 'SKILL',
+            };
+    }
+}
+
 export default async function PipelineBuilderPage({
     params,
     searchParams,
@@ -82,7 +107,7 @@ export default async function PipelineBuilderPage({
                         <textarea
                             name="description"
                             placeholder="Descrição operacional"
-                            className="min-h-[120px] rounded-md border border-canvas-border bg-white px-3 py-2 text-sm text-gray-900 outline-none"
+                            className="min-h-[120px] rounded-md border border-white/10 bg-[color:var(--orion-base)] px-3 py-2 text-sm text-[color:var(--orion-text)] outline-none"
                         />
                         <Button type="submit" className="justify-center">
                             Criar e abrir builder
@@ -101,12 +126,7 @@ export default async function PipelineBuilderPage({
     const nodes = parseNodes(flowJson);
 
     return (
-        <div className="space-y-6">
-            <PageHeader
-                title={`Builder · ${pipeline.name}`}
-                description="Builder inicial do pipeline com persistência de flow_json, visualização de nós e publicação."
-            />
-
+        <div className="space-y-4">
             {searchParams?.error ? (
                 <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                     {searchParams.error}
@@ -123,77 +143,170 @@ export default async function PipelineBuilderPage({
                 </div>
             ) : null}
 
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-                <Card title="Canvas inicial" description="Preview posicional dos nós persistidos no flow_json.">
-                    <div className="relative min-h-[420px] overflow-hidden rounded-2xl border border-canvas-border bg-[radial-gradient(circle_at_top,#faf7ef,transparent_55%),linear-gradient(180deg,#ffffff,#f7f7fb)]">
-                        {nodes.map((node) => (
-                            <div
-                                key={node.id}
-                                className="absolute min-w-[140px] rounded-2xl border border-canvas-border bg-white px-4 py-3 shadow-card"
-                                style={{ left: `${node.position[0]}px`, top: `${node.position[1]}px` }}
-                            >
-                                <p className="text-xs uppercase tracking-[0.18em] text-gray-400">{node.type}</p>
-                                <p className="mt-1 text-sm font-semibold text-gray-900">{node.id}</p>
-                            </div>
-                        ))}
+            <section className="overflow-hidden rounded-2xl border border-[#E8E5E0] bg-white shadow-card">
+                <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3 border-b border-[#E8E5E0] px-6 py-3">
+                    <div className="flex items-center gap-3">
+                        <span className="text-lg">🔀</span>
+                        <h1 className="font-editorial text-[17px] font-bold text-[#111827]">{pipeline.name}</h1>
+                        <span className="rounded-full bg-[rgba(200,169,122,0.12)] px-3 py-1 text-[11px] font-semibold text-[#A8895A]">
+                            Builder visual
+                        </span>
                     </div>
-                </Card>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <form action={togglePipelineStatusAction}>
+                            <input type="hidden" name="pipeline_id" value={pipeline.id} />
+                            <input type="hidden" name="slug" value={pipeline.slug} />
+                            <input type="hidden" name="is_active" value={pipeline.is_active ? 'false' : 'true'} />
+                            <button
+                                type="submit"
+                                className="inline-flex h-[34px] items-center rounded-[7px] border border-[#E8E5E0] px-4 text-[12px] font-semibold text-[#111827] transition hover:border-[#C8A97A] hover:text-[#A8895A]"
+                            >
+                                {pipeline.is_active ? 'Desativar' : 'Ativar'}
+                            </button>
+                        </form>
+                        <form action={publishPipelineAction}>
+                            <input type="hidden" name="pipeline_id" value={pipeline.id} />
+                            <input type="hidden" name="slug" value={pipeline.slug} />
+                            <button
+                                type="submit"
+                                className="inline-flex h-[34px] items-center rounded-[7px] bg-[#C8A97A] px-4 text-[12px] font-bold text-black transition hover:bg-[#E8D5B0]"
+                            >
+                                Publicar pipeline
+                            </button>
+                        </form>
+                    </div>
+                </div>
 
-                <div className="space-y-6">
-                    <Card title="Publicação" description="Controle de status e publicação do pipeline.">
-                        <div className="space-y-3">
-                            <div className="rounded-xl border border-canvas-border bg-[#FBFBFD] px-4 py-3 text-sm text-gray-700">
-                                <p>Status: {pipeline.is_active ? 'Ativo' : 'Inativo'}</p>
-                                <p className="mt-1">Publicado: {pipeline.published_at ? 'Sim' : 'Não'}</p>
-                                <p className="mt-1">Etapas: {stagesResponse.data.length}</p>
-                            </div>
+                <div className="flex border-b border-[#E8E5E0] bg-white px-6">
+                    <button className="border-b-2 border-[#C8A97A] px-4 py-3 text-[13px] font-bold text-[#A8895A]">Builder visual</button>
+                    <button className="px-4 py-3 text-[13px] font-medium text-[#6B7280]">Configuração</button>
+                    <button className="px-4 py-3 text-[13px] font-medium text-[#6B7280]">JSON</button>
+                </div>
 
-                            <form action={togglePipelineStatusAction}>
-                                <input type="hidden" name="pipeline_id" value={pipeline.id} />
-                                <input type="hidden" name="slug" value={pipeline.slug} />
-                                <input type="hidden" name="is_active" value={pipeline.is_active ? 'false' : 'true'} />
-                                <Button type="submit" variant="secondary" className="w-full justify-center">
-                                    {pipeline.is_active ? 'Desativar pipeline' : 'Ativar pipeline'}
-                                </Button>
-                            </form>
-
-                            <form action={publishPipelineAction}>
-                                <input type="hidden" name="pipeline_id" value={pipeline.id} />
-                                <input type="hidden" name="slug" value={pipeline.slug} />
-                                <Button type="submit" className="w-full justify-center">
-                                    Publicar pipeline
-                                </Button>
-                            </form>
+                <div className="grid min-h-[720px] xl:grid-cols-[minmax(0,1fr)_320px]">
+                    <div className="relative overflow-hidden border-r border-[#E8E5E0] bg-[#FAFAF9]" style={{ backgroundImage: 'radial-gradient(circle, #E8E5E0 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
+                        <div className="absolute left-4 top-4 z-10 flex gap-2">
+                            {['Mover', 'Conectar', 'Pan'].map((label, index) => (
+                                <button
+                                    key={label}
+                                    type="button"
+                                    className={index === 0
+                                        ? 'inline-flex h-8 items-center rounded-[7px] border border-[#C8A97A] bg-[#C8A97A] px-3 text-[11px] font-semibold text-black'
+                                        : 'inline-flex h-8 items-center rounded-[7px] border border-[#E8E5E0] bg-white px-3 text-[11px] font-semibold text-[#111827]'}
+                                >
+                                    {label}
+                                </button>
+                            ))}
                         </div>
-                    </Card>
 
-                    <Card title="Etapas vinculadas" description="Etapas atuais desse pipeline.">
-                        <div className="space-y-2">
-                            {stagesResponse.data.map((stage) => (
-                                <div key={stage.id} className="flex items-center gap-2 rounded-lg border border-canvas-border bg-[#FBFBFD] px-3 py-2">
-                                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
-                                    <span className="text-sm font-medium text-gray-900">{stage.name}</span>
+                        <div className="absolute bottom-4 left-4 z-10 flex gap-1">
+                            <button type="button" className="flex h-7 w-7 items-center justify-center rounded-md border border-[#E8E5E0] bg-white text-sm text-[#6B7280]">−</button>
+                            <div className="flex h-7 items-center rounded-md border border-[#E8E5E0] bg-white px-2 text-[11px] text-[#6B7280]">100%</div>
+                            <button type="button" className="flex h-7 w-7 items-center justify-center rounded-md border border-[#E8E5E0] bg-white text-sm text-[#6B7280]">+</button>
+                        </div>
+
+                        <div className="absolute right-4 top-4 z-10 w-[148px] rounded-[10px] border border-[#E8E5E0] bg-white p-3 shadow-[0_4px_16px_rgba(0,0,0,0.08)]">
+                            <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.08em] text-[#6B7280]">Nodes</p>
+                            {[
+                                ['Trigger', '#10B981'],
+                                ['Stage', '#C8A97A'],
+                                ['Action', '#3B82F6'],
+                                ['Condition', '#F59E0B'],
+                            ].map(([label, color]) => (
+                                <div key={label} className="mb-1 flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-semibold text-[#111827]">
+                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+                                    {label}
                                 </div>
                             ))}
                         </div>
-                    </Card>
-                </div>
-            </div>
 
-            <Card title="Flow JSON" description="Persistência canônica do builder até a entrada do canvas mais rico.">
-                <form action={savePipelineFlowAction} className="space-y-3">
-                    <input type="hidden" name="pipeline_id" value={pipeline.id} />
-                    <input type="hidden" name="slug" value={pipeline.slug} />
-                    <textarea
-                        name="flow_json"
-                        defaultValue={JSON.stringify(flowJson, null, 2)}
-                        className="min-h-[320px] w-full rounded-md border border-canvas-border bg-white px-3 py-2 font-mono text-xs text-gray-900 outline-none"
-                    />
-                    <Button type="submit" className="justify-center">
-                        Salvar estrutura
-                    </Button>
-                </form>
-            </Card>
+                        <div className="relative h-full min-h-[720px] w-full overflow-auto p-16">
+                            <svg className="pointer-events-none absolute inset-0 h-full w-full" preserveAspectRatio="none">
+                                {nodes.slice(0, -1).map((node, index) => {
+                                    const nextNode = nodes[index + 1];
+                                    if (!nextNode) return null;
+                                    return (
+                                        <path
+                                            key={`${node.id}-${nextNode.id}`}
+                                            d={`M ${node.position[0] + 160} ${node.position[1] + 44} C ${node.position[0] + 220} ${node.position[1] + 44}, ${nextNode.position[0] - 60} ${nextNode.position[1] + 44}, ${nextNode.position[0]} ${nextNode.position[1] + 44}`}
+                                            fill="none"
+                                            stroke="#D6D3D1"
+                                            strokeWidth="3"
+                                        />
+                                    );
+                                })}
+                            </svg>
+
+                            {nodes.map((node) => {
+                                const accent = nodeAccent(node.type);
+                                return (
+                                    <div
+                                        key={node.id}
+                                        className="absolute min-w-[170px] rounded-[10px] border-[1.5px] border-[#E8E5E0] bg-white px-4 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition hover:border-[#C8A97A] hover:shadow-[0_4px_16px_rgba(200,169,122,0.15)]"
+                                        style={{
+                                            left: `${node.position[0]}px`,
+                                            top: `${node.position[1]}px`,
+                                            borderLeftWidth: '3px',
+                                            borderLeftColor: accent.border,
+                                        }}
+                                    >
+                                        <p className="text-[9px] font-bold uppercase tracking-[0.08em]" style={{ color: accent.border }}>
+                                            {accent.label}
+                                        </p>
+                                        <p className="mt-1 text-[12px] font-bold text-[#111827]">{node.id}</p>
+                                        <p className="mt-0.5 text-[10px] text-[#6B7280]">Etapa visual do fluxo</p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <aside className="space-y-5 bg-white p-5">
+                        <Card title="Publicação" description="Estado atual do pipeline e ações de ativação.">
+                            <div className="space-y-3 text-sm text-[#6B7280]">
+                                <div className="rounded-[10px] border border-[#E8E5E0] bg-[#F8F7F5] px-4 py-3">
+                                    <p>Status: {pipeline.is_active ? 'Ativo' : 'Inativo'}</p>
+                                    <p className="mt-1">Publicado: {pipeline.published_at ? 'Sim' : 'Não'}</p>
+                                    <p className="mt-1">Etapas: {stagesResponse.data.length}</p>
+                                </div>
+                                <div className="rounded-[10px] border border-[#E8E5E0] bg-[#F8F7F5] px-4 py-3">
+                                    <p>Slug: {pipeline.slug}</p>
+                                    <p className="mt-1">Flow: {nodes.length} nodes</p>
+                                </div>
+                            </div>
+                        </Card>
+
+                        <Card title="Etapas" description="Etapas vinculadas ao pipeline atual.">
+                            <div className="space-y-2">
+                                {stagesResponse.data.map((stage) => (
+                                    <div key={stage.id} className="flex items-center gap-2 rounded-lg border border-[#E8E5E0] bg-[#F8F7F5] px-3 py-2 text-sm text-[#111827]">
+                                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
+                                        {stage.name}
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
+
+                        <Card title="Flow JSON" description="Persistência canônica do builder até o canvas mais rico.">
+                            <form action={savePipelineFlowAction} className="space-y-3">
+                                <input type="hidden" name="pipeline_id" value={pipeline.id} />
+                                <input type="hidden" name="slug" value={pipeline.slug} />
+                                <textarea
+                                    name="flow_json"
+                                    defaultValue={JSON.stringify(flowJson, null, 2)}
+                                    className="min-h-[260px] w-full rounded-md border border-[#E8E5E0] bg-[#F8F7F5] px-3 py-3 font-mono text-[11px] text-[#111827] outline-none"
+                                />
+                                <button
+                                    type="submit"
+                                    className="inline-flex h-10 w-full items-center justify-center rounded-md bg-[#C8A97A] text-sm font-bold text-black transition hover:bg-[#E8D5B0]"
+                                >
+                                    Salvar estrutura
+                                </button>
+                            </form>
+                        </Card>
+                    </aside>
+                </div>
+            </section>
         </div>
     );
 }

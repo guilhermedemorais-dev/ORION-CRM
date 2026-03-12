@@ -37,6 +37,7 @@ export default async function PipelinePage({
             pipelineId={pipeline.id}
             pipelineName={pipeline.name}
             canManagePipeline={session.user.role === 'ADMIN'}
+            currentUserId={session.user.id}
             initialQuery={searchParams?.q ?? ''}
         />
     );

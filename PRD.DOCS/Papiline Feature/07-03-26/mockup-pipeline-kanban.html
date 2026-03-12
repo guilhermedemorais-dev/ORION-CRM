@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORION CRM — Pipeline Kanban</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --gold:#BFA06A;--gold-light:#D4B87E;--gold-bg:rgba(191,160,106,0.08);--gold-border:rgba(191,160,106,0.2);
+  --bg-void:#080809;--bg-base:#0F0F11;--bg-surface:#131316;--bg-elevated:#1A1A1E;--bg-nav:#0A0A0C;
+  --bg-hover:rgba(255,255,255,0.03);--bg-active:rgba(191,160,106,0.08);
+  --border-sub:rgba(255,255,255,0.04);--border-low:rgba(255,255,255,0.06);
+  --border-mid:rgba(255,255,255,0.10);--border-high:rgba(255,255,255,0.16);
+  --text-primary:#F0EBE3;--text-secondary:#A09A94;--text-muted:#4a4a54;--text-disabled:#2a2a32;
+  --green:#4CAF82;--red:#E05252;--amber:#F0A040;--blue:#4A9EFF;
+  --col-novo:#F0A040;--col-qual:#4A9EFF;--col-prop:#9C6FDE;
+  --col-neg:#E05252;--col-conv:#4CAF82;--col-perd:#4a4a54;
+  --font-body:'Inter',sans-serif;--font-display:'Cormorant Garamond',serif;
+  --t-fast:120ms ease;--t-base:180ms ease;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font-body);background:var(--bg-void);color:var(--text-primary);display:flex;height:100vh}
+
+/* ══ SIDEBAR ══ */
+.sidebar{width:200px;background:var(--bg-nav);border-right:1px solid var(--border-low);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;height:100vh}
+.sidebar-logo-wrap{padding:16px 16px 12px}
+.sidebar-logo-img{width:100%;height:40px;background:rgba(255,255,255,0.04);border:1px solid var(--border-low);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);margin-bottom:10px}
+.sidebar-brand{font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--gold);letter-spacing:2px}
+.sidebar-section{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-disabled);padding:10px 16px 4px;margin-top:4px}
+.nav-item{height:34px;padding:0 16px;display:flex;align-items:center;gap:9px;font-size:12px;font-weight:500;color:var(--text-secondary);cursor:pointer;border-left:2px solid transparent;transition:all var(--t-fast);position:relative}
+.nav-item:hover{color:var(--text-primary);background:var(--bg-hover)}
+.nav-item.active{color:var(--text-primary);background:var(--bg-active);border-left-color:var(--gold);font-weight:600}
+.nav-item svg{opacity:.5;flex-shrink:0;transition:opacity var(--t-fast)}
+.nav-item:hover svg,.nav-item.active svg{opacity:1}
+.nav-badge{margin-left:auto;height:16px;min-width:16px;padding:0 5px;border-radius:8px;background:rgba(255,255,255,0.07);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--text-muted)}
+.nav-edit{margin-left:auto;opacity:0;width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);transition:opacity var(--t-fast)}
+.nav-item:hover .nav-edit{opacity:1}
+.sidebar-user{margin-top:auto;padding:12px 14px;border-top:1px solid var(--border-low);display:flex;align-items:center;gap:9px}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:rgba(191,160,106,0.2);color:var(--gold);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:11px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gold)}
+
+/* ══ MAIN ══ */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* ── TOPBAR */
+.topbar{height:52px;background:var(--bg-nav);border-bottom:1px solid var(--border-low);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0}
+.topbar-breadcrumb{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted)}
+.topbar-sep{color:var(--text-disabled);font-size:12px}
+.topbar-page{font-size:15px;font-weight:700;color:var(--text-primary)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.icon-btn{width:32px;height:32px;border-radius:7px;background:rgba(255,255,255,0.05);border:1px solid var(--border-low);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);transition:all var(--t-fast);flex-shrink:0}
+.icon-btn:hover{background:rgba(255,255,255,0.09);border-color:var(--border-mid);color:var(--text-primary)}
+.notif-dot{position:relative}.notif-dot::after{content:'';position:absolute;top:7px;right:7px;width:6px;height:6px;border-radius:3px;background:var(--red);border:1.5px solid var(--bg-nav)}
+
+/* ── PAGE HEADER */
+.page-header{padding:16px 20px 0;flex-shrink:0;display:flex;align-items:center;gap:12px}
+.page-title{font-size:13px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px}
+.pipeline-tag{height:20px;padding:0 9px;border-radius:10px;background:rgba(191,160,106,0.1);border:1px solid var(--gold-border);color:var(--gold);font-size:10px;font-weight:700;display:flex;align-items:center}
+.page-header-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.btn{height:32px;padding:0 13px;border-radius:7px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:6px;border:none;cursor:pointer;transition:all var(--t-base);white-space:nowrap}
+.btn-primary{background:var(--gold);color:#0A0A0C}
+.btn-primary:hover{background:var(--gold-light);transform:translateY(-1px);box-shadow:0 4px 14px rgba(191,160,106,0.3)}
+.btn-ghost{background:rgba(255,255,255,0.05);border:1px solid var(--border-mid);color:var(--text-secondary)}
+.btn-ghost:hover{background:rgba(255,255,255,0.09);color:var(--text-primary)}
+
+/* ── FILTER BAR */
+.filter-bar{padding:12px 20px 0;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap}
+.search-wrap{position:relative;flex-shrink:0}
+.search-input{height:32px;width:200px;background:var(--bg-base);border:1px solid var(--border-mid);border-radius:7px;padding:0 10px 0 30px;font-size:12px;color:var(--text-primary);outline:none;transition:border-color var(--t-fast);font-family:var(--font-body)}
+.search-input::placeholder{color:var(--text-muted)}
+.search-input:focus{border-color:rgba(191,160,106,.4);box-shadow:0 0 0 3px rgba(191,160,106,.07)}
+.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none}
+.filter-chip{height:32px;padding:0 11px;border-radius:7px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:5px;cursor:pointer;transition:all var(--t-fast);border:1px solid transparent;white-space:nowrap}
+.chip-active{background:var(--gold);color:#0A0A0C;border-color:var(--gold)}
+.chip-default{background:rgba(255,255,255,0.05);border-color:var(--border-mid);color:var(--text-secondary)}
+.chip-default:hover{border-color:var(--border-high);color:var(--text-primary)}
+.chip-warn{background:rgba(240,160,64,0.08);border-color:rgba(240,160,64,0.25);color:var(--amber)}
+.chip-blue{background:rgba(74,158,255,0.08);border-color:rgba(74,158,255,0.2);color:var(--blue)}
+.filter-sep{width:1px;height:20px;background:var(--border-low)}
+.view-toggle{display:flex;background:var(--bg-base);border:1px solid var(--border-mid);border-radius:7px;overflow:hidden;margin-left:auto}
+.view-btn{height:30px;padding:0 10px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--text-secondary);transition:all var(--t-fast)}
+.view-btn.on{background:rgba(255,255,255,0.07);color:var(--text-primary)}
+.view-btn:hover:not(.on){color:var(--text-primary)}
+
+/* ══ STAGE TABS ══ */
+.stage-tabs{padding:12px 20px 0;display:flex;gap:2px;flex-shrink:0;overflow-x:auto}
+.stage-tabs::-webkit-scrollbar{display:none}
+.stage-tab{height:30px;padding:0 13px;border-radius:6px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--text-secondary);transition:all var(--t-fast);white-space:nowrap;flex-shrink:0}
+.stage-tab:hover{color:var(--text-primary);background:var(--bg-hover)}
+.stage-tab.active{color:var(--text-primary);background:rgba(255,255,255,0.07)}
+.stage-dot{width:7px;height:7px;border-radius:50%}
+
+/* ══ KANBAN BOARD ══
+   REGRA CRÍTICA: o board ocupa 100% da área restante
+   NÃO há wrapper com bg branco, NÃO há card centrado
+   O scroll horizontal é no próprio board
+══════════════════════════════════════════════ */
+.board{
+  flex:1;           /* ocupa TODO o espaço vertical restante */
+  overflow-x:auto;  /* scroll horizontal quando colunas > viewport */
+  overflow-y:hidden;
+  padding:14px 20px 20px;
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  min-height:0;     /* CRÍTICO — sem isso o flex filho não respeita */
+}
+.board::-webkit-scrollbar{height:6px}
+.board::-webkit-scrollbar-track{background:transparent}
+.board::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
+.board::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.14)}
+
+/* ── COLUNA */
+.col{
+  width:260px;
+  min-width:260px; /* CRÍTICO — impede encolhimento */
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  height:100%;     /* CRÍTICO — coluna ocupa a altura do board */
+  max-height:100%;
+}
+
+/* ── COLUMN HEADER */
+.col-header{
+  height:38px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:0 2px;
+  flex-shrink:0;
+}
+.col-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.col-name{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--text-primary)}
+.col-count{font-size:10px;font-weight:700;color:var(--text-muted);background:rgba(255,255,255,0.06);border-radius:5px;height:18px;min-width:18px;padding:0 5px;display:flex;align-items:center;justify-content:center}
+.col-value{margin-left:auto;font-size:10px;font-weight:700;color:var(--text-muted)}
+
+/* ── COLUMN BODY — scrollável verticalmente */
+.col-body{
+  flex:1;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding-right:2px;
+  min-height:0;
+}
+.col-body::-webkit-scrollbar{width:3px}
+.col-body::-webkit-scrollbar-track{background:transparent}
+.col-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.07);border-radius:2px}
+
+/* ── EMPTY COLUMN */
+.col-empty{
+  flex:1;
+  border:1.5px dashed var(--border-low);
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  color:var(--text-disabled);
+  min-height:80px;
+  max-height:120px;
+}
+
+/* ── LEAD CARD */
+.lead-card{
+  background:var(--bg-surface);
+  border:1px solid var(--border-low);
+  border-radius:10px;
+  padding:12px;
+  cursor:pointer;
+  transition:all var(--t-base);
+  position:relative;
+  flex-shrink:0;
+}
+.lead-card:hover{border-color:var(--border-mid);background:var(--bg-elevated);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,0.3)}
+.lead-card.dragging{opacity:.5;border-color:var(--gold-border);box-shadow:0 8px 24px rgba(0,0,0,0.4)}
+/* faixa de cor no topo do card por estágio */
+.lead-card::before{content:'';position:absolute;top:0;left:12px;right:12px;height:2px;border-radius:0 0 2px 2px;opacity:.5}
+.col-novo    .lead-card::before{background:var(--col-novo)}
+.col-qual    .lead-card::before{background:var(--col-qual)}
+.col-prop    .lead-card::before{background:var(--col-prop)}
+.col-neg     .lead-card::before{background:var(--col-neg)}
+.col-conv    .lead-card::before{background:var(--col-conv)}
+.col-perd    .lead-card::before{background:var(--col-perd)}
+
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;gap:8px}
+.card-name{font-size:12px;font-weight:700;color:var(--text-primary);line-height:1.3}
+.card-avatar{width:26px;height:26px;border-radius:50%;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.card-source{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);margin-bottom:8px}
+.card-note{font-size:11px;color:var(--text-secondary);background:rgba(255,255,255,0.025);border-radius:6px;padding:7px 9px;line-height:1.5;border:1px solid var(--border-sub);margin-bottom:8px;min-height:36px}
+.card-note.empty{color:var(--text-disabled);font-style:italic}
+.card-value{font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:10px}
+.card-value.zero{color:var(--text-muted);font-weight:600}
+.card-footer{display:flex;align-items:center;gap:6px}
+.card-tag{height:20px;padding:0 7px;border-radius:5px;font-size:9px;font-weight:700;display:inline-flex;align-items:center;gap:3px}
+.tag-wa{background:rgba(76,175,130,0.1);color:var(--green);border:1px solid rgba(76,175,130,0.2)}
+.tag-task{background:rgba(255,255,255,0.05);color:var(--text-muted);border:1px solid var(--border-sub)}
+.tag-time{background:rgba(224,82,82,0.08);color:var(--red);border:1px solid rgba(224,82,82,0.15)}
+.card-add-btn{margin-left:auto;width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;color:var(--text-disabled);cursor:pointer;transition:all var(--t-fast)}
+.card-add-btn:hover{background:rgba(255,255,255,0.07);color:var(--text-secondary)}
+
+/* ── ADD CARD BTN (fundo da coluna) */
+.col-add{
+  height:34px;
+  border-radius:8px;
+  border:1px dashed var(--border-low);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  font-size:11px;
+  font-weight:600;
+  color:var(--text-disabled);
+  cursor:pointer;
+  transition:all var(--t-fast);
+  flex-shrink:0;
+}
+.col-add:hover{border-color:var(--border-mid);color:var(--text-secondary);background:var(--bg-hover)}
+</style>
+</head>
+<body>
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo-wrap">
+    <div class="sidebar-logo-img">Logo da Empresa</div>
+    <div class="sidebar-brand">ORION CRM</div>
+  </div>
+
+  <div class="sidebar-section">Pipeline</div>
+  <div class="nav-item active">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+    Leads
+    <span class="nav-edit"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg></span>
+  </div>
+  <div class="nav-item">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+    Pedidos
+    <span class="nav-edit"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg></span>
+  </div>
+  <div class="nav-item">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    Produção
+    <span class="nav-edit"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg></span>
+  </div>
+  <div class="nav-item" style="color:var(--text-disabled)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    Novo pipeline
+  </div>
+
+  <div class="sidebar-section" style="margin-top:8px">Geral</div>
+  <div class="nav-item">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    Dashboard
+  </div>
+  <div class="nav-item">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    Inbox
+    <span class="nav-badge">3</span>
+  </div>
+  <div class="nav-item">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+    Clientes
+  </div>
+
+  <div class="sidebar-section" style="margin-top:8px">Operação</div>
+  <div class="nav-item">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+    Pedidos
+  </div>
+  <div class="nav-item">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    Produção
+  </div>
+  <div class="nav-item">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    Estoque
+  </div>
+  <div class="nav-item">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+    Financeiro
+  </div>
+  <div class="nav-item">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+    PDV
+  </div>
+
+  <div class="sidebar-user">
+    <div class="user-avatar">AI</div>
+    <div class="user-info">
+      <div class="user-name">Admin Inbox</div>
+      <div class="user-role">Admin</div>
+    </div>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);flex-shrink:0"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg>
+  </div>
+</aside>
+
+<!-- ══════════ MAIN ══════════ -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-breadcrumb">Operação Comercial</div>
+    <div class="topbar-sep">/</div>
+    <div class="topbar-page">Pipeline</div>
+    <div class="topbar-right">
+      <div class="icon-btn notif-dot">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      </div>
+      <div class="icon-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg>
+      </div>
+    </div>
+  </header>
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="page-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      Leads
+      <span class="pipeline-tag">Pipeline de Vendas</span>
+    </div>
+    <div class="page-header-right">
+      <button class="btn btn-ghost">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Importar leads
+      </button>
+      <button class="btn btn-primary">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Novo Lead
+      </button>
+    </div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <div class="search-wrap">
+      <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="search-input" placeholder="Buscar lead...">
+    </div>
+    <div class="filter-chip chip-active">Todos</div>
+    <div class="filter-chip chip-blue">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      Meus leads
+    </div>
+    <div class="filter-chip chip-default">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Com WA
+    </div>
+    <div class="filter-chip chip-warn">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+      Sem interação 7d+
+    </div>
+    <div class="filter-chip chip-default">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      Com tarefas
+    </div>
+    <div class="filter-sep"></div>
+    <div class="view-toggle">
+      <div class="view-btn on">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Pipeline
+      </div>
+      <div class="view-btn">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/></svg>
+        Lista
+      </div>
+    </div>
+  </div>
+
+  <!--
+    ══════════════════════════════════════════════════════════
+    BOARD — IMPLEMENTAÇÃO CORRETA
+
+    ESTRUTURA JSX EXATA:
+    <main className="flex-1 overflow-hidden flex flex-col min-h-0">
+      ...filtros acima...
+      <div className="board"> ← flex:1 overflow-x:auto overflow-y:hidden padding:14px 20px 20px
+        <KanbanColumn /> × 6
+      </div>
+    </main>
+
+    COLUNA:
+    <div className="col"> ← width:260px min-width:260px flex flex-col height-full
+      <ColHeader />
+      <div className="col-body"> ← flex:1 overflow-y:auto min-h-0
+        <LeadCard /> × n
+      </div>
+      <ColAdd />
+    </div>
+
+    NÃO USAR: wrapper com bg branco, card centrado, max-width no board,
+              overflow:hidden no container pai do board
+    ══════════════════════════════════════════════════════════
+  -->
+
+  <div class="board">
+
+    <!-- ── NOVO ── -->
+    <div class="col col-novo">
+      <div class="col-header">
+        <div class="col-dot" style="background:var(--col-novo)"></div>
+        <div class="col-name">Novo</div>
+        <div class="col-count">3</div>
+        <div class="col-value">R$ 0,00</div>
+      </div>
+      <div class="col-body">
+        <div class="lead-card">
+          <div class="card-top">
+            <div class="card-name">Maria Fernanda Costa</div>
+            <div class="card-avatar" style="background:rgba(240,160,64,0.15);color:var(--amber)">MF</div>
+          </div>
+          <div class="card-source"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>WhatsApp · AURORA</div>
+          <div class="card-note">Interesse em anel de noivado personalizado, orçamento em aberto</div>
+          <div class="card-value zero">R$ 0,00</div>
+          <div class="card-footer">
+            <span class="card-tag tag-wa"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>WA</span>
+            <span class="card-tag tag-task"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/></svg>0</span>
+            <span class="card-tag tag-time"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>2d</span>
+            <div class="card-add-btn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+          </div>
+        </div>
+        <div class="lead-card">
+          <div class="card-top">
+            <div class="card-name">Lead Inbox</div>
+            <div class="card-avatar" style="background:rgba(255,255,255,0.07);color:var(--text-muted)">U</div>
+          </div>
+          <div class="card-source"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>WhatsApp</div>
+          <div class="card-note empty">Adicionar nota...</div>
+          <div class="card-value zero">R$ 0,00</div>
+          <div class="card-footer">
+            <span class="card-tag tag-wa"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>WA</span>
+            <span class="card-tag tag-task">0</span>
+            <span class="card-tag tag-time">8d</span>
+            <div class="card-add-btn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+          </div>
+        </div>
+        <div class="lead-card">
+          <div class="card-top">
+            <div class="card-name">Ana Beatriz Lima</div>
+            <div class="card-avatar" style="background:rgba(156,111,222,0.15);color:#9C6FDE">AB</div>
+          </div>
+          <div class="card-source"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>Instagram</div>
+          <div class="card-note empty">Adicionar nota...</div>
+          <div class="card-value zero">R$ 0,00</div>
+          <div class="card-footer">
+            <span class="card-tag" style="background:rgba(156,111,222,0.1);color:#9C6FDE;border:1px solid rgba(156,111,222,0.2)">IG</span>
+            <span class="card-tag tag-task">1</span>
+            <span class="card-tag tag-time" style="background:rgba(240,160,64,0.08);color:var(--amber);border-color:rgba(240,160,64,0.2)">1d</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-add">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Adicionar lead
+      </div>
+    </div>
+
+    <!-- ── QUALIFICADO ── -->
+    <div class="col col-qual">
+      <div class="col-header">
+        <div class="col-dot" style="background:var(--col-qual)"></div>
+        <div class="col-name">Qualificado</div>
+        <div class="col-count">2</div>
+        <div class="col-value">R$ 4.800,00</div>
+      </div>
+      <div class="col-body">
+        <div class="lead-card">
+          <div class="card-top">
+            <div class="card-name">Lead Landing Teste</div>
+            <div class="card-avatar" style="background:rgba(74,158,255,0.15);color:var(--blue)">LL</div>
+          </div>
+          <div class="card-source"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Loja Online</div>
+          <div class="card-note">Teste automatizado do bloco 8</div>
+          <div class="card-value">R$ 3.200,00</div>
+          <div class="card-footer">
+            <span class="card-tag tag-wa">WA</span>
+            <span class="card-tag tag-task">0</span>
+            <span class="card-tag tag-time">8d</span>
+            <div class="card-add-btn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+          </div>
+        </div>
+        <div class="lead-card">
+          <div class="card-top">
+            <div class="card-name">Carla Mendes</div>
+            <div class="card-avatar" style="background:rgba(74,158,255,0.15);color:var(--blue)">CM</div>
+          </div>
+          <div class="card-source"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>WhatsApp · AURORA</div>
+          <div class="card-note">Colar personalizado, ouro 18k, entrega para 20/04</div>
+          <div class="card-value">R$ 1.600,00</div>
+          <div class="card-footer">
+            <span class="card-tag tag-wa">WA</span>
+            <span class="card-tag tag-task" style="background:rgba(76,175,130,0.08);color:var(--green);border-color:rgba(76,175,130,0.2)">2</span>
+            <span class="card-tag tag-time" style="background:rgba(240,160,64,0.08);color:var(--amber);border-color:rgba(240,160,64,0.2)">3d</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-add">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Adicionar lead
+      </div>
+    </div>
+
+    <!-- ── PROPOSTA ENVIADA ── -->
+    <div class="col col-prop">
+      <div class="col-header">
+        <div class="col-dot" style="background:var(--col-prop)"></div>
+        <div class="col-name">Proposta Enviada</div>
+        <div class="col-count">0</div>
+        <div class="col-value">R$ 0,00</div>
+      </div>
+      <div class="col-body">
+        <div class="col-empty">Nenhum lead nesta etapa</div>
+      </div>
+      <div class="col-add">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Adicionar lead
+      </div>
+    </div>
+
+    <!-- ── NEGOCIAÇÃO ── -->
+    <div class="col col-neg">
+      <div class="col-header">
+        <div class="col-dot" style="background:var(--col-neg)"></div>
+        <div class="col-name">Negociação</div>
+        <div class="col-count">0</div>
+        <div class="col-value">R$ 0,00</div>
+      </div>
+      <div class="col-body">
+        <div class="col-empty">Nenhum lead nesta etapa</div>
+      </div>
+      <div class="col-add">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Adicionar lead
+      </div>
+    </div>
+
+    <!-- ── CONVERTIDO ── -->
+    <div class="col col-conv">
+      <div class="col-header">
+        <div class="col-dot" style="background:var(--col-conv)"></div>
+        <div class="col-name">Convertido</div>
+        <div class="col-count">1</div>
+        <div class="col-value">R$ 8.900,00</div>
+      </div>
+      <div class="col-body">
+        <div class="lead-card">
+          <div class="card-top">
+            <div class="card-name">lead test Zap</div>
+            <div class="card-avatar" style="background:rgba(76,175,130,0.15);color:var(--green)">LT</div>
+          </div>
+          <div class="card-source"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>WhatsApp</div>
+          <div class="card-note empty">Adicionar nota...</div>
+          <div class="card-value">R$ 8.900,00</div>
+          <div class="card-footer">
+            <span class="card-tag tag-wa">WA</span>
+            <span class="card-tag tag-task">0</span>
+            <span class="card-tag tag-time">8d</span>
+            <div class="card-add-btn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-add">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Adicionar lead
+      </div>
+    </div>
+
+    <!-- ── PERDIDO ── -->
+    <div class="col col-perd">
+      <div class="col-header">
+        <div class="col-dot" style="background:var(--col-perd)"></div>
+        <div class="col-name">Perdido</div>
+        <div class="col-count">1</div>
+        <div class="col-value">—</div>
+      </div>
+      <div class="col-body">
+        <div class="lead-card" style="opacity:.6">
+          <div class="card-top">
+            <div class="card-name">Lead Bloco 3</div>
+            <div class="card-avatar" style="background:rgba(255,255,255,0.06);color:var(--text-muted)">LB</div>
+          </div>
+          <div class="card-source"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>WhatsApp</div>
+          <div class="card-note empty">Sem interesse no momento</div>
+          <div class="card-value zero">R$ 0,00</div>
+          <div class="card-footer">
+            <span class="card-tag tag-wa">WA</span>
+            <span class="card-tag tag-task">0</span>
+            <span class="card-tag" style="background:rgba(224,82,82,0.08);color:var(--red);border:1px solid rgba(224,82,82,0.15)">14d</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-add">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Adicionar lead
+      </div>
+    </div>
+
+  </div><!-- /board -->
+
+</div><!-- /main -->
+
+<!--
+══════════════════════════════════════════════════════════
+ANOTAÇÃO PARA O CODEX — LEIA ANTES DE IMPLEMENTAR
+
+PROBLEMA QUE ESTAVA ACONTECENDO:
+  O board estava sendo renderizado dentro de um <div> com bg branco
+  e padding/margin que centralizava o conteúdo, ao invés de ocupar
+  o espaço total disponível.
+
+ESTRUTURA CSS CORRETA:
+
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;          ← NÃO overflow:auto aqui
+    min-width: 0;
+  }
+
+  .board {
+    flex: 1;                   ← OCUPA TUDO QUE SOBROU
+    overflow-x: auto;          ← scroll horizontal no próprio board
+    overflow-y: hidden;
+    display: flex;
+    gap: 12px;
+    padding: 14px 20px 20px;
+    align-items: flex-start;
+    min-height: 0;             ← CRÍTICO em flex column
+    background: transparent;   ← SEM bg, SEM border, SEM border-radius
+  }
+
+  .col {
+    width: 260px;
+    min-width: 260px;          ← NÃO deixar encolher
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .col-body {
+    flex: 1;
+    overflow-y: auto;          ← scroll vertical por coluna
+    min-height: 0;             ← CRÍTICO
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+ERROS COMUNS:
+  ✗ Colocar o board dentro de um <div className="bg-white rounded-xl p-6">
+  ✗ Usar overflow:hidden no .board
+  ✗ Não setar min-height:0 na .col-body
+  ✗ Deixar a coluna sem min-width:260px (elas encolhem)
+  ✗ max-width no .board
+══════════════════════════════════════════════════════════
+-->
+
+</body>
+</html>

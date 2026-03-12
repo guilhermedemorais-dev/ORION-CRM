@@ -1,22 +1,23 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    CalendarDays,
     CheckSquare,
-    ChevronRight,
     Clock3,
+    Download,
+    LayoutGrid,
+    List,
     MessageCircle,
-    Phone,
     Plus,
     Search,
     SlidersHorizontal,
+    Users2,
+    X,
 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import type { LeadRecord, PipelineStageRecord } from '@/lib/api';
-import { formatCurrencyFromCents, formatDate, formatPhone } from '@/lib/utils';
+import { cn, formatCurrencyFromCents } from '@/lib/utils';
 
 function initials(name: string | null | undefined): string {
     if (!name) return 'OR';
@@ -84,6 +85,7 @@ interface LeadsPipelineClientProps {
     pipelineId: string;
     pipelineName: string;
     canManagePipeline: boolean;
+    currentUserId: string;
     initialQuery?: string;
 }
 
@@ -93,8 +95,10 @@ export function LeadsPipelineClient({
     pipelineId,
     pipelineName,
     canManagePipeline,
+    currentUserId,
     initialQuery = '',
 }: LeadsPipelineClientProps) {
+    const [hasMounted, setHasMounted] = useState(false);
     const [leads, setLeads] = useState<LeadRecord[]>(initialLeads);
     const [stages, setStages] = useState<PipelineStageRecord[]>(
         [...initialStages].sort((a, b) => a.position - b.position)
@@ -110,26 +114,85 @@ export function LeadsPipelineClient({
     const [creatingStage, setCreatingStage] = useState(false);
     const [newStageName, setNewStageName] = useState('');
     const [newStageColor, setNewStageColor] = useState('#3B82F6');
-    const [responsibleFilter, setResponsibleFilter] = useState('all');
+    const [showNewLeadForm, setShowNewLeadForm] = useState(false);
+    const [activeQuickFilter, setActiveQuickFilter] = useState<'ALL' | 'MINE' | 'WHATSAPP' | 'STALE' | 'HAS_TASKS'>('ALL');
     const noteTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+    const boardRef = useRef<HTMLDivElement | null>(null);
+    const contentRef = useRef<HTMLDivElement | null>(null);
+    const trackRef = useRef<HTMLDivElement | null>(null);
+    const [scrollMeta, setScrollMeta] = useState({ viewport: 0, content: 0, left: 0, track: 0 });
 
-    const responsibleOptions = useMemo(() => {
-        const unique = new Map<string, string>();
-        for (const lead of leads) {
-            if (lead.assigned_to?.id && lead.assigned_to.name) {
-                unique.set(lead.assigned_to.id, lead.assigned_to.name);
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
+
+    useEffect(() => {
+        const update = () => {
+            const board = boardRef.current;
+            const track = trackRef.current;
+            const content = contentRef.current;
+            if (!board || !track) return;
+            const contentWidth = content?.scrollWidth ?? board.scrollWidth;
+            setScrollMeta({
+                viewport: board.clientWidth,
+                content: contentWidth,
+                left: board.scrollLeft,
+                track: track.clientWidth,
+            });
+        };
+
+        update();
+
+        const board = boardRef.current;
+        const track = trackRef.current;
+        const content = contentRef.current;
+        const ro = new ResizeObserver(update);
+        if (board) ro.observe(board);
+        if (track) ro.observe(track);
+        if (content) ro.observe(content);
+        window.addEventListener('resize', update);
+
+        return () => {
+            ro.disconnect();
+            window.removeEventListener('resize', update);
+        };
+    }, [stages.length, leads.length]);
+
+    useEffect(() => {
+        const handler = (event: WheelEvent) => {
+            if (!event.shiftKey) return;
+            const board = boardRef.current;
+            if (!board) return;
+            const delta = event.deltaY !== 0 ? event.deltaY : event.deltaX;
+            if (delta !== 0) {
+                board.scrollLeft += delta;
+                event.preventDefault();
             }
-        }
-        return Array.from(unique.entries())
-            .map(([id, name]) => ({ id, name }))
-            .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-    }, [leads]);
+        };
+
+        window.addEventListener('wheel', handler, { passive: false });
+        return () => window.removeEventListener('wheel', handler);
+    }, []);
 
     const filteredLeads = useMemo(() => {
         const q = query.trim().toLowerCase();
 
         return leads.filter((lead) => {
-            if (responsibleFilter !== 'all' && lead.assigned_to?.id !== responsibleFilter) {
+            const inactivity = daysWithoutInteraction(lead.last_interaction_at) ?? 0;
+
+            if (activeQuickFilter === 'MINE' && lead.assigned_to?.id !== currentUserId) {
+                return false;
+            }
+
+            if (activeQuickFilter === 'WHATSAPP' && !lead.whatsapp_number) {
+                return false;
+            }
+
+            if (activeQuickFilter === 'STALE' && inactivity < 7) {
+                return false;
+            }
+
+            if (activeQuickFilter === 'HAS_TASKS' && (lead.open_tasks_count ?? 0) <= 0) {
                 return false;
             }
 
@@ -146,7 +209,7 @@ export function LeadsPipelineClient({
 
             return blob.includes(q);
         });
-    }, [leads, query, responsibleFilter]);
+    }, [activeQuickFilter, currentUserId, leads, query]);
 
     const leadsByStage = useMemo(() => {
         const grouped = new Map<string, LeadRecord[]>();
@@ -165,6 +228,18 @@ export function LeadsPipelineClient({
         () => leads.find((lead) => lead.id === selectedLeadId) ?? null,
         [leads, selectedLeadId]
     );
+
+    const focusedStageIndex = useMemo(() => {
+        if (selectedLead?.stage_id) {
+            const selectedStageIndex = stages.findIndex((stage) => stage.id === selectedLead.stage_id);
+            if (selectedStageIndex >= 0) {
+                return selectedStageIndex;
+            }
+        }
+
+        const firstPopulatedStage = stages.findIndex((stage) => (leadsByStage.get(stage.id) ?? []).length > 0);
+        return firstPopulatedStage >= 0 ? firstPopulatedStage : 0;
+    }, [leadsByStage, selectedLead, stages]);
 
     async function refreshFromApi() {
         const [leadsRes, stagesRes] = await Promise.all([
@@ -386,370 +461,536 @@ export function LeadsPipelineClient({
         setInfoMessage('Etapa removida.');
     }
 
+    if (!hasMounted) {
+        return (
+            <div className="-mx-6 -my-6 flex w-[calc(100%+3rem)] min-h-[calc(100%+3rem)] flex-col gap-4 bg-[color:var(--orion-void)] px-5 py-4">
+                <div className="h-[42px] rounded-xl border border-[color:var(--orion-border-low)] bg-[color:var(--orion-surface)]" />
+                <div className="h-[32px] rounded-xl border border-[color:var(--orion-border-low)] bg-[color:var(--orion-surface)]" />
+                <div className="h-[40px] rounded-xl border border-[color:var(--orion-border-low)] bg-[color:var(--orion-surface)]" />
+                <div className="flex-1 rounded-2xl border border-[color:var(--orion-border-low)] bg-[color:var(--orion-surface)]" />
+            </div>
+        );
+    }
+
     return (
-        <div className="space-y-5">
-            {errorMessage ? (
-                <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {errorMessage}
-                </div>
-            ) : null}
-            {infoMessage ? (
-                <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                    {infoMessage}
+        <div className="-mx-6 -my-6 flex h-full w-[calc(100%+3rem)] min-h-[calc(100%+3rem)] flex-col bg-[color:var(--orion-void)] text-[color:var(--orion-text)]">
+            {errorMessage || infoMessage ? (
+                <div className="space-y-2 px-5 pt-4">
+                    {errorMessage ? (
+                        <div className="rounded-lg border border-[color:var(--orion-red)]/30 bg-[rgba(224,82,82,0.1)] px-4 py-3 text-sm text-[color:var(--orion-red)]">
+                            {errorMessage}
+                        </div>
+                    ) : null}
+                    {infoMessage ? (
+                        <div className="rounded-lg border border-[color:var(--orion-green)]/30 bg-[rgba(76,175,130,0.12)] px-4 py-3 text-sm text-[color:var(--orion-green)]">
+                            {infoMessage}
+                        </div>
+                    ) : null}
                 </div>
             ) : null}
 
-            <div className="rounded-2xl border border-canvas-border bg-white px-4 py-3 shadow-card">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gray-400">{pipelineName}</p>
-                        <p className="text-sm text-gray-600">Meus negócios: {filteredLeads.length} resultado(s)</p>
+            <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                <div className="flex flex-wrap items-center gap-3 px-5 pt-4">
+                    <div className="flex items-center gap-3">
+                        <Users2 className="h-4 w-4 text-[color:var(--orion-gold)]" />
+                        <h1 className="font-serif text-[15px] font-semibold text-[color:var(--orion-text)]">
+                            {pipelineName}
+                        </h1>
+                        <span className="rounded-full border border-[color:var(--orion-gold-border)] bg-[color:var(--orion-gold-bg)] px-3 py-1 text-[10px] font-semibold text-[color:var(--orion-gold)]">
+                            Pipeline de Vendas
+                        </span>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                        <div className="relative min-w-[280px]">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                            <Input
-                                value={query}
-                                onChange={(event) => setQuery(event.target.value)}
-                                placeholder="Buscar nome, WhatsApp ou observação"
-                                className="pl-9"
+                    <div className="ml-auto flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            className="inline-flex h-8 items-center gap-2 rounded-[7px] border border-[color:var(--orion-border-mid)] bg-white/5 px-3 text-[11px] font-semibold text-[color:var(--orion-text-secondary)] transition hover:border-[color:var(--orion-border-strong)] hover:text-[color:var(--orion-text)]"
+                        >
+                            <Download className="h-3.5 w-3.5" />
+                            Importar leads
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowNewLeadForm(true)}
+                            className="inline-flex h-8 items-center gap-2 rounded-[7px] bg-[color:var(--orion-gold)] px-3 text-[11px] font-bold text-[#0A0A0C] transition hover:bg-[color:var(--orion-gold-light)]"
+                        >
+                            <Plus className="h-3.5 w-3.5" />
+                            Novo Lead
+                        </button>
+                    </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2 px-5 pb-2">
+                    <div className="relative">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--orion-text-muted)]" />
+                        <Input
+                            value={query}
+                            onChange={(event) => setQuery(event.target.value)}
+                            placeholder="Buscar lead..."
+                            className="h-8 w-[200px] rounded-md border border-[color:var(--orion-border-mid)] bg-[color:var(--orion-base)] pl-8 text-[12px] text-[color:var(--orion-text)] placeholder:text-[color:var(--orion-text-muted)] focus:border-[color:var(--orion-gold-border)] focus:ring-2 focus:ring-[color:var(--orion-gold-bg)]"
+                        />
+                    </div>
+
+                    {[
+                        { value: 'ALL', label: 'Todos' },
+                        { value: 'MINE', label: 'Meus leads', icon: Users2, tone: 'blue' },
+                        { value: 'WHATSAPP', label: 'Com WA', icon: MessageCircle },
+                        { value: 'STALE', label: 'Sem interação 7d+', icon: Clock3, tone: 'warn' },
+                        { value: 'HAS_TASKS', label: 'Com tarefas', icon: CheckSquare },
+                    ].map((item) => (
+                        <button
+                            key={item.value}
+                            type="button"
+                            onClick={() => setActiveQuickFilter(item.value as 'ALL' | 'MINE' | 'WHATSAPP' | 'STALE' | 'HAS_TASKS')}
+                            className={cn(
+                                'inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-[11px] font-semibold transition',
+                                activeQuickFilter === item.value
+                                    ? 'border-[color:var(--orion-gold)] bg-[color:var(--orion-gold)] text-[#0A0A0C]'
+                                    : item.tone === 'warn'
+                                        ? 'border-[color:var(--orion-amber)]/30 bg-[rgba(240,160,64,0.1)] text-[color:var(--orion-amber)] hover:border-[color:var(--orion-amber)]/50'
+                                        : item.tone === 'blue'
+                                            ? 'border-[color:var(--orion-blue)]/25 bg-[rgba(74,158,255,0.1)] text-[color:var(--orion-blue)] hover:border-[color:var(--orion-blue)]/45'
+                                            : 'border-[color:var(--orion-border-mid)] bg-white/5 text-[color:var(--orion-text-secondary)] hover:border-[color:var(--orion-border-strong)] hover:text-[color:var(--orion-text)]'
+                            )}
+                        >
+                            {item.icon ? <item.icon className="h-3.5 w-3.5" /> : null}
+                            {item.label}
+                        </button>
+                    ))}
+
+                    {canManagePipeline ? (
+                        <button
+                            type="button"
+                            onClick={() => setShowPipelineConfig(true)}
+                            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[color:var(--orion-border-mid)] bg-white/5 px-3 text-[11px] font-semibold text-[color:var(--orion-text-secondary)] transition hover:border-[color:var(--orion-border-strong)] hover:text-[color:var(--orion-text)]"
+                        >
+                            <SlidersHorizontal className="h-3.5 w-3.5" />
+                            Pipeline
+                        </button>
+                    ) : null}
+
+                    <div className="ml-auto flex overflow-hidden rounded-md border border-[color:var(--orion-border-mid)] bg-[color:var(--orion-base)]">
+                        <button
+                            type="button"
+                            className="flex h-8 items-center gap-1 px-3 text-[11px] font-semibold text-[color:var(--orion-text)]"
+                        >
+                            <LayoutGrid className="h-3.5 w-3.5" />
+                            Pipeline
+                        </button>
+                        <button
+                            type="button"
+                            className="flex h-8 items-center gap-1 px-3 text-[11px] font-semibold text-[color:var(--orion-text-secondary)] hover:text-[color:var(--orion-text)]"
+                        >
+                            <List className="h-3.5 w-3.5" />
+                            Lista
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2 overflow-x-auto px-5 pb-1">
+                    {stages.map((stage, index) => (
+                        <button
+                            key={stage.id}
+                            type="button"
+                            onClick={() => setSelectedLeadId((leadsByStage.get(stage.id) ?? [])[0]?.id ?? null)}
+                            className={cn(
+                                'flex h-8 items-center gap-2 rounded-md px-3 text-[11px] font-semibold transition',
+                                index === focusedStageIndex
+                                    ? 'bg-white/10 text-[color:var(--orion-text)]'
+                                    : 'text-[color:var(--orion-text-secondary)] hover:bg-[color:var(--orion-hover)] hover:text-[color:var(--orion-text)]'
+                            )}
+                        >
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: stage.color }} />
+                            <span>{stage.name}</span>
+                            {stage.is_won ? <span className="text-[10px] text-[color:var(--orion-text-muted)]">✓</span> : null}
+                        </button>
+                    ))}
+                </div>
+
+                <div
+                    ref={boardRef}
+                    className="flex-1 min-h-0 min-w-0 overflow-x-scroll overflow-y-hidden px-5 pb-5 pt-3 [scrollbar-gutter:stable] overscroll-x-contain"
+                    onWheel={(event) => {
+                        const board = boardRef.current;
+                        if (!board) return;
+
+                        if (event.shiftKey) {
+                            const delta = event.deltaY !== 0 ? event.deltaY : event.deltaX;
+                            if (delta !== 0) {
+                                board.scrollLeft += delta;
+                                event.preventDefault();
+                            }
+                            return;
+                        }
+
+                        const target = event.target as HTMLElement | null;
+                        const columnBody = target?.closest('[data-col-body=\"true\"]') as HTMLElement | null;
+                        const canScrollColumn =
+                            !!columnBody && columnBody.scrollHeight > columnBody.clientHeight;
+
+                        if (canScrollColumn && Math.abs(event.deltaY) >= Math.abs(event.deltaX)) {
+                            const atTop = columnBody!.scrollTop <= 0;
+                            const atBottom =
+                                columnBody!.scrollTop + columnBody!.clientHeight >=
+                                columnBody!.scrollHeight - 1;
+                            const scrollingDown = event.deltaY > 0;
+
+                            if ((scrollingDown && !atBottom) || (!scrollingDown && !atTop)) {
+                                return;
+                            }
+                        }
+
+                        const delta = Math.abs(event.deltaX) > 0 ? event.deltaX : event.deltaY;
+                        if (delta !== 0) {
+                            board.scrollLeft += delta;
+                            event.preventDefault();
+                        }
+                    }}
+                    onScroll={() => {
+                        const board = boardRef.current;
+                        const track = trackRef.current;
+                        if (!board || !track) return;
+                        setScrollMeta((current) => ({
+                            ...current,
+                            viewport: board.clientWidth,
+                            content: board.scrollWidth,
+                            left: board.scrollLeft,
+                            track: track.clientWidth,
+                        }));
+                    }}
+                >
+                    <div ref={contentRef} className="inline-flex h-full min-w-max w-max items-start gap-3">
+                        {stages.map((stage) => {
+                            const stageLeads = leadsByStage.get(stage.id) ?? [];
+                            const totalValue = stageLeads.reduce((sum, lead) => sum + (lead.estimated_value ?? 0), 0);
+
+                            return (
+                                <section key={stage.id} className="flex h-full min-h-0 w-[260px] min-w-[260px] flex-col gap-2">
+                                    <div className="flex h-9 items-center gap-2 px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--orion-text)]">
+                                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: stage.color }} />
+                                        <span className="text-[11px] font-bold">{stage.name}</span>
+                                        <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-bold text-[color:var(--orion-text-muted)]">
+                                            {stageLeads.length}
+                                        </span>
+                                        <span className="ml-auto text-[10px] font-bold text-[color:var(--orion-text-muted)]">
+                                            {formatCurrencyFromCents(totalValue)}
+                                        </span>
+                                    </div>
+
+                                    <div
+                                        data-col-body="true"
+                                        className={cn(
+                                            'flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1 transition overscroll-y-contain',
+                                            highlightStageId === stage.id
+                                                ? 'bg-[color:var(--orion-gold-bg)] ring-1 ring-[color:var(--orion-gold-border)] rounded-[10px]'
+                                                : ''
+                                        )}
+                                        onDragOver={(event) => {
+                                            event.preventDefault();
+                                            setHighlightStageId(stage.id);
+                                        }}
+                                        onDragLeave={() => setHighlightStageId((current) => (current === stage.id ? null : current))}
+                                        onDrop={(event) => {
+                                            event.preventDefault();
+                                            void onDrop(stage.id);
+                                        }}
+                                    >
+                                        {stageLeads.length === 0 ? (
+                                            <div className="flex min-h-[80px] flex-1 items-center justify-center rounded-[10px] border border-dashed border-[color:var(--orion-border-low)] text-[11px] text-[color:var(--orion-text-disabled)]">
+                                                Nenhum lead nesta etapa
+                                            </div>
+                                        ) : (
+                                            stageLeads.map((lead) => {
+                                                const inactivity = daysWithoutInteraction(lead.last_interaction_at) ?? 0;
+
+                                                return (
+                                                    <article
+                                                        key={lead.id}
+                                                        draggable
+                                                        onDragStart={() => onDragStart(lead.id)}
+                                                        onClick={() => setSelectedLeadId(lead.id)}
+                                                        className={cn(
+                                                            'relative rounded-[10px] border border-[color:var(--orion-border-low)] bg-[color:var(--orion-surface)] p-3 transition hover:-translate-y-0.5 hover:border-[color:var(--orion-border-strong)] hover:bg-[color:var(--orion-elevated)]',
+                                                            draggingLeadId === lead.id && 'opacity-50',
+                                                            selectedLeadId === lead.id && 'border-[color:var(--orion-gold-border)]'
+                                                        )}
+                                                    >
+                                                        <span
+                                                            className="absolute left-3 right-3 top-0 h-0.5 rounded-b"
+                                                            style={{ backgroundColor: stage.color, opacity: 0.5 }}
+                                                        />
+
+                                                        <div className="mb-2 flex items-start justify-between gap-2">
+                                                            <div className="min-w-0">
+                                                                <p className="truncate text-[12px] font-semibold leading-[1.3] text-[color:var(--orion-text)]">
+                                                                    {lead.name ?? 'Lead sem nome'}
+                                                                </p>
+                                                                <p className="mt-1 flex items-center gap-1 text-[10px] text-[color:var(--orion-text-muted)]">
+                                                                    <MessageCircle className="h-3 w-3" />
+                                                                    {lead.whatsapp_number ? 'WhatsApp' : 'Origem não informada'}
+                                                                </p>
+                                                            </div>
+                                                            <div
+                                                                className="flex h-7 w-7 items-center justify-center rounded-full text-[9px] font-bold"
+                                                                style={{
+                                                                    backgroundColor: `${stage.color}26`,
+                                                                    color: stage.color,
+                                                                }}
+                                                            >
+                                                                {initials(lead.assigned_to?.name ?? lead.name)}
+                                                            </div>
+                                                        </div>
+
+                                                        <textarea
+                                                            value={lead.quick_note ?? ''}
+                                                            onClick={(event) => event.stopPropagation()}
+                                                            onChange={(event) => updateQuickNoteLocally(lead.id, event.target.value)}
+                                                            placeholder="Adicionar nota..."
+                                                            className="mb-2 min-h-[40px] w-full resize-none rounded-md border border-[color:var(--orion-border-subtle)] bg-white/5 px-2 py-1.5 text-[11px] leading-[1.5] text-[color:var(--orion-text-secondary)] outline-none transition placeholder:text-[color:var(--orion-text-disabled)] hover:border-[color:var(--orion-border-mid)] focus:border-[color:var(--orion-gold-border)]"
+                                                        />
+
+                                                        <p className={cn('text-[12px] font-semibold', lead.estimated_value ? 'text-[color:var(--orion-text)]' : 'text-[color:var(--orion-text-muted)]')}>
+                                                            {formatCurrencyFromCents(lead.estimated_value ?? 0)}
+                                                        </p>
+
+                                                        <div className="mt-2 flex items-center gap-1.5">
+                                                            <span className="inline-flex items-center gap-1 rounded-md border border-[color:var(--orion-green)]/25 bg-[rgba(76,175,130,0.12)] px-2 py-0.5 text-[9px] font-semibold text-[color:var(--orion-green)]">
+                                                                <MessageCircle className="h-3 w-3" />
+                                                                {lead.whatsapp_number ? 'WA' : '--'}
+                                                            </span>
+                                                            <span className="inline-flex items-center gap-1 rounded-md border border-[color:var(--orion-border-subtle)] bg-white/5 px-2 py-0.5 text-[9px] font-semibold text-[color:var(--orion-text-muted)]">
+                                                                <CheckSquare className="h-3 w-3" />
+                                                                {lead.open_tasks_count ?? 0}
+                                                            </span>
+                                                            <span
+                                                                className={cn(
+                                                                    'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[9px] font-semibold',
+                                                                    inactivity >= 8
+                                                                        ? 'border-[color:var(--orion-red)]/30 bg-[rgba(224,82,82,0.12)] text-[color:var(--orion-red)]'
+                                                                        : 'border-[color:var(--orion-amber)]/30 bg-[rgba(240,160,64,0.12)] text-[color:var(--orion-amber)]'
+                                                                )}
+                                                            >
+                                                                <Clock3 className="h-3 w-3" />
+                                                                {inactivity}d
+                                                            </span>
+                                                            <a
+                                                                href={`/leads/${lead.id}`}
+                                                                onClick={(event) => event.stopPropagation()}
+                                                                className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-md text-[color:var(--orion-text-muted)] transition hover:bg-white/10 hover:text-[color:var(--orion-text-secondary)]"
+                                                                aria-label="Abrir lead"
+                                                            >
+                                                                <Plus className="h-3.5 w-3.5" />
+                                                            </a>
+                                                        </div>
+                                                    </article>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowNewLeadForm(true)}
+                                        className="flex h-9 items-center justify-center gap-2 rounded-md border border-dashed border-[color:var(--orion-border-low)] text-[11px] font-semibold text-[color:var(--orion-text-disabled)] transition hover:border-[color:var(--orion-border-strong)] hover:bg-[color:var(--orion-hover)] hover:text-[color:var(--orion-text-secondary)]"
+                                    >
+                                        <Plus className="h-3.5 w-3.5" />
+                                        Adicionar lead
+                                    </button>
+                                </section>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div className="px-5 pb-4">
+                    <div
+                        ref={trackRef}
+                        className="relative h-2 w-full rounded-full bg-white/10"
+                    >
+                        {scrollMeta.content > scrollMeta.viewport ? (
+                            <div
+                                className="absolute top-0 h-2 cursor-grab rounded-full bg-white/40"
+                                style={{
+                                    width: `${Math.max((scrollMeta.viewport / scrollMeta.content) * scrollMeta.track, 28)}px`,
+                                    transform: `translateX(${
+                                        scrollMeta.content - scrollMeta.viewport <= 0
+                                            ? 0
+                                            : (scrollMeta.left / (scrollMeta.content - scrollMeta.viewport)) *
+                                              (scrollMeta.track - Math.max((scrollMeta.viewport / scrollMeta.content) * scrollMeta.track, 28))
+                                    }px)`,
+                                }}
+                                onPointerDown={(event) => {
+                                    event.preventDefault();
+                                    const board = boardRef.current;
+                                    if (!board) return;
+                                    const startX = event.clientX;
+                                    const startLeft = board.scrollLeft;
+                                    const thumbWidth = Math.max((scrollMeta.viewport / scrollMeta.content) * scrollMeta.track, 28);
+                                    const maxThumbLeft = scrollMeta.track - thumbWidth;
+                                    const maxScroll = scrollMeta.content - scrollMeta.viewport;
+                                    const ratio = maxThumbLeft > 0 ? maxScroll / maxThumbLeft : 0;
+
+                                    const onMove = (moveEvent: PointerEvent) => {
+                                        if (!board) return;
+                                        const delta = moveEvent.clientX - startX;
+                                        board.scrollLeft = startLeft + delta * ratio;
+                                    };
+                                    const onUp = () => {
+                                        window.removeEventListener('pointermove', onMove);
+                                        window.removeEventListener('pointerup', onUp);
+                                    };
+                                    window.addEventListener('pointermove', onMove);
+                                    window.addEventListener('pointerup', onUp);
+                                }}
                             />
-                        </div>
-                        {canManagePipeline ? (
-                            <Button
-                                type="button"
-                                variant="secondary"
-                                onClick={() => setShowPipelineConfig((current) => !current)}
-                                icon={<SlidersHorizontal className="h-4 w-4" />}
-                            >
-                                Pipeline
-                            </Button>
                         ) : null}
                     </div>
                 </div>
-            </div>
+            </main>
 
-            {showPipelineConfig && canManagePipeline ? (
-                <Card title="Configurar pipeline" description="Ajuste visual e ordem das etapas operacionais.">
-                    <div className="space-y-4">
-                        <form onSubmit={createStage} className="grid gap-3 md:grid-cols-[1fr_110px_auto]">
-                            <Input
-                                value={newStageName}
-                                onChange={(event) => setNewStageName(event.target.value)}
-                                placeholder="Nova etapa"
-                                required
-                            />
-                            <input
-                                type="color"
-                                value={newStageColor}
-                                onChange={(event) => setNewStageColor(event.target.value)}
-                                className="h-10 w-full cursor-pointer rounded-md border border-canvas-border bg-white px-2"
-                            />
-                            <Button type="submit" disabled={creatingStage}>
-                                {creatingStage ? 'Criando...' : 'Adicionar'}
-                            </Button>
-                        </form>
-
-                        <div className="space-y-2">
-                            {stages.map((stage, index) => (
-                                <div key={stage.id} className="flex items-center justify-between rounded-lg border border-canvas-border bg-[#FBFBFD] px-3 py-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
-                                        <span className="text-sm font-medium text-gray-900">{stage.name}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Button type="button" variant="ghost" onClick={() => moveStageLocal(stage.id, 'up')} disabled={index === 0}>
-                                            ↑
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            onClick={() => moveStageLocal(stage.id, 'down')}
-                                            disabled={index === stages.length - 1}
-                                        >
-                                            ↓
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="secondary"
-                                            className="border-red-200 text-red-700 hover:border-red-300 hover:text-red-800"
-                                            onClick={() => void removeStage(stage.id)}
-                                            disabled={stage.is_won || stage.is_lost}
-                                        >
-                                            Excluir
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))}
+            {showNewLeadForm ? (
+                <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/55 p-4">
+                    <div className="w-full max-w-lg rounded-2xl border border-[#E8E5E0] bg-white p-6 shadow-[0_32px_80px_rgba(0,0,0,0.28)]">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#A8895A]">Pipeline</p>
+                                <h2 className="mt-1 font-editorial text-[22px] font-bold text-[#111827]">Novo lead</h2>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowNewLeadForm(false)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#E8E5E0] text-[#6B7280] transition hover:border-[#C8A97A] hover:text-[#A8895A]"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
                         </div>
 
-                        <Button type="button" onClick={() => void saveStageOrder()} disabled={savingOrder}>
-                            {savingOrder ? 'Salvando...' : 'Salvar ordem'}
-                        </Button>
-                    </div>
-                </Card>
-            ) : null}
-
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
-                <div className="overflow-hidden rounded-[28px] border border-canvas-border bg-[#F5F6FA] shadow-card">
-                    <div className="overflow-x-auto pb-4">
-                        <div className="min-w-max px-4 pt-4">
-                            <div className="flex gap-0">
-                                {stages.map((stage, index) => {
-                                    const stageLeads = leadsByStage.get(stage.id) ?? [];
-                                    const totalValue = stageLeads.reduce((sum, lead) => sum + (lead.estimated_value ?? 0), 0);
-
-                                    return (
-                                        <div key={stage.id} className="w-[260px]">
-                                            <div
-                                                className="relative mx-[2px] border-y border-r border-canvas-border bg-white px-5 py-3 first:border-l"
-                                                style={getStageHeaderStyle(index, stages.length)}
-                                            >
-                                                <p className="text-[13px] font-semibold text-gray-800">{stage.name}</p>
-                                                <div className="mt-1 flex items-center gap-4 text-xs text-gray-500">
-                                                    <span className="inline-flex items-center gap-1">
-                                                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: stage.color }} />
-                                                        {stageLeads.length}
-                                                    </span>
-                                                    <span>{formatCurrencyFromCents(totalValue)}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            <div className="mt-4 flex items-start gap-4 pb-3">
-                                {stages.map((stage) => {
-                                    const stageLeads = leadsByStage.get(stage.id) ?? [];
-
-                                    return (
-                                        <section
-                                            key={stage.id}
-                                            className={`min-h-[620px] w-[260px] rounded-2xl border border-transparent px-1 py-1 transition ${
-                                                highlightStageId === stage.id ? 'border-brand-gold bg-brand-gold/5' : ''
-                                            }`}
-                                            onDragOver={(event) => {
-                                                event.preventDefault();
-                                                setHighlightStageId(stage.id);
-                                            }}
-                                            onDragLeave={() => setHighlightStageId((current) => current === stage.id ? null : current)}
-                                            onDrop={(event) => {
-                                                event.preventDefault();
-                                                void onDrop(stage.id);
-                                            }}
-                                        >
-                                            <div className="space-y-3">
-                                                {stageLeads.length === 0 ? (
-                                                    <div className="flex min-h-[120px] items-center justify-center rounded-2xl border border-dashed border-canvas-border bg-white/60 px-4 text-center text-sm text-gray-400">
-                                                        Nenhum resultado encontrado nesta fase.
-                                                    </div>
-                                                ) : (
-                                                    stageLeads.map((lead) => {
-                                                        const inactivity = daysWithoutInteraction(lead.last_interaction_at);
-                                                        const dateBadge = getCardDateParts(lead.created_at);
-
-                                                        return (
-                                                            <article
-                                                                key={lead.id}
-                                                                draggable
-                                                                onDragStart={() => onDragStart(lead.id)}
-                                                                onClick={() => setSelectedLeadId(lead.id)}
-                                                                className={`group relative cursor-pointer overflow-hidden rounded-2xl border border-canvas-border bg-white shadow-[0_10px_25px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_38px_rgba(15,23,42,0.10)] ${
-                                                                    draggingLeadId === lead.id ? 'opacity-40' : ''
-                                                                }`}
-                                                            >
-                                                                <div className="flex gap-3 px-3 py-3">
-                                                                    <div className="flex w-11 shrink-0 flex-col items-center rounded-xl border border-brand-gold-light/60 bg-brand-gold-light/20 px-1 py-2">
-                                                                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-gold-dark">
-                                                                            {dateBadge.month}
-                                                                        </span>
-                                                                        <span className="mt-1 text-xl font-bold leading-none text-surface-sidebar">
-                                                                            {dateBadge.day}
-                                                                        </span>
-                                                                    </div>
-
-                                                                    <div className="min-w-0 flex-1">
-                                                                        <p className="truncate text-[15px] font-semibold text-gray-800">
-                                                                            {lead.name ?? 'Lead sem nome'}
-                                                                        </p>
-                                                                        <p className="mt-1 text-sm text-gray-500">
-                                                                            {formatCurrencyFromCents(lead.estimated_value ?? 0)}
-                                                                        </p>
-                                                                        <p className="mt-2 line-clamp-2 min-h-[34px] text-xs text-gray-500">
-                                                                            {lead.quick_note?.trim() || lead.notes?.trim() || formatPhone(lead.whatsapp_number)}
-                                                                        </p>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="border-t border-canvas-border px-3 py-2">
-                                                                    <div className="flex items-center justify-between gap-2">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-gold-light/30 text-[11px] font-semibold text-brand-gold-dark">
-                                                                                {initials(lead.assigned_to?.name ?? null)}
-                                                                            </div>
-                                                                            <div className="min-w-0">
-                                                                                <p className="truncate text-[11px] font-medium text-gray-700">
-                                                                                    {lead.assigned_to?.name ?? 'Sem responsável'}
-                                                                                </p>
-                                                                                <p className="truncate text-[11px] text-gray-400">
-                                                                                    {formatPhone(lead.whatsapp_number)}
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-
-                                                                        <a
-                                                                            href={`/leads/${lead.id}`}
-                                                                            onClick={(event) => event.stopPropagation()}
-                                                                            className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-gold text-surface-sidebar transition hover:bg-brand-gold-dark"
-                                                                            aria-label="Abrir lead"
-                                                                        >
-                                                                            <Plus className="h-4 w-4" />
-                                                                        </a>
-                                                                    </div>
-
-                                                                    <div className="mt-3 flex items-center gap-2 text-[11px] text-gray-500">
-                                                                        <span className="inline-flex items-center gap-1 rounded-full bg-canvas px-2 py-1">
-                                                                            <Phone className="h-3 w-3" />
-                                                                            Lead
-                                                                        </span>
-                                                                        <span className="inline-flex items-center gap-1 rounded-full bg-canvas px-2 py-1">
-                                                                            <CheckSquare className="h-3 w-3" />
-                                                                            {lead.open_tasks_count ?? 0}
-                                                                        </span>
-                                                                        <span className="inline-flex items-center gap-1 rounded-full bg-canvas px-2 py-1">
-                                                                            <MessageCircle className="h-3 w-3" />
-                                                                            msg
-                                                                        </span>
-                                                                        <span
-                                                                            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 ${
-                                                                                (inactivity ?? 0) > 7
-                                                                                    ? 'bg-red-50 text-red-600'
-                                                                                    : (inactivity ?? 0) > 3
-                                                                                        ? 'bg-amber-50 text-amber-600'
-                                                                                        : 'bg-canvas text-gray-500'
-                                                                            }`}
-                                                                        >
-                                                                            <Clock3 className="h-3 w-3" />
-                                                                            {inactivity ?? 0}d
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            </article>
-                                                        );
-                                                    })
-                                                )}
-                                            </div>
-                                        </section>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <aside className="space-y-4">
-                    <Card title="Filtros" description="Refine a visão do pipeline sem sair da tela.">
-                        <div className="space-y-3">
-                            <label className="block">
-                                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
-                                    Usuário responsável
-                                </span>
-                                <select
-                                    value={responsibleFilter}
-                                    onChange={(event) => setResponsibleFilter(event.target.value)}
-                                    className="w-full rounded-md border border-canvas-border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-brand-gold"
-                                >
-                                    <option value="all">Todos</option>
-                                    {responsibleOptions.map((option) => (
-                                        <option key={option.id} value={option.id}>
-                                            {option.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-
-                            <div className="rounded-xl border border-dashed border-canvas-border bg-[#FBFBFD] px-3 py-3 text-sm text-gray-500">
-                                Data de criação e filtros avançados entram no próximo ajuste fino.
-                            </div>
-                        </div>
-                    </Card>
-
-                    <Card title="Novo lead" description="Cadastro rápido sem tomar a área principal do kanban.">
-                        <form onSubmit={onCreateLead} className="space-y-3">
-                            <Input name="name" placeholder="Nome do lead" required />
-                            <Input name="whatsapp_number" placeholder="+5511999999999" required />
+                        <form
+                            onSubmit={async (event) => {
+                                await onCreateLead(event);
+                                setShowNewLeadForm(false);
+                            }}
+                            className="mt-6 space-y-3"
+                        >
+                            <Input name="name" placeholder="Nome do lead" required className="h-10 border-[#E8E5E0] bg-[#F8F7F5] text-[#111827]" />
+                            <Input name="whatsapp_number" placeholder="+5511999999999" required className="h-10 border-[#E8E5E0] bg-[#F8F7F5] text-[#111827]" />
                             <select
                                 name="source"
                                 defaultValue="WHATSAPP"
-                                className="w-full rounded-md border border-canvas-border bg-white px-3 py-2 text-sm text-gray-900 outline-none"
+                                className="h-10 w-full rounded-md border border-[#E8E5E0] bg-[#F8F7F5] px-3 text-sm text-[#111827] outline-none"
                             >
                                 <option value="WHATSAPP">WhatsApp</option>
                                 <option value="BALCAO">Balcão</option>
                                 <option value="INDICACAO">Indicação</option>
                                 <option value="OUTRO">Outro</option>
                             </select>
-                            <Button className="w-full justify-center" type="submit">
+                            <button
+                                type="submit"
+                                className="inline-flex h-10 w-full items-center justify-center rounded-md bg-[#C8A97A] text-sm font-bold text-black transition hover:bg-[#E8D5B0]"
+                            >
                                 Criar lead
-                            </Button>
+                            </button>
                         </form>
-                    </Card>
+                    </div>
+                </div>
+            ) : null}
 
-                    {selectedLead ? (
-                        <Card
-                            title={selectedLead.name ?? 'Lead sem nome'}
-                            description={selectedLead.assigned_to?.name ?? 'Sem responsável definido'}
-                        >
-                            <div className="space-y-3 text-sm text-gray-700">
-                                <div className="flex items-center justify-between">
-                                    <span>Etapa</span>
-                                    <span className="font-semibold">{selectedLead.stage_name ?? selectedLead.stage}</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span>Valor</span>
-                                    <span className="font-semibold">{formatCurrencyFromCents(selectedLead.estimated_value ?? 0)}</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span>Última interação</span>
-                                    <span className="font-semibold">{formatDate(selectedLead.last_interaction_at)}</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span>Tarefas abertas</span>
-                                    <span className="font-semibold">{selectedLead.open_tasks_count ?? 0}</span>
-                                </div>
+            {showPipelineConfig && canManagePipeline ? (
+                <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/55 p-4">
+                    <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-[color:var(--orion-surface)] p-6 shadow-[0_32px_80px_rgba(0,0,0,0.45)]">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-gold">Admin</p>
+                                <h2 className="mt-1 font-serif text-[24px] font-semibold text-[color:var(--orion-text)]">Configurar pipeline</h2>
+                                <p className="mt-2 text-sm text-[color:var(--orion-text-secondary)]">
+                                    Ajuste etapas e ordem operacional sem sair do board.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowPipelineConfig(false)}
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-[color:var(--orion-text-secondary)] transition hover:border-brand-gold hover:text-brand-gold"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
 
-                                <label className="block pt-1">
-                                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
-                                        Nota rápida
-                                    </span>
-                                    <textarea
-                                        value={selectedLead.quick_note ?? ''}
-                                        onChange={(event) => updateQuickNoteLocally(selectedLead.id, event.target.value)}
-                                        placeholder="Escreva o que aconteceu..."
-                                        className="min-h-[96px] w-full rounded-md border border-canvas-border bg-white px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-brand-gold"
+                        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+                            <Card title="Nova etapa" description="Adicione etapas canônicas ao pipeline atual.">
+                                <form onSubmit={createStage} className="grid gap-3">
+                                    <Input
+                                        value={newStageName}
+                                        onChange={(event) => setNewStageName(event.target.value)}
+                                        placeholder="Nova etapa"
+                                        required
                                     />
-                                </label>
+                                    <input
+                                        type="color"
+                                        value={newStageColor}
+                                        onChange={(event) => setNewStageColor(event.target.value)}
+                                        className="h-10 w-full cursor-pointer rounded-md border border-white/10 bg-[color:var(--orion-base)] px-2"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={creatingStage}
+                                        className="inline-flex h-10 items-center justify-center rounded-md bg-brand-gold text-sm font-bold text-black transition hover:bg-brand-gold-light disabled:opacity-50"
+                                    >
+                                        {creatingStage ? 'Criando...' : 'Adicionar etapa'}
+                                    </button>
+                                </form>
+                            </Card>
 
-                                <a
-                                    href={`/leads/${selectedLead.id}`}
-                                    className="inline-flex items-center gap-1 font-semibold text-brand-gold-dark hover:underline"
+                            <Card title="Etapas atuais" description="Reordene e remova etapas sem sair do contexto do pipeline.">
+                                <div className="space-y-2">
+                                    {stages.map((stage, index) => (
+                                        <div key={stage.id} className="flex items-center justify-between rounded-lg border border-white/10 bg-[color:var(--orion-base)] px-3 py-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
+                                                <span className="text-sm font-medium text-[color:var(--orion-text)]">{stage.name}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => moveStageLocal(stage.id, 'up')}
+                                                    disabled={index === 0}
+                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/10 text-sm text-[color:var(--orion-text-secondary)] transition hover:border-brand-gold hover:text-brand-gold disabled:opacity-40"
+                                                >
+                                                    ↑
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => moveStageLocal(stage.id, 'down')}
+                                                    disabled={index === stages.length - 1}
+                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/10 text-sm text-[color:var(--orion-text-secondary)] transition hover:border-brand-gold hover:text-brand-gold disabled:opacity-40"
+                                                >
+                                                    ↓
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => void removeStage(stage.id)}
+                                                    disabled={stage.is_won || stage.is_lost}
+                                                    className="inline-flex h-8 items-center justify-center rounded-md border border-red-400/25 px-3 text-xs font-semibold text-red-300 transition hover:bg-red-500/10 disabled:opacity-40"
+                                                >
+                                                    Excluir
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => void saveStageOrder()}
+                                    disabled={savingOrder}
+                                    className="mt-4 inline-flex h-10 items-center justify-center rounded-md bg-brand-gold px-4 text-sm font-bold text-black transition hover:bg-brand-gold-light disabled:opacity-50"
                                 >
-                                    Abrir detalhe completo
-                                    <ChevronRight className="h-4 w-4" />
-                                </a>
-                            </div>
-                        </Card>
-                    ) : (
-                        <Card title="Selecione um negócio" description="Clique em um card para abrir o resumo lateral.">
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                                <CalendarDays className="h-4 w-4" />
-                                O detalhe completo continua em `/leads/:id`.
-                            </div>
-                        </Card>
-                    )}
-                </aside>
-            </div>
+                                    {savingOrder ? 'Salvando...' : 'Salvar ordem'}
+                                </button>
+                            </Card>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }

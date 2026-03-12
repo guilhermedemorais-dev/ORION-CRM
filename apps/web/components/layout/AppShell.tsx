@@ -31,7 +31,7 @@ export function AppShell({
             />
             <div className="ml-64 flex min-h-screen flex-1 flex-col">
                 <Topbar userName={user.name} />
-                <main className="flex-1 overflow-auto p-6">{children}</main>
+                <main className="flex-1 overflow-y-auto overflow-x-hidden p-6">{children}</main>
             </div>
             <AssistantDock userRole={user.role} />
         </div>

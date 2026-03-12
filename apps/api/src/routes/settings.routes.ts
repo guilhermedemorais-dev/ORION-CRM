@@ -17,6 +17,7 @@ import {
     fetchEvolutionQrCode,
     fetchEvolutionStatus,
 } from '../services/evolution.service.js';
+import integrationsRoutes from './integrations.routes.js';
 import type { Settings } from '../types/entities.js';
 
 const router = Router();
@@ -99,6 +100,88 @@ function detectBrandingFile(buffer: Buffer): { ext: 'png' | 'jpg' | 'svg'; mimeT
     return null;
 }
 
+async function handleGetSettings(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const result = await query<Settings>(
+            `SELECT company_name, logo_url, favicon_url, primary_color, secondary_color,
+            cnpj, phone, address, instagram, whatsapp_greeting, email_from_name,
+            notify_new_lead_whatsapp, notify_order_paid, notify_production_delayed, notify_low_stock,
+            plan
+     FROM settings LIMIT 1`
+        );
+        const settings = result.rows[0];
+
+        if (!settings) {
+            next(AppError.notFound());
+            return;
+        }
+
+        res.json(settings);
+    } catch (err) {
+        next(err);
+    }
+}
+
+async function handleUpdateSettings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const parsed = updateSettingsSchema.safeParse(req.body);
+        if (!parsed.success) {
+            next(AppError.badRequest(
+                'Verifique os campos informados.',
+                parsed.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+            ));
+            return;
+        }
+
+        const data = parsed.data;
+        const fields = Object.entries(data).filter(([, v]) => v !== undefined);
+
+        if (fields.length === 0) {
+            next(AppError.badRequest('Nenhum campo para atualizar.'));
+            return;
+        }
+
+        const oldResult = await query<Settings>('SELECT * FROM settings LIMIT 1');
+        const oldSettings = oldResult.rows[0];
+
+        const setClauses = fields.map(([key], i) => `${key} = $${i + 1}`);
+        setClauses.push(`updated_at = NOW()`);
+        const values = fields.map(([, v]) => v === null ? null : typeof v === 'object' ? JSON.stringify(v) : v);
+
+        await query(
+            `UPDATE settings SET ${setClauses.join(', ')}`,
+            values
+        );
+
+        await invalidateSettingsCache();
+
+        if (req.user) {
+            await createAuditLog({
+                userId: req.user.id,
+                action: 'UPDATE',
+                entityType: 'settings',
+                entityId: oldSettings?.id || null,
+                oldValue: oldSettings ? (oldSettings as unknown as Record<string, unknown>) : null,
+                newValue: data as Record<string, unknown>,
+                req,
+            });
+        }
+
+        const result = await query<Settings>(
+            `SELECT company_name, logo_url, favicon_url, primary_color, secondary_color,
+            cnpj, phone, address, instagram, whatsapp_greeting, email_from_name,
+            notify_new_lead_whatsapp, notify_order_paid, notify_production_delayed, notify_low_stock,
+            plan
+     FROM settings LIMIT 1`
+        );
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        next(err);
+    }
+}
+
+
 // ---- GET /settings/public (PUBLIC — no auth) ----
 
 router.get(
@@ -138,28 +221,17 @@ router.get(
     '/',
     authenticate,
     requireRole(['ADMIN']),
-    async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
-        try {
-            const result = await query<Settings>(
-                `SELECT company_name, logo_url, favicon_url, primary_color, secondary_color,
-                cnpj, phone, address, instagram, whatsapp_greeting, email_from_name,
-                notify_new_lead_whatsapp, notify_order_paid, notify_production_delayed, notify_low_stock,
-                plan
-         FROM settings LIMIT 1`
-            );
-            const settings = result.rows[0];
-
-            if (!settings) {
-                next(AppError.notFound());
-                return;
-            }
-
-            res.json(settings);
-        } catch (err) {
-            next(err);
-        }
-    }
+    handleGetSettings
 );
+
+router.get(
+    '/settings',
+    authenticate,
+    requireRole(['ADMIN']),
+    handleGetSettings
+);
+
+router.use('/integrations', integrationsRoutes);
 
 // ---- PUT /settings (ADMIN only) ----
 
@@ -168,69 +240,15 @@ router.put(
     authenticate,
     requireRole(['ADMIN']),
     rateLimit({ windowMs: 60 * 1000, max: 10, name: 'settings-update' }),
-    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        try {
-            const parsed = updateSettingsSchema.safeParse(req.body);
-            if (!parsed.success) {
-                next(AppError.badRequest(
-                    'Verifique os campos informados.',
-                    parsed.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
-                ));
-                return;
-            }
+    handleUpdateSettings
+);
 
-            const data = parsed.data;
-            const fields = Object.entries(data).filter(([, v]) => v !== undefined);
-
-            if (fields.length === 0) {
-                next(AppError.badRequest('Nenhum campo para atualizar.'));
-                return;
-            }
-
-            // Get old values for audit log
-            const oldResult = await query<Settings>('SELECT * FROM settings LIMIT 1');
-            const oldSettings = oldResult.rows[0];
-
-            // Build dynamic UPDATE
-            const setClauses = fields.map(([key], i) => `${key} = $${i + 1}`);
-            setClauses.push(`updated_at = NOW()`);
-            const values = fields.map(([, v]) => v === null ? null : typeof v === 'object' ? JSON.stringify(v) : v);
-
-            await query(
-                `UPDATE settings SET ${setClauses.join(', ')}`,
-                values
-            );
-
-            // Invalidate Redis cache
-            await invalidateSettingsCache();
-
-            // Audit log
-            if (req.user) {
-                await createAuditLog({
-                    userId: req.user.id,
-                    action: 'UPDATE',
-                    entityType: 'settings',
-                    entityId: oldSettings?.id || null,
-                    oldValue: oldSettings ? (oldSettings as unknown as Record<string, unknown>) : null,
-                    newValue: data as Record<string, unknown>,
-                    req,
-                });
-            }
-
-            // Return updated settings
-            const result = await query<Settings>(
-                `SELECT company_name, logo_url, favicon_url, primary_color, secondary_color,
-                cnpj, phone, address, instagram, whatsapp_greeting, email_from_name,
-                notify_new_lead_whatsapp, notify_order_paid, notify_production_delayed, notify_low_stock,
-                plan
-         FROM settings LIMIT 1`
-            );
-
-            res.json(result.rows[0]);
-        } catch (err) {
-            next(err);
-        }
-    }
+router.put(
+    '/settings',
+    authenticate,
+    requireRole(['ADMIN']),
+    rateLimit({ windowMs: 60 * 1000, max: 10, name: 'settings-update' }),
+    handleUpdateSettings
 );
 
 // ---- POST /settings/logo (ADMIN only) ----

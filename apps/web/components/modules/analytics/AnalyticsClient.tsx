@@ -1,7 +1,17 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useEffect, useState, useTransition } from 'react';
-import { Download, LineChart as LineChartIcon, TrendingDown, TrendingUp } from 'lucide-react';
+import {
+    Ban,
+    CircleDollarSign,
+    Download,
+    Gift,
+    LineChart as LineChartIcon,
+    ShoppingCart,
+    TrendingDown,
+    TrendingUp,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
     Bar,
@@ -19,7 +29,6 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/Input';
-import { PageHeader } from '@/components/ui/PageHeader';
 import type { AnalyticsPeriod, AnalyticsSalesResponse, AnalyticsTab } from '@/lib/analytics-types';
 import { cn, formatCurrencyFromCents } from '@/lib/utils';
 
@@ -84,11 +93,11 @@ function downloadCsv(filename: string, rows: AnalyticsSalesResponse['tables']['t
 
 function getTrendClassName(delta: number, inverted = false): string {
     if (delta === 0) {
-        return 'text-gray-500';
+        return 'text-[color:var(--orion-text-secondary)]';
     }
 
     const isPositive = inverted ? delta < 0 : delta > 0;
-    return isPositive ? 'text-emerald-700' : 'text-rose-700';
+    return isPositive ? 'text-emerald-200' : 'text-rose-200';
 }
 
 function RevenueTooltip({
@@ -121,25 +130,31 @@ function RevenueTooltip({
 
 function AnalyticsKpiCard({
     label,
+    icon,
     value,
     trend,
     helper,
     inverted,
 }: {
     label: string;
+    icon: ReactNode;
     value: string;
     trend: number;
     helper: string;
     inverted?: boolean;
 }) {
     return (
-        <Card className="overflow-hidden p-0">
-            <div className="h-1 w-full bg-gradient-to-r from-[#C8A97A] via-[#E7D3B0] to-[#C8A97A]" />
-            <div className="p-5">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500">{label}</p>
-                <p className="mt-3 font-serif text-3xl font-semibold text-gray-900">{value}</p>
+        <Card className="border-white/5 bg-[#131316]">
+            <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--orion-text-secondary)]">{label}</p>
+                <span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-brand-gold/10 text-brand-gold">
+                    {icon}
+                </span>
+            </div>
+            <div>
+                <p className="font-serif text-[28px] font-semibold leading-none text-[color:var(--orion-text)]">{value}</p>
                 <p className={cn('mt-2 text-sm font-medium', getTrendClassName(trend, inverted))}>{formatTrend(trend)}</p>
-                <p className="mt-2 text-sm text-gray-500">{helper}</p>
+                <p className="mt-2 text-[11px] text-[color:var(--orion-text-secondary)]">{helper}</p>
             </div>
         </Card>
     );
@@ -173,10 +188,15 @@ export function AnalyticsClient({
 }) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
+    const [hasMounted, setHasMounted] = useState(false);
     const [activeTab, setActiveTab] = useState<AnalyticsTab>(initialTab);
     const [customFrom, setCustomFrom] = useState(filters.from ?? sales.period.from);
     const [customTo, setCustomTo] = useState(filters.to ?? sales.period.to);
     const [hasRestoredSavedFilters, setHasRestoredSavedFilters] = useState(hasExplicitFilters);
+
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
 
     useEffect(() => {
         const savedTab = window.localStorage.getItem('analytics.activeTab');
@@ -271,16 +291,77 @@ export function AnalyticsClient({
         });
     }
 
+    if (!hasMounted) {
+        return (
+            <div className="overflow-hidden rounded-[24px] border border-white/5 bg-[#0F0F11] shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
+                <div className="border-b border-white/5 bg-[#0A0A0C] px-6 py-4">
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                        <div className="space-y-2">
+                            <div className="h-3 w-20 rounded-full bg-white/10" />
+                            <div className="h-8 w-40 rounded-full bg-white/10" />
+                            <div className="h-4 w-64 rounded-full bg-white/5" />
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            <div className="h-11 w-64 rounded-[10px] bg-white/5" />
+                            <div className="h-11 w-80 rounded-[10px] bg-white/5" />
+                            <div className="h-11 w-28 rounded-[10px] bg-white/5" />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="border-b border-white/5 px-6 pt-4">
+                    <div className="flex gap-2">
+                        {Array.from({ length: 5 }).map((_, index) => (
+                            <div key={`analytics-tab-skeleton-${index}`} className="h-10 w-24 rounded-t-[10px] bg-white/5" />
+                        ))}
+                    </div>
+                </div>
+
+                <div className="space-y-6 p-6">
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        {Array.from({ length: 4 }).map((_, index) => (
+                            <div
+                                key={`analytics-kpi-skeleton-${index}`}
+                                className="h-[154px] rounded-2xl border border-white/10 bg-[#131316]"
+                            />
+                        ))}
+                    </div>
+
+                    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
+                        <div className="h-[420px] rounded-2xl border border-white/10 bg-[#131316]" />
+                        <div className="h-[420px] rounded-2xl border border-white/10 bg-[#131316]" />
+                    </div>
+
+                    <div className="grid gap-6 xl:grid-cols-2">
+                        <div className="h-[380px] rounded-2xl border border-white/10 bg-[#131316]" />
+                        <div className="h-[380px] rounded-2xl border border-white/10 bg-[#131316]" />
+                    </div>
+
+                    <div className="h-[360px] rounded-2xl border border-white/10 bg-[#131316]" />
+                </div>
+            </div>
+        );
+    }
+
     const revenueFilename = `analytics-vendas-${sales.period.from}-${sales.period.to}.csv`;
+    const activeTabLabel = TAB_OPTIONS.find((tab) => tab.value === activeTab)?.label ?? 'Analytics';
 
     return (
-        <div className="space-y-6">
-            <PageHeader
-                title="Analytics"
-                description="Visão executiva consolidada do ORION. Este primeiro slice da Phase 4 entrega a tab de Vendas com comparação contra período anterior."
-                actions={(
-                    <>
-                        <div className="inline-flex flex-wrap rounded-lg border border-canvas-border bg-white p-1">
+        <div className="overflow-hidden rounded-[24px] border border-white/5 bg-[#0F0F11] shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
+            <div className="border-b border-white/5 bg-[#0A0A0C] px-6 py-4">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--orion-text-muted)]">ORION CRM</p>
+                        <h1 className="mt-1 font-serif text-[22px] font-semibold text-[color:var(--orion-text)]">
+                            Analytics
+                        </h1>
+                        <p className="mt-1 text-sm text-[color:var(--orion-text-secondary)]">
+                            {activeTabLabel} no período {sales.period.from} até {sales.period.to}
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="inline-flex flex-wrap rounded-[10px] border border-white/10 bg-[#131316] p-1">
                             {PERIOD_OPTIONS.map((option) => (
                                 <button
                                     key={option.value}
@@ -288,10 +369,10 @@ export function AnalyticsClient({
                                     disabled={isPending}
                                     onClick={() => navigateToSales({ period: option.value })}
                                     className={cn(
-                                        'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                                        'rounded-[8px] px-3 py-2 text-[12px] font-medium transition',
                                         filters.period === option.value
-                                            ? 'bg-brand-gold text-surface-sidebar'
-                                            : 'text-gray-600 hover:bg-canvas hover:text-gray-900'
+                                            ? 'bg-brand-gold text-black'
+                                            : 'text-[color:var(--orion-text-secondary)] hover:bg-white/5 hover:text-[color:var(--orion-text)]'
                                     )}
                                 >
                                     {option.label}
@@ -299,108 +380,122 @@ export function AnalyticsClient({
                             ))}
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-canvas-border bg-white px-3 py-2">
+                        <div className="flex flex-wrap items-center gap-2 rounded-[10px] border border-white/10 bg-[#131316] px-3 py-2">
                             <Input
                                 type="date"
                                 value={customFrom}
                                 onChange={(event) => setCustomFrom(event.target.value)}
-                                className="h-10 min-w-[150px]"
+                                className="h-9 min-w-[145px] border-white/10 bg-[#0F0F11]"
                             />
                             <Input
                                 type="date"
                                 value={customTo}
                                 onChange={(event) => setCustomTo(event.target.value)}
-                                className="h-10 min-w-[150px]"
+                                className="h-9 min-w-[145px] border-white/10 bg-[#0F0F11]"
                             />
-                            <Button type="button" variant="secondary" disabled={isPending} onClick={applyCustomRange}>
+                            <button
+                                type="button"
+                                disabled={isPending}
+                                onClick={applyCustomRange}
+                                className="rounded-[8px] border border-white/10 px-3 py-2 text-[12px] font-semibold text-[color:var(--orion-text-secondary)] transition hover:border-brand-gold/30 hover:text-brand-gold disabled:opacity-40"
+                            >
                                 Aplicar
-                            </Button>
+                            </button>
                         </div>
 
-                        <Button
+                        <button
                             type="button"
-                            variant="secondary"
                             onClick={() => downloadCsv(revenueFilename, sales.tables.top_products)}
+                            className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-white/10 px-4 text-[12px] font-semibold text-[color:var(--orion-text-secondary)] transition hover:border-brand-gold/30 hover:text-brand-gold"
                         >
                             <Download className="h-4 w-4" />
-                            Exportar CSV
-                        </Button>
-                    </>
-                )}
-            />
-
-            <div className="flex flex-wrap gap-2">
-                {TAB_OPTIONS.map((tab) => (
-                    <button
-                        key={tab.value}
-                        type="button"
-                        onClick={() => setActiveTab(tab.value)}
-                        className={cn(
-                            'rounded-full border px-4 py-2 text-sm font-medium transition',
-                            activeTab === tab.value
-                                ? 'border-[#C8A97A] bg-[#F6EFE2] text-gray-900'
-                                : 'border-canvas-border bg-white text-gray-500 hover:text-gray-900',
-                            !tab.available && 'opacity-80'
-                        )}
-                    >
-                        {tab.label}
-                        {!tab.available ? ' · em breve' : ''}
-                    </button>
-                ))}
+                            Exportar
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            {error ? (
-                <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                    {error}
+            <div className="border-b border-white/5 px-6 pt-4">
+                <div className="flex flex-wrap gap-1">
+                    {TAB_OPTIONS.map((tab) => (
+                        <button
+                            key={tab.value}
+                            type="button"
+                            onClick={() => setActiveTab(tab.value)}
+                            className={cn(
+                                'inline-flex h-10 items-center gap-2 border-b-2 px-4 text-[12px] font-medium transition',
+                                activeTab === tab.value
+                                    ? 'border-brand-gold text-[color:var(--orion-text)]'
+                                    : 'border-transparent text-[color:var(--orion-text-secondary)] hover:text-[color:var(--orion-text)]'
+                            )}
+                        >
+                            {activeTab === tab.value ? <span className="h-1.5 w-1.5 rounded-full bg-brand-gold" /> : null}
+                            {tab.label}
+                            {!tab.available ? <span className="text-[10px] text-[color:var(--orion-text-muted)]">em breve</span> : null}
+                        </button>
+                    ))}
                 </div>
-            ) : null}
+            </div>
 
-            {activeTab !== 'sales' ? (
-                <SalesTabPlaceholder
-                    title={TAB_OPTIONS.find((tab) => tab.value === activeTab)?.label ?? 'Relatório'}
-                />
-            ) : (
-                <>
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="space-y-6 p-6">
+                {error ? (
+                    <div className="rounded-md border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">
+                        {error}
+                    </div>
+                ) : null}
+
+                {activeTab !== 'sales' ? (
+                    <SalesTabPlaceholder title={activeTabLabel} />
+                ) : (
+                    <>
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                         <AnalyticsKpiCard
                             label="Faturamento"
+                            icon={<CircleDollarSign className="h-4 w-4" />}
                             value={formatCurrencyFromCents(sales.kpis.revenue.value_cents)}
                             trend={sales.kpis.revenue.delta_percent}
                             helper={`Comparativo ${sales.period.comparison_from} → ${sales.period.comparison_to}`}
                         />
                         <AnalyticsKpiCard
                             label="Pedidos"
+                            icon={<ShoppingCart className="h-4 w-4" />}
                             value={String(sales.kpis.orders.value)}
                             trend={sales.kpis.orders.delta_percent}
                             helper="Pedidos operacionais e da loja no período"
                         />
                         <AnalyticsKpiCard
                             label="Ticket Médio"
+                            icon={<Gift className="h-4 w-4" />}
                             value={formatCurrencyFromCents(sales.kpis.average_ticket.value_cents)}
                             trend={sales.kpis.average_ticket.delta_percent}
                             helper="Receita / pedidos pagos ou aprovados"
                         />
                         <AnalyticsKpiCard
                             label="Taxa de Cancelamento"
+                            icon={<Ban className="h-4 w-4" />}
                             value={formatPercent(sales.kpis.cancellation_rate.value_percent)}
                             trend={sales.kpis.cancellation_rate.delta_percent}
                             helper="Queda na taxa é leitura positiva"
                             inverted
                         />
-                    </div>
+                        </div>
 
-                    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
+                        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
                         <Card
                             title="Faturamento por período"
                             description={`Atual ${sales.period.from} → ${sales.period.to} contra a janela anterior.`}
+                            className="min-w-0 border-white/5 bg-[#131316]"
                         >
                             <div className="h-[340px]">
-                                <ResponsiveContainer width="100%" height="100%">
+                                {!hasMounted ? (
+                                    <div className="h-full rounded-2xl border border-white/10 bg-[color:var(--orion-base)]" />
+                                ) : (
+                                    <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={sales.charts.revenue_timeline}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#E7E5E4" />
-                                        <XAxis dataKey="label" stroke="#6B7280" />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                                        <XAxis dataKey="label" stroke="#A09A94" />
                                         <YAxis
-                                            stroke="#6B7280"
+                                            stroke="#A09A94"
                                             tickFormatter={(value) => `R$ ${(Number(value) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k`}
                                         />
                                         <Tooltip content={<RevenueTooltip />} />
@@ -423,89 +518,99 @@ export function AnalyticsClient({
                                             dot={false}
                                         />
                                     </LineChart>
-                                </ResponsiveContainer>
+                                    </ResponsiveContainer>
+                                )}
                             </div>
                         </Card>
 
                         <Card
                             title="Leitura executiva"
                             description="Resumo do que mudou quando comparado com a janela imediatamente anterior."
+                            className="border-white/5 bg-[#131316]"
                         >
                             <div className="space-y-4">
-                                <div className="rounded-2xl border border-canvas-border bg-[#FBFBFD] p-4">
+                                <div className="rounded-2xl border border-white/10 bg-[color:var(--orion-elevated)] p-4">
                                     <div className="flex items-center gap-3">
-                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F6EFE2] text-[#8B6B3F]">
+                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gold/10 text-brand-gold">
                                             <LineChartIcon className="h-5 w-5" />
                                         </span>
                                         <div>
-                                            <p className="text-sm font-semibold text-gray-900">Período ativo</p>
-                                            <p className="text-sm text-gray-500">{sales.period.from} até {sales.period.to}</p>
+                                            <p className="text-sm font-semibold text-[color:var(--orion-text)]">Período ativo</p>
+                                            <p className="text-sm text-[color:var(--orion-text-secondary)]">{sales.period.from} até {sales.period.to}</p>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                                <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4">
                                     <div className="flex items-center gap-3">
-                                        <TrendingUp className="h-5 w-5 text-emerald-700" />
+                                        <TrendingUp className="h-5 w-5 text-emerald-200" />
                                         <div>
-                                            <p className="text-sm font-semibold text-emerald-900">Receita</p>
-                                            <p className="text-sm text-emerald-700">{formatTrend(sales.kpis.revenue.delta_percent)}</p>
+                                            <p className="text-sm font-semibold text-emerald-100">Receita</p>
+                                            <p className="text-sm text-emerald-200">{formatTrend(sales.kpis.revenue.delta_percent)}</p>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4">
+                                <div className="rounded-2xl border border-rose-400/25 bg-rose-400/10 p-4">
                                     <div className="flex items-center gap-3">
-                                        <TrendingDown className="h-5 w-5 text-rose-700" />
+                                        <TrendingDown className="h-5 w-5 text-rose-200" />
                                         <div>
-                                            <p className="text-sm font-semibold text-rose-900">Cancelamentos</p>
-                                            <p className="text-sm text-rose-700">{formatTrend(sales.kpis.cancellation_rate.delta_percent)}</p>
+                                            <p className="text-sm font-semibold text-rose-100">Cancelamentos</p>
+                                            <p className="text-sm text-rose-200">{formatTrend(sales.kpis.cancellation_rate.delta_percent)}</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </Card>
-                    </div>
+                        </div>
 
-                    <div className="grid gap-6 xl:grid-cols-2">
-                        <Card title="Faturamento por canal" description="Loja online separada da operação manual.">
+                        <div className="grid gap-6 xl:grid-cols-2">
+                        <Card title="Faturamento por canal" description="Loja online separada da operação manual." className="min-w-0">
                             <div className="h-[320px]">
-                                <ResponsiveContainer width="100%" height="100%">
+                                {!hasMounted ? (
+                                    <div className="h-full rounded-2xl border border-white/10 bg-[color:var(--orion-base)]" />
+                                ) : (
+                                    <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={sales.charts.revenue_by_channel}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#E7E5E4" />
-                                        <XAxis dataKey="channel" stroke="#6B7280" />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                                        <XAxis dataKey="channel" stroke="#A09A94" />
                                         <YAxis
-                                            stroke="#6B7280"
+                                            stroke="#A09A94"
                                             tickFormatter={(value) => `R$ ${(Number(value) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k`}
                                         />
                                         <Tooltip
                                             formatter={(value) => formatTooltipCurrency(value)}
-                                            cursor={{ fill: '#F8F5EF' }}
+                                            cursor={{ fill: 'rgba(191,160,106,0.08)' }}
                                         />
                                         <Bar dataKey="revenue_cents" name="Receita" fill="#C8A97A" radius={[8, 8, 0, 0]} />
                                     </BarChart>
-                                </ResponsiveContainer>
+                                    </ResponsiveContainer>
+                                )}
                             </div>
                         </Card>
 
-                        <Card title="Top categorias por receita" description="Categorias que mais puxaram faturamento neste recorte.">
+                        <Card title="Top categorias por receita" description="Categorias que mais puxaram faturamento neste recorte." className="min-w-0 border-white/5 bg-[#131316]">
                             <div className="h-[320px]">
-                                <ResponsiveContainer width="100%" height="100%">
+                                {!hasMounted ? (
+                                    <div className="h-full rounded-2xl border border-white/10 bg-[color:var(--orion-base)]" />
+                                ) : (
+                                    <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={sales.charts.top_categories} layout="vertical" margin={{ left: 16 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#E7E5E4" />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                                         <XAxis
                                             type="number"
-                                            stroke="#6B7280"
+                                            stroke="#A09A94"
                                             tickFormatter={(value) => `R$ ${(Number(value) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}k`}
                                         />
-                                        <YAxis type="category" dataKey="category" stroke="#6B7280" width={110} />
+                                        <YAxis type="category" dataKey="category" stroke="#A09A94" width={110} />
                                         <Tooltip formatter={(value) => formatTooltipCurrency(value)} />
                                         <Bar dataKey="revenue_cents" name="Receita" fill="#8B6B3F" radius={[0, 8, 8, 0]} />
                                     </BarChart>
-                                </ResponsiveContainer>
+                                    </ResponsiveContainer>
+                                )}
                             </div>
                         </Card>
-                    </div>
+                        </div>
 
-                    <Card title="Top produtos mais vendidos" description="Tabela exportável da tab de vendas.">
+                        <Card title="Top produtos mais vendidos" description="Tabela exportável da tab de vendas." className="border-white/5 bg-[#131316]">
                         {sales.tables.top_products.length === 0 ? (
                             <EmptyState
                                 title="Sem vendas no período"
@@ -515,7 +620,7 @@ export function AnalyticsClient({
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-canvas-border text-sm">
                                     <thead>
-                                        <tr className="text-left text-xs uppercase tracking-[0.18em] text-gray-500">
+                                        <tr className="text-left text-xs uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">
                                             <th className="px-3 py-3 font-medium">Produto</th>
                                             <th className="px-3 py-3 font-medium">Categoria</th>
                                             <th className="px-3 py-3 font-medium">Qtd Vendida</th>
@@ -526,20 +631,21 @@ export function AnalyticsClient({
                                     <tbody className="divide-y divide-canvas-border">
                                         {sales.tables.top_products.map((row) => (
                                             <tr key={`${row.product}-${row.category}`} className="bg-white/70">
-                                                <td className="px-3 py-3 font-medium text-gray-900">{row.product}</td>
-                                                <td className="px-3 py-3 text-gray-600">{row.category}</td>
-                                                <td className="px-3 py-3 text-gray-600">{row.quantity}</td>
-                                                <td className="px-3 py-3 text-gray-900">{formatCurrencyFromCents(row.revenue_cents)}</td>
-                                                <td className="px-3 py-3 text-gray-600">{formatPercent(row.share_percent)}</td>
+                                                <td className="px-3 py-3 font-medium text-[color:var(--orion-text)]">{row.product}</td>
+                                                <td className="px-3 py-3 text-[color:var(--orion-text-secondary)]">{row.category}</td>
+                                                <td className="px-3 py-3 text-[color:var(--orion-text-secondary)]">{row.quantity}</td>
+                                                <td className="px-3 py-3 text-[color:var(--orion-text)]">{formatCurrencyFromCents(row.revenue_cents)}</td>
+                                                <td className="px-3 py-3 text-[color:var(--orion-text-secondary)]">{formatPercent(row.share_percent)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
                         )}
-                    </Card>
-                </>
-            )}
+                        </Card>
+                    </>
+                )}
+            </div>
         </div>
     );
 }

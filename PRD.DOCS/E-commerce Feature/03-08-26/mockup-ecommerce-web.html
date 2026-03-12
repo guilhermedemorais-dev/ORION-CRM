@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>ORION Loja — Desktop Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#060607;display:flex;flex-direction:column;align-items:center;padding:48px 24px 80px;gap:56px}
+.label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#222228;text-align:center;margin-bottom:20px}
+
+/* BROWSER SHELL */
+.browser{width:1200px;border-radius:14px;overflow:hidden;border:1px solid #1a1a22;box-shadow:0 0 0 1px #0e0e14, 0 40px 100px rgba(0,0,0,0.85)}
+.browser-bar{height:42px;background:#111114;display:flex;align-items:center;padding:0 16px;gap:12px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.browser-dots{display:flex;gap:6px}
+.browser-dot{width:11px;height:11px;border-radius:50%}
+.browser-url{flex:1;height:26px;background:#0a0a0d;border-radius:6px;display:flex;align-items:center;padding:0 10px;gap:7px;font-size:11px;color:#555;max-width:480px;margin:0 auto}
+.browser-url-lock{color:#4CAF82}
+
+/* ── TOKENS ── */
+.dk{--bg:#0A0A0C;--surf:#131316;--surf2:#1A1A1E;--text:#F0EBE3;--text2:#A09A94;--gold:#BFA06A;--gold2:#D4B87E;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);--green:#4CAF82}
+.lt{--bg:#F9F7F4;--surf:#FFFFFF;--surf2:#F2F0ED;--text:#1A1A1C;--text2:#777777;--gold:#BFA06A;--gold2:#C8A97E;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.12);--green:#2E9E64}
+
+/* NAVBAR LOJA */
+.nav{height:64px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 60px;gap:32px;position:relative}
+.nav-logo-wrap{display:flex;flex-direction:column}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--gold);letter-spacing:3px;text-transform:uppercase}
+.nav-slogan{font-size:8px;font-weight:500;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-top:-2px}
+.nav-links{display:flex;gap:28px;margin-left:40px}
+.nav-link{font-size:12px;font-weight:500;color:var(--text2);cursor:pointer}
+.nav-link.on{color:var(--gold2)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.nav-search{display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;background:var(--surf);border:1px solid var(--border2);border-radius:8px;font-size:12px;color:var(--text2);width:200px}
+
+/* ══ HOME ══ */
+
+/* HERO */
+.hero{width:100%;height:480px;position:relative;overflow:hidden}
+.hero-bg{width:100%;height:100%;background:linear-gradient(160deg,#100c04,#1e1408,#0a0a0e);display:flex;align-items:center;justify-content:center}
+.hero-bg.lt-bg{background:linear-gradient(160deg,#f0e8d8,#e4d8c4,#ece8e0)}
+.hero-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,0.7) 0%,rgba(0,0,0,0.2) 60%,transparent 100%)}
+.hero-content{position:absolute;top:50%;left:60px;transform:translateY(-50%);max-width:520px}
+.hero-eyebrow{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+.hero-title{font-family:'Cormorant Garamond',serif;font-size:56px;font-weight:700;line-height:1.05;color:#F0EBE3;margin-bottom:16px}
+.hero-sub{font-size:14px;color:rgba(240,235,227,0.7);line-height:1.7;margin-bottom:28px;max-width:380px}
+.hero-ctas{display:flex;gap:12px}
+.btn-primary{height:44px;padding:0 28px;background:var(--gold);border-radius:10px;font-size:13px;font-weight:700;color:#0A0A0C;display:flex;align-items:center;gap:8px;cursor:pointer}
+.btn-secondary{height:44px;padding:0 24px;background:transparent;border:1px solid rgba(255,255,255,0.2);border-radius:10px;font-size:13px;font-weight:600;color:rgba(240,235,227,0.8);display:flex;align-items:center;gap:8px;cursor:pointer}
+.hero-img-placeholder{position:absolute;right:60px;top:50%;transform:translateY(-50%);width:300px;height:300px;display:flex;align-items:center;justify-content:center;opacity:0.12}
+
+/* CATEGORY BAR */
+.cat-bar{background:var(--surf);border-bottom:1px solid var(--border);padding:0 60px;display:flex;align-items:center;gap:0}
+.cat-tab{height:48px;padding:0 20px;font-size:12px;font-weight:500;color:var(--text2);display:flex;align-items:center;gap:7px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.cat-tab.on{color:var(--gold2);border-bottom-color:var(--gold);font-weight:700}
+.cat-count{min-width:18px;height:18px;border-radius:9px;background:rgba(191,160,106,0.12);color:var(--gold);font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.cat-bar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.filter-pill{height:30px;padding:0 14px;border-radius:15px;font-size:11px;font-weight:600;border:1px solid var(--border2);color:var(--text2);display:flex;align-items:center;gap:5px;cursor:pointer;background:transparent}
+.filter-pill.on{background:rgba(191,160,106,0.1);border-color:rgba(191,160,106,0.3);color:var(--gold2)}
+
+/* MAIN CONTENT */
+.main{background:var(--bg);padding:32px 60px 60px;position:relative}
+
+/* FILTER PANEL (overlay drawer) */
+.filter-panel-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.55);z-index:10;display:flex}
+.filter-panel{width:280px;background:#131316;border-right:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;max-height:100%}
+.filter-panel-header{height:52px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0}
+.filter-panel-title{font-size:13px;font-weight:700;color:#F0EBE3}
+.filter-panel-close{width:28px;height:28px;border-radius:7px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#A09A94}
+.filter-panel-body{flex:1;padding:8px 20px 20px;overflow-y:auto}
+.filter-panel-footer{padding:14px 20px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px;flex-shrink:0}
+.btn-clear{flex:1;height:36px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:600;color:#A09A94;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.btn-apply{flex:2;height:36px;border-radius:8px;background:#BFA06A;font-size:12px;font-weight:800;color:#0A0A0C;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.filter-option{display:flex;align-items:center;justify-content:space-between;padding:5px 0;cursor:pointer}
+.filter-checkbox{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.filter-checkbox.on{background:var(--gold);border-color:var(--gold)}
+.filter-option-label{font-size:12px;color:var(--text2);flex:1;margin-left:8px}
+.filter-option-count{font-size:10px;color:var(--text2);opacity:0.5}
+.price-range{height:4px;background:var(--border2);border-radius:2px;position:relative;margin:8px 0 4px}
+.price-range-fill{position:absolute;left:15%;right:20%;top:0;bottom:0;background:var(--gold);border-radius:2px}
+.price-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text2)}
+
+/* DROPDOWN FILTERS (inside panel) */
+.filter-dropdown{border-bottom:1px solid var(--border);overflow:hidden}
+.filter-dropdown-header{height:40px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:0 2px}
+.filter-dropdown-header:hover .filter-dropdown-label{color:var(--text)}
+.filter-dropdown-label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px}
+.filter-dropdown-meta{display:flex;align-items:center;gap:6px}
+.filter-dropdown-active{font-size:10px;font-weight:700;color:var(--gold);background:rgba(191,160,106,0.1);border-radius:4px;padding:1px 6px}
+.filter-dropdown-arrow{width:14px;height:14px;color:var(--text2);transition:transform 0.15s}
+.filter-dropdown-arrow.open{transform:rotate(180deg)}
+.filter-dropdown-body{padding:6px 2px 14px;display:flex;flex-direction:column;gap:0}
+.filter-dropdown-body.hidden{display:none}
+.filter-option{display:flex;align-items:center;justify-content:space-between;padding:6px 0;cursor:pointer}
+.filter-checkbox{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.filter-checkbox.on{background:var(--gold);border-color:var(--gold)}
+.filter-option-label{font-size:12px;color:var(--text2);flex:1;margin-left:8px}
+.filter-option-count{font-size:10px;color:var(--text2);opacity:0.5}
+.price-range{height:4px;background:var(--border2);border-radius:2px;position:relative;margin:8px 0 4px}
+.price-range-fill{position:absolute;left:15%;right:20%;top:0;bottom:0;background:var(--gold);border-radius:2px}
+.price-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text2)}
+
+/* PRODUCT GRID */
+.grid-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.grid-info{font-size:12px;color:var(--text2)}
+.grid-sort{height:34px;padding:0 14px;background:var(--surf);border:1px solid var(--border2);border-radius:8px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px;cursor:pointer}
+
+.product-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+.prod-card{background:var(--surf);border-radius:12px;border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:all 0.2s}
+.prod-card:hover{border-color:rgba(191,160,106,0.3);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.prod-img{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative}
+.prod-badge{position:absolute;top:10px;left:10px;height:20px;padding:0 8px;border-radius:10px;font-size:8px;font-weight:800;text-transform:uppercase;display:flex;align-items:center}
+.badge-novo{background:rgba(74,158,255,0.9);color:#fff}
+.badge-sale{background:rgba(224,82,82,0.9);color:#fff}
+.badge-hot{background:rgba(240,160,64,0.9);color:#0a0a0c}
+.badge-custom{background:rgba(191,160,106,0.9);color:#0a0a0c}
+.custom-overlay{position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);border:1px solid rgba(191,160,106,0.3);border-radius:6px;padding:3px 8px;font-size:8px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.5px}
+.prod-info{padding:14px}
+.prod-name{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px;line-height:1.3}
+.prod-sub{font-size:11px;color:var(--text2);margin-bottom:8px}
+.prod-price-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.prod-price{font-size:14px;font-weight:700;color:var(--gold2)}
+.prod-from{font-size:11px;color:var(--text2);text-decoration:line-through}
+.prod-price-custom{font-size:11px;color:var(--text2)}
+.btn-buy-card{width:100%;height:34px;border-radius:8px;background:var(--gold);border:none;font-size:11px;font-weight:800;color:#0A0A0C;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.btn-wa-card{width:100%;height:34px;border-radius:8px;background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.25);font-size:11px;font-weight:700;color:var(--green);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+
+/* FAB */
+.fab{position:sticky;bottom:24px;margin-left:auto;margin-right:0;width:52px;height:52px;border-radius:26px;background:#25D366;box-shadow:0 4px 20px rgba(37,211,102,0.4);display:flex;align-items:center;justify-content:center}
+
+/* ══ PRODUTO PAGE ══ */
+.prod-page{background:var(--bg);padding:32px 60px 60px}
+.breadcrumb{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-bottom:28px}
+.breadcrumb a{color:var(--text2)}
+.breadcrumb span{color:var(--text)}
+.prod-page-layout{display:grid;grid-template-columns:1fr 1fr;gap:48px}
+
+/* GALLERY */
+.gallery{display:flex;flex-direction:column;gap:12px}
+.gallery-main{width:100%;aspect-ratio:1;border-radius:14px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.gallery-thumbs{display:flex;gap:10px}
+.gthumb{width:72px;height:72px;border-radius:8px;border:2px solid var(--border);overflow:hidden;cursor:pointer;flex-shrink:0}
+.gthumb.on{border-color:var(--gold)}
+.gthumb-bg{width:100%;height:100%}
+
+/* PRODUCT INFO */
+.prod-detail{display:flex;flex-direction:column;gap:0}
+.prod-detail-badges{display:flex;gap:8px;margin-bottom:14px}
+.prod-detail-name{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:700;color:var(--text);line-height:1.15;margin-bottom:8px}
+.prod-detail-ref{font-size:11px;color:var(--text2);margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.in-stock{color:var(--green);font-weight:600}
+.prod-detail-price-row{display:flex;align-items:baseline;gap:12px;margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.prod-detail-price{font-size:32px;font-weight:700;color:var(--gold2)}
+.prod-detail-from{font-size:16px;color:var(--text2);text-decoration:line-through}
+.prod-detail-desc{font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:24px}
+.prod-specs-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:24px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.spec-cell{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:2px}
+.spec-cell:nth-last-child(-n+2){border-bottom:none}
+.spec-cell:nth-child(odd){border-right:1px solid var(--border)}
+.spec-key{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2)}
+.spec-val{font-size:13px;font-weight:600;color:var(--text)}
+
+/* SIZE SELECTOR */
+.size-section{margin-bottom:24px}
+.size-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:10px}
+.size-options{display:flex;gap:8px;flex-wrap:wrap}
+.size-opt{width:42px;height:42px;border-radius:8px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer}
+.size-opt.on{border-color:var(--gold);color:var(--gold2);background:rgba(191,160,106,0.08)}
+
+/* CTA AREA PRODUTO */
+.cta-area{display:flex;flex-direction:column;gap:10px}
+.btn-buy-full{width:100%;height:54px;border-radius:12px;background:var(--gold);border:none;font-size:16px;font-weight:800;color:#0A0A0C;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;box-shadow:0 4px 24px rgba(191,160,106,0.25)}
+.btn-wa-full{width:100%;height:54px;border-radius:12px;background:#25D366;border:none;font-size:15px;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;box-shadow:0 4px 24px rgba(37,211,102,0.25)}
+.secure-note{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--text2)}
+.wa-note{font-size:11px;color:var(--text2);text-align:center}
+.share-row{display:flex;gap:8px;margin-top:4px}
+.share-btn{flex:1;height:38px;border-radius:8px;background:var(--surf);border:1px solid var(--border2);font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+
+/* INFO BOX */
+.info-box{background:rgba(37,211,102,0.06);border:1px solid rgba(37,211,102,0.15);border-radius:10px;padding:14px 16px;margin-bottom:20px}
+.info-box-title{font-size:11px;font-weight:700;color:var(--green);margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.info-box-text{font-size:12px;color:var(--text2);line-height:1.6}
+
+/* RELATED */
+.related-section{background:var(--surf);padding:40px 60px;border-top:1px solid var(--border)}
+.related-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--text);margin-bottom:24px}
+.related-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+
+/* ══ CHECKOUT ══ */
+.checkout-page{background:var(--bg);padding:40px 60px 60px}
+.checkout-layout{display:grid;grid-template-columns:1fr 400px;gap:40px;max-width:1080px}
+.checkout-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--text);margin-bottom:28px}
+.checkout-steps{display:flex;gap:0;margin-bottom:28px}
+.step{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600}
+.step-circle{width:24px;height:24px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
+.step.done .step-circle{background:var(--gold);color:#0A0A0C}
+.step.on .step-circle{background:var(--gold);color:#0A0A0C}
+.step.off .step-circle{background:var(--surf);border:1.5px solid var(--border2);color:var(--text2)}
+.step.done .step-label{color:var(--gold2)}
+.step.on .step-label{color:var(--text)}
+.step.off .step-label{color:var(--text2)}
+.step-sep{width:32px;height:1px;background:var(--border2);margin:0 4px}
+
+/* FORM */
+.form-section{margin-bottom:24px}
+.form-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:14px}
+.form-row{display:grid;gap:14px;margin-bottom:14px}
+.form-row.cols2{grid-template-columns:1fr 1fr}
+.form-row.cols3{grid-template-columns:1fr 1fr 80px}
+.form-field{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text2)}
+.form-input{height:42px;background:var(--surf);border:1px solid var(--border2);border-radius:8px;padding:0 14px;font-size:13px;color:var(--text);display:flex;align-items:center;font-family:'DM Sans',sans-serif}
+.form-input.active{border-color:rgba(191,160,106,0.5)}
+.form-input.cep{display:flex;gap:0}
+.cep-val{flex:1;font-size:13px;color:var(--text)}
+.cep-btn{padding:0 14px;font-size:11px;font-weight:700;color:var(--gold);border-left:1px solid var(--border2);white-space:nowrap}
+
+/* ORDER SUMMARY */
+.order-card{background:var(--surf);border-radius:12px;border:1px solid var(--border);overflow:hidden;position:sticky;top:24px}
+.order-card-header{padding:16px 18px;border-bottom:1px solid var(--border)}
+.order-card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2)}
+.order-card-body{padding:18px}
+.order-item{display:flex;gap:14px;align-items:flex-start;margin-bottom:16px}
+.order-thumb{width:60px;height:60px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.order-item-info{}
+.order-item-name{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px}
+.order-item-sub{font-size:11px;color:var(--text2)}
+.order-divider{height:1px;background:var(--border);margin:14px 0}
+.order-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px}
+.order-row.total{font-size:15px;font-weight:800;margin-top:6px;margin-bottom:0}
+.order-label{color:var(--text2)}
+.order-val{color:var(--text);font-weight:600}
+.order-pay-btn{width:100%;height:50px;border-radius:10px;background:var(--gold);border:none;font-size:15px;font-weight:800;color:#0A0A0C;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:16px;cursor:pointer;box-shadow:0 4px 20px rgba(191,160,106,0.2)}
+.mp-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;font-size:10px;color:var(--text2)}
+.mp-logo{background:linear-gradient(90deg,#00b1ea,#009ee3);border-radius:3px;padding:2px 7px;font-size:8px;font-weight:800;color:#fff;letter-spacing:0.3px}
+
+/* UTILS */
+.icon-ph{opacity:.12}
+.img-dk1{background:linear-gradient(135deg,#1c1408,#2a1e0a)}
+.img-dk2{background:linear-gradient(135deg,#180a1a,#240e28)}
+.img-dk3{background:linear-gradient(135deg,#0a1a18,#0e2a24)}
+.img-dk4{background:linear-gradient(135deg,#1a100a,#2a1808)}
+.img-lt1{background:linear-gradient(135deg,#f0e8d8,#e0d4be)}
+.img-lt2{background:linear-gradient(135deg,#e8e0f0,#d4c8e8)}
+.img-lt3{background:linear-gradient(135deg,#e0ece4,#c8dcd0)}
+.img-lt4{background:linear-gradient(135deg,#f0e4d8,#e8d0bc)}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════
+     1 — HOME DARK
+════════════════════ -->
+<div>
+  <div class="label">🖥 Loja · Home — Dark Luxury</div>
+  <div class="browser dk">
+    <div class="browser-bar">
+      <div class="browser-dots"><div class="browser-dot" style="background:#FF5F57"></div><div class="browser-dot" style="background:#FEBC2E"></div><div class="browser-dot" style="background:#28C840"></div></div>
+      <div class="browser-url"><svg class="browser-url-lock" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>orionjoalheria.com.br/loja</div>
+    </div>
+
+    <!-- NAV -->
+    <div class="nav">
+      <div class="nav-logo-wrap"><div class="nav-logo">ORION</div><div class="nav-slogan">Joalheria · Rio de Janeiro</div></div>
+      <div class="nav-links">
+        <div class="nav-link on">Todos</div>
+        <div class="nav-link">Anéis</div>
+        <div class="nav-link">Colares</div>
+        <div class="nav-link">Brincos</div>
+        <div class="nav-link">Personalizados</div>
+      </div>
+      <div class="nav-right">
+        <div class="nav-search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Buscar joias...</div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A09A94" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+      </div>
+    </div>
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-bg"><svg width="200" height="200" viewBox="0 0 100 100" class="icon-ph" fill="none" stroke="#BFA06A" stroke-width="0.8"><circle cx="50" cy="50" r="35"/><circle cx="50" cy="50" r="22"/><circle cx="50" cy="50" r="10"/><circle cx="50" cy="50" r="3"/></svg></div>
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <div class="hero-eyebrow">Nova Coleção · Primavera 2026</div>
+        <div class="hero-title">Eternamente<br>Único</div>
+        <div class="hero-sub">Joias exclusivas em ouro 18k criadas para celebrar os momentos que duram para sempre.</div>
+        <div class="hero-ctas">
+          <div class="btn-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>Ver Coleção</div>
+          <div class="btn-secondary"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413z"/></svg>Personalizados</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CATEGORY BAR + FILTERS -->
+    <div class="cat-bar">
+      <div class="cat-tab on">Todos <div class="cat-count">24</div></div>
+      <div class="cat-tab">Anéis <div class="cat-count">9</div></div>
+      <div class="cat-tab">Colares <div class="cat-count">6</div></div>
+      <div class="cat-tab">Brincos <div class="cat-count">5</div></div>
+      <div class="cat-tab">Personalizados <div class="cat-count">4</div></div>
+      <div class="cat-bar-right">
+        <div class="filter-pill on">Ouro 18k ×</div>
+        <div class="filter-pill on">R$1k–5k ×</div>
+        <div class="filter-pill">+ Filtros</div>
+        <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px"></div>
+        <div class="filter-pill">↕ Mais recentes</div>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+
+      <!-- FILTER PANEL OVERLAY (estado: aberto) -->
+      <div class="filter-panel-overlay">
+        <div class="filter-panel">
+          <div class="filter-panel-header">
+            <div class="filter-panel-title">Filtros</div>
+            <div class="filter-panel-close"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+          </div>
+          <div class="filter-panel-body">
+
+            <div class="filter-dropdown">
+              <div class="filter-dropdown-header">
+                <div class="filter-dropdown-label">Material</div>
+                <div class="filter-dropdown-meta"><div class="filter-dropdown-active">2</div><svg class="filter-dropdown-arrow open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+              </div>
+              <div class="filter-dropdown-body">
+                <div class="filter-option"><div class="filter-checkbox on"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0A0A0C" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><span class="filter-option-label">Ouro 18k</span><span class="filter-option-count">14</span></div>
+                <div class="filter-option"><div class="filter-checkbox on"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0A0A0C" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><span class="filter-option-label">Ouro Branco</span><span class="filter-option-count">8</span></div>
+                <div class="filter-option"><div class="filter-checkbox"></div><span class="filter-option-label">Prata 925</span><span class="filter-option-count">5</span></div>
+                <div class="filter-option"><div class="filter-checkbox"></div><span class="filter-option-label">Platina</span><span class="filter-option-count">2</span></div>
+              </div>
+            </div>
+
+            <div class="filter-dropdown">
+              <div class="filter-dropdown-header">
+                <div class="filter-dropdown-label">Faixa de Preço</div>
+                <div class="filter-dropdown-meta"><div class="filter-dropdown-active">R$1k–5k</div><svg class="filter-dropdown-arrow open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+              </div>
+              <div class="filter-dropdown-body">
+                <div class="price-range"><div class="price-range-fill"></div></div>
+                <div class="price-labels"><span>R$ 1.000</span><span>R$ 5.000</span></div>
+              </div>
+            </div>
+
+            <div class="filter-dropdown">
+              <div class="filter-dropdown-header">
+                <div class="filter-dropdown-label">Tipo</div>
+                <div class="filter-dropdown-meta"><svg class="filter-dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+              </div>
+              <div class="filter-dropdown-body hidden">
+                <div class="filter-option"><div class="filter-checkbox"></div><span class="filter-option-label">Prontos</span><span class="filter-option-count">20</span></div>
+                <div class="filter-option"><div class="filter-checkbox"></div><span class="filter-option-label">Personalizados</span><span class="filter-option-count">4</span></div>
+              </div>
+            </div>
+
+            <div class="filter-dropdown">
+              <div class="filter-dropdown-header">
+                <div class="filter-dropdown-label">Destaque</div>
+                <div class="filter-dropdown-meta"><svg class="filter-dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+              </div>
+              <div class="filter-dropdown-body hidden">
+                <div class="filter-option"><div class="filter-checkbox"></div><span class="filter-option-label">🆕 Novo</span><span class="filter-option-count">6</span></div>
+                <div class="filter-option"><div class="filter-checkbox"></div><span class="filter-option-label">🔥 Hot</span><span class="filter-option-count">4</span></div>
+                <div class="filter-option"><div class="filter-checkbox"></div><span class="filter-option-label">% Sale</span><span class="filter-option-count">3</span></div>
+              </div>
+            </div>
+
+            <div class="filter-dropdown">
+              <div class="filter-dropdown-header">
+                <div class="filter-dropdown-label">Tamanho</div>
+                <div class="filter-dropdown-meta"><svg class="filter-dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+              </div>
+              <div class="filter-dropdown-body hidden"></div>
+            </div>
+
+          </div>
+          <div class="filter-panel-footer">
+            <div class="btn-clear">Limpar</div>
+            <div class="btn-apply">Ver 18 resultados</div>
+          </div>
+        </div>
+      </div>
+      <!-- /FILTER PANEL -->
+
+      <!-- GRID FULL WIDTH -->
+      <div>
+        <div class="grid-header">
+          <div class="grid-info">Mostrando <strong style="color:#F0EBE3">24</strong> produtos</div>
+          <div class="grid-sort">Mais recentes <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+        </div>
+        <div class="product-grid">
+
+          <!-- PRONTO -->
+          <div class="prod-card"><div class="prod-img img-dk1"><div class="prod-badge badge-novo">Novo</div><svg width="60" height="60" viewBox="0 0 100 100" class="icon-ph" fill="none" stroke="#BFA06A" stroke-width="1.5"><circle cx="50" cy="50" r="28"/><circle cx="50" cy="50" r="14"/></svg></div><div class="prod-info"><div class="prod-name">Anel Solitário</div><div class="prod-sub">Ouro Branco 18k</div><div class="prod-price-row"><div class="prod-price">R$ 4.800</div><div class="prod-from">R$ 5.200</div></div><div class="btn-buy-card"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Comprar agora</div></div></div>
+
+          <!-- PERSONALIZADO -->
+          <div class="prod-card"><div class="prod-img img-dk2"><div class="prod-badge badge-custom">Custom</div><div class="custom-overlay">Personalizado</div><svg width="60" height="60" viewBox="0 0 100 100" class="icon-ph" fill="none" stroke="#BFA06A" stroke-width="1.5"><ellipse cx="50" cy="50" rx="30" ry="18"/><path d="M20 50 Q35 20 50 50 Q65 80 80 50"/></svg></div><div class="prod-info"><div class="prod-name">Colar Gravado</div><div class="prod-sub">Ouro 18k · sob pedido</div><div class="prod-price-row"><div class="prod-price-custom">A partir de R$ 1.800</div></div><div class="btn-wa-card"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413z"/></svg>Solicitar via WA</div></div></div>
+
+          <!-- PRONTO -->
+          <div class="prod-card"><div class="prod-img img-dk3"><div class="prod-badge badge-hot">Hot</div><svg width="60" height="60" viewBox="0 0 100 100" class="icon-ph" fill="none" stroke="#BFA06A" stroke-width="1.5"><polygon points="50,20 65,45 80,45 68,60 73,80 50,67 27,80 32,60 20,45 35,45"/></svg></div><div class="prod-info"><div class="prod-name">Brinco Star</div><div class="prod-sub">Ouro Branco · Diamante</div><div class="prod-price-row"><div class="prod-price">R$ 1.890</div></div><div class="btn-buy-card"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Comprar agora</div></div></div>
+
+          <!-- PERSONALIZADO -->
+          <div class="prod-card"><div class="prod-img img-dk4"><div class="prod-badge badge-custom">Custom</div><div class="custom-overlay">Personalizado</div><svg width="60" height="60" viewBox="0 0 100 100" class="icon-ph" fill="none" stroke="#BFA06A" stroke-width="1.5"><path d="M30 70 Q50 20 70 70"/><circle cx="50" cy="35" r="8"/></svg></div><div class="prod-info"><div class="prod-name">Pingente Inicial</div><div class="prod-sub">Ouro 18k · gravação</div><div class="prod-price-row"><div class="prod-price-custom">A partir de R$ 680</div></div><div class="btn-wa-card"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413z"/></svg>Solicitar via WA</div></div></div>
+
+          <!-- PRONTO SALE -->
+          <div class="prod-card"><div class="prod-img" style="background:linear-gradient(135deg,#0e1218,#141c24)"><div class="prod-badge badge-sale">Sale</div><svg width="60" height="60" viewBox="0 0 100 100" class="icon-ph" fill="none" stroke="#BFA06A" stroke-width="1.5"><rect x="25" y="35" width="50" height="30" rx="4"/><path d="M35 35V28a15 15 0 0130 0v7"/></svg></div><div class="prod-info"><div class="prod-name">Pulseira Elo</div><div class="prod-sub">Prata 925 · 18cm</div><div class="prod-price-row"><div class="prod-price">R$ 740</div><div class="prod-from">R$ 980</div></div><div class="btn-buy-card"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Comprar agora</div></div></div>
+
+          <!-- PRONTO -->
+          <div class="prod-card"><div class="prod-img" style="background:linear-gradient(135deg,#14100a,#201808)"><svg width="60" height="60" viewBox="0 0 100 100" class="icon-ph" fill="none" stroke="#BFA06A" stroke-width="1.5"><path d="M30 50 A20 20 0 0 1 70 50 A20 20 0 0 1 30 50"/><circle cx="50" cy="50" r="5"/></svg></div><div class="prod-info"><div class="prod-name">Par Aliança</div><div class="prod-sub">Ouro 18k · par</div><div class="prod-price-row"><div class="prod-price">R$ 3.200</div></div><div class="btn-buy-card"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Comprar agora</div></div></div>
+
+          <!-- PERSONALIZADO -->
+          <div class="prod-card"><div class="prod-img" style="background:linear-gradient(135deg,#0a0e18,#0e1424)"><div class="prod-badge badge-custom">Custom</div><div class="custom-overlay">Personalizado</div><svg width="60" height="60" viewBox="0 0 100 100" class="icon-ph" fill="none" stroke="#BFA06A" stroke-width="1.5"><circle cx="50" cy="50" r="24"/><path d="M36 50h28M50 36v28"/></svg></div><div class="prod-info"><div class="prod-name">Anel Data Especial</div><div class="prod-sub">Ouro 18k · data gravada</div><div class="prod-price-row"><div class="prod-price-custom">A partir de R$ 1.200</div></div><div class="btn-wa-card"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413z"/></svg>Solicitar via WA</div></div></div>
+
+          <!-- PRONTO -->
+          <div class="prod-card"><div class="prod-img" style="background:linear-gradient(135deg,#0e1a10,#142018)"><div class="prod-badge badge-novo">Novo</div><svg width="60" height="60" viewBox="0 0 100 100" class="icon-ph" fill="none" stroke="#BFA06A" stroke-width="1.5"><path d="M30 40 L50 20 L70 40 L70 70 L30 70 Z"/><line x1="50" y1="70" x2="50" y2="20"/></svg></div><div class="prod-info"><div class="prod-name">Colar Geométrico</div><div class="prod-sub">Ouro 18k · 45cm</div><div class="prod-price-row"><div class="prod-price">R$ 2.100</div></div><div class="btn-buy-card"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Comprar agora</div></div></div>
+
+        </div><!-- /product-grid -->
+      </div><!-- /grid -->
+    </div><!-- /main -->
+    <div class="fab"><svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413z"/></svg></div>
+  </div>
+</div>
+
+<!-- ═══════════════════
+     2 — PÁGINA PRODUTO PRONTO
+════════════════════ -->
+<div>
+  <div class="label">🖥 Página do Produto · Pronto — Dark</div>
+  <div class="browser dk">
+    <div class="browser-bar">
+      <div class="browser-dots"><div class="browser-dot" style="background:#FF5F57"></div><div class="browser-dot" style="background:#FEBC2E"></div><div class="browser-dot" style="background:#28C840"></div></div>
+      <div class="browser-url"><svg class="browser-url-lock" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>orionjoalheria.com.br/loja/produto/anel-solitario-ob-18k</div>
+    </div>
+    <div class="nav">
+      <div class="nav-logo-wrap"><div class="nav-logo">ORION</div><div class="nav-slogan">Joalheria · Rio de Janeiro</div></div>
+      <div class="nav-links"><div class="nav-link">Todos</div><div class="nav-link on">Anéis</div><div class="nav-link">Colares</div><div class="nav-link">Brincos</div><div class="nav-link">Personalizados</div></div>
+      <div class="nav-right"><div class="nav-search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Buscar joias...</div></div>
+    </div>
+    <div class="prod-page">
+      <div class="breadcrumb">
+        <a>Loja</a>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <a>Anéis</a>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <span>Anel Solitário Ouro Branco 18k</span>
+      </div>
+      <div class="prod-page-layout">
+        <!-- GALLERY -->
+        <div class="gallery">
+          <div class="gallery-main img-dk1"><svg width="120" height="120" viewBox="0 0 100 100" class="icon-ph" fill="none" stroke="#BFA06A" stroke-width="1"><circle cx="50" cy="50" r="30"/><circle cx="50" cy="50" r="17"/><circle cx="50" cy="50" r="6"/></svg></div>
+          <div class="gallery-thumbs">
+            <div class="gthumb on"><div class="gthumb-bg img-dk1"></div></div>
+            <div class="gthumb"><div class="gthumb-bg img-dk2"></div></div>
+            <div class="gthumb"><div class="gthumb-bg img-dk3"></div></div>
+            <div class="gthumb"><div class="gthumb-bg img-dk4"></div></div>
+          </div>
+        </div>
+        <!-- INFO -->
+        <div class="prod-detail">
+          <div class="prod-detail-badges"><div class="prod-badge badge-novo" style="position:static">Novo</div></div>
+          <div class="prod-detail-name">Anel Solitário<br>Ouro Branco 18k</div>
+          <div class="prod-detail-ref">Ref: OB-SOL-18K-001 <span class="in-stock">● Em estoque</span></div>
+          <div class="prod-detail-price-row">
+            <div class="prod-detail-price">R$ 4.800,00</div>
+            <div class="prod-detail-from">R$ 5.200,00</div>
+            <div style="background:rgba(224,82,82,0.15);color:#E05252;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px">-8%</div>
+          </div>
+          <div class="prod-detail-desc">Anel solitário em ouro branco 18k com diamante central de 30 pontos, lapidação brilhante, pureza VS1. Acabamento polido artesanal. Acompanha certificado GIA e caixa exclusiva ORION.</div>
+          <div class="prod-specs-grid">
+            <div class="spec-cell"><div class="spec-key">Material</div><div class="spec-val">Ouro branco 18k</div></div>
+            <div class="spec-cell"><div class="spec-key">Pedra</div><div class="spec-val">Diamante 30pts · VS1</div></div>
+            <div class="spec-cell"><div class="spec-key">Lapidação</div><div class="spec-val">Brilhante</div></div>
+            <div class="spec-cell"><div class="spec-key">Prazo entrega</div><div class="spec-val">5–10 dias úteis</div></div>
+          </div>
+          <div class="size-section">
+            <div class="size-label">Tamanho</div>
+            <div class="size-options">
+              <div class="size-opt">14</div>
+              <div class="size-opt">15</div>
+              <div class="size-opt">16</div>
+              <div class="size-opt on">17</div>
+              <div class="size-opt">18</div>
+              <div class="size-opt">19</div>
+              <div class="size-opt">20</div>
+            </div>
+          </div>
+          <div class="cta-area">
+            <div class="btn-buy-full"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Comprar agora · R$ 4.800,00</div>
+            <div class="secure-note"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Pagamento seguro · Cartão, PIX ou Boleto via Mercado Pago</div>
+            <div class="share-row">
+              <div class="share-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Compartilhar</div>
+              <div class="share-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>Favoritar</div>
+              <div class="share-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>Ver no Whatsapp</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="related-section">
+      <div class="related-title">Você também vai amar</div>
+      <div class="related-grid">
+        <div class="prod-card"><div class="prod-img img-dk3"><svg width="50" height="50" viewBox="0 0 100 100" class="icon-ph" fill="none" stroke="#BFA06A" stroke-width="1.5"><polygon points="50,20 65,45 80,45 68,60 73,80 50,67 27,80 32,60 20,45 35,45"/></svg></div><div class="prod-info"><div class="prod-name">Brinco Star</div><div class="prod-sub">Ouro Branco</div><div class="prod-price-row"><div class="prod-price">R$ 1.890</div></div><div class="btn-buy-card"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Comprar agora</div></div></div>
+        <div class="prod-card"><div class="prod-img" style="background:linear-gradient(135deg,#14100a,#201808)"><svg width="50" height="50" viewBox="0 0 100 100" class="icon-ph" fill="none" stroke="#BFA06A" stroke-width="1.5"><path d="M30 50 A20 20 0 0 1 70 50 A20 20 0 0 1 30 50"/></svg></div><div class="prod-info"><div class="prod-name">Par Aliança</div><div class="prod-sub">Ouro 18k</div><div class="prod-price-row"><div class="prod-price">R$ 3.200</div></div><div class="btn-buy-card"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Comprar agora</div></div></div>
+        <div class="prod-card"><div class="prod-img img-dk2"><div class="prod-badge badge-custom">Custom</div><div class="custom-overlay">Personalizado</div><svg width="50" height="50" viewBox="0 0 100 100" class="icon-ph" fill="none" stroke="#BFA06A" stroke-width="1.5"><ellipse cx="50" cy="50" rx="30" ry="18"/></svg></div><div class="prod-info"><div class="prod-name">Colar Gravado</div><div class="prod-sub">Personalizado</div><div class="prod-price-row"><div class="prod-price-custom">A partir R$ 1.800</div></div><div class="btn-wa-card"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413z"/></svg>Solicitar via WA</div></div></div>
+        <div class="prod-card"><div class="prod-img img-dk4"><svg width="50" height="50" viewBox="0 0 100 100" class="icon-ph" fill="none" stroke="#BFA06A" stroke-width="1.5"><rect x="25" y="35" width="50" height="30" rx="4"/><path d="M35 35V28a15 15 0 0130 0v7"/></svg></div><div class="prod-info"><div class="prod-name">Pulseira Elo</div><div class="prod-sub">Prata 925</div><div class="prod-price-row"><div class="prod-price">R$ 740</div><div class="prod-from">R$ 980</div></div><div class="btn-buy-card"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Comprar agora</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════
+     3 — CHECKOUT
+════════════════════ -->
+<div>
+  <div class="label">🖥 Checkout · Finalizar Compra — Dark</div>
+  <div class="browser dk">
+    <div class="browser-bar">
+      <div class="browser-dots"><div class="browser-dot" style="background:#FF5F57"></div><div class="browser-dot" style="background:#FEBC2E"></div><div class="browser-dot" style="background:#28C840"></div></div>
+      <div class="browser-url"><svg class="browser-url-lock" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>orionjoalheria.com.br/loja/checkout</div>
+    </div>
+    <div class="nav">
+      <div class="nav-logo-wrap"><div class="nav-logo">ORION</div><div class="nav-slogan">Joalheria · Rio de Janeiro</div></div>
+      <div class="nav-right" style="margin-left:auto"><div style="font-size:12px;color:#A09A94;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Checkout seguro</div></div>
+    </div>
+    <div class="checkout-page">
+      <div class="checkout-title">Finalizar Compra</div>
+      <div class="checkout-steps">
+        <div class="step done"><div class="step-circle"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="step-label">Produto</div></div>
+        <div class="step-sep"></div>
+        <div class="step on"><div class="step-circle">2</div><div class="step-label">Seus dados</div></div>
+        <div class="step-sep"></div>
+        <div class="step off"><div class="step-circle">3</div><div class="step-label">Pagamento</div></div>
+      </div>
+      <div class="checkout-layout">
+        <!-- FORM -->
+        <div>
+          <div class="form-section">
+            <div class="form-section-title">Dados pessoais</div>
+            <div class="form-row cols2">
+              <div class="form-field"><div class="form-label">Nome completo</div><div class="form-input active">Ana Beatriz Sousa</div></div>
+              <div class="form-field"><div class="form-label">E-mail</div><div class="form-input active">ana@email.com</div></div>
+            </div>
+            <div class="form-row" style="grid-template-columns:1fr"><div class="form-field"><div class="form-label">Telefone (WhatsApp)</div><div class="form-input active">(21) 98765-4321</div></div></div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Endereço de entrega</div>
+            <div class="form-row cols2">
+              <div class="form-field"><div class="form-label">CEP</div><div class="form-input active cep"><span class="cep-val">22041-001</span><span class="cep-btn">Buscar</span></div></div>
+              <div class="form-field"><div class="form-label">Rua</div><div class="form-input active">Rua Visconde de Pirajá</div></div>
+            </div>
+            <div class="form-row cols3">
+              <div class="form-field"><div class="form-label">Número</div><div class="form-input active">550</div></div>
+              <div class="form-field"><div class="form-label">Complemento</div><div class="form-input" style="color:#4a4a54">Apto, sala... (opcional)</div></div>
+              <div class="form-field"><div class="form-label">UF</div><div class="form-input active">RJ</div></div>
+            </div>
+            <div class="form-row cols2">
+              <div class="form-field"><div class="form-label">Bairro</div><div class="form-input active">Ipanema</div></div>
+              <div class="form-field"><div class="form-label">Cidade</div><div class="form-input active">Rio de Janeiro</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ORDER SUMMARY -->
+        <div>
+          <div class="order-card">
+            <div class="order-card-header"><div class="order-card-title">Resumo do pedido</div></div>
+            <div class="order-card-body">
+              <div class="order-item">
+                <div class="order-thumb img-dk1"><svg width="28" height="28" viewBox="0 0 100 100" class="icon-ph" fill="none" stroke="#BFA06A" stroke-width="2"><circle cx="50" cy="50" r="28"/><circle cx="50" cy="50" r="14"/></svg></div>
+                <div class="order-item-info"><div class="order-item-name">Anel Solitário Ouro Branco 18k</div><div class="order-item-sub">Tamanho 17 · 1 unidade</div></div>
+              </div>
+              <div class="order-divider"></div>
+              <div class="order-row"><span class="order-label">Subtotal</span><span class="order-val">R$ 4.800,00</span></div>
+              <div class="order-row"><span class="order-label">Frete</span><span style="color:#4CAF82;font-weight:700">Grátis</span></div>
+              <div class="order-row"><span class="order-label">Desconto</span><span style="color:#E05252;font-weight:700">- R$ 400,00</span></div>
+              <div class="order-divider"></div>
+              <div class="order-row total"><span>Total</span><span style="color:#D4B87E">R$ 4.800,00</span></div>
+              <div style="font-size:10px;color:#A09A94;margin-top:6px;text-align:right">ou 12x de R$ 400,00 sem juros</div>
+              <div class="order-pay-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Ir para pagamento</div>
+              <div class="mp-row">Processado com segurança por <div class="mp-logo">mercadopago</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

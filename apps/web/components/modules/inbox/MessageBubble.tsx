@@ -1,5 +1,6 @@
+import { Check, FileText, Play, UserRound } from 'lucide-react';
 import type { InboxMessageRecord } from '@/lib/api';
-import { cn, formatDate } from '@/lib/utils';
+import { cn, ORION_TIME_ZONE } from '@/lib/utils';
 
 function getMessageFallback(message: InboxMessageRecord): string {
     if (message.content) {
@@ -18,37 +19,150 @@ function getMessageFallback(message: InboxMessageRecord): string {
     }
 }
 
+function getInitials(label: string): string {
+    return label
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? '')
+        .join('');
+}
+
+function formatMessageTime(value: string): string {
+    return new Intl.DateTimeFormat('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: ORION_TIME_ZONE,
+    }).format(new Date(value));
+}
+
+function isIdentificationMessage(message: InboxMessageRecord): boolean {
+    return message.direction === 'OUTBOUND'
+        && Boolean(message.content?.includes('Vou seguir com o seu atendimento por aqui.'));
+}
+
+function renderStatusCheck(message: InboxMessageRecord) {
+    if (message.direction !== 'OUTBOUND' || message.status === 'FAILED') {
+        return null;
+    }
+
+    return <Check className="h-3 w-3 text-[color:var(--orion-blue)]" />;
+}
+
 export function MessageBubble({ message }: { message: InboxMessageRecord }) {
     const isInbound = message.direction === 'INBOUND';
-    const isAutomatedOutbound = message.direction === 'OUTBOUND' && message.is_automated;
+    const content = getMessageFallback(message);
+    const identificationMessage = isIdentificationMessage(message);
+    const senderLabel = message.sent_by?.name ?? 'Equipe ORION';
+    const initials = getInitials(senderLabel);
+
+    if (identificationMessage) {
+        return (
+            <div className="flex justify-end">
+                <article className="max-w-[72%] rounded-[12px] rounded-tr-[4px] border border-brand-gold/25 bg-[linear-gradient(135deg,rgba(191,160,106,0.12),rgba(191,160,106,0.06))] px-4 py-3">
+                    <div className="mb-2 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.14em] text-[color:var(--orion-gold-dark)]">
+                        <UserRound className="h-3 w-3" />
+                        Identificação enviada
+                    </div>
+
+                    <div className="mb-2 flex items-center gap-2">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 text-[10px] font-black text-emerald-300">
+                            {initials}
+                        </div>
+                        <div>
+                            <div className="text-[13px] font-bold text-[color:var(--orion-text)]">{senderLabel}</div>
+                            <div className="text-[10px] text-[color:var(--orion-text-secondary)]">Atendimento · ORION CRM</div>
+                        </div>
+                    </div>
+
+                    <p className="text-[12px] leading-6 text-[color:var(--orion-text-secondary)]">{content}</p>
+
+                    <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-[color:var(--orion-text-muted)]">
+                        <span>{formatMessageTime(message.created_at)}</span>
+                        {renderStatusCheck(message)}
+                    </div>
+                </article>
+            </div>
+        );
+    }
+
+    if (message.type === 'AUDIO') {
+        return (
+            <div className={cn('flex', isInbound ? 'justify-start' : 'justify-end')}>
+                <div className="max-w-[72%]">
+                    <div className="flex w-[230px] items-center gap-3 rounded-[10px] border border-white/10 bg-[color:var(--orion-elevated)] px-3 py-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-gold text-black">
+                            <Play className="h-3.5 w-3.5 fill-current" />
+                        </div>
+                        <div className="flex flex-1 items-center gap-1">
+                            {Array.from({ length: 12 }).map((_, index) => (
+                                <span
+                                    key={`wave-${message.id}-${index}`}
+                                    className={cn(
+                                        'block w-[3px] rounded-full bg-white/25',
+                                        index < 5 && 'bg-brand-gold/80'
+                                    )}
+                                    style={{ height: `${8 + ((index * 7) % 14)}px` }}
+                                />
+                            ))}
+                        </div>
+                        <span className="text-[10px] text-[color:var(--orion-text-secondary)]">0:18</span>
+                    </div>
+                    <div className={cn('mt-1 flex items-center gap-1 text-[10px] text-[color:var(--orion-text-muted)]', !isInbound && 'justify-end')}>
+                        <span>{formatMessageTime(message.created_at)}</span>
+                        {renderStatusCheck(message)}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (message.type === 'DOCUMENT') {
+        return (
+            <div className={cn('flex', isInbound ? 'justify-start' : 'justify-end')}>
+                <div className="max-w-[72%]">
+                    <div className="flex w-[230px] items-center gap-3 rounded-[10px] border border-white/10 bg-[color:var(--orion-elevated)] px-3 py-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-red-500/10 text-red-300">
+                            <FileText className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <div className="truncate text-[11px] font-semibold text-[color:var(--orion-text)]">
+                                {message.content ?? 'Documento enviado'}
+                            </div>
+                            <div className="text-[10px] text-[color:var(--orion-text-secondary)]">Documento</div>
+                        </div>
+                    </div>
+                    <div className={cn('mt-1 flex items-center gap-1 text-[10px] text-[color:var(--orion-text-muted)]', !isInbound && 'justify-end')}>
+                        <span>{formatMessageTime(message.created_at)}</span>
+                        {renderStatusCheck(message)}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={cn('flex', isInbound ? 'justify-start' : 'justify-end')}>
-            <article
-                className={cn(
-                    'max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm',
-                    isInbound && 'rounded-bl-md bg-gray-100 text-gray-800',
-                    !isInbound && !isAutomatedOutbound && 'rounded-br-md bg-brand-gold text-surface-sidebar',
-                    isAutomatedOutbound && 'rounded-br-md border border-dashed border-violet-300 bg-violet-50 text-violet-800'
-                )}
-            >
-                {message.is_automated ? (
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] opacity-80">Automático</p>
-                ) : null}
-                {message.is_quick_reply ? (
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] opacity-80">Pronta</p>
-                ) : null}
-
-                <p className="whitespace-pre-wrap break-words">{getMessageFallback(message)}</p>
-
+            <article className="max-w-[72%]">
                 <div
                     className={cn(
-                        'mt-2 flex items-center gap-2 text-[11px]',
-                        isInbound ? 'text-gray-500' : 'text-current/70'
+                        'relative rounded-[10px] px-3 py-2 text-[13px] leading-6',
+                        isInbound
+                            ? 'rounded-tl-[4px] border border-white/10 bg-[color:var(--orion-elevated)] text-[color:var(--orion-text)]'
+                            : 'rounded-tr-[4px] border border-emerald-500/10 bg-emerald-500/10 text-[color:var(--orion-text)]'
                     )}
                 >
-                    {message.sent_by?.name ? <span>{message.sent_by.name}</span> : null}
-                    <span>{formatDate(message.created_at)}</span>
+                    {message.is_quick_reply ? (
+                        <span className="absolute -right-1.5 -top-1.5 rounded-[4px] border border-brand-gold/30 bg-brand-gold/15 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[color:var(--orion-gold-dark)]">
+                            pronta
+                        </span>
+                    ) : null}
+                    <p className="whitespace-pre-wrap break-words">{content}</p>
+                </div>
+
+                <div className={cn('mt-1 flex items-center gap-1 text-[10px] text-[color:var(--orion-text-muted)]', !isInbound && 'justify-end')}>
+                    <span>{formatMessageTime(message.created_at)}</span>
+                    {renderStatusCheck(message)}
                 </div>
             </article>
         </div>

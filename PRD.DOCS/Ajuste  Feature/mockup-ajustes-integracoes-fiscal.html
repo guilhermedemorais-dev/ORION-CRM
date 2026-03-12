@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>ORION — Ajustes · Integrações + Fiscal</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#080809;color:#F0EBE3;display:flex;flex-direction:column;align-items:center;padding:40px 20px 80px;gap:40px}
+.sec-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#1e1e24;text-align:center}
+.shell{width:1140px;background:#0F0F11;border-radius:16px;border:1px solid rgba(255,255,255,0.06);overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,0.7)}
+.topbar{height:52px;background:#0A0A0C;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;padding:0 24px;gap:16px}
+.topbar-logo{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:700;color:#BFA06A;letter-spacing:2px}
+.topbar-sep{width:1px;height:18px;background:rgba(255,255,255,0.08)}
+.topbar-path{font-size:12px;color:#A09A94;display:flex;align-items:center;gap:6px}
+.topbar-path span{color:#F0EBE3;font-weight:500}
+.topbar-save{margin-left:auto;height:30px;padding:0 16px;border-radius:7px;background:#BFA06A;font-size:11px;font-weight:700;color:#0A0A0C;display:flex;align-items:center;gap:6px}
+.layout{display:flex;min-height:580px}
+.leftnav{width:200px;background:#0A0A0C;border-right:1px solid rgba(255,255,255,0.06);padding:16px 0;flex-shrink:0}
+.nav-sec{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#2a2a32;padding:0 16px;margin:14px 0 6px}
+.nav-item{height:36px;padding:0 16px;display:flex;align-items:center;gap:10px;font-size:12px;font-weight:500;color:#A09A94;cursor:pointer}
+.nav-item.on{color:#F0EBE3;background:rgba(191,160,106,0.08);border-left:2px solid #BFA06A;font-weight:600}
+.nav-icon{width:16px;height:16px;opacity:0.5;flex-shrink:0}
+.nav-item.on .nav-icon{opacity:1}
+.content{flex:1;display:flex;flex-direction:column}
+.page-header{padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.page-title{font-size:20px;font-weight:700}
+.tab-row{padding:16px 24px 0;display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,0.06);margin-top:4px}
+.tab{height:36px;padding:0 14px;font-size:12px;font-weight:500;color:#A09A94;display:flex;align-items:center;gap:7px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tab.on{color:#F0EBE3;border-bottom-color:#BFA06A;font-weight:700}
+.inner{padding:20px 24px 24px;display:flex;flex-direction:column;gap:16px}
+.card{background:#131316;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden}
+.card-header{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#F0EBE3}
+.card-sub{font-size:11px;color:#A09A94;margin-top:1px}
+.card-body{padding:18px}
+
+/* INTEGRATION CARD */
+.int-card{background:#131316;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden}
+.int-header{padding:16px 18px;display:flex;align-items:center;gap:14px;border-bottom:1px solid rgba(255,255,255,0.05)}
+.int-logo{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.int-info{flex:1}
+.int-name{font-size:13px;font-weight:700;color:#F0EBE3;margin-bottom:2px}
+.int-desc{font-size:11px;color:#A09A94}
+.int-status{display:flex;align-items:center;gap:8px}
+.int-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.pill{height:20px;padding:0 8px;border-radius:10px;font-size:9px;font-weight:800;display:inline-flex;align-items:center}
+.pill-g{background:rgba(76,175,130,0.15);color:#4CAF82}
+.pill-r{background:rgba(224,82,82,0.15);color:#E05252}
+.pill-a{background:rgba(240,160,64,0.15);color:#F0A040}
+.pill-gray{background:rgba(255,255,255,0.06);color:#A09A94}
+
+/* FORM */
+.form-grid{display:grid;gap:12px}
+.form-grid.cols2{grid-template-columns:1fr 1fr}
+.form-field{display:flex;flex-direction:column;gap:4px}
+.form-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#A09A94}
+.form-input{height:38px;background:#0F0F11;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:0 12px;font-size:13px;color:#F0EBE3;display:flex;align-items:center;font-family:monospace}
+.form-input.plain{font-family:'Inter',sans-serif}
+.form-input.readonly{color:#4a4a54;justify-content:space-between;cursor:default}
+.form-input.disabled{color:#3a3a42;border-color:rgba(255,255,255,0.05);background:#0a0a0c;cursor:not-allowed}
+.form-hint{font-size:10px;color:#4a4a54}
+.mask-row{display:flex;gap:8px;align-items:center}
+.mask-val{flex:1;height:38px;background:#0F0F11;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:0 12px;font-size:12px;color:#A09A94;font-family:monospace;display:flex;align-items:center;letter-spacing:1px}
+.mask-btn{width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;color:#A09A94;cursor:pointer;flex-shrink:0}
+.copy-val{font-size:10px;color:#BFA06A;cursor:pointer;padding:0 4px;white-space:nowrap}
+
+/* BUTTON */
+.btn-test{height:30px;padding:0 14px;border-radius:7px;background:transparent;border:1px solid rgba(255,255,255,0.1);font-size:11px;font-weight:600;color:#A09A94;display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
+.btn-test:hover{border-color:rgba(191,160,106,0.3);color:#BFA06A}
+.btn-docs{height:28px;padding:0 12px;border-radius:7px;background:transparent;border:1px solid rgba(255,255,255,0.08);font-size:10px;font-weight:600;color:#A09A94;display:flex;align-items:center;gap:5px}
+
+/* DIVIDER */
+.divider{height:1px;background:rgba(255,255,255,0.05)}
+
+/* N8N WORKFLOWS */
+.wf-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.wf-row:last-child{border-bottom:none}
+.wf-name{font-size:12px;font-weight:500;color:#F0EBE3;display:flex;align-items:center;gap:8px}
+.wf-dot{width:6px;height:6px;border-radius:3px}
+.wf-id{font-size:10px;color:#4a4a54;font-family:monospace;margin-top:1px}
+
+/* FISCAL */
+.coming-soon-banner{background:linear-gradient(135deg,rgba(191,160,106,0.06),rgba(191,160,106,0.02));border:1px solid rgba(191,160,106,0.15);border-radius:12px;padding:24px;display:flex;align-items:center;gap:20px}
+.cs-icon{width:52px;height:52px;border-radius:14px;background:rgba(191,160,106,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cs-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:#D4B87E;margin-bottom:4px}
+.cs-sub{font-size:12px;color:#A09A94;line-height:1.6}
+.cs-badge{height:22px;padding:0 12px;border-radius:11px;background:rgba(191,160,106,0.12);border:1px solid rgba(191,160,106,0.2);font-size:10px;font-weight:700;color:#BFA06A;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+
+/* MARKETPLACE GRID */
+.mkt-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.mkt-card{background:#0F0F11;border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:8px;opacity:0.5}
+.mkt-logo{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800}
+.mkt-name{font-size:11px;font-weight:600;color:#F0EBE3}
+.mkt-via{font-size:9px;color:#4a4a54}
+
+/* SELECT DISABLED */
+.form-select{height:38px;background:#0a0a0c;border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:0 12px;font-size:13px;color:#3a3a42;display:flex;align-items:center;justify-content:space-between;cursor:not-allowed}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════
+     TAB INTEGRAÇÕES
+═══════════════════════ -->
+<div class="sec-label">Ajustes · Tab Integrações</div>
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar-logo">ORION</div><div class="topbar-sep"></div>
+    <div class="topbar-path">CRM <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg><span>Ajustes · Integrações</span></div>
+    <div class="topbar-save"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Salvar</div>
+  </div>
+  <div class="layout">
+    <div class="leftnav">
+      <div class="nav-sec">Principal</div>
+      <div class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</div>
+      <div class="nav-sec">Config</div>
+      <div class="nav-item on"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 5.34L6.75 6.75M19.07 19.07l-1.41-1.41M5.34 18.66l1.41-1.41M1 12h2m18 0h2M12 1v2m0 18v2"/></svg>Ajustes</div>
+      <div class="nav-item" style="padding-left:32px;font-size:11px">Loja</div>
+    </div>
+    <div class="content">
+      <div class="page-header"><div class="page-title">Ajustes</div></div>
+      <div class="tab-row">
+        <div class="tab">Empresa</div>
+        <div class="tab">Usuários</div>
+        <div class="tab">WhatsApp</div>
+        <div class="tab">Notificações</div>
+        <div class="tab on">Integrações</div>
+        <div class="tab">Fiscal</div>
+      </div>
+      <div class="inner">
+
+        <!-- META -->
+        <div class="int-card">
+          <div class="int-header">
+            <div class="int-logo" style="background:linear-gradient(135deg,#1a1080,#0060ff)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/></svg>
+            </div>
+            <div class="int-info">
+              <div class="int-name">Meta Cloud API</div>
+              <div class="int-desc">WhatsApp Business + Instagram Direct · AURORA SDR</div>
+            </div>
+            <div class="int-status">
+              <span class="pill pill-g">● Conectado</span>
+              <div class="btn-docs"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Docs</div>
+            </div>
+          </div>
+          <div class="int-body">
+            <div class="form-grid cols2">
+              <div class="form-field">
+                <div class="form-label">Token de Acesso Permanente</div>
+                <div class="mask-row">
+                  <div class="mask-val">EAABwz•••••••••••••••••••••••••••••••••••••ZABC</div>
+                  <div class="mask-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                </div>
+              </div>
+              <div class="form-field">
+                <div class="form-label">Phone Number ID</div>
+                <div class="form-input">102648374921847</div>
+              </div>
+              <div class="form-field">
+                <div class="form-label">WhatsApp Business Account ID</div>
+                <div class="form-input">198473920847362</div>
+              </div>
+              <div class="form-field">
+                <div class="form-label">Verify Token (gerado pelo ORION)</div>
+                <div class="form-input">orion_verify_a3f9d2c1</div>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div class="form-field">
+              <div class="form-label">Webhook URL · configure no Meta Developer Console</div>
+              <div class="form-input readonly plain">
+                https://api.orion.io/webhooks/meta/a3f9d2c1
+                <span class="copy-val"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;margin-right:3px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copiar</span>
+              </div>
+              <div class="form-hint">Cole esta URL em: Meta Developer → Webhooks → WhatsApp e Instagram</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- N8N -->
+        <div class="int-card">
+          <div class="int-header">
+            <div class="int-logo" style="background:linear-gradient(135deg,#e63d3d,#ff6b35)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+            </div>
+            <div class="int-info">
+              <div class="int-name">n8n</div>
+              <div class="int-desc">Motor de automações · AURORA SDR, notificações, webhooks</div>
+            </div>
+            <div class="int-status">
+              <span class="pill pill-g">● Online</span>
+              <div class="btn-test"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Testar conexão</div>
+            </div>
+          </div>
+          <div class="int-body">
+            <div class="form-grid cols2">
+              <div class="form-field">
+                <div class="form-label">URL da instância</div>
+                <div class="form-input plain">https://n8n.orionjoalheria.com.br</div>
+              </div>
+              <div class="form-field">
+                <div class="form-label">API Key</div>
+                <div class="mask-row">
+                  <div class="mask-val">n8n_api_••••••••••••••••••••••••••••••</div>
+                  <div class="mask-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                </div>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#A09A94;margin-bottom:8px">Workflows ativos conhecidos pelo ORION</div>
+            <div class="wf-row">
+              <div><div class="wf-name"><div class="wf-dot" style="background:#4CAF82"></div>AURORA SDR — Atendimento WA</div><div class="wf-id">ID: wf_aurora_sdr_001</div></div>
+              <span class="pill pill-g">Ativo</span>
+            </div>
+            <div class="wf-row">
+              <div><div class="wf-name"><div class="wf-dot" style="background:#4CAF82"></div>Checkout Webhook — Mercado Pago</div><div class="wf-id">ID: wf_checkout_mp_001</div></div>
+              <span class="pill pill-g">Ativo</span>
+            </div>
+            <div class="wf-row">
+              <div><div class="wf-name"><div class="wf-dot" style="background:#4CAF82"></div>Notificações WA — Atendentes</div><div class="wf-id">ID: wf_notify_agents_001</div></div>
+              <span class="pill pill-g">Ativo</span>
+            </div>
+            <div class="wf-row">
+              <div><div class="wf-name"><div class="wf-dot" style="background:#F0A040"></div>Lead Qualificado → CRM</div><div class="wf-id">ID: wf_lead_qualify_001</div></div>
+              <span class="pill pill-a">Pausado</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- MERCADO PAGO -->
+        <div class="int-card">
+          <div class="int-header">
+            <div class="int-logo" style="background:linear-gradient(135deg,#009ee3,#00b1ea)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            </div>
+            <div class="int-info">
+              <div class="int-name">Mercado Pago</div>
+              <div class="int-desc">Checkout da loja pública · Cartão, PIX e Boleto</div>
+            </div>
+            <div class="int-status">
+              <span class="pill pill-g">● Conectado</span>
+              <div class="btn-test">Testar credencial</div>
+            </div>
+          </div>
+          <div class="int-body">
+            <!-- AMBIENTE TOGGLE -->
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#0F0F11;border-radius:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:4px">
+              <div style="font-size:12px;font-weight:600;color:#F0EBE3;flex:1">Ambiente</div>
+              <div style="display:flex;gap:0;border:1px solid rgba(255,255,255,0.1);border-radius:6px;overflow:hidden">
+                <div style="height:26px;padding:0 14px;background:#BFA06A;font-size:11px;font-weight:700;color:#0A0A0C;display:flex;align-items:center">Produção</div>
+                <div style="height:26px;padding:0 14px;background:transparent;font-size:11px;font-weight:600;color:#A09A94;display:flex;align-items:center">Sandbox</div>
+              </div>
+            </div>
+            <div class="form-grid cols2">
+              <div class="form-field">
+                <div class="form-label">Access Token (produção)</div>
+                <div class="mask-row">
+                  <div class="mask-val">APP_USR-••••••••••••••••••••••••••••••••••</div>
+                  <div class="mask-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                </div>
+              </div>
+              <div class="form-field">
+                <div class="form-label">Public Key (produção)</div>
+                <div class="mask-row">
+                  <div class="mask-val">APP_USR-••••••••-••••-••••-••••-••••••••</div>
+                  <div class="mask-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                </div>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div class="form-field">
+              <div class="form-label">Webhook URL · configure em MP → Notificações IPN</div>
+              <div class="form-input readonly plain">
+                https://api.orion.io/webhooks/mercadopago/a3f9d2c1
+                <span class="copy-val"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;margin-right:3px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copiar</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════
+     TAB FISCAL
+═══════════════════════ -->
+<div class="sec-label">Ajustes · Tab Fiscal (Feature Futura)</div>
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar-logo">ORION</div><div class="topbar-sep"></div>
+    <div class="topbar-path">CRM <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg><span>Ajustes · Fiscal</span></div>
+  </div>
+  <div class="layout">
+    <div class="leftnav">
+      <div class="nav-sec">Config</div>
+      <div class="nav-item on"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41"/></svg>Ajustes</div>
+    </div>
+    <div class="content">
+      <div class="page-header"><div class="page-title">Ajustes</div></div>
+      <div class="tab-row">
+        <div class="tab">Empresa</div>
+        <div class="tab">Usuários</div>
+        <div class="tab">WhatsApp</div>
+        <div class="tab">Notificações</div>
+        <div class="tab">Integrações</div>
+        <div class="tab on">Fiscal</div>
+      </div>
+      <div class="inner">
+
+        <!-- BANNER EM BREVE -->
+        <div class="coming-soon-banner">
+          <div class="cs-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#BFA06A" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <div style="flex:1">
+            <div class="cs-title">Emissão de Nota Fiscal</div>
+            <div class="cs-sub">Integração com Bling ERP para emissão de NF-e. Ao conectar, o Bling sincroniza automaticamente seu catálogo e pedidos com os principais marketplaces do Brasil.</div>
+          </div>
+          <div class="cs-badge">🔒 Em breve</div>
+        </div>
+
+        <!-- BLING CONFIG -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title" style="display:flex;align-items:center;gap:8px">
+                <div style="width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#e85d04,#f48c06);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff">B</div>
+                Bling ERP
+              </div>
+              <div class="card-sub">Emissão de NF-e e sincronização com marketplaces</div>
+            </div>
+            <span class="pill pill-gray">Não configurado</span>
+          </div>
+          <div class="card-body">
+            <div class="form-grid cols2">
+              <div class="form-field">
+                <div class="form-label">API Key Bling</div>
+                <div class="form-input disabled">••••••••••••••••••••••••••••••••</div>
+                <div class="form-hint">Disponível em Bling → Configurações → API</div>
+              </div>
+              <div class="form-field">
+                <div class="form-label">CNPJ Emissor</div>
+                <div class="form-input disabled plain" style="color:#3a3a42">12.345.678/0001-90 <span style="font-size:10px;color:#2a2a32">(de Empresa)</span></div>
+              </div>
+              <div class="form-field">
+                <div class="form-label">Regime Tributário</div>
+                <div class="form-select">Simples Nacional <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+              </div>
+              <div class="form-field">
+                <div class="form-label">Ambiente NF-e</div>
+                <div class="form-select">Homologação (teste) <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MARKETPLACES -->
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Marketplaces via Bling</div><div class="card-sub">Ao conectar o Bling, estes canais ficam disponíveis automaticamente</div></div></div>
+          <div class="card-body">
+            <div class="mkt-grid">
+
+              <div class="mkt-card">
+                <div class="mkt-logo" style="background:linear-gradient(135deg,#ffe600,#ffcf00)">
+                  <span style="color:#333;font-size:9px;font-weight:900">ML</span>
+                </div>
+                <div class="mkt-name">Mercado Livre</div>
+                <div class="mkt-via">via Bling</div>
+                <span class="pill pill-gray">Futuro</span>
+              </div>
+
+              <div class="mkt-card">
+                <div class="mkt-logo" style="background:linear-gradient(135deg,#ee4d2d,#f55c3e)">
+                  <span style="color:#fff;font-size:9px;font-weight:900">SH</span>
+                </div>
+                <div class="mkt-name">Shopee</div>
+                <div class="mkt-via">via Bling</div>
+                <span class="pill pill-gray">Futuro</span>
+              </div>
+
+              <div class="mkt-card">
+                <div class="mkt-logo" style="background:#000">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.29 6.29 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.24 8.24 0 004.83 1.55V6.79a4.85 4.85 0 01-1.06-.1z"/></svg>
+                </div>
+                <div class="mkt-name">TikTok Shop</div>
+                <div class="mkt-via">via Bling</div>
+                <span class="pill pill-gray">Futuro</span>
+              </div>
+
+              <div class="mkt-card">
+                <div class="mkt-logo" style="background:linear-gradient(135deg,#ff9900,#ff6600)">
+                  <span style="color:#fff;font-size:9px;font-weight:900">AMZ</span>
+                </div>
+                <div class="mkt-name">Amazon</div>
+                <div class="mkt-via">via Bling</div>
+                <span class="pill pill-gray">Futuro</span>
+              </div>
+
+            </div>
+            <div style="margin-top:14px;padding:10px 14px;background:#0F0F11;border-radius:8px;border:1px solid rgba(255,255,255,0.05);font-size:11px;color:#4a4a54;line-height:1.7">
+              💡 O Bling centraliza a emissão de NF-e e sincroniza automaticamente catálogo, estoque e pedidos com cada marketplace. Nenhuma integração adicional é necessária — basta conectar o Bling.
+            </div>
+          </div>
+        </div>
+
+        <!-- CONFIGURAÇÕES FISCAIS FUTURAS -->
+        <div class="card" style="opacity:0.4">
+          <div class="card-header"><div><div class="card-title">Configurações Fiscais</div><div class="card-sub">Disponível após conectar o Bling</div></div></div>
+          <div class="card-body">
+            <div class="form-grid cols2">
+              <div class="form-field"><div class="form-label">CFOP padrão (venda presencial)</div><div class="form-select">5.102 — Venda de mercadoria adquirida <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div></div>
+              <div class="form-field"><div class="form-label">CFOP padrão (venda online)</div><div class="form-select">6.108 — Venda à ordem <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div></div>
+              <div class="form-field"><div class="form-label">Série da NF-e</div><div class="form-input disabled">1</div></div>
+              <div class="form-field"><div class="form-label">NCM padrão (joias)</div><div class="form-input disabled">7113.19.00 — Joias e suas partes</div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

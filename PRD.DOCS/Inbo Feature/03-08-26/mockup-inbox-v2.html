@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORION — Inbox v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --ink: #0C0C0E; --ink2: #111114; --ink3: #18181C;
+  --ink4: #1E1E24; --ink5: #242430;
+  --gold: #BFA06A; --gold2: #D4B87E; --gold3: #8A7248;
+  --stone: #52515A; --stone2: #777;
+  --text: #F0EBE3; --text2: #A09A94;
+  --border: rgba(255,255,255,0.055);
+  --green: #4CAF82; --blue: #4A9EFF;
+  --sent: #1A2A1A; --sent-border: rgba(76,175,130,0.15);
+  --red: #E05252; --amber: #F0A040;
+}
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #080809;
+  display: flex; flex-direction: column;
+  align-items: center; padding: 32px 16px 48px; gap: 32px;
+}
+.frame-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 2px; color: #2a2a30; text-align: center; margin-bottom: 12px;
+}
+
+/* DESKTOP FRAME */
+.desktop {
+  width: 1060px; height: 660px;
+  background: var(--ink2); border-radius: 14px;
+  border: 1px solid #1e1e26;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.7);
+  overflow: hidden; display: flex; flex-direction: column;
+}
+.browser-bar {
+  height: 36px; background: #0e0e12; display: flex; align-items: center;
+  padding: 0 14px; gap: 8px; border-bottom: 1px solid #1a1a22; flex-shrink: 0;
+}
+.bdot { width: 11px; height: 11px; border-radius: 50%; }
+.burl {
+  flex: 1; height: 21px; background: #16161e; border-radius: 10px;
+  margin: 0 12px; display: flex; align-items: center; padding: 0 12px;
+  font-size: 11px; color: #333; gap: 6px;
+}
+
+/* INBOX LAYOUT */
+.inbox-layout { flex: 1; display: flex; overflow: hidden; }
+
+/* ─── LEFT PANEL ─── */
+.panel-left {
+  width: 300px; flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.panel-left-header {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.panel-left-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 17px; font-weight: 700; color: var(--text);
+  margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;
+}
+.header-actions { display: flex; gap: 10px; }
+.hbtn { color: var(--stone2); cursor: pointer; transition: color 0.15s; }
+.hbtn:hover { color: var(--gold); }
+.conv-search {
+  height: 34px; background: var(--ink3);
+  border: 1px solid var(--border); border-radius: 8px;
+  display: flex; align-items: center; gap: 8px; padding: 0 12px;
+  color: var(--stone); font-size: 12px; margin-bottom: 10px;
+}
+.conv-search input {
+  background: none; border: none; outline: none;
+  font-family: 'DM Sans', sans-serif; font-size: 12px;
+  color: var(--text); width: 100%; caret-color: var(--gold);
+}
+.conv-search input::placeholder { color: #2e2e38; }
+.conv-tabs { display: flex; gap: 0; }
+.conv-tab {
+  flex: 1; height: 26px; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 500; color: var(--stone2); cursor: pointer;
+  border-bottom: 2px solid transparent; transition: all 0.15s;
+}
+.conv-tab.on { color: var(--gold2); border-bottom-color: var(--gold); font-weight: 600; }
+
+.conv-list { flex: 1; overflow-y: auto; padding: 6px 0; }
+.conv-list::-webkit-scrollbar { width: 3px; }
+.conv-list::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+
+.conv-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; cursor: pointer; transition: background 0.12s; position: relative;
+}
+.conv-item:hover { background: var(--ink3); }
+.conv-item.active { background: var(--ink4); }
+.conv-item.active::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 2px; background: var(--gold);
+}
+.conv-avatar {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; position: relative;
+}
+.online-dot {
+  position: absolute; bottom: 0; right: 0;
+  width: 9px; height: 9px; background: var(--green);
+  border-radius: 50%; border: 2px solid var(--ink2);
+}
+/* atendente badge na conversa */
+.attendant-dot {
+  position: absolute; bottom: 0; right: 0;
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 1.5px solid var(--ink2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 7px; font-weight: 800;
+}
+.conv-body { flex: 1; min-width: 0; }
+.conv-name { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.conv-last {
+  font-size: 11px; color: var(--stone2); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 4px;
+}
+.conv-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.conv-time { font-size: 10px; color: var(--stone); }
+.conv-unread {
+  min-width: 17px; height: 17px; background: var(--gold);
+  border-radius: 9px; font-size: 9px; font-weight: 800;
+  color: var(--ink); display: flex; align-items: center; justify-content: center; padding: 0 4px;
+}
+/* CHANNEL ROW */
+.channel-row {
+  display: flex; align-items: center; gap: 5px;
+  margin-bottom: 10px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.channel-btn {
+  width: 28px; height: 28px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.18s; position: relative;
+  border: 1.5px solid transparent; background: var(--ink3); flex-shrink: 0;
+}
+.channel-btn:hover { background: var(--ink4); }
+.channel-btn.ch-active { border-color: rgba(255,255,255,0.12); background: var(--ink4); }
+.channel-btn.all {
+  width: auto; padding: 0 9px; gap: 5px;
+  font-size: 10px; font-weight: 700; color: var(--stone2);
+  font-family: 'DM Sans', sans-serif;
+}
+.channel-btn.all.ch-active { color: var(--text); }
+.ch-badge {
+  position: absolute; top: -4px; right: -4px;
+  min-width: 13px; height: 13px; border-radius: 7px;
+  font-size: 8px; font-weight: 800; color: #000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 3px; border: 1.5px solid var(--ink2);
+  font-family: 'DM Sans', sans-serif;
+}
+.ch-disabled { opacity: 0.22; cursor: not-allowed; filter: grayscale(1); pointer-events: none; }
+.channel-sep { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; }
+.tooltip {
+  position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%);
+  background: #1e1e26; border: 1px solid #2a2a36; color: #aaa;
+  font-size: 10px; font-weight: 500; white-space: nowrap;
+  padding: 3px 8px; border-radius: 5px; pointer-events: none;
+  opacity: 0; transition: opacity 0.15s; z-index: 100;
+  font-family: 'DM Sans', sans-serif;
+}
+.tooltip::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 4px solid transparent; border-top-color: #2a2a36;
+}
+.channel-btn:hover .tooltip { opacity: 1; }
+.conv-channel-icon {
+  position: absolute; bottom: -2px; right: -2px;
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 1.5px solid var(--ink2);
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* SEM ATENDENTE — tag vermelha */
+.conv-unassigned {
+  font-size: 9px; font-weight: 700; color: var(--red);
+  background: rgba(224,82,82,0.1); border-radius: 4px;
+  padding: 1px 5px; white-space: nowrap;
+}
+
+/* ─── RIGHT PANEL ─── */
+.panel-right { flex: 1; display: flex; overflow: hidden; }
+.chat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* CHAT HEADER */
+.chat-header {
+  height: 58px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 18px; gap: 10px; flex-shrink: 0;
+}
+.chat-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+.chat-header-info { flex: 1; }
+.chat-name { font-size: 14px; font-weight: 700; color: var(--text); }
+.chat-status { font-size: 11px; color: var(--green); display: flex; align-items: center; gap: 4px; }
+.status-pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.chat-actions { display: flex; gap: 12px; align-items: center; }
+.chat-action-btn { color: var(--stone2); cursor: pointer; transition: color 0.15s; }
+.chat-action-btn:hover { color: var(--gold); }
+.pipeline-tag {
+  background: rgba(191,160,106,0.1); border: 1px solid rgba(191,160,106,0.2);
+  color: var(--gold3); font-size: 10px; font-weight: 600;
+  padding: 3px 8px; border-radius: 4px; display: flex; align-items: center; gap: 5px;
+  cursor: pointer; white-space: nowrap;
+}
+
+/* ASSUMIR CONVERSA BANNER */
+.assumir-banner {
+  background: linear-gradient(90deg, rgba(191,160,106,0.06) 0%, rgba(191,160,106,0.03) 100%);
+  border-bottom: 1px solid rgba(191,160,106,0.15);
+  padding: 10px 18px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-shrink: 0;
+}
+.assumir-info { display: flex; align-items: center; gap: 10px; }
+.assumir-icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: rgba(191,160,106,0.1); border: 1px solid rgba(191,160,106,0.2);
+  display: flex; align-items: center; justify-content: center; color: var(--gold);
+}
+.assumir-text { font-size: 12px; color: var(--text2); }
+.assumir-text strong { color: var(--text); font-weight: 600; }
+.assumir-btn {
+  height: 32px; padding: 0 16px;
+  background: var(--gold); border: none; border-radius: 7px;
+  font-size: 12px; font-weight: 700; color: var(--ink);
+  font-family: 'DM Sans', sans-serif; cursor: pointer;
+  display: flex; align-items: center; gap: 7px;
+  transition: background 0.15s; white-space: nowrap;
+}
+.assumir-btn:hover { background: var(--gold2); }
+
+/* ATENDENTE ATUAL (quando já assumiu) */
+.atendente-banner {
+  background: rgba(76,175,130,0.04);
+  border-bottom: 1px solid rgba(76,175,130,0.1);
+  padding: 8px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.atendente-info { display: flex; align-items: center; gap: 8px; }
+.atendente-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(76,175,130,0.1); border: 1px solid rgba(76,175,130,0.2);
+  border-radius: 20px; padding: 3px 10px 3px 4px;
+}
+.atendente-avatar-sm {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 800;
+}
+.atendente-name { font-size: 11px; font-weight: 600; color: var(--green); }
+.atendente-since { font-size: 10px; color: var(--stone2); }
+.transferir-btn {
+  font-size: 11px; font-weight: 600; color: var(--stone2); cursor: pointer;
+  display: flex; align-items: center; gap: 5px; transition: color 0.15s;
+}
+.transferir-btn:hover { color: var(--gold); }
+
+/* MESSAGES */
+.messages {
+  flex: 1; overflow-y: auto; padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.messages::-webkit-scrollbar { width: 3px; }
+.messages::-webkit-scrollbar-thumb { background: #1e1e26; border-radius: 2px; }
+
+.date-divider { text-align: center; margin: 8px 0; }
+.date-divider span {
+  background: var(--ink3); border: 1px solid var(--border);
+  color: var(--stone2); font-size: 10px; font-weight: 600;
+  padding: 3px 12px; border-radius: 10px; letter-spacing: 0.3px;
+}
+
+/* IDENTIFICAÇÃO — mensagem especial */
+.id-msg {
+  align-self: flex-end; max-width: 72%;
+  background: linear-gradient(135deg, rgba(191,160,106,0.12), rgba(191,160,106,0.06));
+  border: 1px solid rgba(191,160,106,0.25);
+  border-radius: 10px 4px 10px 10px;
+  padding: 10px 14px; position: relative;
+}
+.id-msg-badge {
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px;
+  color: var(--gold3); margin-bottom: 6px; display: flex; align-items: center; gap: 5px;
+}
+.id-msg-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; flex-shrink: 0;
+}
+.id-msg-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.id-msg-name { font-size: 13px; font-weight: 700; color: var(--text); }
+.id-msg-text { font-size: 12px; color: var(--text2); line-height: 1.5; }
+.id-msg-time { font-size: 10px; color: var(--stone); margin-top: 6px; text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 3px; }
+
+.msg { display: flex; flex-direction: column; max-width: 72%; }
+.msg.received { align-self: flex-start; }
+.msg.sent { align-self: flex-end; }
+.bubble {
+  padding: 8px 12px; border-radius: 10px;
+  font-size: 13px; line-height: 1.5;
+}
+.msg.received .bubble {
+  background: var(--ink4); border: 1px solid var(--border);
+  border-radius: 4px 10px 10px 10px; color: var(--text);
+}
+.msg.sent .bubble {
+  background: var(--sent); border: 1px solid var(--sent-border);
+  border-radius: 10px 4px 10px 10px; color: var(--text);
+}
+.msg-time {
+  font-size: 10px; color: var(--stone); margin-top: 3px;
+  display: flex; align-items: center; gap: 3px;
+}
+.msg.sent .msg-time { justify-content: flex-end; }
+.status-check { color: var(--blue); }
+
+/* AUDIO */
+.media-audio {
+  width: 230px; background: var(--ink4); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px;
+  display: flex; align-items: center; gap: 10px;
+}
+.audio-play {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--gold); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+}
+.audio-waveform { flex: 1; display: flex; align-items: center; gap: 2px; }
+.wave-bar { width: 3px; border-radius: 2px; background: var(--stone); }
+.wave-bar.played { background: var(--gold3); }
+.audio-dur { font-size: 10px; color: var(--stone2); flex-shrink: 0; }
+
+/* PDF */
+.media-doc {
+  width: 230px; background: var(--ink4); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px;
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+}
+.doc-icon {
+  width: 34px; height: 34px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.doc-info { flex: 1; min-width: 0; }
+.doc-name { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-size { font-size: 10px; color: var(--stone2); }
+
+/* ─── INPUT AREA ─── */
+.chat-input-area { border-top: 1px solid var(--border); flex-shrink: 0; }
+
+/* PRONTAS TRAY */
+.prontas-tray {
+  overflow: hidden; max-height: 0;
+  transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1);
+  border-bottom: 1px solid transparent;
+}
+.prontas-tray.open {
+  max-height: 280px;
+  border-bottom-color: var(--border);
+}
+.prontas-tray-inner { padding: 12px 16px; }
+.prontas-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+}
+.prontas-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--stone2); }
+.prontas-search {
+  height: 28px; background: var(--ink3); border: 1px solid var(--border);
+  border-radius: 6px; display: flex; align-items: center; gap: 6px;
+  padding: 0 10px; color: var(--stone);
+}
+.prontas-search input {
+  background: none; border: none; outline: none;
+  font-family: 'DM Sans', sans-serif; font-size: 11px; color: var(--text); width: 120px;
+}
+.prontas-search input::placeholder { color: #333; }
+.prontas-list { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; }
+.prontas-list::-webkit-scrollbar { width: 3px; }
+.prontas-item {
+  padding: 8px 12px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--ink3);
+  transition: all 0.15s;
+}
+.prontas-item:hover { border-color: rgba(191,160,106,0.3); background: var(--ink4); }
+.prontas-item-title {
+  font-size: 11px; font-weight: 700; color: var(--gold3);
+  margin-bottom: 2px; display: flex; align-items: center; gap: 6px;
+}
+.prontas-item-text { font-size: 12px; color: var(--text2); line-height: 1.4; }
+.prontas-tag {
+  font-size: 9px; background: rgba(191,160,106,0.1); border: 1px solid rgba(191,160,106,0.2);
+  color: var(--gold3); padding: 1px 6px; border-radius: 10px;
+}
+
+/* IDENTIFICAÇÃO QUICK */
+.id-quick-banner {
+  background: linear-gradient(90deg, rgba(191,160,106,0.06), transparent);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.id-quick-label { font-size: 11px; color: var(--stone2); }
+.id-quick-btn {
+  height: 26px; padding: 0 12px;
+  background: var(--ink3); border: 1px solid rgba(191,160,106,0.3);
+  border-radius: 6px; font-size: 11px; font-weight: 700; color: var(--gold2);
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  display: flex; align-items: center; gap: 6px; transition: all 0.15s; white-space: nowrap;
+}
+.id-quick-btn:hover { background: rgba(191,160,106,0.12); }
+
+/* INPUT BAR */
+.chat-input-bar {
+  padding: 12px 16px;
+  display: flex; align-items: flex-end; gap: 10px;
+}
+.input-left { display: flex; gap: 8px; padding-bottom: 4px; }
+.input-icon-btn {
+  color: var(--stone2); cursor: pointer; transition: color 0.15s;
+  position: relative;
+}
+.input-icon-btn:hover { color: var(--gold); }
+.input-icon-btn.on { color: var(--gold2); }
+.prontas-badge {
+  position: absolute; top: -4px; right: -4px;
+  width: 8px; height: 8px; background: var(--gold); border-radius: 50%;
+}
+.input-field {
+  flex: 1; min-height: 38px; max-height: 100px;
+  background: var(--ink3); border: 1px solid var(--border);
+  border-radius: 10px; padding: 9px 14px;
+  font-family: 'DM Sans', sans-serif; font-size: 13px;
+  color: var(--text); outline: none; resize: none;
+  transition: border-color 0.15s; line-height: 1.4;
+}
+.input-field:focus { border-color: rgba(191,160,106,0.3); }
+.input-field::placeholder { color: #2a2a38; }
+.send-btn {
+  width: 38px; height: 38px; background: var(--gold); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; transition: background 0.15s; color: var(--ink);
+}
+.send-btn:hover { background: var(--gold2); }
+
+/* SIDE PANEL — info rápida */
+.panel-side {
+  width: 240px; flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow-y: auto;
+  padding: 16px;
+}
+.panel-side::-webkit-scrollbar { width: 3px; }
+.panel-side::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+.side-section { margin-bottom: 20px; }
+.side-label {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.2px; color: var(--stone); margin-bottom: 10px;
+}
+.side-client-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.side-client-tel { font-size: 11px; color: var(--stone2); display: flex; align-items: center; gap: 5px; }
+.side-kv { display: flex; flex-direction: column; gap: 6px; }
+.side-row { display: flex; justify-content: space-between; align-items: center; }
+.side-key { font-size: 11px; color: var(--stone2); }
+.side-val { font-size: 11px; font-weight: 600; color: var(--text); }
+.side-pipeline-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(191,160,106,0.1); border: 1px solid rgba(191,160,106,0.2);
+  border-radius: 6px; padding: 5px 10px; cursor: pointer;
+  transition: background 0.15s;
+}
+.side-pipeline-chip:hover { background: rgba(191,160,106,0.18); }
+.stage-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+.stage-name { font-size: 11px; font-weight: 600; color: var(--gold2); flex: 1; }
+.side-divider { height: 1px; background: var(--border); margin: 4px 0 16px; }
+
+/* ATENDENTES DISPONÍVEIS */
+.att-list { display: flex; flex-direction: column; gap: 6px; }
+.att-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: 7px;
+  background: var(--ink3); border: 1px solid var(--border);
+}
+.att-avatar-sm {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 800; flex-shrink: 0;
+}
+.att-info { flex: 1; min-width: 0; }
+.att-name { font-size: 11px; font-weight: 600; color: var(--text); }
+.att-role { font-size: 10px; color: var(--stone2); }
+.att-online { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+.att-busy { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); flex-shrink: 0; }
+
+.side-note-area {
+  width: 100%; min-height: 60px; background: var(--ink3);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; font-family: 'DM Sans', sans-serif;
+  font-size: 11px; color: var(--text2); resize: none; outline: none;
+  transition: border-color 0.15s; line-height: 1.5;
+}
+.side-note-area:focus { border-color: rgba(191,160,106,0.3); }
+.side-note-area::placeholder { color: #2a2a38; }
+</style>
+</head>
+<body>
+
+<div>
+  <div class="frame-label">🖥 Inbox v2 — Assumir · Mensagens Prontas · Identificação</div>
+  <div class="desktop">
+    <div class="browser-bar">
+      <div class="bdot" style="background:#FF5F57"></div>
+      <div class="bdot" style="background:#FFBD2E"></div>
+      <div class="bdot" style="background:#28CA41"></div>
+      <div class="burl">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        orion.app/inbox
+      </div>
+    </div>
+
+    <div class="inbox-layout">
+
+      <!-- ═══ LEFT ═══ -->
+      <div class="panel-left">
+        <div class="panel-left-header">
+          <div class="panel-left-title">
+            Inbox
+            <div class="header-actions">
+              <div class="hbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+              <div class="hbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></div>
+            </div>
+          </div>
+          <!-- CHANNEL FILTER -->
+          <div class="channel-row">
+            <div class="channel-btn all ch-active" onclick="setChannel(this)" id="ch-todos">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Todos
+              <div class="tooltip">Todos os canais</div>
+            </div>
+            <div class="channel-sep"></div>
+            <!-- WhatsApp — conectado -->
+            <div class="channel-btn" onclick="setChannel(this)" id="ch-wa">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              <div class="ch-badge" style="background:#25D366">7</div>
+              <div class="tooltip">WhatsApp · 7 não lidos</div>
+            </div>
+            <!-- Instagram -->
+            <div class="channel-btn" onclick="setChannel(this)" id="ch-ig">
+              <svg width="15" height="15" viewBox="0 0 24 24">
+                <defs><linearGradient id="ig2" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#F58529"/><stop offset="50%" stop-color="#DD2A7B"/><stop offset="100%" stop-color="#8134AF"/></linearGradient></defs>
+                <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#ig2)"/>
+                <circle cx="12" cy="12" r="4" fill="none" stroke="white" stroke-width="1.8"/>
+                <circle cx="17.5" cy="6.5" r="1.2" fill="white"/>
+              </svg>
+              <div class="ch-badge" style="background:linear-gradient(135deg,#F58529,#DD2A7B)">3</div>
+              <div class="tooltip">Instagram DM · 3 não lidos</div>
+            </div>
+            <!-- Telegram -->
+            <div class="channel-btn" onclick="setChannel(this)" id="ch-tg">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="#229ED9"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.46 14.08l-2.95-.924c-.64-.203-.658-.64.135-.953l11.57-4.461c.537-.194 1.006.131.679.479z"/></svg>
+              <div class="tooltip">Telegram · conectado</div>
+            </div>
+            <!-- TikTok — não conectado -->
+            <div class="channel-btn ch-disabled" id="ch-tt">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="#555"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.32 6.32 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.74a4.85 4.85 0 01-1.01-.05z"/></svg>
+              <div class="tooltip">TikTok · não conectado</div>
+            </div>
+            <!-- Messenger — não conectado -->
+            <div class="channel-btn ch-disabled" id="ch-fb">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="#555"><path d="M12 2C6.477 2 2 6.145 2 11.243c0 2.936 1.46 5.554 3.748 7.266V22l3.395-1.87C10.05 20.37 11.012 20.5 12 20.5c5.523 0 10-4.145 10-9.257S17.523 2 12 2zm1.044 12.47l-2.548-2.72-4.976 2.72 5.476-5.813 2.613 2.72 4.911-2.72-5.476 5.813z"/></svg>
+              <div class="tooltip">Messenger · não conectado</div>
+            </div>
+          </div>
+
+          <div class="conv-search">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Buscar conversa..." />
+          </div>
+          <div class="conv-tabs">
+            <div class="conv-tab on">Todos</div>
+            <div class="conv-tab">Não lidos</div>
+            <div class="conv-tab">Meus</div>
+            <div class="conv-tab">Livre</div>
+          </div>
+        </div>
+        <div class="conv-list">
+
+          <!-- SEM ATENDENTE -->
+          <div class="conv-item">
+            <div class="conv-avatar" style="background:linear-gradient(135deg,#1a0e0e,#2a1616)">
+              <span style="color:#E07070">MR</span>
+              <div class="conv-channel-icon" style="background:#25D366"><svg width="7" height="7" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
+            </div>
+            <div class="conv-body">
+              <div class="conv-name">Mariana Rocha</div>
+              <div class="conv-last">Quero ver o anel de noivado</div>
+            </div>
+            <div class="conv-meta">
+              <div class="conv-time">14:38</div>
+              <div class="conv-unassigned">Livre</div>
+            </div>
+          </div>
+
+          <!-- ATIVO — com atendente JS -->
+          <div class="conv-item active">
+            <div class="conv-avatar" style="background:linear-gradient(135deg,#2a1f0e,#3d2e16)">
+              <span style="color:#BFA06A">MS</span>
+              <div class="attendant-dot" style="background:#1a5c1a;color:#4CAF82">JS</div>
+            </div>
+            <div class="conv-body">
+              <div class="conv-name">Mariana Silva</div>
+              <div class="conv-last">Amei a proposta! 😍</div>
+            </div>
+            <div class="conv-meta">
+              <div class="conv-time">14:32</div>
+              <div class="conv-unread">2</div>
+            </div>
+          </div>
+
+          <!-- OUTRO ATENDENTE -->
+          <div class="conv-item">
+            <div class="conv-avatar" style="background:linear-gradient(135deg,#0e1a2a,#162438)">
+              <span style="color:#4A9EFF">CA</span>
+              <div class="conv-channel-icon" style="background:linear-gradient(135deg,#F58529,#DD2A7B)"><svg width="7" height="7" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" fill="white" opacity="0.9"/><circle cx="12" cy="12" r="4" fill="none" stroke="#DD2A7B" stroke-width="2.5"/></svg></div>
+              <div class="attendant-dot" style="background:#1a1a3a;color:#4A9EFF;bottom:10px">ML</div>
+            </div>
+            <div class="conv-body">
+              <div class="conv-name">Carlos Andrade</div>
+              <div class="conv-last">Ok, aguardo o orçamento</div>
+            </div>
+            <div class="conv-meta">
+              <div class="conv-time">13:18</div>
+            </div>
+          </div>
+
+          <div class="conv-item">
+            <div class="conv-avatar" style="background:linear-gradient(135deg,#0e1a0e,#162416)">
+              <span style="color:#4CAF82">JC</span>
+              <div class="conv-channel-icon" style="background:#229ED9"><svg width="7" height="7" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.46 14.08l-2.95-.924c-.64-.203-.658-.64.135-.953l11.57-4.461c.537-.194 1.006.131.679.479z"/></svg></div>
+            </div>
+            <div class="conv-body">
+              <div class="conv-name">João Costa</div>
+              <div class="conv-last">🎵 Mensagem de voz</div>
+            </div>
+            <div class="conv-meta">
+              <div class="conv-time">10:02</div>
+              <div class="conv-unassigned">Livre</div>
+            </div>
+          </div>
+
+          <div class="conv-item">
+            <div class="conv-avatar" style="background:#1a1a22">
+              <span style="color:#888">PM</span>
+              <div class="attendant-dot" style="background:#1a1a3a;color:#4A9EFF">ML</div>
+            </div>
+            <div class="conv-body">
+              <div class="conv-name" style="color:var(--stone2)">Paulo Mendes</div>
+              <div class="conv-last">📄 Orçamento_Anel.pdf</div>
+            </div>
+            <div class="conv-meta">
+              <div class="conv-time">Ontem</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ═══ CHAT MAIN ═══ -->
+      <div class="chat-main">
+
+        <!-- HEADER -->
+        <div class="chat-header">
+          <div class="chat-avatar" style="background:linear-gradient(135deg,#2a1f0e,#3d2e16)">
+            <span style="color:#BFA06A;font-weight:700">MS</span>
+          </div>
+          <div class="chat-header-info">
+            <div class="chat-name">Mariana Silva</div>
+            <div class="chat-status"><div class="status-pulse"></div>online agora</div>
+          </div>
+          <div class="pipeline-tag">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Qualificado · Leads
+          </div>
+          <div class="chat-actions">
+            <div class="chat-action-btn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+            <div class="chat-action-btn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></div>
+          </div>
+        </div>
+
+        <!-- ATENDENTE ASSUMIU (estado: já assumida por JS) -->
+        <div class="atendente-banner">
+          <div class="atendente-info">
+            <div class="atendente-chip">
+              <div class="atendente-avatar-sm" style="background:#1a3a1a;color:#4CAF82">JS</div>
+              <div class="atendente-name">Julia Santos</div>
+            </div>
+            <div class="atendente-since">assumiu às 14:21 · 11min</div>
+          </div>
+          <div class="transferir-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+            Transferir
+          </div>
+        </div>
+
+        <!-- MESSAGES -->
+        <div class="messages">
+          <div class="date-divider"><span>Hoje, 08 março</span></div>
+
+          <!-- received -->
+          <div class="msg received">
+            <div class="bubble">Olá! Vi o anel de noivado solitário no site. Vocês têm em ouro branco? 💍</div>
+            <div class="msg-time">14:20</div>
+          </div>
+
+          <!-- IDENTIFICAÇÃO — mensagem especial enviada pela atendente -->
+          <div class="id-msg">
+            <div class="id-msg-badge">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Identificação enviada
+            </div>
+            <div class="id-msg-row">
+              <div class="id-msg-avatar" style="background:#1a3a1a;color:#4CAF82">JS</div>
+              <div>
+                <div class="id-msg-name">Julia Santos</div>
+                <div style="font-size:10px;color:var(--stone2)">Atendente · ORION Joalheria</div>
+              </div>
+            </div>
+            <div class="id-msg-text">Olá Mariana! Sou a Julia, atendente da ORION Joalheria. Será um prazer te ajudar a encontrar o anel perfeito ✨</div>
+            <div class="id-msg-time">
+              14:21
+              <svg class="status-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+          </div>
+
+          <!-- sent -->
+          <div class="msg sent">
+            <div class="bubble">Sim, temos linha completa em ouro branco 18k! Posso te mostrar nossas opções disponíveis agora mesmo.</div>
+            <div class="msg-time">14:22 <svg class="status-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          </div>
+
+          <!-- audio -->
+          <div class="msg received">
+            <div class="media-audio">
+              <div class="audio-play">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--ink)" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </div>
+              <div class="audio-waveform">
+                <div class="wave-bar played" style="height:8px"></div>
+                <div class="wave-bar played" style="height:14px"></div>
+                <div class="wave-bar played" style="height:18px"></div>
+                <div class="wave-bar played" style="height:10px"></div>
+                <div class="wave-bar played" style="height:20px"></div>
+                <div class="wave-bar" style="height:12px"></div>
+                <div class="wave-bar" style="height:16px"></div>
+                <div class="wave-bar" style="height:9px"></div>
+                <div class="wave-bar" style="height:22px"></div>
+                <div class="wave-bar" style="height:14px"></div>
+                <div class="wave-bar" style="height:11px"></div>
+                <div class="wave-bar" style="height:18px"></div>
+              </div>
+              <div class="audio-dur">0:18</div>
+            </div>
+            <div class="msg-time">14:24</div>
+          </div>
+
+          <!-- PDF sent -->
+          <div class="msg sent">
+            <div class="media-doc">
+              <div class="doc-icon" style="background:rgba(224,82,82,0.1)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E05252" stroke-width="2"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+              </div>
+              <div class="doc-info">
+                <div class="doc-name">Proposta_Anel_Mariana.pdf</div>
+                <div class="doc-size">PDF · 248 KB</div>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--stone2)" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </div>
+            <div class="msg-time" style="justify-content:flex-end">14:28</div>
+          </div>
+
+          <!-- MENSAGEM PRONTA usada -->
+          <div class="msg sent">
+            <div class="bubble" style="position:relative">
+              Amei! Qualquer dúvida sobre os modelos ou personalização estou à disposição. Podemos agendar uma visita também 😊
+              <div style="position:absolute;top:-6px;right:-6px;background:rgba(191,160,106,0.2);border:1px solid rgba(191,160,106,0.3);border-radius:4px;font-size:8px;font-weight:700;color:var(--gold3);padding:1px 5px;white-space:nowrap">✦ pronta</div>
+            </div>
+            <div class="msg-time" style="justify-content:flex-end">14:30 <svg class="status-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          </div>
+
+          <!-- received -->
+          <div class="msg received">
+            <div class="bubble">Amei a proposta! Quando posso ir ver pessoalmente? 😍</div>
+            <div class="msg-time">14:32</div>
+          </div>
+
+        </div>
+
+        <!-- INPUT AREA -->
+        <div class="chat-input-area">
+
+          <!-- PRONTAS TRAY -->
+          <div class="prontas-tray" id="prontas-tray">
+            <div class="prontas-tray-inner">
+              <div class="prontas-header">
+                <div class="prontas-title">Mensagens prontas</div>
+                <div class="prontas-search">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" placeholder="Buscar mensagem..." />
+                </div>
+              </div>
+              <div class="prontas-list">
+                <div class="prontas-item" onclick="selectPronta(this)">
+                  <div class="prontas-item-title">
+                    👋 Boas-vindas
+                    <span class="prontas-tag">geral</span>
+                  </div>
+                  <div class="prontas-item-text">Olá! Seja bem-vindo(a) à ORION Joalheria. Como posso te ajudar hoje?</div>
+                </div>
+                <div class="prontas-item" onclick="selectPronta(this)">
+                  <div class="prontas-item-title">
+                    📅 Agendamento
+                    <span class="prontas-tag">visita</span>
+                  </div>
+                  <div class="prontas-item-text">Podemos agendar uma visita na loja. Temos horários de segunda a sábado, das 9h às 18h. Qual horário é melhor para você?</div>
+                </div>
+                <div class="prontas-item" onclick="selectPronta(this)">
+                  <div class="prontas-item-title">
+                    💰 Formas de pagamento
+                    <span class="prontas-tag">financeiro</span>
+                  </div>
+                  <div class="prontas-item-text">Aceitamos cartão de crédito em até 12x, débito, Pix e dinheiro. Para pedidos personalizados, trabalhamos com 50% de entrada.</div>
+                </div>
+                <div class="prontas-item" onclick="selectPronta(this)">
+                  <div class="prontas-item-title">
+                    ⏱ Prazo de produção
+                    <span class="prontas-tag">produção</span>
+                  </div>
+                  <div class="prontas-item-text">Peças personalizadas têm prazo médio de 15 a 30 dias úteis. Peças prontas em estoque podem ser retiradas em até 24h.</div>
+                </div>
+                <div class="prontas-item" onclick="selectPronta(this)">
+                  <div class="prontas-item-title">
+                    ✨ Encerramento
+                    <span class="prontas-tag">geral</span>
+                  </div>
+                  <div class="prontas-item-text">Foi um prazer te atender! Qualquer dúvida pode me chamar aqui. Até logo! 😊</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- IDENTIFICAÇÃO RÁPIDA -->
+          <div class="id-quick-banner">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold3)" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <div class="id-quick-label">Enviar minha identificação para o cliente</div>
+            <div class="id-quick-btn" onclick="sendId()">
+              <div class="atendente-avatar-sm" style="width:18px;height:18px;background:#1a3a1a;color:#4CAF82;font-size:8px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0">JS</div>
+              Enviar como Julia Santos
+            </div>
+          </div>
+
+          <!-- INPUT BAR -->
+          <div class="chat-input-bar">
+            <div class="input-left">
+              <div class="input-icon-btn" title="Anexar arquivo">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+              </div>
+              <div class="input-icon-btn on" id="prontas-btn" title="Mensagens prontas" onclick="toggleProntas()" style="position:relative">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                <div class="prontas-badge"></div>
+              </div>
+            </div>
+            <textarea class="input-field" id="input-field" placeholder="Mensagem..." rows="1"></textarea>
+            <div class="input-icon-btn" title="Gravar voz">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
+            </div>
+            <div class="send-btn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SIDE PANEL ═══ -->
+      <div class="panel-side">
+        <div class="side-section">
+          <div class="side-label">Cliente</div>
+          <div class="side-client-name">Mariana Silva</div>
+          <div class="side-client-tel">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .18h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>
+            +55 21 98888-1234
+          </div>
+        </div>
+
+        <div class="side-divider"></div>
+
+        <div class="side-section">
+          <div class="side-label">Pipeline</div>
+          <div class="side-pipeline-chip">
+            <div class="stage-dot"></div>
+            <div class="stage-name">Qualificado</div>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--stone2)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+
+        <div class="side-divider"></div>
+
+        <div class="side-section">
+          <div class="side-label">Conversa</div>
+          <div class="side-kv">
+            <div class="side-row">
+              <div class="side-key">Iniciada</div>
+              <div class="side-val">14:20</div>
+            </div>
+            <div class="side-row">
+              <div class="side-key">Atendente</div>
+              <div class="side-val" style="color:var(--green)">Julia Santos</div>
+            </div>
+            <div class="side-row">
+              <div class="side-key">Mensagens</div>
+              <div class="side-val">9</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="side-divider"></div>
+
+        <div class="side-section">
+          <div class="side-label">Atendentes online</div>
+          <div class="att-list">
+            <div class="att-item">
+              <div class="att-avatar-sm" style="background:#1a3a1a;color:#4CAF82">JS</div>
+              <div class="att-info">
+                <div class="att-name">Julia Santos</div>
+                <div class="att-role">Você</div>
+              </div>
+              <div class="att-online"></div>
+            </div>
+            <div class="att-item">
+              <div class="att-avatar-sm" style="background:#1a1a3a;color:#4A9EFF">ML</div>
+              <div class="att-info">
+                <div class="att-name">Marcos Lima</div>
+                <div class="att-role">3 conversas</div>
+              </div>
+              <div class="att-busy"></div>
+            </div>
+            <div class="att-item" style="opacity:0.4">
+              <div class="att-avatar-sm" style="background:#2a1a1a;color:#E07070">CA</div>
+              <div class="att-info">
+                <div class="att-name">Carol Alves</div>
+                <div class="att-role">offline</div>
+              </div>
+              <div style="width:7px;height:7px;border-radius:50%;background:var(--stone);flex-shrink:0"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="side-divider"></div>
+
+        <div class="side-section">
+          <div class="side-label">Nota interna</div>
+          <textarea class="side-note-area" placeholder="Anotação privada sobre este cliente..."></textarea>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+let prontasOpen = false;
+
+function setChannel(el) {
+  document.querySelectorAll('.channel-btn:not(.ch-disabled)').forEach(b => b.classList.remove('ch-active'));
+  el.classList.add('ch-active');
+}
+
+function toggleProntas() {
+  prontasOpen = !prontasOpen;
+  document.getElementById('prontas-tray').classList.toggle('open', prontasOpen);
+  document.getElementById('prontas-btn').style.color = prontasOpen ? 'var(--gold2)' : 'var(--stone2)';
+}
+
+function selectPronta(el) {
+  const text = el.querySelector('.prontas-item-text').innerText;
+  document.getElementById('input-field').value = text;
+  document.getElementById('input-field').focus();
+  prontasOpen = false;
+  document.getElementById('prontas-tray').classList.remove('open');
+  document.getElementById('prontas-btn').style.color = 'var(--stone2)';
+}
+
+function sendId() {
+  alert('Identificação enviada:\n\n"Olá! Sou a Julia Santos, atendente da ORION Joalheria. Será um prazer te ajudar ✨"');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>ORION — Lead Detail</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --ink: #0C0C0E; --ink2: #111114; --ink3: #18181C; --ink4: #1E1E24; --ink5: #242430;
+  --gold: #BFA06A; --gold2: #D4B87E; --gold3: #8A7248;
+  --stone: #52515A; --stone2: #777; --stone3: #999;
+  --text: #F0EBE3; --text2: #A09A94;
+  --border: rgba(255,255,255,0.055); --border2: rgba(255,255,255,0.08);
+  --green: #4CAF82; --blue: #4A9EFF; --red: #E05252; --amber: #F0A040;
+  --sent: #1A2A1A;
+}
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #080809;
+  display: flex; flex-direction: column;
+  align-items: center; padding: 32px 16px 60px;
+}
+.frame-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 2px; color: #2a2a30; text-align: center; margin-bottom: 14px;
+}
+
+/* DESKTOP FRAME */
+.desktop {
+  width: 1100px;
+  background: var(--ink2); border-radius: 14px;
+  border: 1px solid #1e1e26;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.7);
+  overflow: hidden; display: flex; flex-direction: column;
+}
+.browser-bar {
+  height: 36px; background: #0e0e12; display: flex; align-items: center;
+  padding: 0 14px; gap: 8px; border-bottom: 1px solid #1a1a22; flex-shrink: 0;
+}
+.bdot { width: 11px; height: 11px; border-radius: 50%; }
+.burl {
+  flex: 1; height: 21px; background: #16161e; border-radius: 10px;
+  margin: 0 12px; display: flex; align-items: center; padding: 0 12px;
+  font-size: 11px; color: #333; gap: 6px;
+}
+
+/* ══ STAGE BAR ══ */
+.stage-bar {
+  height: 46px; background: var(--ink3); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 18px; gap: 0; flex-shrink: 0;
+  overflow-x: auto;
+}
+.stage-bar::-webkit-scrollbar { display: none; }
+
+.stage-item {
+  display: flex; align-items: center; height: 100%;
+  padding: 0 14px; font-size: 12px; font-weight: 500; color: var(--stone2);
+  cursor: pointer; white-space: nowrap; position: relative; gap: 6px;
+  transition: color 0.15s;
+}
+.stage-item:hover { color: var(--text2); }
+.stage-item.active { color: var(--gold2); font-weight: 700; }
+.stage-item.active::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 2px; background: var(--gold);
+}
+.stage-item.done { color: var(--green); }
+.stage-item.done::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 2px; background: var(--green);
+}
+.stage-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.stage-sep { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; margin: 0 2px; }
+
+.stage-win {
+  margin-left: auto; display: flex; align-items: center; gap: 6px;
+}
+.stage-btn {
+  height: 28px; padding: 0 14px; border-radius: 6px; border: none;
+  font-size: 11px; font-weight: 700; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 6px;
+  transition: all 0.15s;
+}
+.btn-win { background: rgba(76,175,130,0.15); color: var(--green); border: 1px solid rgba(76,175,130,0.25); }
+.btn-win:hover { background: rgba(76,175,130,0.25); }
+.btn-lose { background: rgba(224,82,82,0.1); color: var(--red); border: 1px solid rgba(224,82,82,0.2); }
+.btn-lose:hover { background: rgba(224,82,82,0.18); }
+
+/* ══ MAIN LAYOUT ══ */
+.page-body {
+  flex: 1; display: flex; gap: 0; overflow: hidden;
+  max-height: 660px;
+}
+
+/* ── COL LEFT ── */
+.col-left {
+  width: 260px; flex-shrink: 0; border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow-y: auto; padding: 16px;
+  gap: 12px;
+}
+.col-left::-webkit-scrollbar { width: 3px; }
+.col-left::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+
+.card-block {
+  background: var(--ink3); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px;
+}
+.card-block-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+}
+.card-block-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--stone2);
+  display: flex; align-items: center; gap: 7px;
+}
+.card-icon {
+  width: 24px; height: 24px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+.icon-btn {
+  color: var(--stone2); cursor: pointer; transition: color 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.icon-btn:hover { color: var(--gold); }
+
+/* LEAD INFO */
+.lead-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 2px;
+}
+.lead-created { font-size: 11px; color: var(--stone2); margin-bottom: 14px; }
+.kv-list { display: flex; flex-direction: column; gap: 8px; }
+.kv-row { display: flex; flex-direction: column; gap: 2px; }
+.kv-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--stone); display: flex; align-items: center; gap: 5px;
+}
+.kv-value { font-size: 13px; font-weight: 600; color: var(--text); }
+.kv-divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+/* STATS ROW */
+.stats-row {
+  display: flex; gap: 0;
+}
+.stat-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 10px 6px; border-right: 1px solid var(--border);
+  gap: 3px;
+}
+.stat-item:last-child { border-right: none; }
+.stat-val { font-size: 18px; font-weight: 800; color: var(--gold2); }
+.stat-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--stone2); text-align: center; }
+
+/* ── COL CENTER ── */
+.col-center {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+
+/* TABS */
+.center-tabs {
+  display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; padding: 0 18px;
+}
+.ctab {
+  height: 42px; display: flex; align-items: center; padding: 0 14px;
+  font-size: 12px; font-weight: 500; color: var(--stone2); cursor: pointer;
+  border-bottom: 2px solid transparent; transition: all 0.15s; gap: 6px;
+}
+.ctab.on { color: var(--gold2); border-bottom-color: var(--gold); font-weight: 700; }
+.ctab:hover:not(.on) { color: var(--text2); }
+.ctab-badge {
+  min-width: 16px; height: 16px; background: rgba(191,160,106,0.15);
+  border-radius: 8px; font-size: 9px; font-weight: 800; color: var(--gold3);
+  display: flex; align-items: center; justify-content: center; padding: 0 4px;
+}
+
+.col-center-body { flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+.col-center-body::-webkit-scrollbar { width: 3px; }
+.col-center-body::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+
+/* NOTA */
+.nota-area {
+  width: 100%; min-height: 80px;
+  background: var(--ink3); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px;
+  font-family: 'DM Sans', sans-serif; font-size: 13px;
+  color: var(--text2); resize: none; outline: none;
+  transition: border-color 0.15s; line-height: 1.5;
+}
+.nota-area:focus { border-color: rgba(191,160,106,0.3); color: var(--text); }
+.nota-area::placeholder { color: #2a2a38; }
+
+.nota-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; background: var(--ink3); border: 1px solid var(--border);
+  border-top: none; border-radius: 0 0 10px 10px; margin-top: -10px;
+}
+.nota-type-select {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--stone2); cursor: pointer;
+}
+.nota-footer-right { display: flex; align-items: center; gap: 10px; }
+.mic-btn { color: var(--stone2); cursor: pointer; transition: color 0.15s; }
+.mic-btn:hover { color: var(--gold); }
+.save-btn {
+  height: 30px; padding: 0 16px; background: var(--gold); border-radius: 6px;
+  font-size: 12px; font-weight: 700; color: var(--ink);
+  cursor: pointer; font-family: 'DM Sans', sans-serif; border: none;
+  transition: background 0.15s;
+}
+.save-btn:hover { background: var(--gold2); }
+
+/* ATIVIDADE */
+.activity-card {
+  background: var(--ink3); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; display: flex; align-items: center; gap: 12px;
+}
+.activity-icon {
+  width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.activity-body { flex: 1; min-width: 0; }
+.activity-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.activity-sub { font-size: 11px; color: var(--stone2); }
+.activity-actions { display: flex; gap: 10px; align-items: center; color: var(--stone2); }
+.activity-actions > * { cursor: pointer; transition: color 0.15s; }
+.activity-actions > *:hover { color: var(--gold); }
+
+/* COMUNICAÇÕES */
+.comm-section { }
+.comm-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+}
+.comm-title { font-size: 14px; font-weight: 700; color: var(--text); }
+.comm-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.comm-tab {
+  height: 28px; padding: 0 12px; border-radius: 6px;
+  font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.comm-tab.on { background: rgba(191,160,106,0.12); color: var(--gold2); border: 1px solid rgba(191,160,106,0.2); }
+.comm-tab:not(.on) { background: var(--ink3); color: var(--stone2); border: 1px solid var(--border); }
+.comm-count { font-size: 9px; font-weight: 800; }
+.comm-empty {
+  background: var(--ink3); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px; display: flex; align-items: center; gap: 10px; cursor: pointer;
+  transition: border-color 0.15s;
+}
+.comm-empty:hover { border-color: rgba(191,160,106,0.25); }
+.comm-empty-icon { width: 32px; height: 32px; border-radius: 8px; background: rgba(74,158,255,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.comm-empty-text { font-size: 12px; font-weight: 600; color: var(--text2); }
+.comm-empty-sub { font-size: 11px; color: var(--stone); }
+
+/* LINHA DO TEMPO */
+.timeline-section { }
+.timeline-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.timeline-title { font-size: 14px; font-weight: 700; color: var(--text); }
+.timeline-filters { display: flex; gap: 5px; flex-wrap: wrap; }
+.tf {
+  height: 22px; padding: 0 9px; border-radius: 11px;
+  font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+}
+.tf.on { background: rgba(191,160,106,0.15); color: var(--gold2); border: 1px solid rgba(191,160,106,0.25); }
+.tf:not(.on) { background: var(--ink3); color: var(--stone2); border: 1px solid var(--border); }
+
+.timeline-list { display: flex; flex-direction: column; gap: 0; }
+.tl-item {
+  display: flex; gap: 12px; position: relative; padding-bottom: 16px;
+}
+.tl-item::before {
+  content: ''; position: absolute; left: 15px; top: 30px; bottom: 0;
+  width: 1px; background: var(--border);
+}
+.tl-item:last-child::before { display: none; }
+.tl-dot {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); background: var(--ink4);
+}
+.tl-body { flex: 1; min-width: 0; }
+.tl-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.tl-sub { font-size: 11px; color: var(--stone2); }
+.tl-time { font-size: 10px; color: var(--stone); white-space: nowrap; }
+.tl-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+
+/* ── COL RIGHT ── */
+.col-right {
+  width: 260px; flex-shrink: 0;
+  display: flex; flex-direction: column; overflow-y: auto; padding: 16px;
+  gap: 12px;
+}
+.col-right::-webkit-scrollbar { width: 3px; }
+.col-right::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+
+/* CONTACT CARD */
+.contact-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.contact-item:last-child { border-bottom: none; }
+.contact-avatar {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+}
+.contact-info { flex: 1; min-width: 0; }
+.contact-name { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 1px; }
+.contact-detail { font-size: 10px; color: var(--stone2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* EMPRESA */
+.empresa-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 0;
+}
+.empresa-logo {
+  width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800;
+}
+.empresa-info { flex: 1; min-width: 0; }
+.empresa-name { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 1px; }
+.empresa-detail { font-size: 10px; color: var(--stone2); }
+
+/* TAGS */
+.tags-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.tag {
+  height: 22px; padding: 0 9px; border-radius: 11px;
+  font-size: 10px; font-weight: 700; display: flex; align-items: center; gap: 5px;
+}
+
+/* CAMPOS PERSONALIZADOS */
+.custom-empty {
+  font-size: 11px; color: var(--stone); text-align: center; padding: 8px 0;
+  font-style: italic;
+}
+
+/* ARQUIVOS */
+.arquivo-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; background: var(--ink4); border: 1px solid var(--border);
+  border-radius: 8px; cursor: pointer; transition: border-color 0.15s;
+}
+.arquivo-item:hover { border-color: rgba(191,160,106,0.25); }
+.arquivo-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.arquivo-info { flex: 1; min-width: 0; }
+.arquivo-name { font-size: 11px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arquivo-size { font-size: 10px; color: var(--stone2); }
+</style>
+</head>
+<body>
+
+<div class="frame-label">🖥 Pipeline — Página do Lead (detalhe do card)</div>
+<div class="desktop">
+  <div class="browser-bar">
+    <div class="bdot" style="background:#FF5F57"></div>
+    <div class="bdot" style="background:#FFBD2E"></div>
+    <div class="bdot" style="background:#28CA41"></div>
+    <div class="burl">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      orion.app/pipeline/leads/8f3a2c
+    </div>
+  </div>
+
+  <!-- STAGE BAR -->
+  <div class="stage-bar">
+    <!-- breadcrumb -->
+    <div style="display:flex;align-items:center;gap:6px;margin-right:16px;padding-right:16px;border-right:1px solid var(--border)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--stone2)" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      <span style="font-size:11px;color:var(--stone2);cursor:pointer">Pipeline Leads</span>
+    </div>
+
+    <div class="stage-item done">
+      <div class="stage-dot" style="background:var(--green)"></div>
+      Novo Lead
+    </div>
+    <div class="stage-sep"></div>
+    <div class="stage-item active">
+      <div class="stage-dot" style="background:var(--gold)"></div>
+      Qualificado
+    </div>
+    <div class="stage-sep"></div>
+    <div class="stage-item">Proposta enviada</div>
+    <div class="stage-sep"></div>
+    <div class="stage-item">Negociação</div>
+    <div class="stage-sep"></div>
+    <div class="stage-item">Fechamento</div>
+
+    <div class="stage-win">
+      <button class="stage-btn btn-win">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Ganhou
+      </button>
+      <button class="stage-btn btn-lose">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Perdeu
+      </button>
+    </div>
+  </div>
+
+  <!-- PAGE BODY -->
+  <div class="page-body">
+
+    <!-- ═══ COL LEFT ═══ -->
+    <div class="col-left">
+
+      <!-- LEAD INFO -->
+      <div class="card-block">
+        <div class="card-block-header">
+          <div style="display:flex;align-items:center;gap:7px">
+            <div class="card-icon" style="background:rgba(191,160,106,0.12)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--stone2)">Lead</span>
+          </div>
+          <div class="icon-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></div>
+        </div>
+        <div class="lead-name">Anel Solitário · Mariana</div>
+        <div class="lead-created">Criado em 05 Mar, 2026</div>
+        <div class="kv-list">
+          <div class="kv-row">
+            <div class="kv-label">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+              Valor estimado
+            </div>
+            <div class="kv-value" style="color:var(--gold2)">R$ 4.800,00</div>
+          </div>
+          <div class="kv-divider"></div>
+          <div class="kv-row">
+            <div class="kv-label">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Previsão de fechamento
+            </div>
+            <div class="kv-value">15 Mar, 2026</div>
+          </div>
+          <div class="kv-divider"></div>
+          <div class="kv-row">
+            <div class="kv-label">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Responsável
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+              <div style="width:22px;height:22px;border-radius:50%;background:#1a3a1a;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#4CAF82">JS</div>
+              <div class="kv-value">Julia Santos</div>
+            </div>
+          </div>
+          <div class="kv-divider"></div>
+          <div class="kv-row">
+            <div class="kv-label">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Origem
+            </div>
+            <div class="kv-value">Instagram</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div class="card-block" style="padding:0;overflow:hidden">
+        <div class="stats-row">
+          <div class="stat-item">
+            <div class="stat-val">3</div>
+            <div class="stat-label">Dias aberto</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-val">1</div>
+            <div class="stat-label">Dias na fase</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-val" style="color:var(--green)">5</div>
+            <div class="stat-label">Interações</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-val" style="color:var(--amber)">1</div>
+            <div class="stat-label">Dias s/ inter.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAGS -->
+      <div class="card-block">
+        <div class="card-block-header">
+          <div class="card-block-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            Tags
+          </div>
+          <div class="icon-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+        </div>
+        <div class="tags-list">
+          <div class="tag" style="background:rgba(191,160,106,0.12);color:var(--gold2);border:1px solid rgba(191,160,106,0.2)">Ouro branco</div>
+          <div class="tag" style="background:rgba(76,175,130,0.1);color:var(--green);border:1px solid rgba(76,175,130,0.2)">Noivado</div>
+          <div class="tag" style="background:rgba(74,158,255,0.1);color:var(--blue);border:1px solid rgba(74,158,255,0.2)">IG DM</div>
+        </div>
+      </div>
+
+      <!-- CAMPOS PERSONALIZADOS -->
+      <div class="card-block">
+        <div class="card-block-header">
+          <div class="card-block-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Campos Personalizados
+          </div>
+          <div class="icon-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+        </div>
+        <div class="kv-list">
+          <div class="kv-row">
+            <div class="kv-label">Material preferido</div>
+            <div class="kv-value">Ouro branco 18k</div>
+          </div>
+          <div class="kv-divider"></div>
+          <div class="kv-row">
+            <div class="kv-label">Tamanho do aro</div>
+            <div class="kv-value">16</div>
+          </div>
+          <div class="kv-divider"></div>
+          <div class="kv-row">
+            <div class="kv-label">Pedra</div>
+            <div class="kv-value">Diamante · 30pts</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══ COL CENTER ═══ -->
+    <div class="col-center">
+      <div class="center-tabs">
+        <div class="ctab on">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Notas & Atividades
+          <div class="ctab-badge">2</div>
+        </div>
+        <div class="ctab">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          Comunicações
+        </div>
+        <div class="ctab">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Linha do Tempo
+        </div>
+      </div>
+
+      <div class="col-center-body">
+
+        <!-- NOTA INPUT -->
+        <div>
+          <textarea class="nota-area" placeholder="Escreva ou grave o que aconteceu..."></textarea>
+          <div class="nota-footer">
+            <div class="nota-type-select">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              Tipo de atividade
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="nota-footer-right">
+              <div class="mic-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg></div>
+              <button class="save-btn">Salvar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ATIVIDADES -->
+        <div class="activity-card">
+          <div class="activity-icon" style="background:rgba(74,158,255,0.1)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div class="activity-body">
+            <div class="activity-title">Visita à loja agendada</div>
+            <div class="activity-sub">Reunião · 12 Mar, 14:00 · Julia Santos</div>
+          </div>
+          <div class="activity-actions">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2v6h6M21 12A9 9 0 003.51 4.5L3 8M21 22v-6h-6M3 12a9 9 0 0017.49 7.5L21 16"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+          </div>
+        </div>
+
+        <div class="activity-card">
+          <div class="activity-icon" style="background:rgba(191,160,106,0.1)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div class="activity-body">
+            <div class="activity-title">Proposta enviada por WhatsApp</div>
+            <div class="activity-sub">Nota · 08 Mar, 14:28 · Julia Santos</div>
+          </div>
+          <div class="activity-actions">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+          </div>
+        </div>
+
+        <!-- COMUNICAÇÕES -->
+        <div class="comm-section">
+          <div class="comm-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            <span class="comm-title">Comunicações</span>
+          </div>
+          <div class="comm-tabs">
+            <div class="comm-tab on">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              WhatsApp <span class="comm-count" style="color:var(--green)">5</span>
+            </div>
+            <div class="comm-tab">Email <span class="comm-count">0</span></div>
+          </div>
+          <!-- mini preview última msg WA -->
+          <div class="activity-card" style="cursor:pointer">
+            <div class="activity-icon" style="background:rgba(37,211,102,0.08)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            </div>
+            <div class="activity-body">
+              <div class="activity-title">Amei a proposta! Quando posso ir... 😍</div>
+              <div class="activity-sub">Última mensagem · 08 Mar, 14:32 · Ver no Inbox →</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--stone2)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+
+        <!-- LINHA DO TEMPO -->
+        <div class="timeline-section">
+          <div class="timeline-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <span class="timeline-title">Linha do Tempo</span>
+          </div>
+          <div class="timeline-filters" style="margin-bottom:12px">
+            <div class="tf on">Todas</div>
+            <div class="tf">Notas</div>
+            <div class="tf">Atividades</div>
+            <div class="tf">WhatsApp</div>
+            <div class="tf">Email</div>
+          </div>
+          <div class="timeline-list">
+
+            <div class="tl-item">
+              <div class="tl-dot" style="background:rgba(76,175,130,0.1);border-color:rgba(76,175,130,0.2)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <div class="tl-body">
+                <div class="tl-row">
+                  <div class="tl-title">Visita agendada para 12/03</div>
+                  <div class="tl-time">08 Mar, 15:10</div>
+                </div>
+                <div class="tl-sub">Julia Santos</div>
+              </div>
+            </div>
+
+            <div class="tl-item">
+              <div class="tl-dot" style="background:rgba(37,211,102,0.08);border-color:rgba(37,211,102,0.15)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              </div>
+              <div class="tl-body">
+                <div class="tl-row">
+                  <div class="tl-title">Proposta enviada via WhatsApp</div>
+                  <div class="tl-time">08 Mar, 14:28</div>
+                </div>
+                <div class="tl-sub">Proposta_Anel_Mariana.pdf · Julia Santos</div>
+              </div>
+            </div>
+
+            <div class="tl-item">
+              <div class="tl-dot" style="background:rgba(191,160,106,0.08);border-color:rgba(191,160,106,0.2)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div class="tl-body">
+                <div class="tl-row">
+                  <div class="tl-title">Atendimento assumido</div>
+                  <div class="tl-time">08 Mar, 14:21</div>
+                </div>
+                <div class="tl-sub">Julia Santos assumiu a conversa</div>
+              </div>
+            </div>
+
+            <div class="tl-item">
+              <div class="tl-dot" style="background:rgba(191,160,106,0.08);border-color:rgba(191,160,106,0.15)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold3)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </div>
+              <div class="tl-body">
+                <div class="tl-row">
+                  <div class="tl-title">Lead criado · Novo Lead</div>
+                  <div class="tl-time">05 Mar, 09:14</div>
+                </div>
+                <div class="tl-sub">Via Instagram DM · IA SDR</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══ COL RIGHT ═══ -->
+    <div class="col-right">
+
+      <!-- CONTATO -->
+      <div class="card-block">
+        <div class="card-block-header">
+          <div class="card-block-title">
+            <div class="card-icon" style="background:rgba(74,158,255,0.1)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            Contato
+          </div>
+          <div class="icon-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+        </div>
+        <div class="contact-item">
+          <div class="contact-avatar" style="background:linear-gradient(135deg,#2a1f0e,#3d2e16);color:#BFA06A">MS</div>
+          <div class="contact-info">
+            <div class="contact-name">Mariana Silva</div>
+            <div class="contact-detail">+55 21 98888-1234</div>
+            <div class="contact-detail" style="color:var(--stone)">@marianasilva</div>
+          </div>
+          <div class="icon-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+      </div>
+
+      <!-- EMPRESA -->
+      <div class="card-block">
+        <div class="card-block-header">
+          <div class="card-block-title">
+            <div class="card-icon" style="background:rgba(191,160,106,0.1)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            Empresa
+          </div>
+          <div class="icon-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+        </div>
+        <div class="empresa-item">
+          <div class="empresa-logo" style="background:rgba(191,160,106,0.1);color:var(--gold3);font-size:9px">MS</div>
+          <div class="empresa-info">
+            <div class="empresa-name">Studio MS Design</div>
+            <div class="empresa-detail">Arquitetura e Interiores · RJ</div>
+          </div>
+          <div class="icon-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+      </div>
+
+      <!-- ARQUIVOS -->
+      <div class="card-block">
+        <div class="card-block-header">
+          <div class="card-block-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+            Arquivos
+          </div>
+          <div class="icon-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="arquivo-item">
+            <div class="arquivo-icon" style="background:rgba(224,82,82,0.1)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E05252" stroke-width="2"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+            </div>
+            <div class="arquivo-info">
+              <div class="arquivo-name">Proposta_Anel_Mariana.pdf</div>
+              <div class="arquivo-size">PDF · 248 KB · 08/03</div>
+            </div>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--stone2)" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </div>
+          <div class="arquivo-item">
+            <div class="arquivo-icon" style="background:rgba(74,158,255,0.1)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
+            <div class="arquivo-info">
+              <div class="arquivo-name">referencia_anel_WA.jpg</div>
+              <div class="arquivo-size">JPG · 1.2 MB · 08/03</div>
+            </div>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--stone2)" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESPONSÁVEL / EQUIPE -->
+      <div class="card-block">
+        <div class="card-block-header">
+          <div class="card-block-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+            Equipe
+          </div>
+          <div class="icon-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:28px;height:28px;border-radius:50%;background:#1a3a1a;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#4CAF82;flex-shrink:0">JS</div>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:600;color:var(--text)">Julia Santos</div>
+              <div style="font-size:10px;color:var(--stone2)">Responsável</div>
+            </div>
+            <div style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;opacity:0.6">
+            <div style="width:28px;height:28px;border-radius:50%;background:#1a1a3a;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#4A9EFF;flex-shrink:0">ML</div>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:600;color:var(--text)">Marcos Lima</div>
+              <div style="font-size:10px;color:var(--stone2)">Observador</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

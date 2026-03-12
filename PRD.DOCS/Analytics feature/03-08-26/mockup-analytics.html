@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>ORION — Analytics Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#080809;color:#F0EBE3;display:flex;flex-direction:column;align-items:center;padding:40px 20px 80px;gap:40px}
+.section-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#1e1e24;text-align:center}
+
+/* SHELL */
+.shell{width:1140px;background:#0F0F11;border-radius:16px;border:1px solid rgba(255,255,255,0.06);overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,0.7)}
+
+/* TOP BAR */
+.topbar{height:52px;background:#0A0A0C;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;padding:0 24px;gap:16px}
+.topbar-logo{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:700;color:#BFA06A;letter-spacing:2px}
+.topbar-sep{width:1px;height:18px;background:rgba(255,255,255,0.08)}
+.topbar-path{font-size:12px;color:#A09A94;display:flex;align-items:center;gap:6px}
+.topbar-path span{color:#F0EBE3;font-weight:500}
+
+/* LAYOUT */
+.layout{display:flex;min-height:580px}
+
+/* LEFT NAV */
+.leftnav{width:200px;background:#0A0A0C;border-right:1px solid rgba(255,255,255,0.06);padding:16px 0;flex-shrink:0}
+.nav-sec{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#2a2a32;padding:0 16px;margin:14px 0 6px}
+.nav-item{height:36px;padding:0 16px;display:flex;align-items:center;gap:10px;font-size:12px;font-weight:500;color:#A09A94;cursor:pointer}
+.nav-item:hover{color:#F0EBE3}
+.nav-item.on{color:#F0EBE3;background:rgba(191,160,106,0.08);border-left:2px solid #BFA06A;font-weight:600}
+.nav-icon{width:16px;height:16px;opacity:0.6;flex-shrink:0}
+.nav-item.on .nav-icon{opacity:1}
+
+/* CONTENT */
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* PAGE HEADER */
+.page-header{padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.page-title{font-size:20px;font-weight:700;color:#F0EBE3}
+.header-actions{display:flex;gap:10px;align-items:center}
+.period-btn{height:32px;padding:0 14px;border-radius:8px;background:#131316;border:1px solid rgba(255,255,255,0.1);font-size:12px;color:#A09A94;display:flex;align-items:center;gap:6px;cursor:pointer}
+.period-btn.on{border-color:rgba(191,160,106,0.4);color:#BFA06A}
+.export-btn{height:32px;padding:0 14px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:600;color:#A09A94;display:flex;align-items:center;gap:6px}
+
+/* PERIOD DROPDOWN */
+.period-dropdown{position:absolute;top:52px;right:0;background:#1A1A1E;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:6px;width:160px;z-index:10;box-shadow:0 16px 40px rgba(0,0,0,0.6)}
+.period-opt{height:32px;padding:0 10px;border-radius:6px;font-size:12px;color:#A09A94;display:flex;align-items:center;cursor:pointer}
+.period-opt.on{background:rgba(191,160,106,0.1);color:#BFA06A;font-weight:600}
+.period-opt:hover{background:rgba(255,255,255,0.04);color:#F0EBE3}
+
+/* TABS */
+.tab-row{padding:16px 24px 0;display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,0.06);margin-top:4px}
+.tab{height:36px;padding:0 16px;font-size:12px;font-weight:500;color:#A09A94;display:flex;align-items:center;gap:7px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tab.on{color:#F0EBE3;border-bottom-color:#BFA06A;font-weight:700}
+.tab-dot{width:6px;height:6px;border-radius:3px;background:#BFA06A}
+
+/* INNER CONTENT */
+.inner{padding:20px 24px 24px;display:flex;flex-direction:column;gap:16px;overflow-y:auto}
+
+/* KPI ROW */
+.kpi-row{display:grid;gap:12px}
+.kpi-row.cols4{grid-template-columns:repeat(4,1fr)}
+.kpi-row.cols3{grid-template-columns:repeat(3,1fr)}
+.kpi-card{background:#131316;border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px}
+.kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.kpi-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#A09A94}
+.kpi-icon{width:28px;height:28px;border-radius:7px;background:rgba(191,160,106,0.1);display:flex;align-items:center;justify-content:center;color:#BFA06A}
+.kpi-value{font-size:22px;font-weight:700;color:#F0EBE3;margin-bottom:4px;line-height:1}
+.kpi-trend{font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px}
+.trend-up{color:#4CAF82}
+.trend-dn{color:#E05252}
+.trend-neu{color:#A09A94}
+.kpi-sub{font-size:10px;color:#4a4a54;margin-left:4px;font-weight:400}
+
+/* CHART AREA */
+.charts-row{display:grid;gap:12px}
+.charts-row.full{grid-template-columns:1fr}
+.charts-row.split6040{grid-template-columns:3fr 2fr}
+.charts-row.split5050{grid-template-columns:1fr 1fr}
+.chart-card{background:#131316;border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.chart-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#A09A94}
+.chart-legend{display:flex;gap:12px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:#A09A94}
+.legend-dot{width:8px;height:8px;border-radius:4px;flex-shrink:0}
+
+/* SVG CHARTS */
+.chart-svg{width:100%;overflow:visible}
+
+/* TABLE */
+.table-card{background:#131316;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden}
+.table-header{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:space-between}
+.table-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#A09A94}
+.csv-btn{height:26px;padding:0 10px;border-radius:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);font-size:10px;font-weight:600;color:#A09A94;display:flex;align-items:center;gap:4px}
+table{width:100%;border-collapse:collapse}
+th{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#A09A94;padding:8px 14px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.05)}
+td{padding:9px 14px;font-size:12px;color:#F0EBE3;border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,0.02)}
+.td-sub{font-size:10px;color:#A09A94;margin-top:1px}
+.pct-bar-bg{height:4px;border-radius:2px;background:rgba(255,255,255,0.06);margin-top:5px;width:100%}
+.pct-bar-fill{height:4px;border-radius:2px;background:#BFA06A}
+.pill{height:20px;padding:0 8px;border-radius:10px;font-size:9px;font-weight:800;display:inline-flex;align-items:center}
+.pill-g{background:rgba(76,175,130,0.15);color:#4CAF82}
+.pill-r{background:rgba(224,82,82,0.15);color:#E05252}
+.pill-a{background:rgba(240,160,64,0.15);color:#F0A040}
+.pill-gold{background:rgba(191,160,106,0.15);color:#BFA06A}
+.pill-gray{background:rgba(255,255,255,0.06);color:#A09A94}
+
+/* FUNNEL */
+.funnel{display:flex;flex-direction:column;gap:8px}
+.funnel-row{display:flex;align-items:center;gap:10px}
+.funnel-label{font-size:11px;color:#A09A94;width:90px;text-align:right;flex-shrink:0}
+.funnel-bar-wrap{flex:1;height:28px;background:rgba(255,255,255,0.04);border-radius:6px;overflow:hidden;position:relative}
+.funnel-bar{height:100%;border-radius:6px;display:flex;align-items:center;padding:0 10px;transition:width 0.3s}
+.funnel-bar-text{font-size:11px;font-weight:700;color:#F0EBE3;white-space:nowrap}
+.funnel-meta{font-size:10px;color:#A09A94;width:60px;text-align:right;flex-shrink:0}
+.funnel-drop{font-size:10px;color:#E05252;width:44px;flex-shrink:0}
+
+/* HEATMAP */
+.heatmap{display:grid;grid-template-columns:40px repeat(7,1fr);gap:3px}
+.hm-label{font-size:9px;color:#4a4a54;display:flex;align-items:center;justify-content:flex-end;padding-right:6px}
+.hm-head{font-size:9px;color:#4a4a54;text-align:center;padding-bottom:4px}
+.hm-cell{height:22px;border-radius:4px}
+
+/* AGENT BAR */
+.agent-bar-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.agent-bar-row:last-child{border-bottom:none}
+.agent-name{font-size:12px;font-weight:600;color:#F0EBE3;width:110px;flex-shrink:0}
+.agent-bar-wrap{flex:1;height:24px;background:rgba(255,255,255,0.04);border-radius:6px;overflow:hidden;position:relative}
+.agent-bar{height:100%;border-radius:6px;display:flex;align-items:center;padding:0 10px}
+.agent-bar-val{font-size:10px;font-weight:700;color:#0A0A0C}
+.agent-meta{font-size:11px;font-weight:700;width:80px;text-align:right;flex-shrink:0}
+.agent-badge{width:20px;height:20px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;flex-shrink:0}
+.badge-crown{background:#BFA06A;color:#0A0A0C}
+.badge-2{background:#888;color:#fff}
+.badge-3{background:#714e1a;color:#fff}
+
+/* MINI PROGRESS */
+.mini-prog-bg{height:3px;border-radius:2px;background:rgba(255,255,255,0.08);margin-top:3px}
+.mini-prog{height:3px;border-radius:2px}
+
+/* ALERT BANNER */
+.alert-banner{background:rgba(224,82,82,0.08);border:1px solid rgba(224,82,82,0.2);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:12px;color:#E05252}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════
+     TAB VENDAS
+════════════════ -->
+<div class="section-label">Analytics · Tab Vendas</div>
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar-logo">ORION</div>
+    <div class="topbar-sep"></div>
+    <div class="topbar-path">CRM <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg> <span>Analytics</span></div>
+  </div>
+  <div class="layout">
+    <div class="leftnav">
+      <div class="nav-sec">Principal</div>
+      <div class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</div>
+      <div class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Leads</div>
+      <div class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Pipeline</div>
+      <div class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Pedidos</div>
+      <div class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Financeiro</div>
+      <div class="nav-item on"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Analytics</div>
+      <div class="nav-sec">Outros</div>
+      <div class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 5.34L6.75 6.75M19.07 19.07l-1.41-1.41M5.34 18.66l1.41-1.41M1 12h2m18 0h2M12 1v2m0 18v2"/></svg>Ajustes</div>
+    </div>
+    <div class="content">
+      <div class="page-header">
+        <div class="page-title">Analytics</div>
+        <div class="header-actions">
+          <div style="display:flex;gap:4px">
+            <div class="period-btn">7d</div>
+            <div class="period-btn on">30d</div>
+            <div class="period-btn">90d</div>
+            <div class="period-btn">12m</div>
+            <div class="period-btn">Personalizado <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+          </div>
+          <div class="export-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar</div>
+        </div>
+      </div>
+      <div class="tab-row">
+        <div class="tab on"><div class="tab-dot"></div>Vendas</div>
+        <div class="tab">Leads</div>
+        <div class="tab">Produção</div>
+        <div class="tab">Loja</div>
+        <div class="tab">Atendentes</div>
+      </div>
+      <div class="inner">
+
+        <!-- KPIs -->
+        <div class="kpi-row cols4">
+          <div class="kpi-card">
+            <div class="kpi-top"><div class="kpi-label">Faturamento</div><div class="kpi-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div></div>
+            <div class="kpi-value">R$ 84.720</div>
+            <div class="kpi-trend trend-up">↑ 18,4% <span class="kpi-sub">vs mês anterior</span></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-top"><div class="kpi-label">Pedidos</div><div class="kpi-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg></div></div>
+            <div class="kpi-value">47</div>
+            <div class="kpi-trend trend-up">↑ 12,0% <span class="kpi-sub">vs mês anterior</span></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-top"><div class="kpi-label">Ticket Médio</div><div class="kpi-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg></div></div>
+            <div class="kpi-value">R$ 1.802</div>
+            <div class="kpi-trend trend-up">↑ 5,7% <span class="kpi-sub">vs mês anterior</span></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-top"><div class="kpi-label">Cancelamentos</div><div class="kpi-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div></div>
+            <div class="kpi-value">3,2%</div>
+            <div class="kpi-trend trend-up">↓ 1,1pp <span class="kpi-sub">melhorando</span></div>
+          </div>
+        </div>
+
+        <!-- LINECHART FATURAMENTO -->
+        <div class="charts-row full">
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">Faturamento por dia</div>
+              <div class="chart-legend">
+                <div class="legend-item"><div class="legend-dot" style="background:#BFA06A"></div>Este mês</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#2a2a36"></div>Mês anterior</div>
+              </div>
+            </div>
+            <svg class="chart-svg" height="140" viewBox="0 0 1060 140">
+              <!-- Grid -->
+              <line x1="0" y1="20" x2="1060" y2="20" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <line x1="0" y1="60" x2="1060" y2="60" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <line x1="0" y1="100" x2="1060" y2="100" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <text x="0" y="16" font-size="9" fill="#4a4a54">R$6k</text>
+              <text x="0" y="56" font-size="9" fill="#4a4a54">R$4k</text>
+              <text x="0" y="96" font-size="9" fill="#4a4a54">R$2k</text>
+              <!-- Área período anterior -->
+              <path d="M30,110 L80,95 L130,105 L180,80 L230,90 L280,100 L330,75 L380,85 L430,70 L480,80 L530,90 L580,65 L630,75 L680,60 L730,70 L780,55 L830,65 L880,50 L930,60 L980,45 L1030,55 L1030,120 L30,120 Z" fill="rgba(42,42,54,0.4)" stroke="none"/>
+              <path d="M30,110 L80,95 L130,105 L180,80 L230,90 L280,100 L330,75 L380,85 L430,70 L480,80 L530,90 L580,65 L630,75 L680,60 L730,70 L780,55 L830,65 L880,50 L930,60 L980,45 L1030,55" fill="none" stroke="#2a2a36" stroke-width="1.5"/>
+              <!-- Área período atual -->
+              <defs>
+                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#BFA06A" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#BFA06A" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M30,100 L80,80 L130,90 L180,55 L230,65 L280,75 L330,45 L380,55 L430,35 L480,45 L530,60 L580,30 L630,40 L680,25 L730,35 L780,20 L830,30 L880,15 L930,25 L980,10 L1030,20 L1030,120 L30,120 Z" fill="url(#areaGrad)"/>
+              <path d="M30,100 L80,80 L130,90 L180,55 L230,65 L280,75 L330,45 L380,55 L430,35 L480,45 L530,60 L580,30 L630,40 L680,25 L730,35 L780,20 L830,30 L880,15 L930,25 L980,10 L1030,20" fill="none" stroke="#BFA06A" stroke-width="2"/>
+              <!-- Tooltip -->
+              <rect x="850" y="0" width="110" height="44" rx="6" fill="#1A1A1E" stroke="rgba(191,160,106,0.3)" stroke-width="1"/>
+              <text x="860" y="14" font-size="9" fill="#A09A94">29 fev</text>
+              <text x="860" y="28" font-size="12" fill="#D4B87E" font-weight="bold">R$ 3.840</text>
+              <text x="860" y="39" font-size="9" fill="#4CAF82">↑ 22% vs ant.</text>
+              <circle cx="880" cy="15" r="3" fill="#BFA06A" stroke="#0F0F11" stroke-width="2"/>
+              <!-- X labels -->
+              <text x="30" y="136" font-size="9" fill="#4a4a54" text-anchor="middle">01</text>
+              <text x="130" y="136" font-size="9" fill="#4a4a54" text-anchor="middle">05</text>
+              <text x="330" y="136" font-size="9" fill="#4a4a54" text-anchor="middle">11</text>
+              <text x="530" y="136" font-size="9" fill="#4a4a54" text-anchor="middle">17</text>
+              <text x="730" y="136" font-size="9" fill="#4a4a54" text-anchor="middle">23</text>
+              <text x="930" y="136" font-size="9" fill="#4a4a54" text-anchor="middle">29</text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- BARCHARTS -->
+        <div class="charts-row split5050">
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">Receita por canal</div></div>
+            <svg class="chart-svg" height="120" viewBox="0 0 480 120">
+              <line x1="40" y1="0" x2="40" y2="100" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <!-- Bars -->
+              <rect x="70" y="15" width="80" height="75" rx="4" fill="#BFA06A" opacity="0.85"/>
+              <rect x="200" y="45" width="80" height="45" rx="4" fill="#BFA06A" opacity="0.5"/>
+              <rect x="330" y="65" width="80" height="25" rx="4" fill="#BFA06A" opacity="0.3"/>
+              <text x="110" y="10" font-size="10" fill="#D4B87E" text-anchor="middle" font-weight="bold">R$52k</text>
+              <text x="240" y="40" font-size="10" fill="#D4B87E" text-anchor="middle" font-weight="bold">R$24k</text>
+              <text x="370" y="60" font-size="10" fill="#D4B87E" text-anchor="middle" font-weight="bold">R$9k</text>
+              <text x="110" y="115" font-size="9" fill="#4a4a54" text-anchor="middle">Loja Online</text>
+              <text x="240" y="115" font-size="9" fill="#4a4a54" text-anchor="middle">PDV</text>
+              <text x="370" y="115" font-size="9" fill="#4a4a54" text-anchor="middle">WhatsApp</text>
+            </svg>
+          </div>
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">Top 5 categorias</div></div>
+            <svg class="chart-svg" height="120" viewBox="0 0 480 120">
+              <!-- Horizontal bars -->
+              <text x="64" y="18" font-size="9" fill="#A09A94" text-anchor="end">Anéis</text>
+              <rect x="70" y="8" width="240" height="14" rx="3" fill="rgba(191,160,106,0.85)"/>
+              <text x="318" y="18" font-size="9" fill="#D4B87E" font-weight="bold">R$38k</text>
+
+              <text x="64" y="40" font-size="9" fill="#A09A94" text-anchor="end">Colares</text>
+              <rect x="70" y="30" width="170" height="14" rx="3" fill="rgba(191,160,106,0.6)"/>
+              <text x="248" y="40" font-size="9" fill="#D4B87E" font-weight="bold">R$22k</text>
+
+              <text x="64" y="62" font-size="9" fill="#A09A94" text-anchor="end">Brincos</text>
+              <rect x="70" y="52" width="110" height="14" rx="3" fill="rgba(191,160,106,0.45)"/>
+              <text x="188" y="62" font-size="9" fill="#D4B87E" font-weight="bold">R$14k</text>
+
+              <text x="64" y="84" font-size="9" fill="#A09A94" text-anchor="end">Custom</text>
+              <rect x="70" y="74" width="80" height="14" rx="3" fill="rgba(191,160,106,0.3)"/>
+              <text x="158" y="84" font-size="9" fill="#D4B87E" font-weight="bold">R$8k</text>
+
+              <text x="64" y="106" font-size="9" fill="#A09A94" text-anchor="end">Pulseiras</text>
+              <rect x="70" y="96" width="20" height="14" rx="3" fill="rgba(191,160,106,0.15)"/>
+              <text x="98" y="106" font-size="9" fill="#D4B87E" font-weight="bold">R$2k</text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- TABELA TOP PRODUTOS -->
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">Top 10 produtos mais vendidos</div>
+            <div class="csv-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</div>
+          </div>
+          <table>
+            <thead><tr><th>#</th><th>Produto</th><th>Categoria</th><th>Qtd</th><th>Receita</th><th>% do total</th></tr></thead>
+            <tbody>
+              <tr><td style="color:#BFA06A;font-weight:800">1</td><td><div>Anel Solitário OB 18k</div><div class="td-sub">OB-SOL-18K-001</div></td><td><span class="pill pill-gold">Anéis</span></td><td>8</td><td style="font-weight:700;color:#D4B87E">R$ 38.400</td><td><div>45,3%</div><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:45%"></div></div></td></tr>
+              <tr><td style="color:#888;font-weight:800">2</td><td><div>Par Aliança Ouro 18k</div><div class="td-sub">AL-18K-PAR-001</div></td><td><span class="pill pill-gold">Anéis</span></td><td>5</td><td style="font-weight:700;color:#D4B87E">R$ 16.000</td><td><div>18,9%</div><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:19%"></div></div></td></tr>
+              <tr><td style="color:#714e1a;font-weight:800">3</td><td><div>Colar Geométrico 18k</div><div class="td-sub">CL-GEO-18K-001</div></td><td><span class="pill pill-gray">Colares</span></td><td>4</td><td style="font-weight:700;color:#D4B87E">R$ 8.400</td><td><div>9,9%</div><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:10%"></div></div></td></tr>
+              <tr><td style="color:#4a4a54;font-weight:800">4</td><td><div>Brinco Star Diamante</div><div class="td-sub">BR-STAR-DIA-001</div></td><td><span class="pill pill-gray">Brincos</span></td><td>3</td><td style="font-weight:700;color:#D4B87E">R$ 5.670</td><td><div>6,7%</div><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:7%"></div></div></td></tr>
+              <tr><td style="color:#4a4a54;font-weight:800">5</td><td><div>Pulseira Elo Prata 925</div><div class="td-sub">PU-ELO-925-001</div></td><td><span class="pill pill-gray">Pulseiras</span></td><td>7</td><td style="font-weight:700;color:#D4B87E">R$ 5.180</td><td><div>6,1%</div><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:6%"></div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════
+     TAB LEADS
+════════════════ -->
+<div class="section-label">Analytics · Tab Leads</div>
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar-logo">ORION</div><div class="topbar-sep"></div>
+    <div class="topbar-path">CRM <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg> <span>Analytics · Leads</span></div>
+  </div>
+  <div class="layout">
+    <div class="leftnav">
+      <div class="nav-sec">Principal</div>
+      <div class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</div>
+      <div class="nav-item on"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Analytics</div>
+    </div>
+    <div class="content">
+      <div class="page-header">
+        <div class="page-title">Analytics</div>
+        <div class="header-actions">
+          <div style="display:flex;gap:4px"><div class="period-btn">7d</div><div class="period-btn on">30d</div><div class="period-btn">90d</div><div class="period-btn">12m</div></div>
+        </div>
+      </div>
+      <div class="tab-row">
+        <div class="tab">Vendas</div>
+        <div class="tab on"><div class="tab-dot"></div>Leads</div>
+        <div class="tab">Produção</div>
+        <div class="tab">Loja</div>
+        <div class="tab">Atendentes</div>
+      </div>
+      <div class="inner">
+        <!-- KPIs -->
+        <div class="kpi-row cols4">
+          <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Leads Criados</div></div><div class="kpi-value">143</div><div class="kpi-trend trend-up">↑ 24,3%</div></div>
+          <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Taxa Conversão</div></div><div class="kpi-value">12,6%</div><div class="kpi-trend trend-up">↑ 2,1pp</div></div>
+          <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Tempo Médio</div></div><div class="kpi-value">11,4d</div><div class="kpi-trend trend-dn">↑ 1,2d <span class="kpi-sub">piorando</span></div></div>
+          <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Receita Leads</div></div><div class="kpi-value">R$ 62k</div><div class="kpi-trend trend-up">↑ 31,0%</div></div>
+        </div>
+
+        <div class="charts-row split6040">
+          <!-- ORIGENS -->
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">Leads por origem</div></div>
+            <svg class="chart-svg" height="140" viewBox="0 0 640 140">
+              <text x="74" y="22" font-size="9" fill="#A09A94" text-anchor="end">WhatsApp</text>
+              <rect x="80" y="12" width="310" height="16" rx="3" fill="rgba(191,160,106,0.8)"/>
+              <text x="398" y="22" font-size="9" fill="#D4B87E" font-weight="bold">68</text>
+
+              <text x="74" y="48" font-size="9" fill="#A09A94" text-anchor="end">Loja</text>
+              <rect x="80" y="38" width="195" height="16" rx="3" fill="rgba(191,160,106,0.55)"/>
+              <text x="283" y="48" font-size="9" fill="#D4B87E" font-weight="bold">43</text>
+
+              <text x="74" y="74" font-size="9" fill="#A09A94" text-anchor="end">Indicação</text>
+              <rect x="80" y="64" width="120" height="16" rx="3" fill="rgba(191,160,106,0.4)"/>
+              <text x="208" y="74" font-size="9" fill="#D4B87E" font-weight="bold">24</text>
+
+              <text x="74" y="100" font-size="9" fill="#A09A94" text-anchor="end">Manual</text>
+              <rect x="80" y="90" width="50" height="16" rx="3" fill="rgba(191,160,106,0.25)"/>
+              <text x="138" y="100" font-size="9" fill="#D4B87E" font-weight="bold">8</text>
+
+              <text x="74" y="126" font-size="9" fill="#A09A94" text-anchor="end">Import</text>
+              <rect x="80" y="116" width="18" height="16" rx="3" fill="rgba(191,160,106,0.12)"/>
+              <text x="106" y="126" font-size="9" fill="#D4B87E" font-weight="bold">—</text>
+            </svg>
+          </div>
+
+          <!-- FUNIL -->
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">Funil de conversão</div></div>
+            <div class="funnel">
+              <div class="funnel-row">
+                <div class="funnel-label">Novo</div>
+                <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:100%;background:rgba(191,160,106,0.7)"><div class="funnel-bar-text">143</div></div></div>
+                <div class="funnel-meta">100%</div>
+                <div class="funnel-drop"></div>
+              </div>
+              <div class="funnel-row">
+                <div class="funnel-label">Qualificado</div>
+                <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:72%;background:rgba(191,160,106,0.55)"><div class="funnel-bar-text">103</div></div></div>
+                <div class="funnel-meta">72%</div>
+                <div class="funnel-drop" style="color:#E05252">-28%</div>
+              </div>
+              <div class="funnel-row">
+                <div class="funnel-label">Proposta</div>
+                <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:48%;background:rgba(191,160,106,0.4)"><div class="funnel-bar-text">69</div></div></div>
+                <div class="funnel-meta">48%</div>
+                <div class="funnel-drop" style="color:#E05252">-33%</div>
+              </div>
+              <div class="funnel-row">
+                <div class="funnel-label">Fechado</div>
+                <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:12.6%;background:rgba(76,175,130,0.7)"><div class="funnel-bar-text">18</div></div></div>
+                <div class="funnel-meta" style="color:#4CAF82">12,6%</div>
+                <div class="funnel-drop" style="color:#E05252">-74%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HEATMAP -->
+        <div class="chart-card">
+          <div class="chart-header"><div class="chart-title">Pico de criação de leads · Hora × Dia da semana</div></div>
+          <div class="heatmap">
+            <div class="hm-label"></div>
+            <div class="hm-head">Seg</div><div class="hm-head">Ter</div><div class="hm-head">Qua</div><div class="hm-head">Qui</div><div class="hm-head">Sex</div><div class="hm-head">Sáb</div><div class="hm-head">Dom</div>
+            <!-- 8h --> <div class="hm-label">08h</div><div class="hm-cell" style="background:rgba(191,160,106,0.15)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.2)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.1)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.18)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.12)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.05)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.04)"></div>
+            <!-- 10h --> <div class="hm-label">10h</div><div class="hm-cell" style="background:rgba(191,160,106,0.45)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.6)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.4)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.5)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.38)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.3)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.1)"></div>
+            <!-- 12h --> <div class="hm-label">12h</div><div class="hm-cell" style="background:rgba(191,160,106,0.3)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.35)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.28)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.32)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.25)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.5)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.42)"></div>
+            <!-- 14h --> <div class="hm-label">14h</div><div class="hm-cell" style="background:rgba(191,160,106,0.2)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.25)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.22)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.18)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.2)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.6)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.55)"></div>
+            <!-- 18h --> <div class="hm-label">18h</div><div class="hm-cell" style="background:rgba(191,160,106,0.75)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.85)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.7)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.8)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.9)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.65)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.4)"></div>
+            <!-- 20h --> <div class="hm-label">20h</div><div class="hm-cell" style="background:rgba(191,160,106,0.55)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.6)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.5)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.55)"></div><div class="hm-cell" style="background:rgba(191,160,106,1)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.75)"></div><div class="hm-cell" style="background:rgba(191,160,106,0.3)"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:10px;color:#4a4a54">
+            Baixo
+            <div style="display:flex;gap:3px">
+              <div style="width:16px;height:8px;border-radius:2px;background:rgba(191,160,106,0.1)"></div>
+              <div style="width:16px;height:8px;border-radius:2px;background:rgba(191,160,106,0.3)"></div>
+              <div style="width:16px;height:8px;border-radius:2px;background:rgba(191,160,106,0.5)"></div>
+              <div style="width:16px;height:8px;border-radius:2px;background:rgba(191,160,106,0.75)"></div>
+              <div style="width:16px;height:8px;border-radius:2px;background:rgba(191,160,106,1)"></div>
+            </div>
+            Alto
+            <span style="margin-left:12px;color:#BFA06A">● Pico: Sexta 20h</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════
+     TAB ATENDENTES
+════════════════ -->
+<div class="section-label">Analytics · Tab Atendentes</div>
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar-logo">ORION</div><div class="topbar-sep"></div>
+    <div class="topbar-path">CRM <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg> <span>Analytics · Atendentes</span></div>
+  </div>
+  <div class="layout">
+    <div class="leftnav">
+      <div class="nav-sec">Principal</div>
+      <div class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</div>
+      <div class="nav-item on"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Analytics</div>
+    </div>
+    <div class="content">
+      <div class="page-header">
+        <div class="page-title">Analytics</div>
+        <div class="header-actions">
+          <div style="display:flex;gap:4px"><div class="period-btn">7d</div><div class="period-btn on">30d</div><div class="period-btn">90d</div><div class="period-btn">12m</div></div>
+          <div class="export-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Folha CSV</div>
+        </div>
+      </div>
+      <div class="tab-row">
+        <div class="tab">Vendas</div>
+        <div class="tab">Leads</div>
+        <div class="tab">Produção</div>
+        <div class="tab">Loja</div>
+        <div class="tab on"><div class="tab-dot"></div>Atendentes</div>
+      </div>
+      <div class="inner">
+        <!-- KPIs -->
+        <div class="kpi-row cols3">
+          <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Atendentes Ativos</div></div><div class="kpi-value">5 / 6</div><div class="kpi-trend trend-neu">→ igual ao mês anterior</div></div>
+          <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Melhor Taxa</div></div><div class="kpi-value">🏆 Juliana — 21%</div><div class="kpi-trend trend-up">↑ 3,2pp vs anterior</div></div>
+          <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Meta Atingida</div></div><div class="kpi-value">3 / 5</div><div class="kpi-trend trend-dn">↓ 1 atendente vs anterior</div></div>
+        </div>
+
+        <!-- RANKING BAR CHART -->
+        <div class="chart-card">
+          <div class="chart-header"><div class="chart-title">Ranking por faturamento gerado · Este mês</div><div style="font-size:10px;color:#4a4a54"><span style="color:#BFA06A">■</span> Acima da meta &nbsp; <span style="color:#333338">■</span> Abaixo da meta</div></div>
+          <div class="funnel" style="gap:12px">
+            <div class="agent-bar-row">
+              <div class="agent-badge badge-crown">1</div>
+              <div class="agent-name">Juliana S.</div>
+              <div class="agent-bar-wrap"><div class="agent-bar" style="width:88%;background:#BFA06A"><div class="agent-bar-val">R$ 28.400</div></div></div>
+              <div class="agent-meta" style="color:#BFA06A">21% conv.</div>
+            </div>
+            <div class="agent-bar-row">
+              <div class="agent-badge badge-2">2</div>
+              <div class="agent-name">Rafael M.</div>
+              <div class="agent-bar-wrap"><div class="agent-bar" style="width:70%;background:#BFA06A"><div class="agent-bar-val">R$ 22.800</div></div></div>
+              <div class="agent-meta" style="color:#BFA06A">17% conv.</div>
+            </div>
+            <div class="agent-bar-row">
+              <div class="agent-badge badge-3">3</div>
+              <div class="agent-name">Beatriz L.</div>
+              <div class="agent-bar-wrap"><div class="agent-bar" style="width:52%;background:#BFA06A"><div class="agent-bar-val">R$ 16.900</div></div></div>
+              <div class="agent-meta" style="color:#BFA06A">14% conv.</div>
+            </div>
+            <div class="agent-bar-row">
+              <div class="agent-badge" style="background:#1a1a22;color:#A09A94">4</div>
+              <div class="agent-name">Carlos P.</div>
+              <div class="agent-bar-wrap"><div class="agent-bar" style="width:32%;background:#2a2a36"><div class="agent-bar-val" style="color:#A09A94">R$ 10.400</div></div></div>
+              <div class="agent-meta" style="color:#A09A94">9% conv.</div>
+            </div>
+            <div class="agent-bar-row">
+              <div class="agent-badge" style="background:#1a1a22;color:#A09A94">5</div>
+              <div class="agent-name">Fernanda T.</div>
+              <div class="agent-bar-wrap"><div class="agent-bar" style="width:18%;background:#2a2a36"><div class="agent-bar-val" style="color:#A09A94">R$ 6.220</div></div></div>
+              <div class="agent-meta" style="color:#E05252">6% conv.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TABELA PERFORMANCE -->
+        <div class="table-card">
+          <div class="table-header"><div class="table-title">Performance individual</div><div class="csv-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Folha CSV</div></div>
+          <table>
+            <thead><tr><th>Atendente</th><th>Atribuídos</th><th>Ganhos</th><th>Perdidos</th><th>Taxa</th><th>Faturamento</th><th>Comissão (5%)</th><th>Meta</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><div style="font-weight:600">Juliana S.</div></td>
+                <td>86</td>
+                <td style="color:#4CAF82;font-weight:700">18</td>
+                <td style="color:#E05252">12</td>
+                <td><span class="pill pill-g">21%</span></td>
+                <td style="color:#D4B87E;font-weight:700">R$ 28.400</td>
+                <td>R$ 1.420</td>
+                <td><div style="font-size:10px;color:#4CAF82">✓ Atingida</div><div class="mini-prog-bg"><div class="mini-prog" style="width:94%;background:#4CAF82"></div></div></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:600">Rafael M.</div></td>
+                <td>72</td>
+                <td style="color:#4CAF82;font-weight:700">12</td>
+                <td style="color:#E05252">14</td>
+                <td><span class="pill pill-g">17%</span></td>
+                <td style="color:#D4B87E;font-weight:700">R$ 22.800</td>
+                <td>R$ 1.140</td>
+                <td><div style="font-size:10px;color:#4CAF82">✓ Atingida</div><div class="mini-prog-bg"><div class="mini-prog" style="width:76%;background:#4CAF82"></div></div></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:600">Beatriz L.</div></td>
+                <td>58</td>
+                <td style="color:#4CAF82;font-weight:700">8</td>
+                <td style="color:#E05252">10</td>
+                <td><span class="pill pill-a">14%</span></td>
+                <td style="color:#D4B87E;font-weight:700">R$ 16.900</td>
+                <td>R$ 845</td>
+                <td><div style="font-size:10px;color:#4CAF82">✓ Atingida</div><div class="mini-prog-bg"><div class="mini-prog" style="width:56%;background:#4CAF82"></div></div></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:600">Carlos P.</div></td>
+                <td>47</td>
+                <td style="color:#4CAF82;font-weight:700">4</td>
+                <td style="color:#E05252">18</td>
+                <td><span class="pill pill-r">9%</span></td>
+                <td style="color:#A09A94;font-weight:700">R$ 10.400</td>
+                <td style="color:#A09A94">R$ 520</td>
+                <td><div style="font-size:10px;color:#F0A040">⚠ 52% da meta</div><div class="mini-prog-bg"><div class="mini-prog" style="width:52%;background:#F0A040"></div></div></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:600">Fernanda T.</div></td>
+                <td>32</td>
+                <td style="color:#4CAF82;font-weight:700">2</td>
+                <td style="color:#E05252">16</td>
+                <td><span class="pill pill-r">6%</span></td>
+                <td style="color:#A09A94;font-weight:700">R$ 6.220</td>
+                <td style="color:#A09A94">R$ 311</td>
+                <td><div style="font-size:10px;color:#E05252">✗ 31% da meta</div><div class="mini-prog-bg"><div class="mini-prog" style="width:31%;background:#E05252"></div></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

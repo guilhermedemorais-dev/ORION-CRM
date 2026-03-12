@@ -11,7 +11,6 @@ const createFinancialLaunchSchema = z.object({
     valor: z.string().trim().min(1),
     data: z.string().date(),
     categoria: z.string().trim().min(2).max(100),
-    comprovante: z.string().trim().url().max(500).optional().or(z.literal('')),
 });
 
 function parseCurrencyToCents(value: string): number | null {
@@ -49,7 +48,6 @@ export async function createFinancialLaunchAction(formData: FormData) {
         valor: formData.get('valor'),
         data: formData.get('data'),
         categoria: formData.get('categoria'),
-        comprovante: formData.get('comprovante'),
     });
 
     if (!parsed.success) {
@@ -61,8 +59,17 @@ export async function createFinancialLaunchAction(formData: FormData) {
         redirect('/financeiro?error=Valor%20inv%C3%A1lido%20para%20o%20lan%C3%A7amento.');
     }
 
+    const receiptFile = formData.get('comprovante');
+    const hasReceiptFile = receiptFile instanceof File && receiptFile.size > 0;
+
+    if (hasReceiptFile && receiptFile.size > 5 * 1024 * 1024) {
+        redirect('/financeiro?error=Arquivo%20excede%20o%20limite%20de%205MB.');
+    }
+
+    let createdEntry: { id: string } | null = null;
+
     try {
-        await apiRequest('/financeiro/lancamentos', {
+        createdEntry = await apiRequest<{ id: string }>('/financeiro/lancamentos', {
             method: 'POST',
             body: JSON.stringify({
                 tipo: parsed.data.tipo,
@@ -70,12 +77,27 @@ export async function createFinancialLaunchAction(formData: FormData) {
                 valor: amountCents,
                 data: parsed.data.data,
                 categoria: parsed.data.categoria,
-                comprovante: parsed.data.comprovante || undefined,
             }),
         });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Falha ao registrar lançamento.';
         redirect(`/financeiro?error=${encodeURIComponent(message)}`);
+    }
+
+    if (hasReceiptFile && createdEntry) {
+        try {
+            const uploadData = new FormData();
+            uploadData.set('file', receiptFile, receiptFile.name || 'comprovante');
+
+            await apiRequest(`/financeiro/lancamentos/${createdEntry.id}/comprovante`, {
+                method: 'POST',
+                body: uploadData,
+            });
+        } catch (error) {
+            revalidatePath('/financeiro');
+            const message = error instanceof Error ? error.message : 'Falha ao enviar comprovante.';
+            redirect(`/financeiro?error=${encodeURIComponent(`Lançamento criado, mas o comprovante falhou: ${message}`)}`);
+        }
     }
 
     revalidatePath('/financeiro');

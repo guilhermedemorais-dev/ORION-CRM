@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import type { NextFunction, Request, Response } from 'express';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import multer from 'multer';
 import { z } from 'zod';
+import { env } from '../config/env.js';
 import { query } from '../db/pool.js';
 import { AppError } from '../lib/errors.js';
 import { authenticate } from '../middleware/auth.js';
@@ -27,6 +31,14 @@ const listFinancialSchema = z.object({
 const financialParamsSchema = z.object({
     id: z.string().uuid(),
 });
+
+const receiptUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: Math.min(env().MAX_FILE_SIZE_MB, 5) * 1024 * 1024,
+        files: 1,
+    },
+}).single('file');
 
 const createExpenseSchema = z.object({
     type: z.literal('SAIDA'),
@@ -94,6 +106,49 @@ function mapFinancialEntry(row: FinancialEntryRow) {
             name: row.created_by_user_name,
         },
     };
+}
+
+function runReceiptUpload(req: Request, res: Response): Promise<void> {
+    return new Promise((resolve, reject) => {
+        receiptUpload(req, res, (err) => {
+            if (!err) {
+                resolve();
+                return;
+            }
+
+            if (err instanceof multer.MulterError) {
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    reject(new AppError(413, 'PAYLOAD_TOO_LARGE', 'Arquivo excede o limite de 5MB.'));
+                    return;
+                }
+
+                reject(AppError.badRequest('Upload inválido do comprovante.'));
+                return;
+            }
+
+            reject(err);
+        });
+    });
+}
+
+function detectReceiptFile(buffer: Buffer): { ext: 'png' | 'jpg' | 'pdf'; mimeType: string } | null {
+    const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const jpgSignature = Buffer.from([0xff, 0xd8, 0xff]);
+    const pdfSignature = Buffer.from('%PDF-');
+
+    if (buffer.length >= pngSignature.length && buffer.subarray(0, pngSignature.length).equals(pngSignature)) {
+        return { ext: 'png', mimeType: 'image/png' };
+    }
+
+    if (buffer.length >= jpgSignature.length && buffer.subarray(0, jpgSignature.length).equals(jpgSignature)) {
+        return { ext: 'jpg', mimeType: 'image/jpeg' };
+    }
+
+    if (buffer.length >= pdfSignature.length && buffer.subarray(0, pdfSignature.length).equals(pdfSignature)) {
+        return { ext: 'pdf', mimeType: 'application/pdf' };
+    }
+
+    return null;
 }
 
 async function fetchFinancialEntry(financialEntryId: string): Promise<FinancialEntryRow | null> {
@@ -372,6 +427,87 @@ router.post(
             }
 
             res.status(201).json(mapFinancialEntry(entry as FinancialEntryRow));
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+router.post(
+    '/lancamentos/:id/comprovante',
+    authenticate,
+    requireRole(['ADMIN', 'FINANCEIRO']),
+    rateLimit({ windowMs: 60 * 1000, max: 20, name: 'financial-launches-receipt-upload' }),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            await runReceiptUpload(req, res);
+
+            if (!req.file?.buffer) {
+                next(AppError.badRequest('Arquivo obrigatório.'));
+                return;
+            }
+
+            const parsed = financialParamsSchema.safeParse(req.params);
+            if (!parsed.success) {
+                next(AppError.badRequest('Lançamento inválido para upload do comprovante.'));
+                return;
+            }
+
+            const entry = await fetchFinancialEntry(parsed.data.id);
+            if (!entry) {
+                next(AppError.notFound('Lançamento financeiro não encontrado.'));
+                return;
+            }
+
+            const fileInfo = detectReceiptFile(req.file.buffer);
+            if (!fileInfo) {
+                next(AppError.badRequest('Formato inválido. Envie PNG, JPG ou PDF com até 5MB.'));
+                return;
+            }
+
+            const safeBaseName = path.parse(req.file.originalname || 'comprovante')
+                .name
+                .replace(/[^a-zA-Z0-9_-]/g, '_')
+                .slice(0, 80) || 'comprovante';
+            const filename = `${Date.now()}-${safeBaseName}.${fileInfo.ext}`;
+            const dir = path.join(env().UPLOAD_PATH, 'financeiro', entry.id);
+            const diskPath = path.join(dir, filename);
+            const publicPath = `/uploads/financeiro/${entry.id}/${filename}`;
+
+            await mkdir(dir, { recursive: true });
+            await writeFile(diskPath, req.file.buffer);
+
+            await query(
+                `UPDATE financial_entries
+                 SET receipt_url = $1
+                 WHERE id = $2`,
+                [publicPath, entry.id]
+            );
+
+            const updated = await fetchFinancialEntry(entry.id);
+
+            if (req.user) {
+                await createAuditLog({
+                    userId: req.user.id,
+                    action: 'UPLOAD',
+                    entityType: 'financial_entries',
+                    entityId: entry.id,
+                    oldValue: {
+                        receipt_url: entry.receipt_url,
+                    },
+                    newValue: {
+                        receipt_url: publicPath,
+                        mime_type: fileInfo.mimeType,
+                        file_size: req.file.size,
+                    },
+                    req,
+                });
+            }
+
+            res.status(201).json({
+                receipt_url: publicPath,
+                entry: updated ? mapFinancialEntry(updated) : mapFinancialEntry({ ...entry, receipt_url: publicPath }),
+            });
         } catch (error) {
             next(error);
         }
