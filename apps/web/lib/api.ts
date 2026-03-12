@@ -111,7 +111,7 @@ export interface InboxMessageRecord {
     meta_message_id: string | null;
     external_id: string | null;
     direction: 'INBOUND' | 'OUTBOUND';
-    type: 'TEXT' | 'IMAGE' | 'DOCUMENT' | 'AUDIO' | 'TEMPLATE';
+    type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'AUDIO' | 'STICKER' | 'LOCATION' | 'TEMPLATE' | 'IDENTIFICATION';
     content: string | null;
     media_url: string | null;
     media_mime: string | null;
@@ -124,7 +124,10 @@ export interface InboxMessageRecord {
 }
 
 export interface InboxConversationResponse {
-    conversation: Omit<InboxConversationRecord, 'unread_count'>;
+    conversation: Omit<InboxConversationRecord, 'unread_count'> & {
+        unread_count: number;
+        internal_note: string | null;
+    };
     messages: InboxMessageRecord[];
 }
 

@@ -111,6 +111,7 @@ export default async function InboxPage({
                         currentUser={session.user}
                         quickReplies={quickReplyResponse.data}
                         attendants={attendants}
+                        initialNote={selectedThread.conversation.internal_note}
                     />
                 ) : (
                     <InboxEmptyState />

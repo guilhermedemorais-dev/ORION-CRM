@@ -105,3 +105,35 @@ export async function createFinancialLaunchAction(formData: FormData) {
 }
 
 export const createExpenseAction = createFinancialLaunchAction;
+
+export async function uploadFinancialReceiptAction(formData: FormData) {
+    const idResult = z.string().uuid().safeParse(formData.get('id'));
+    if (!idResult.success) {
+        redirect('/financeiro?error=Lança​mento%20inválido.');
+    }
+
+    const file = formData.get('file');
+    if (!(file instanceof File) || file.size === 0) {
+        redirect('/financeiro?error=Arquivo%20obrigatório.');
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        redirect('/financeiro?error=Arquivo%20excede%20o%20limite%20de%205MB.');
+    }
+
+    try {
+        const uploadData = new FormData();
+        uploadData.set('file', file, file.name || 'comprovante');
+
+        await apiRequest(`/financeiro/lancamentos/${idResult.data}/comprovante`, {
+            method: 'POST',
+            body: uploadData,
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Falha ao enviar comprovante.';
+        redirect(`/financeiro?error=${encodeURIComponent(message)}`);
+    }
+
+    revalidatePath('/financeiro');
+    redirect('/financeiro');
+}

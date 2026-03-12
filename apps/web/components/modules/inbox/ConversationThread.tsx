@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight, MoreHorizontal, Phone, Repeat2, Workflow } from 'lucide-react';
 import {
     assignConversationAction,
     closeConversationAction,
     handoffConversationAction,
+    markConversationReadAction,
+    saveConversationNoteAction,
 } from '@/app/(crm)/inbox/actions';
 import type { AdminUser } from '@/lib/ajustes-types';
 import type { InboxConversationResponse, QuickReplyRecord } from '@/lib/api';
@@ -24,6 +26,7 @@ interface ConversationThreadProps {
     currentUser: CurrentUserView;
     quickReplies: QuickReplyRecord[];
     attendants: AdminUser[];
+    initialNote?: string | null;
 }
 
 const channelLabel: Record<InboxConversationResponse['conversation']['channel'], string> = {
@@ -115,12 +118,38 @@ export function ConversationThread({
     currentUser,
     quickReplies,
     attendants,
+    initialNote,
 }: ConversationThreadProps) {
     const [hasMounted, setHasMounted] = useState(false);
+    const [note, setNote] = useState(initialNote ?? '');
+    const [noteSaving, setNoteSaving] = useState(false);
+    const noteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         setHasMounted(true);
     }, []);
+
+    // Mark as read on mount
+    useEffect(() => {
+        if (thread.conversation.unread_count > 0) {
+            void markConversationReadAction(thread.conversation.id);
+        }
+    }, [thread.conversation.id, thread.conversation.unread_count]);
+
+    const handleNoteChange = useCallback((value: string) => {
+        setNote(value);
+
+        if (noteDebounceRef.current) {
+            clearTimeout(noteDebounceRef.current);
+        }
+
+        noteDebounceRef.current = setTimeout(() => {
+            setNoteSaving(true);
+            void saveConversationNoteAction(thread.conversation.id, value).finally(() => {
+                setNoteSaving(false);
+            });
+        }, 800);
+    }, [thread.conversation.id]);
 
     const displayName = thread.conversation.contact_name
         ?? thread.conversation.customer?.name
@@ -465,10 +494,19 @@ export function ConversationThread({
                         <div className="h-px bg-white/5" />
 
                         <section>
-                            <div className="mb-3 text-[9px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-text-muted)]">
-                                Nota interna
+                            <div className="mb-1.5 flex items-center justify-between gap-2">
+                                <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-text-muted)]">
+                                    Nota interna
+                                </div>
+                                {noteSaving ? (
+                                    <span className="text-[9px] text-[color:var(--orion-text-muted)]">salvando…</span>
+                                ) : note.trim().length > 0 ? (
+                                    <span className="text-[9px] text-emerald-400">salvo</span>
+                                ) : null}
                             </div>
                             <textarea
+                                value={note}
+                                onChange={(e) => handleNoteChange(e.target.value)}
                                 placeholder="Anotação privada sobre este cliente..."
                                 className="min-h-[84px] w-full resize-none rounded-lg border border-white/10 bg-[color:var(--orion-elevated)] px-3 py-2 text-[11px] leading-5 text-[color:var(--orion-text-secondary)] outline-none transition placeholder:text-[color:var(--orion-text-muted)] focus:border-brand-gold/30"
                             />

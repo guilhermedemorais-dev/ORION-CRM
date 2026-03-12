@@ -1,4 +1,4 @@
-import { Check, FileText, Play, UserRound } from 'lucide-react';
+import { Check, ExternalLink, FileText, Image, MapPin, Play, UserRound } from 'lucide-react';
 import type { InboxMessageRecord } from '@/lib/api';
 import { cn, ORION_TIME_ZONE } from '@/lib/utils';
 
@@ -129,12 +129,152 @@ export function MessageBubble({ message }: { message: InboxMessageRecord }) {
                             <div className="truncate text-[11px] font-semibold text-[color:var(--orion-text)]">
                                 {message.content ?? 'Documento enviado'}
                             </div>
-                            <div className="text-[10px] text-[color:var(--orion-text-secondary)]">Documento</div>
+                            {message.media_url ? (
+                                <a
+                                    href={message.media_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 text-[10px] text-brand-gold hover:underline"
+                                >
+                                    <ExternalLink className="h-2.5 w-2.5" />
+                                    Abrir
+                                </a>
+                            ) : (
+                                <div className="text-[10px] text-[color:var(--orion-text-secondary)]">Documento</div>
+                            )}
                         </div>
                     </div>
                     <div className={cn('mt-1 flex items-center gap-1 text-[10px] text-[color:var(--orion-text-muted)]', !isInbound && 'justify-end')}>
                         <span>{formatMessageTime(message.created_at)}</span>
                         {renderStatusCheck(message)}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (message.type === 'IMAGE') {
+        return (
+            <div className={cn('flex', isInbound ? 'justify-start' : 'justify-end')}>
+                <div className="max-w-[72%]">
+                    {message.media_url ? (
+                        <a href={message.media_url} target="_blank" rel="noreferrer" className="block">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={message.media_url}
+                                alt={message.content ?? 'Imagem'}
+                                className="max-h-[320px] max-w-[280px] rounded-[10px] border border-white/10 object-cover"
+                            />
+                        </a>
+                    ) : (
+                        <div className="flex h-[120px] w-[200px] items-center justify-center rounded-[10px] border border-white/10 bg-[color:var(--orion-elevated)]">
+                            <Image className="h-8 w-8 text-[color:var(--orion-text-muted)]" />
+                        </div>
+                    )}
+                    {message.content ? (
+                        <p className="mt-1 text-[12px] leading-5 text-[color:var(--orion-text-secondary)]">{message.content}</p>
+                    ) : null}
+                    <div className={cn('mt-1 flex items-center gap-1 text-[10px] text-[color:var(--orion-text-muted)]', !isInbound && 'justify-end')}>
+                        <span>{formatMessageTime(message.created_at)}</span>
+                        {renderStatusCheck(message)}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (message.type === 'VIDEO') {
+        return (
+            <div className={cn('flex', isInbound ? 'justify-start' : 'justify-end')}>
+                <div className="max-w-[72%]">
+                    {message.media_url ? (
+                        <video
+                            src={message.media_url}
+                            controls
+                            className="max-h-[320px] max-w-[280px] rounded-[10px] border border-white/10 bg-black"
+                        />
+                    ) : (
+                        <div className="flex h-[120px] w-[200px] items-center justify-center rounded-[10px] border border-white/10 bg-[color:var(--orion-elevated)]">
+                            <Play className="h-8 w-8 text-[color:var(--orion-text-muted)]" />
+                        </div>
+                    )}
+                    <div className={cn('mt-1 flex items-center gap-1 text-[10px] text-[color:var(--orion-text-muted)]', !isInbound && 'justify-end')}>
+                        <span>{formatMessageTime(message.created_at)}</span>
+                        {renderStatusCheck(message)}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (message.type === 'STICKER') {
+        return (
+            <div className={cn('flex', isInbound ? 'justify-start' : 'justify-end')}>
+                <div className="max-w-[72%]">
+                    {message.media_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                            src={message.media_url}
+                            alt="Sticker"
+                            className="h-[120px] w-[120px] object-contain"
+                        />
+                    ) : (
+                        <div className="flex h-[80px] w-[80px] items-center justify-center rounded-lg border border-dashed border-white/10 bg-[color:var(--orion-elevated)] text-[28px]">
+                            🎟
+                        </div>
+                    )}
+                    <div className={cn('mt-1 flex items-center gap-1 text-[10px] text-[color:var(--orion-text-muted)]', !isInbound && 'justify-end')}>
+                        <span>{formatMessageTime(message.created_at)}</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (message.type === 'LOCATION') {
+        let lat: number | null = null;
+        let lng: number | null = null;
+
+        if (message.content) {
+            try {
+                const parsed = JSON.parse(message.content) as { lat?: number; lng?: number };
+                lat = parsed.lat ?? null;
+                lng = parsed.lng ?? null;
+            } catch {
+                // not JSON, skip
+            }
+        }
+
+        const mapsUrl = lat !== null && lng !== null
+            ? `https://www.google.com/maps?q=${lat},${lng}`
+            : null;
+
+        return (
+            <div className={cn('flex', isInbound ? 'justify-start' : 'justify-end')}>
+                <div className="max-w-[72%]">
+                    <div className="flex w-[230px] items-center gap-3 rounded-[10px] border border-white/10 bg-[color:var(--orion-elevated)] px-3 py-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-emerald-500/10 text-emerald-300">
+                            <MapPin className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <div className="text-[11px] font-semibold text-[color:var(--orion-text)]">Localização</div>
+                            {mapsUrl ? (
+                                <a
+                                    href={mapsUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 text-[10px] text-brand-gold hover:underline"
+                                >
+                                    <ExternalLink className="h-2.5 w-2.5" />
+                                    Abrir no Maps
+                                </a>
+                            ) : (
+                                <div className="text-[10px] text-[color:var(--orion-text-secondary)]">{message.content ?? 'Localização compartilhada'}</div>
+                            )}
+                        </div>
+                    </div>
+                    <div className={cn('mt-1 flex items-center gap-1 text-[10px] text-[color:var(--orion-text-muted)]', !isInbound && 'justify-end')}>
+                        <span>{formatMessageTime(message.created_at)}</span>
                     </div>
                 </div>
             </div>

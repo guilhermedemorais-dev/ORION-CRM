@@ -693,3 +693,301 @@ export async function getAnalyticsSales(params: {
         },
     };
 }
+
+// ─── Analytics Leads ─────────────────────────────────────────────────────────
+
+export interface AnalyticsLeadsResponse {
+    period: { from: string; to: string };
+    funnel: Array<{ stage: string; count: number; percent: number }>;
+    lost_leads: Array<{ name: string | null; phone: string | null; lost_at: string; reason: string | null }>;
+    new_leads_count: number;
+    converted_count: number;
+    lost_count: number;
+    conversion_rate_percent: number;
+}
+
+export async function getAnalyticsLeads(
+    params: { periodo: AnalyticsPeriod; from?: string; to?: string }
+): Promise<AnalyticsLeadsResponse> {
+    const range = resolveAnalyticsPeriodRange(params.periodo, params.from, params.to);
+    const { current_start, current_end_exclusive } = range;
+
+    const [funnelResult, lostResult, countsResult] = await Promise.all([
+        executeQuery<{ stage: string; count: string }>(
+            `SELECT COALESCE(ps.name, l.stage::text, 'Sem etapa') AS stage,
+                    COUNT(l.id)::text AS count
+             FROM leads l
+             LEFT JOIN pipeline_stages ps ON ps.id = l.stage_id
+             WHERE l.created_at >= $1 AND l.created_at < $2
+               AND l.status != 'LOST'
+             GROUP BY 1
+             ORDER BY COUNT(l.id) DESC`,
+            [current_start, current_end_exclusive]
+        ),
+        executeQuery<{ name: string | null; phone: string | null; lost_at: string; reason: string | null }>(
+            `SELECT l.name, l.whatsapp_number AS phone,
+                    l.updated_at::text AS lost_at,
+                    l.lost_reason AS reason
+             FROM leads l
+             WHERE l.updated_at >= $1 AND l.updated_at < $2
+               AND l.status = 'LOST'
+             ORDER BY l.updated_at DESC
+             LIMIT 20`,
+            [current_start, current_end_exclusive]
+        ),
+        executeQuery<{ new_leads: string; converted: string; lost: string }>(
+            `SELECT
+               COUNT(*)::text AS new_leads,
+               COUNT(*) FILTER (WHERE status = 'CONVERTED')::text AS converted,
+               COUNT(*) FILTER (WHERE status = 'LOST')::text AS lost
+             FROM leads
+             WHERE created_at >= $1 AND created_at < $2`,
+            [current_start, current_end_exclusive]
+        ),
+    ]);
+
+    const total = funnelResult.rows.reduce((acc, row) => acc + parseInteger(row.count), 0);
+    const funnel = funnelResult.rows.map((row) => ({
+        stage: row.stage,
+        count: parseInteger(row.count),
+        percent: total > 0 ? clampPercentage((parseInteger(row.count) / total) * 100) : 0,
+    }));
+
+    const counts = countsResult.rows[0] ?? { new_leads: '0', converted: '0', lost: '0' };
+    const newLeadsCount = parseInteger(counts.new_leads);
+    const convertedCount = parseInteger(counts.converted);
+    const lostCount = parseInteger(counts.lost);
+
+    return {
+        period: {
+            from: current_start,
+            to: formatDateOnly(addDays(parseDateValue(current_end_exclusive), -1)),
+        },
+        funnel,
+        lost_leads: lostResult.rows,
+        new_leads_count: newLeadsCount,
+        converted_count: convertedCount,
+        lost_count: lostCount,
+        conversion_rate_percent: newLeadsCount > 0
+            ? clampPercentage((convertedCount / newLeadsCount) * 100)
+            : 0,
+    };
+}
+
+// ─── Analytics Produção ───────────────────────────────────────────────────────
+
+export interface AnalyticsProductionResponse {
+    period: { from: string; to: string };
+    status_distribution: Array<{ status: string; count: number; percent: number }>;
+    late_orders: Array<{ id: string; client: string | null; deadline: string | null; days_late: number }>;
+    total_orders: number;
+    completed_count: number;
+    in_progress_count: number;
+    late_count: number;
+}
+
+export async function getAnalyticsProduction(
+    params: { periodo: AnalyticsPeriod; from?: string; to?: string }
+): Promise<AnalyticsProductionResponse> {
+    const range = resolveAnalyticsPeriodRange(params.periodo, params.from, params.to);
+    const { current_start, current_end_exclusive } = range;
+
+    const [statusResult, lateResult] = await Promise.all([
+        executeQuery<{ status: string; count: string }>(
+            `SELECT status::text, COUNT(*)::text AS count
+             FROM orders
+             WHERE created_at >= $1 AND created_at < $2
+             GROUP BY 1
+             ORDER BY COUNT(*) DESC`,
+            [current_start, current_end_exclusive]
+        ),
+        executeQuery<{ id: string; client: string | null; deadline: string | null; days_late: number }>(
+            `SELECT o.id::text,
+                    COALESCE(c.name, l.name) AS client,
+                    o.deadline::text,
+                    GREATEST(0, DATE_PART('day', NOW() - o.deadline))::int AS days_late
+             FROM orders o
+             LEFT JOIN customers c ON c.id = o.customer_id
+             LEFT JOIN leads l ON l.id = o.lead_id
+             WHERE o.deadline IS NOT NULL
+               AND o.deadline < NOW()
+               AND o.status NOT IN ('ENTREGUE', 'CANCELADO')
+             ORDER BY o.deadline ASC
+             LIMIT 20`,
+            []
+        ),
+    ]);
+
+    const total = statusResult.rows.reduce((acc, row) => acc + parseInteger(row.count), 0);
+    const statusDistribution = statusResult.rows.map((row) => ({
+        status: row.status,
+        count: parseInteger(row.count),
+        percent: total > 0 ? clampPercentage((parseInteger(row.count) / total) * 100) : 0,
+    }));
+
+    const completedStatuses = new Set(['ENTREGUE', 'RETIRADO', 'ENVIADO']);
+    const inProgressStatuses = new Set(['EM_PRODUCAO', 'CONTROLE_QUALIDADE', 'SEPARANDO', 'APROVADO']);
+
+    const completedCount = statusResult.rows
+        .filter((r) => completedStatuses.has(r.status))
+        .reduce((acc, r) => acc + parseInteger(r.count), 0);
+    const inProgressCount = statusResult.rows
+        .filter((r) => inProgressStatuses.has(r.status))
+        .reduce((acc, r) => acc + parseInteger(r.count), 0);
+
+    return {
+        period: {
+            from: current_start,
+            to: formatDateOnly(addDays(parseDateValue(current_end_exclusive), -1)),
+        },
+        status_distribution: statusDistribution,
+        late_orders: lateResult.rows,
+        total_orders: total,
+        completed_count: completedCount,
+        in_progress_count: inProgressCount,
+        late_count: lateResult.rows.length,
+    };
+}
+
+// ─── Analytics Loja ───────────────────────────────────────────────────────────
+
+export interface AnalyticsStoreResponse {
+    period: { from: string; to: string };
+    store_active: boolean;
+    revenue_cents: number;
+    orders_count: number;
+    average_ticket_cents: number;
+    top_products: Array<{ product: string; quantity: number; revenue_cents: number }>;
+    status_breakdown: Array<{ status: string; count: number }>;
+}
+
+export async function getAnalyticsStore(
+    params: { periodo: AnalyticsPeriod; from?: string; to?: string }
+): Promise<AnalyticsStoreResponse> {
+    const range = resolveAnalyticsPeriodRange(params.periodo, params.from, params.to);
+    const { current_start, current_end_exclusive } = range;
+
+    const [configResult, summaryResult, topProductsResult, statusResult] = await Promise.all([
+        executeQuery<{ is_active: boolean }>(`SELECT is_active FROM store_config LIMIT 1`),
+        executeQuery<{ revenue_cents: string; orders_count: string }>(
+            `SELECT COALESCE(SUM(amount_cents), 0)::text AS revenue_cents,
+                    COUNT(*)::text AS orders_count
+             FROM store_orders
+             WHERE created_at >= $1 AND created_at < $2
+               AND status = 'approved'`,
+            [current_start, current_end_exclusive]
+        ),
+        executeQuery<{ product: string; quantity: string; revenue_cents: string }>(
+            `SELECT sp.name AS product,
+                    COUNT(so.id)::text AS quantity,
+                    COALESCE(SUM(so.amount_cents), 0)::text AS revenue_cents
+             FROM store_orders so
+             JOIN store_products sp ON sp.id = so.store_product_id
+             WHERE so.created_at >= $1 AND so.created_at < $2
+               AND so.status = 'approved'
+             GROUP BY sp.name
+             ORDER BY SUM(so.amount_cents) DESC
+             LIMIT 10`,
+            [current_start, current_end_exclusive]
+        ),
+        executeQuery<{ status: string; count: string }>(
+            `SELECT status::text, COUNT(*)::text AS count
+             FROM store_orders
+             WHERE created_at >= $1 AND created_at < $2
+             GROUP BY 1`,
+            [current_start, current_end_exclusive]
+        ),
+    ]);
+
+    const storeActive = configResult.rows[0]?.is_active ?? false;
+    const summary = summaryResult.rows[0] ?? { revenue_cents: '0', orders_count: '0' };
+    const revenueCents = parseInteger(summary.revenue_cents);
+    const ordersCount = parseInteger(summary.orders_count);
+
+    return {
+        period: {
+            from: current_start,
+            to: formatDateOnly(addDays(parseDateValue(current_end_exclusive), -1)),
+        },
+        store_active: storeActive,
+        revenue_cents: revenueCents,
+        orders_count: ordersCount,
+        average_ticket_cents: ordersCount > 0 ? Math.round(revenueCents / ordersCount) : 0,
+        top_products: topProductsResult.rows.map((r) => ({
+            product: r.product,
+            quantity: parseInteger(r.quantity),
+            revenue_cents: parseInteger(r.revenue_cents),
+        })),
+        status_breakdown: statusResult.rows.map((r) => ({
+            status: r.status,
+            count: parseInteger(r.count),
+        })),
+    };
+}
+
+// ─── Analytics Atendentes ─────────────────────────────────────────────────────
+
+export interface AnalyticsAgentsResponse {
+    period: { from: string; to: string };
+    agents: Array<{
+        id: string;
+        name: string;
+        conversations_handled: number;
+        messages_sent: number;
+        avg_response_time_min: number | null;
+        leads_converted: number;
+    }>;
+}
+
+export async function getAnalyticsAgents(
+    params: { periodo: AnalyticsPeriod; from?: string; to?: string }
+): Promise<AnalyticsAgentsResponse> {
+    const range = resolveAnalyticsPeriodRange(params.periodo, params.from, params.to);
+    const { current_start, current_end_exclusive } = range;
+
+    const result = await executeQuery<{
+        id: string;
+        name: string;
+        conversations_handled: string;
+        messages_sent: string;
+        leads_converted: string;
+    }>(
+        `SELECT
+           u.id::text,
+           u.name,
+           COUNT(DISTINCT c.id)::text AS conversations_handled,
+           COUNT(DISTINCT m.id)::text AS messages_sent,
+           COUNT(DISTINCT l.id) FILTER (WHERE l.status = 'CONVERTED')::text AS leads_converted
+         FROM users u
+         LEFT JOIN conversations c
+           ON c.assigned_to = u.id
+           AND c.assigned_at >= $1 AND c.assigned_at < $2
+         LEFT JOIN messages m
+           ON m.sent_by = u.id
+           AND m.created_at >= $1 AND m.created_at < $2
+           AND m.direction = 'OUTBOUND'
+         LEFT JOIN leads l
+           ON l.assigned_to = u.id
+           AND l.updated_at >= $1 AND l.updated_at < $2
+         WHERE u.role IN ('ADMIN', 'ATENDENTE')
+           AND u.status = 'active'
+         GROUP BY u.id, u.name
+         ORDER BY COUNT(DISTINCT c.id) DESC`,
+        [current_start, current_end_exclusive]
+    );
+
+    return {
+        period: {
+            from: current_start,
+            to: formatDateOnly(addDays(parseDateValue(current_end_exclusive), -1)),
+        },
+        agents: result.rows.map((row) => ({
+            id: row.id,
+            name: row.name,
+            conversations_handled: parseInteger(row.conversations_handled),
+            messages_sent: parseInteger(row.messages_sent),
+            avg_response_time_min: null,
+            leads_converted: parseInteger(row.leads_converted),
+        })),
+    };
+}

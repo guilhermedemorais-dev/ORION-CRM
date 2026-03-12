@@ -29,15 +29,23 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/Input';
-import type { AnalyticsPeriod, AnalyticsSalesResponse, AnalyticsTab } from '@/lib/analytics-types';
+import type {
+    AnalyticsAgentsResponse,
+    AnalyticsLeadsResponse,
+    AnalyticsPeriod,
+    AnalyticsProductionResponse,
+    AnalyticsSalesResponse,
+    AnalyticsStoreResponse,
+    AnalyticsTab,
+} from '@/lib/analytics-types';
 import { cn, formatCurrencyFromCents } from '@/lib/utils';
 
 const TAB_OPTIONS: Array<{ value: AnalyticsTab; label: string; available: boolean }> = [
     { value: 'sales', label: 'Vendas', available: true },
-    { value: 'leads', label: 'Leads', available: false },
-    { value: 'production', label: 'Produção', available: false },
-    { value: 'store', label: 'Loja', available: false },
-    { value: 'agents', label: 'Atendentes', available: false },
+    { value: 'leads', label: 'Leads', available: true },
+    { value: 'production', label: 'Produção', available: true },
+    { value: 'store', label: 'Loja', available: true },
+    { value: 'agents', label: 'Atendentes', available: true },
 ];
 
 const PERIOD_OPTIONS: Array<{ value: AnalyticsPeriod; label: string }> = [
@@ -160,23 +168,266 @@ function AnalyticsKpiCard({
     );
 }
 
-function SalesTabPlaceholder({ title }: { title: string }) {
+function LeadsTab({ data }: { data: AnalyticsLeadsResponse }) {
     return (
-        <EmptyState
-            title={`${title} entra no próximo slice`}
-            description="A estrutura das tabs já está pronta. Neste lote da Phase 4 foi entregue o dashboard de Vendas, que é a base para abrir os demais relatórios com o mesmo contrato visual."
-        />
+        <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {[
+                    { label: 'Novos leads', value: String(data.new_leads_count) },
+                    { label: 'Convertidos', value: String(data.converted_count) },
+                    { label: 'Perdidos', value: String(data.lost_count) },
+                    { label: 'Taxa de conversão', value: `${data.conversion_rate_percent.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%` },
+                ].map((kpi) => (
+                    <Card key={kpi.label} className="border-white/5 bg-[#131316]">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--orion-text-secondary)]">{kpi.label}</p>
+                        <p className="mt-3 font-serif text-[28px] font-semibold leading-none text-[color:var(--orion-text)]">{kpi.value}</p>
+                    </Card>
+                ))}
+            </div>
+
+            <Card title="Funil de leads por etapa" className="border-white/5 bg-[#131316]">
+                {data.funnel.length === 0 ? (
+                    <EmptyState title="Sem dados de funil" description="Crie leads no período selecionado para ver o funil." />
+                ) : (
+                    <div className="space-y-3">
+                        {data.funnel.map((row) => (
+                            <div key={row.stage}>
+                                <div className="mb-1 flex justify-between text-[12px]">
+                                    <span className="text-[color:var(--orion-text)]">{row.stage}</span>
+                                    <span className="text-[color:var(--orion-text-secondary)]">{row.count} · {row.percent.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%</span>
+                                </div>
+                                <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                                    <div
+                                        className="h-2 rounded-full bg-brand-gold"
+                                        style={{ width: `${row.percent}%` }}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </Card>
+
+            <Card title="Leads perdidos" description="Últimos 20 leads marcados como perdidos no período." className="border-white/5 bg-[#131316]">
+                {data.lost_leads.length === 0 ? (
+                    <EmptyState title="Nenhum lead perdido" description="Ótimo sinal para o período selecionado." />
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-white/5 text-sm">
+                            <thead>
+                                <tr className="text-left text-xs uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">
+                                    <th className="px-3 py-3 font-medium">Nome</th>
+                                    <th className="px-3 py-3 font-medium">Telefone</th>
+                                    <th className="px-3 py-3 font-medium">Data</th>
+                                    <th className="px-3 py-3 font-medium">Motivo</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {data.lost_leads.map((row, i) => (
+                                    <tr key={`lost-${i}`}>
+                                        <td className="px-3 py-2.5 text-[color:var(--orion-text)]">{row.name ?? '—'}</td>
+                                        <td className="px-3 py-2.5 text-[color:var(--orion-text-secondary)]">{row.phone ?? '—'}</td>
+                                        <td className="px-3 py-2.5 text-[color:var(--orion-text-secondary)]">{new Date(row.lost_at).toLocaleDateString('pt-BR')}</td>
+                                        <td className="px-3 py-2.5 text-[color:var(--orion-text-secondary)]">{row.reason ?? '—'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </Card>
+        </div>
+    );
+}
+
+function ProductionTab({ data }: { data: AnalyticsProductionResponse }) {
+    return (
+        <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {[
+                    { label: 'Total de pedidos', value: String(data.total_orders) },
+                    { label: 'Concluídos', value: String(data.completed_count) },
+                    { label: 'Em andamento', value: String(data.in_progress_count) },
+                    { label: 'Em atraso', value: String(data.late_count), danger: data.late_count > 0 },
+                ].map((kpi) => (
+                    <Card key={kpi.label} className="border-white/5 bg-[#131316]">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--orion-text-secondary)]">{kpi.label}</p>
+                        <p className={cn('mt-3 font-serif text-[28px] font-semibold leading-none', kpi.danger ? 'text-rose-300' : 'text-[color:var(--orion-text)]')}>{kpi.value}</p>
+                    </Card>
+                ))}
+            </div>
+
+            <Card title="Distribuição por status" className="border-white/5 bg-[#131316]">
+                {data.status_distribution.length === 0 ? (
+                    <EmptyState title="Sem pedidos no período" description="Nenhum pedido encontrado para o período selecionado." />
+                ) : (
+                    <div className="space-y-3">
+                        {data.status_distribution.map((row) => (
+                            <div key={row.status}>
+                                <div className="mb-1 flex justify-between text-[12px]">
+                                    <span className="text-[color:var(--orion-text)]">{row.status}</span>
+                                    <span className="text-[color:var(--orion-text-secondary)]">{row.count} · {row.percent.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%</span>
+                                </div>
+                                <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                                    <div className="h-2 rounded-full bg-brand-gold" style={{ width: `${row.percent}%` }} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </Card>
+
+            <Card title="Pedidos em atraso" description="Pedidos com prazo vencido ainda em produção." className="border-white/5 bg-[#131316]">
+                {data.late_orders.length === 0 ? (
+                    <EmptyState title="Nenhum pedido em atraso" description="Todos os pedidos estão dentro do prazo." />
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-white/5 text-sm">
+                            <thead>
+                                <tr className="text-left text-xs uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">
+                                    <th className="px-3 py-3 font-medium">Cliente</th>
+                                    <th className="px-3 py-3 font-medium">Prazo</th>
+                                    <th className="px-3 py-3 font-medium">Dias em atraso</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {data.late_orders.map((row) => (
+                                    <tr key={row.id}>
+                                        <td className="px-3 py-2.5 text-[color:var(--orion-text)]">{row.client ?? '—'}</td>
+                                        <td className="px-3 py-2.5 text-[color:var(--orion-text-secondary)]">{row.deadline ? new Date(row.deadline).toLocaleDateString('pt-BR') : '—'}</td>
+                                        <td className="px-3 py-2.5 font-semibold text-rose-300">{row.days_late}d</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </Card>
+        </div>
+    );
+}
+
+function StoreTab({ data }: { data: AnalyticsStoreResponse }) {
+    return (
+        <div className="space-y-6">
+            {!data.store_active && (
+                <div className="rounded-md border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">
+                    A loja pública está desativada. Ative em Ajustes → Loja para começar a receber pedidos.
+                </div>
+            )}
+
+            <div className="grid gap-4 md:grid-cols-3">
+                {[
+                    { label: 'Receita', value: formatCurrencyFromCents(data.revenue_cents) },
+                    { label: 'Pedidos aprovados', value: String(data.orders_count) },
+                    { label: 'Ticket médio', value: formatCurrencyFromCents(data.average_ticket_cents) },
+                ].map((kpi) => (
+                    <Card key={kpi.label} className="border-white/5 bg-[#131316]">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--orion-text-secondary)]">{kpi.label}</p>
+                        <p className="mt-3 font-serif text-[28px] font-semibold leading-none text-[color:var(--orion-text)]">{kpi.value}</p>
+                    </Card>
+                ))}
+            </div>
+
+            <Card title="Top produtos da loja" className="border-white/5 bg-[#131316]">
+                {data.top_products.length === 0 ? (
+                    <EmptyState title="Sem vendas na loja" description="Nenhum pedido aprovado no período selecionado." />
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-white/5 text-sm">
+                            <thead>
+                                <tr className="text-left text-xs uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">
+                                    <th className="px-3 py-3 font-medium">Produto</th>
+                                    <th className="px-3 py-3 font-medium">Qtd</th>
+                                    <th className="px-3 py-3 font-medium">Receita</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {data.top_products.map((row, i) => (
+                                    <tr key={`store-prod-${i}`}>
+                                        <td className="px-3 py-2.5 text-[color:var(--orion-text)]">{row.product}</td>
+                                        <td className="px-3 py-2.5 text-[color:var(--orion-text-secondary)]">{row.quantity}</td>
+                                        <td className="px-3 py-2.5 text-[color:var(--orion-text)]">{formatCurrencyFromCents(row.revenue_cents)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </Card>
+
+            <Card title="Status dos pedidos da loja" className="border-white/5 bg-[#131316]">
+                {data.status_breakdown.length === 0 ? (
+                    <EmptyState title="Sem pedidos" description="Sem pedidos na loja para o período." />
+                ) : (
+                    <div className="flex flex-wrap gap-3">
+                        {data.status_breakdown.map((row) => (
+                            <div key={row.status} className="flex items-center gap-2 rounded-lg border border-white/10 bg-[color:var(--orion-elevated)] px-3 py-2">
+                                <span className="h-2 w-2 rounded-full bg-brand-gold" />
+                                <span className="text-[12px] font-semibold text-[color:var(--orion-text)]">{row.count}</span>
+                                <span className="text-[11px] text-[color:var(--orion-text-secondary)]">{row.status}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </Card>
+        </div>
+    );
+}
+
+function AgentsTab({ data }: { data: AnalyticsAgentsResponse }) {
+    return (
+        <div className="space-y-6">
+            {data.agents.length === 0 ? (
+                <EmptyState title="Sem dados de atendimento" description="Nenhum atendente com conversas no período selecionado." />
+            ) : (
+                <Card title="Ranking de atendentes" description="Atendentes com conversas assumidas no período." className="border-white/5 bg-[#131316]">
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-white/5 text-sm">
+                            <thead>
+                                <tr className="text-left text-xs uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">
+                                    <th className="px-3 py-3 font-medium">#</th>
+                                    <th className="px-3 py-3 font-medium">Atendente</th>
+                                    <th className="px-3 py-3 font-medium">Conversas</th>
+                                    <th className="px-3 py-3 font-medium">Mensagens</th>
+                                    <th className="px-3 py-3 font-medium">Leads convertidos</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {data.agents.map((agent, i) => (
+                                    <tr key={agent.id}>
+                                        <td className="px-3 py-2.5 text-[color:var(--orion-text-muted)]">#{i + 1}</td>
+                                        <td className="px-3 py-2.5 font-semibold text-[color:var(--orion-text)]">{agent.name}</td>
+                                        <td className="px-3 py-2.5 text-[color:var(--orion-text-secondary)]">{agent.conversations_handled}</td>
+                                        <td className="px-3 py-2.5 text-[color:var(--orion-text-secondary)]">{agent.messages_sent}</td>
+                                        <td className="px-3 py-2.5 text-emerald-300">{agent.leads_converted}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
+            )}
+        </div>
     );
 }
 
 export function AnalyticsClient({
     sales,
+    leads,
+    production,
+    store,
+    agents,
     filters,
     initialTab,
     hasExplicitFilters,
     error,
 }: {
-    sales: AnalyticsSalesResponse;
+    sales: AnalyticsSalesResponse | null;
+    leads: AnalyticsLeadsResponse;
+    production: AnalyticsProductionResponse;
+    store: AnalyticsStoreResponse;
+    agents: AnalyticsAgentsResponse;
     filters: {
         period: AnalyticsPeriod;
         from?: string;
@@ -190,8 +441,8 @@ export function AnalyticsClient({
     const [isPending, startTransition] = useTransition();
     const [hasMounted, setHasMounted] = useState(false);
     const [activeTab, setActiveTab] = useState<AnalyticsTab>(initialTab);
-    const [customFrom, setCustomFrom] = useState(filters.from ?? sales.period.from);
-    const [customTo, setCustomTo] = useState(filters.to ?? sales.period.to);
+    const [customFrom, setCustomFrom] = useState(filters.from ?? sales?.period.from ?? '');
+    const [customTo, setCustomTo] = useState(filters.to ?? sales?.period.to ?? '');
     const [hasRestoredSavedFilters, setHasRestoredSavedFilters] = useState(hasExplicitFilters);
 
     useEffect(() => {
@@ -343,20 +594,23 @@ export function AnalyticsClient({
         );
     }
 
-    const revenueFilename = `analytics-vendas-${sales.period.from}-${sales.period.to}.csv`;
+    const revenueFilename = sales ? `analytics-vendas-${sales.period.from}-${sales.period.to}.csv` : 'analytics-vendas.csv';
     const activeTabLabel = TAB_OPTIONS.find((tab) => tab.value === activeTab)?.label ?? 'Analytics';
+    const periodLabel = sales
+        ? `${sales.period.from} até ${sales.period.to}`
+        : `${filters.period}`;
 
     return (
         <div className="overflow-hidden rounded-[24px] border border-white/5 bg-[#0F0F11] shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
             <div className="border-b border-white/5 bg-[#0A0A0C] px-6 py-4">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                     <div>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--orion-text-muted)]">ORIN CRM</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--orion-text-muted)]">ORION CRM</p>
                         <h1 className="mt-1 font-serif text-[22px] font-semibold text-[color:var(--orion-text)]">
                             Analytics
                         </h1>
                         <p className="mt-1 text-sm text-[color:var(--orion-text-secondary)]">
-                            {activeTabLabel} no período {sales.period.from} até {sales.period.to}
+                            {activeTabLabel} · {periodLabel}
                         </p>
                     </div>
 
@@ -405,7 +659,8 @@ export function AnalyticsClient({
 
                         <button
                             type="button"
-                            onClick={() => downloadCsv(revenueFilename, sales.tables.top_products)}
+                            disabled={!sales}
+                            onClick={() => sales && downloadCsv(revenueFilename, sales.tables.top_products)}
                             className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-white/10 px-4 text-[12px] font-semibold text-[color:var(--orion-text-secondary)] transition hover:border-brand-gold/30 hover:text-brand-gold"
                         >
                             <Download className="h-4 w-4" />
@@ -444,9 +699,16 @@ export function AnalyticsClient({
                     </div>
                 ) : null}
 
-                {activeTab !== 'sales' ? (
-                    <SalesTabPlaceholder title={activeTabLabel} />
-                ) : (
+                {activeTab === 'leads' && <LeadsTab data={leads} />}
+                {activeTab === 'production' && <ProductionTab data={production} />}
+                {activeTab === 'store' && <StoreTab data={store} />}
+                {activeTab === 'agents' && <AgentsTab data={agents} />}
+
+                {activeTab === 'sales' && !sales ? (
+                    <EmptyState title="Erro ao carregar dados de vendas" description="Tente recarregar a página." />
+                ) : null}
+
+                {activeTab === 'sales' && sales !== null ? (
                     <>
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                         <AnalyticsKpiCard
@@ -644,7 +906,7 @@ export function AnalyticsClient({
                         )}
                         </Card>
                     </>
-                )}
+                ) : null}
             </div>
         </div>
     );

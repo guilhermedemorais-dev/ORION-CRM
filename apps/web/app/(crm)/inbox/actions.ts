@@ -5,6 +5,11 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { apiRequest } from '@/lib/api';
 
+const saveNoteSchema = z.object({
+    conversation_id: z.string().uuid(),
+    note: z.string().max(4000),
+});
+
 const conversationSchema = z.object({
     conversation_id: z.string().uuid(),
 });
@@ -125,4 +130,38 @@ export async function handoffConversationAction(formData: FormData) {
 
     revalidatePath('/inbox');
     redirect(buildConversationRedirect(parsed.data.conversation_id));
+}
+
+export async function saveConversationNoteAction(conversationId: string, note: string): Promise<void> {
+    const parsed = saveNoteSchema.safeParse({ conversation_id: conversationId, note });
+    if (!parsed.success) {
+        return;
+    }
+
+    try {
+        await apiRequest(`/inbox/conversations/${parsed.data.conversation_id}/note`, {
+            method: 'PATCH',
+            body: JSON.stringify({ note: parsed.data.note }),
+        });
+    } catch {
+        // fire-and-forget: note save is non-critical
+    }
+}
+
+export async function markConversationReadAction(conversationId: string): Promise<void> {
+    const parsed = z.string().uuid().safeParse(conversationId);
+    if (!parsed.success) {
+        return;
+    }
+
+    try {
+        await apiRequest(`/inbox/conversations/${parsed.data}/read`, {
+            method: 'POST',
+            body: JSON.stringify({}),
+        });
+    } catch {
+        // fire-and-forget
+    }
+
+    revalidatePath('/inbox');
 }

@@ -14,12 +14,15 @@ import {
     createQuickReply,
     deleteQuickReply,
     getConversationById,
+    getConversationNote,
     getQuickReplyById,
     getConversationThread,
     handoffConversation,
     listChannelIntegrations,
     listConversations,
     listQuickReplies,
+    markConversationRead,
+    saveConversationNote,
     updateChannelIntegration,
     updateQuickReply,
     type CurrentUser,
@@ -73,6 +76,10 @@ const channelParamsSchema = z.object({
 const channelPayloadSchema = z.object({
     is_active: z.boolean(),
     webhook_url: z.string().trim().url().optional().or(z.literal('')),
+});
+
+const saveNoteSchema = z.object({
+    note: z.string().max(4000),
 });
 
 function getCurrentUser(req: Request): CurrentUser {
@@ -721,6 +728,82 @@ router.post(
             res.json({
                 conversation: updated,
             });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+router.get(
+    '/conversations/:id/note',
+    authenticate,
+    requireRole(['ADMIN', 'ATENDENTE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const params = conversationParamsSchema.safeParse(req.params);
+            if (!params.success) {
+                next(AppError.badRequest('Conversa inválida.'));
+                return;
+            }
+
+            const currentUser = getCurrentUser(req);
+            const payload = await getConversationNote(params.data.id, currentUser);
+            res.json(payload);
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+router.patch(
+    '/conversations/:id/note',
+    authenticate,
+    requireRole(['ADMIN', 'ATENDENTE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const params = conversationParamsSchema.safeParse(req.params);
+            const body = saveNoteSchema.safeParse(req.body);
+
+            if (!params.success || !body.success) {
+                next(AppError.badRequest('Dados inválidos para salvar nota.'));
+                return;
+            }
+
+            const currentUser = getCurrentUser(req);
+            await saveConversationNote(params.data.id, body.data.note, currentUser);
+
+            await createAuditLog({
+                userId: currentUser.id,
+                action: 'UPDATE_CONVERSATION_NOTE',
+                entityType: 'conversations',
+                entityId: params.data.id,
+                oldValue: null,
+                newValue: { has_note: body.data.note.trim().length > 0 },
+                req,
+            });
+
+            res.status(204).send();
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+router.post(
+    '/conversations/:id/read',
+    authenticate,
+    requireRole(['ADMIN', 'ATENDENTE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const params = conversationParamsSchema.safeParse(req.params);
+            if (!params.success) {
+                next(AppError.badRequest('Conversa inválida.'));
+                return;
+            }
+
+            const currentUser = getCurrentUser(req);
+            await markConversationRead(params.data.id, currentUser);
+            res.status(204).send();
         } catch (error) {
             next(error);
         }

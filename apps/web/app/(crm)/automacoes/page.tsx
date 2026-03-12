@@ -2,11 +2,12 @@ import { redirect } from 'next/navigation';
 import {
     createAutomationAction,
     deleteAutomationAction,
+    saveCanvasFlowAction,
     toggleAutomationAction,
     updateAutomationAction,
 } from '@/app/(crm)/automacoes/actions';
-import { AutomationCanvasPreview } from '@/components/modules/automations/AutomationCanvasPreview';
 import { AutomationCatalogPanel } from '@/components/modules/automations/AutomationCatalogPanel';
+import { FlowEditorWrapper } from '@/components/modules/automations/FlowEditorWrapper';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -217,15 +218,18 @@ export default async function AutomationsPage({
                         )}
                     </Card>
 
-                    <Card
-                        title="Preview do fluxo"
-                        description="Leitura visual da posição dos nós e conexões principais do workflow selecionado."
-                    >
-                        <AutomationCanvasPreview
-                            nodes={selectedFlow?.nodes ?? []}
-                            connections={selectedFlow?.connections ?? {}}
+                    <div>
+                        <div className="mb-3">
+                            <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--orion-text)]">Editor visual</h2>
+                            <p className="mt-1 text-sm text-[color:var(--orion-text-secondary)]">Drag-and-drop de nós do catálogo, conexões e configuração inline. Salva direto no n8n.</p>
+                        </div>
+                        <FlowEditorWrapper
+                            flow={selectedFlow}
+                            catalog={catalog}
+                            workflowId={selectedId}
+                            onSaveAction={saveCanvasFlowAction}
                         />
-                    </Card>
+                    </div>
                 </div>
 
                 <div className="space-y-6 xl:sticky xl:top-20 xl:self-start">

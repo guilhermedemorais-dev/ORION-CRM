@@ -1110,3 +1110,63 @@ export async function updateChannelIntegration(input: {
 
     return row;
 }
+
+export async function saveConversationNote(
+    conversationId: string,
+    note: string,
+    currentUser: CurrentUser
+): Promise<void> {
+    const result = await query(
+        `UPDATE conversations
+         SET internal_note = $2, updated_at = NOW()
+         WHERE id = $1
+           AND (
+             $3 = 'ADMIN'
+             OR assigned_to = $4
+           )`,
+        [conversationId, note.trim(), currentUser.role, currentUser.id]
+    );
+
+    if (result.rowCount === 0) {
+        throw AppError.notFound('Conversa não encontrada ou sem permissão para editar nota.');
+    }
+}
+
+export async function markConversationRead(
+    conversationId: string,
+    currentUser: CurrentUser
+): Promise<void> {
+    await query(
+        `UPDATE conversations
+         SET unread_count  = 0,
+             last_read_at  = NOW(),
+             last_read_by  = $2,
+             updated_at    = NOW()
+         WHERE id = $1`,
+        [conversationId, currentUser.id]
+    );
+}
+
+export async function getConversationNote(
+    conversationId: string,
+    currentUser: CurrentUser
+): Promise<{ internal_note: string | null }> {
+    const result = await query<{ internal_note: string | null }>(
+        `SELECT internal_note
+         FROM conversations
+         WHERE id = $1
+           AND (
+             $2 = 'ADMIN'
+             OR assigned_to = $3
+             OR status = 'AGUARDANDO_HUMANO'
+           )`,
+        [conversationId, currentUser.role, currentUser.id]
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+        throw AppError.notFound('Conversa não encontrada.');
+    }
+
+    return { internal_note: row.internal_note };
+}

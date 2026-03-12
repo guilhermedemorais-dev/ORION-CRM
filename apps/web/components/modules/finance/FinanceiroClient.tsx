@@ -16,7 +16,7 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
-import { createFinancialLaunchAction } from '@/app/(crm)/financeiro/actions';
+import { createFinancialLaunchAction, uploadFinancialReceiptAction } from '@/app/(crm)/financeiro/actions';
 import type {
     FinanceCommissionRecord,
     FinanceDashboardResponse,
@@ -627,7 +627,24 @@ export function FinanceiroClient({
                                                                 Ver
                                                             </a>
                                                         ) : (
-                                                            <span className="text-[12px] text-[#9CA3AF]">—</span>
+                                                            <form action={uploadFinancialReceiptAction} encType="multipart/form-data">
+                                                                <input type="hidden" name="id" value={record.id} />
+                                                                <label className="inline-flex cursor-pointer items-center gap-1 text-[12px] font-medium text-[#9CA3AF] hover:text-[#A8895A]">
+                                                                    <Paperclip className="h-3.5 w-3.5" />
+                                                                    Anexar
+                                                                    <input
+                                                                        type="file"
+                                                                        name="file"
+                                                                        accept="image/png,image/jpeg,application/pdf"
+                                                                        className="sr-only"
+                                                                        onChange={(e) => {
+                                                                            if (e.target.files?.[0]) {
+                                                                                e.target.form?.requestSubmit();
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </label>
+                                                            </form>
                                                         )}
                                                     </td>
                                                 </tr>

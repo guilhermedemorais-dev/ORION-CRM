@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@xyflow/react": "^12.10.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.469.0",
     "next": "^14.2.25",

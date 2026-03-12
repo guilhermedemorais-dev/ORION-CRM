@@ -210,3 +210,24 @@ export async function deleteAutomationAction(formData: FormData) {
     redirect('/automacoes');
 }
 
+export async function saveCanvasFlowAction(
+    workflowId: string,
+    nodes: Array<Record<string, unknown>>,
+    connections: Record<string, unknown>
+): Promise<void> {
+    const id = z.string().trim().min(1).safeParse(workflowId);
+    if (!id.success) {
+        return;
+    }
+
+    try {
+        await apiRequest(`/automations/${id.data}`, {
+            method: 'PUT',
+            body: JSON.stringify({ nodes, connections }),
+        });
+        revalidatePath('/automacoes');
+    } catch {
+        // client handles error state
+    }
+}
+

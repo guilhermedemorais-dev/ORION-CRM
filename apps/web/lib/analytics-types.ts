@@ -1,6 +1,48 @@
 export type AnalyticsPeriod = '7d' | '30d' | '90d' | '12m' | 'custom';
 export type AnalyticsTab = 'sales' | 'leads' | 'production' | 'store' | 'agents';
 
+export interface AnalyticsLeadsResponse {
+    period: { from: string; to: string };
+    funnel: Array<{ stage: string; count: number; percent: number }>;
+    lost_leads: Array<{ name: string | null; phone: string | null; lost_at: string; reason: string | null }>;
+    new_leads_count: number;
+    converted_count: number;
+    lost_count: number;
+    conversion_rate_percent: number;
+}
+
+export interface AnalyticsProductionResponse {
+    period: { from: string; to: string };
+    status_distribution: Array<{ status: string; count: number; percent: number }>;
+    late_orders: Array<{ id: string; client: string | null; deadline: string | null; days_late: number }>;
+    total_orders: number;
+    completed_count: number;
+    in_progress_count: number;
+    late_count: number;
+}
+
+export interface AnalyticsStoreResponse {
+    period: { from: string; to: string };
+    store_active: boolean;
+    revenue_cents: number;
+    orders_count: number;
+    average_ticket_cents: number;
+    top_products: Array<{ product: string; quantity: number; revenue_cents: number }>;
+    status_breakdown: Array<{ status: string; count: number }>;
+}
+
+export interface AnalyticsAgentsResponse {
+    period: { from: string; to: string };
+    agents: Array<{
+        id: string;
+        name: string;
+        conversations_handled: number;
+        messages_sent: number;
+        avg_response_time_min: number | null;
+        leads_converted: number;
+    }>;
+}
+
 export interface AnalyticsSalesResponse {
     period: {
         periodo: AnalyticsPeriod;
