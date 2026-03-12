@@ -129,10 +129,10 @@ function LightCard({
     children: ReactNode;
 }) {
     return (
-        <section className={cn('rounded-[14px] border border-[#E8E5E0] bg-white p-5', className)}>
+        <section className={cn('rounded-[14px] border border-white/10 bg-[#1A1A1E] p-5', className)}>
             <div className="mb-4">
-                <h2 className="font-serif text-[1rem] font-semibold text-[#111827]">{title}</h2>
-                {description ? <p className="mt-1 text-[12px] text-[#6B7280]">{description}</p> : null}
+                <h2 className="font-serif text-[1rem] font-semibold text-white">{title}</h2>
+                {description ? <p className="mt-1 text-[12px] text-white/50">{description}</p> : null}
             </div>
             {children}
         </section>
@@ -155,13 +155,13 @@ function KpiCard({
     helper: string;
 }) {
     return (
-        <div className="overflow-hidden rounded-[14px] border border-[#E8E5E0] bg-white">
+        <div className="overflow-hidden rounded-[14px] border border-white/10 bg-[#1A1A1E]">
             <div className={cn('h-[3px] w-full', accentClassName)} />
             <div className="p-5">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280]">{label}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/50">{label}</div>
                 <div className={cn('mt-3 font-serif text-[28px] font-semibold', valueClassName)}>{value}</div>
-                <div className="mt-2 text-[12px] font-medium text-[#111827]">{delta}</div>
-                <div className="mt-1 text-[11px] text-[#6B7280]">{helper}</div>
+                <div className="mt-2 text-[12px] font-medium text-white">{delta}</div>
+                <div className="mt-1 text-[11px] text-white/50">{helper}</div>
             </div>
         </div>
     );
@@ -274,8 +274,8 @@ export function FinanceiroClient({
 
     if (!hasMounted) {
         return (
-            <div className="overflow-hidden rounded-[24px] border border-[#E8E5E0] bg-[#F8F7F5] shadow-[0_18px_60px_rgba(0,0,0,0.14)]">
-                <div className="h-14 border-b border-[#E8E5E0] bg-white" />
+            <div className="text-[#111827]">
+                <div className="h-14 border-b border-white/10 bg-[#1A1A1E]" />
                 <div className="space-y-6 p-7">
                     <div className="grid gap-4 xl:grid-cols-4">
                         {Array.from({ length: 4 }).map((_, index) => (
@@ -292,15 +292,15 @@ export function FinanceiroClient({
     }
 
     return (
-        <div className="overflow-hidden rounded-[24px] border border-[#E8E5E0] bg-[#F8F7F5] text-[#111827] shadow-[0_18px_60px_rgba(0,0,0,0.14)]">
-            <div className="flex flex-col gap-4 border-b border-[#E8E5E0] bg-white px-7 py-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="text-[#111827]">
+            <div className="flex flex-col gap-4 border-b border-white/10 bg-[#1A1A1E] px-7 py-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
                     <div className="flex items-center gap-3">
                         <span className="text-[20px]">💰</span>
-                        <h1 className="font-serif text-[20px] font-bold text-[#111827]">Financeiro</h1>
+                        <h1 className="font-serif text-[20px] font-bold text-white">Financeiro</h1>
                     </div>
 
-                    <div className="inline-flex overflow-hidden rounded-[10px] border border-[#E8E5E0]">
+                    <div className="inline-flex overflow-hidden rounded-[10px] border border-white/15">
                         {PERIOD_OPTIONS.map((option) => (
                             <button
                                 key={option.value}
@@ -311,7 +311,7 @@ export function FinanceiroClient({
                                     'h-9 px-4 text-[12px] font-medium transition',
                                     filters.period === option.value
                                         ? 'bg-[#C8A97A] font-bold text-black'
-                                        : 'bg-white text-[#6B7280] hover:bg-[#F4EFE6]'
+                                        : 'bg-transparent text-white/60 hover:bg-white/10'
                                 )}
                             >
                                 {option.label}
@@ -332,7 +332,7 @@ export function FinanceiroClient({
 
             <div className="space-y-6 p-7">
                 {error ? (
-                    <div className="rounded-[12px] border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
+                    <div className="rounded-[12px] border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
                         {error}
                     </div>
                 ) : null}
@@ -378,23 +378,23 @@ export function FinanceiroClient({
                         description="Comparativo diário do período selecionado."
                     >
                         {dashboard.grafico_barras.length === 0 ? (
-                            <div className="rounded-[12px] border border-dashed border-[#E8E5E0] bg-[#F8F7F5] px-4 py-10 text-center text-sm text-[#6B7280]">
+                            <div className="rounded-[12px] border border-dashed border-white/10 bg-white/5 px-4 py-10 text-center text-sm text-white/50">
                                 Sem movimentação financeira confirmada no período.
                             </div>
                         ) : (
                             <div className="h-[210px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={dashboard.grafico_barras} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
-                                        <CartesianGrid stroke="#EEE7DD" vertical={false} />
-                                        <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: '#6B7280', fontSize: 11 }} />
+                                        <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
+                                        <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} />
                                         <YAxis
                                             tickLine={false}
                                             axisLine={false}
-                                            tick={{ fill: '#6B7280', fontSize: 11 }}
+                                            tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
                                             tickFormatter={(value) => formatCurrencyFromCents(Number(value)).replace(',00', '')}
                                         />
                                         <Tooltip
-                                            contentStyle={{ borderRadius: '10px', borderColor: '#E8E5E0' }}
+                                            contentStyle={{ borderRadius: '10px', borderColor: 'rgba(255,255,255,0.1)', backgroundColor: '#1A1A1E', color: '#fff' }}
                                             formatter={(value, name) => [
                                                 formatCurrencyFromCents(Number(value ?? 0)),
                                                 name === 'receitas_cents' ? 'Receitas' : 'Despesas',
@@ -407,7 +407,7 @@ export function FinanceiroClient({
                             </div>
                         )}
 
-                        <div className="mt-3 flex items-center gap-4 text-[12px] text-[#6B7280]">
+                        <div className="mt-3 flex items-center gap-4 text-[12px] text-white/50">
                             <div className="flex items-center gap-2">
                                 <span className="h-2 w-2 rounded-full bg-[#10B981]" />
                                 Receitas
@@ -424,7 +424,7 @@ export function FinanceiroClient({
                         description="Distribuição das saídas confirmadas."
                     >
                         {pieData.length === 0 ? (
-                            <div className="rounded-[12px] border border-dashed border-[#E8E5E0] bg-[#F8F7F5] px-4 py-10 text-center text-sm text-[#6B7280]">
+                            <div className="rounded-[12px] border border-dashed border-white/10 bg-white/5 px-4 py-10 text-center text-sm text-white/50">
                                 Sem despesas confirmadas no período atual.
                             </div>
                         ) : (
@@ -445,7 +445,7 @@ export function FinanceiroClient({
                                                 ))}
                                             </Pie>
                                             <Tooltip
-                                                contentStyle={{ borderRadius: '10px', borderColor: '#E8E5E0' }}
+                                                contentStyle={{ borderRadius: '10px', borderColor: 'rgba(255,255,255,0.1)', backgroundColor: '#1A1A1E', color: '#fff' }}
                                                 formatter={(value) => formatCurrencyFromCents(Number(value ?? 0))}
                                             />
                                         </PieChart>
@@ -456,18 +456,18 @@ export function FinanceiroClient({
                                     {pieData.map((item, index) => (
                                         <div key={item.categoria}>
                                             <div className="flex items-center justify-between gap-3 text-[12px]">
-                                                <div className="flex items-center gap-2 text-[#6B7280]">
+                                                <div className="flex items-center gap-2 text-white/50">
                                                     <span
                                                         className="h-2 w-2 rounded-full"
                                                         style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
                                                     />
                                                     {item.categoria}
                                                 </div>
-                                                <span className="font-bold text-[#111827]">
+                                                <span className="font-bold text-white">
                                                     {item.percentual.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%
                                                 </span>
                                             </div>
-                                            <div className="mt-1 h-1 rounded-full bg-[#EEE7DD]">
+                                            <div className="mt-1 h-1 rounded-full bg-white/10">
                                                 <div
                                                     className="h-1 rounded-full"
                                                     style={{
@@ -491,7 +491,7 @@ export function FinanceiroClient({
                     >
                         <div className="space-y-3">
                             {commissions.length === 0 ? (
-                                <div className="rounded-[12px] border border-dashed border-[#E8E5E0] bg-[#F8F7F5] px-4 py-10 text-center text-sm text-[#6B7280]">
+                                <div className="rounded-[12px] border border-dashed border-white/10 bg-white/5 px-4 py-10 text-center text-sm text-white/50">
                                     Nenhuma comissão apurada no período selecionado.
                                 </div>
                             ) : (
@@ -501,18 +501,18 @@ export function FinanceiroClient({
                                         : 0;
 
                                     return (
-                                        <div key={record.user_id} className="flex items-center gap-3 rounded-[10px] border border-[#E8E5E0] bg-[#F8F7F5] px-3 py-3">
+                                        <div key={record.user_id} className="flex items-center gap-3 rounded-[10px] border border-white/10 bg-white/5 px-3 py-3">
                                             <div className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-[#E8D5B0] text-[13px] font-bold text-[#A8895A]">
                                                 {getInitials(record.nome)}
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <div className="text-[13px] font-semibold text-[#111827]">{record.nome}</div>
-                                                <div className="text-[11px] text-[#6B7280]">
+                                                <div className="text-[13px] font-semibold text-white">{record.nome}</div>
+                                                <div className="text-[11px] text-white/50">
                                                     {record.vendas} vendas • {formatCurrencyFromCents(record.total_vendido_cents)}
                                                 </div>
                                             </div>
                                             <div className="w-20">
-                                                <div className="h-[5px] rounded-full bg-[#E8E5E0]">
+                                                <div className="h-[5px] rounded-full bg-white/15">
                                                     <div className="h-[5px] rounded-full bg-[#3B82F6]" style={{ width: `${progress}%` }} />
                                                 </div>
                                             </div>
@@ -520,7 +520,7 @@ export function FinanceiroClient({
                                                 <div className="font-serif text-[15px] font-semibold text-[#3B82F6]">
                                                     {formatCurrencyFromCents(record.comissao_cents)}
                                                 </div>
-                                                <div className="text-[11px] text-[#6B7280]">{record.percentual.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%</div>
+                                                <div className="text-[11px] text-white/50">{record.percentual.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%</div>
                                             </div>
                                         </div>
                                     );
@@ -544,7 +544,7 @@ export function FinanceiroClient({
                                             'rounded-full border px-3 py-1.5 text-[12px] font-medium transition',
                                             filters.type === option.value
                                                 ? 'border-[#C8A97A] bg-[#C8A97A] text-black'
-                                                : 'border-[#E8E5E0] bg-white text-[#6B7280] hover:bg-[#F4EFE6]'
+                                                : 'border-white/15 bg-white/5 text-white/60 hover:bg-white/10'
                                         )}
                                     >
                                         {option.label}
@@ -552,26 +552,26 @@ export function FinanceiroClient({
                                 ))}
                             </div>
 
-                            <label className="flex h-[34px] w-full items-center gap-2 rounded-[10px] border border-[#E8E5E0] bg-white px-3 xl:max-w-[220px]">
-                                <Search className="h-4 w-4 text-[#6B7280]" />
+                            <label className="flex h-[34px] w-full items-center gap-2 rounded-[10px] border border-white/15 bg-white/5 px-3 xl:max-w-[220px]">
+                                <Search className="h-4 w-4 text-white/40" />
                                 <input
                                     value={searchValue}
                                     onChange={(event) => setSearchValue(event.target.value)}
                                     placeholder="Buscar lançamento..."
-                                    className="w-full border-0 bg-transparent p-0 text-[13px] text-[#111827] outline-none placeholder:text-[#9CA3AF]"
+                                    className="w-full border-0 bg-transparent p-0 text-[13px] text-white outline-none placeholder:text-white/40"
                                 />
                             </label>
                         </div>
 
                         {launches.data.length === 0 ? (
-                            <div className="rounded-[12px] border border-dashed border-[#E8E5E0] bg-[#F8F7F5] px-4 py-10 text-center text-sm text-[#6B7280]">
+                            <div className="rounded-[12px] border border-dashed border-white/10 bg-white/5 px-4 py-10 text-center text-sm text-white/50">
                                 Nenhum lançamento encontrado com os filtros atuais.
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="min-w-full border-collapse">
                                     <thead>
-                                        <tr className="border-b border-[#E8E5E0] text-left text-[11px] uppercase tracking-[0.05em] text-[#6B7280]">
+                                        <tr className="border-b border-white/10 text-left text-[11px] uppercase tracking-[0.05em] text-white/50">
                                             <th className="px-3 pb-3 font-semibold">Descrição</th>
                                             <th className="px-3 pb-3 font-semibold">Categoria</th>
                                             <th className="px-3 pb-3 font-semibold">Data</th>
@@ -585,18 +585,18 @@ export function FinanceiroClient({
                                             const badge = getLaunchBadge(record);
 
                                             return (
-                                                <tr key={record.id} className="border-b border-[#E8E5E0] last:border-b-0 hover:bg-[#FBFAF8]">
+                                                <tr key={record.id} className="border-b border-white/10 last:border-b-0 hover:bg-white/5">
                                                     <td className="px-3 py-3">
                                                         <div className="min-w-[220px]">
-                                                            <div className="font-semibold text-[#111827]">{record.description}</div>
-                                                            <div className="mt-0.5 text-[11px] text-[#6B7280]">
+                                                            <div className="font-semibold text-white">{record.description}</div>
+                                                            <div className="mt-0.5 text-[11px] text-white/50">
                                                                 {record.responsible?.name ?? 'Sistema'}
                                                                 {record.reference.order_number ? ` • ${record.reference.order_number}` : ''}
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-3 py-3 text-[13px] text-[#6B7280]">{formatCategory(record.category)}</td>
-                                                    <td className="px-3 py-3 text-[13px] text-[#6B7280]">{formatCompactDate(record.competence_date)}</td>
+                                                    <td className="px-3 py-3 text-[13px] text-white/50">{formatCategory(record.category)}</td>
+                                                    <td className="px-3 py-3 text-[13px] text-white/50">{formatCompactDate(record.competence_date)}</td>
                                                     <td className="px-3 py-3">
                                                         <span className={cn('inline-flex rounded-full px-2 py-1 text-[11px] font-semibold', badge.className)}>
                                                             {badge.label}
@@ -656,16 +656,17 @@ export function FinanceiroClient({
                         )}
 
                         <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                            <div className="text-[12px] text-[#6B7280]">
+                            <div className="text-[12px] text-white/50">
                                 Mostrando {launches.data.length} de {launches.meta.total} lançamentos
                             </div>
 
                             <div className="flex items-center gap-2">
                                 <button
                                     type="button"
+                                    aria-label="Página anterior"
                                     disabled={launches.meta.page <= 1 || isPending}
                                     onClick={() => navigateWith({ page: launches.meta.page - 1 })}
-                                    className="flex h-7 w-7 items-center justify-center rounded-[8px] border border-[#E8E5E0] bg-white text-[#111827] disabled:opacity-40"
+                                    className="flex h-7 w-7 items-center justify-center rounded-[8px] border border-white/15 bg-white/5 text-white disabled:opacity-40"
                                 >
                                     <ChevronLeft className="h-4 w-4" />
                                 </button>
@@ -674,9 +675,10 @@ export function FinanceiroClient({
                                 </span>
                                 <button
                                     type="button"
+                                    aria-label="Próxima página"
                                     disabled={launches.meta.page >= launches.meta.pages || isPending}
                                     onClick={() => navigateWith({ page: launches.meta.page + 1 })}
-                                    className="flex h-7 w-7 items-center justify-center rounded-[8px] border border-[#E8E5E0] bg-white text-[#111827] disabled:opacity-40"
+                                    className="flex h-7 w-7 items-center justify-center rounded-[8px] border border-white/15 bg-white/5 text-white disabled:opacity-40"
                                 >
                                     <ChevronRight className="h-4 w-4" />
                                 </button>
