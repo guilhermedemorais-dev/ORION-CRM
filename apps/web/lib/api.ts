@@ -437,7 +437,7 @@ export async function fetchPublicSettings(): Promise<PublicSettings> {
 
     if (!response.ok) {
         return {
-            company_name: 'ORION CRM',
+            company_name: 'ORIN CRM',
             logo_url: null,
             primary_color: '#C8A97A',
             favicon_url: null,

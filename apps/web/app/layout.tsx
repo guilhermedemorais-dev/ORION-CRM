@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import '@/app/globals.css';
 
 export const metadata: Metadata = {
-    title: 'ORION CRM',
+    title: 'ORIN CRM',
     description: 'Painel operacional da ORION',
 };
 

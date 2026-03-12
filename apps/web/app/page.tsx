@@ -6,8 +6,8 @@ import { fetchPublicCatalog, fetchPublicSettings } from '@/lib/api';
 import { getSession } from '@/lib/auth';
 
 export const metadata: Metadata = {
-    title: 'ORION CRM | Landing',
-    description: 'Landing publica com catalogo e captacao conectada ao ORION CRM.',
+    title: 'ORIN CRM | Landing',
+    description: 'Landing publica com catalogo e captacao conectada ao ORIN CRM.',
 };
 
 export default async function LandingPage({

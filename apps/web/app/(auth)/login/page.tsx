@@ -17,7 +17,7 @@ export default async function LoginPage({
         <main className="grid min-h-screen grid-cols-1 bg-canvas lg:grid-cols-[1.1fr_0.9fr]">
             <section className="flex items-center justify-center px-6 py-16">
                 <div className="w-full max-w-md">
-                    <p className="text-xs uppercase tracking-[0.2em] text-gray-500">ORION CRM</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-gray-500">ORIN CRM</p>
                     <h1 className="mt-3 font-serif text-4xl font-semibold text-gray-900">{settings.company_name}</h1>
                     <p className="mt-3 text-sm text-gray-600">
                         Entre com sua conta para acessar o pipeline, clientes e operação da joalheria.

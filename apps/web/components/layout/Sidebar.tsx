@@ -83,7 +83,7 @@ export function Sidebar({
     return (
         <aside className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-white/5 bg-surface-sidebar text-white">
             <div className="border-b border-white/5 px-5 py-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-gray-500">ORION CRM</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-500">ORIN CRM</p>
                 {logoUrl ? (
                     <img
                         src={logoUrl}

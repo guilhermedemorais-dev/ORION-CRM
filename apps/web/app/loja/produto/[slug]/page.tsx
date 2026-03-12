@@ -96,7 +96,7 @@ export default async function StoreProductDetailPage({
 
                         <Card title="Descrição" description="Narrativa comercial da peça ou do item customizável.">
                             <p className="text-sm leading-7 text-stone-600">
-                                {product.description ?? 'Produto conectado à operação comercial e logística do ORION CRM.'}
+                                {product.description ?? 'Produto conectado à operação comercial e logística do ORIN CRM.'}
                             </p>
                         </Card>
                     </div>

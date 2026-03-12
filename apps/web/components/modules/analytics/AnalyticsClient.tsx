@@ -351,7 +351,7 @@ export function AnalyticsClient({
             <div className="border-b border-white/5 bg-[#0A0A0C] px-6 py-4">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                     <div>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--orion-text-muted)]">ORION CRM</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--orion-text-muted)]">ORIN CRM</p>
                         <h1 className="mt-1 font-serif text-[22px] font-semibold text-[color:var(--orion-text)]">
                             Analytics
                         </h1>

@@ -11,7 +11,7 @@ import { getSession } from '@/lib/auth';
 
 export const metadata: Metadata = {
     title: 'Loja ORION',
-    description: 'Loja pública conectada ao catálogo operacional do ORION CRM.',
+    description: 'Loja pública conectada ao catálogo operacional do ORIN CRM.',
 };
 
 export default async function StorePage({

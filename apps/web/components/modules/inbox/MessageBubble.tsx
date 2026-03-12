@@ -71,7 +71,7 @@ export function MessageBubble({ message }: { message: InboxMessageRecord }) {
                         </div>
                         <div>
                             <div className="text-[13px] font-bold text-[color:var(--orion-text)]">{senderLabel}</div>
-                            <div className="text-[10px] text-[color:var(--orion-text-secondary)]">Atendimento · ORION CRM</div>
+                            <div className="text-[10px] text-[color:var(--orion-text-secondary)]">Atendimento · ORIN CRM</div>
                         </div>
                     </div>
 
