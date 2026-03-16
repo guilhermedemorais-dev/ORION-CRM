@@ -1,0 +1,382 @@
+'use client';
+
+import { useState, useCallback } from 'react';
+import type { CustomerFull } from '../types';
+
+interface Props {
+  customer: CustomerFull;
+  customerId: string;
+  onUpdate: (updated: Partial<CustomerFull>) => void;
+}
+
+const inputStyle: React.CSSProperties = {
+  height: '35px',
+  background: '#1A1A1E',
+  border: '1px solid rgba(255,255,255,0.10)',
+  borderRadius: '7px',
+  padding: '0 11px',
+  fontSize: '12px',
+  color: '#F0EDE8',
+  width: '100%',
+  boxSizing: 'border-box',
+  fontFamily: "'DM Sans', sans-serif",
+  outline: 'none',
+};
+
+const textareaStyle: React.CSSProperties = {
+  minHeight: '68px',
+  background: '#1A1A1E',
+  border: '1px solid rgba(255,255,255,0.10)',
+  borderRadius: '7px',
+  padding: '8px 11px',
+  fontSize: '12px',
+  color: '#F0EDE8',
+  width: '100%',
+  boxSizing: 'border-box',
+  resize: 'vertical',
+  fontFamily: "'DM Sans', sans-serif",
+  outline: 'none',
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: '11px',
+  fontWeight: 700,
+  color: '#E8E4DE',
+  display: 'block',
+  marginBottom: '4px',
+};
+
+function FieldGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label style={labelStyle}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        fontSize: '11px',
+        fontWeight: 700,
+        letterSpacing: '0.10em',
+        textTransform: 'uppercase',
+        color: '#7A7774',
+        marginBottom: '12px',
+        paddingBottom: '8px',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function fmtDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  try {
+    return new Date(dateStr).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '—';
+  }
+}
+
+export default function ClientFichaTab({ customer, customerId, onUpdate }: Props) {
+  const [form, setForm] = useState({
+    name: customer.name ?? '',
+    social_name: customer.social_name ?? '',
+    cpf: customer.cpf ?? '',
+    birth_date: customer.birth_date ?? '',
+    rg: customer.rg ?? '',
+    gender: customer.gender ?? '',
+    whatsapp_number: customer.whatsapp_number ?? '',
+    email: customer.email ?? '',
+    instagram: customer.instagram ?? '',
+    phone_landline: customer.phone_landline ?? '',
+    zip_code: customer.zip_code ?? '',
+    city: customer.city ?? '',
+    state: customer.state ?? '',
+    address_full: customer.address_full ?? '',
+    cnpj: customer.cnpj ?? '',
+    company_name: customer.company_name ?? '',
+    company_address: customer.company_address ?? '',
+    preferred_metal: customer.preferred_metal ?? '',
+    ring_size: customer.ring_size ?? '',
+    preferred_channel: customer.preferred_channel ?? '',
+    special_dates: customer.special_dates ?? '',
+    remarketing_notes: customer.remarketing_notes ?? '',
+  });
+
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cepLoading, setCepLoading] = useState(false);
+
+  function handleChange(field: keyof typeof form) {
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    };
+  }
+
+  const handleCepBlur = useCallback(async () => {
+    const cep = form.zip_code.replace(/\D/g, '');
+    if (cep.length !== 8) return;
+    setCepLoading(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        setForm((prev) => ({
+          ...prev,
+          city: data.localidade ?? prev.city,
+          state: data.uf ?? prev.state,
+          address_full: data.logradouro ? `${data.logradouro}, ${data.bairro}` : prev.address_full,
+        }));
+      }
+    } catch {
+      // ignore
+    } finally {
+      setCepLoading(false);
+    }
+  }, [form.zip_code]);
+
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/internal/customers/${customerId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error('Falha ao salvar');
+      const data = await res.json();
+      onUpdate(data);
+    } catch {
+      setError('Erro ao salvar. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const hasCpf = Boolean(form.cpf);
+
+  return (
+    <div style={{ maxWidth: '680px' }}>
+      {/* CPF Badge */}
+      <div style={{ marginBottom: '20px' }}>
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px',
+            background: hasCpf ? 'rgba(63,184,122,0.10)' : 'rgba(240,160,64,0.10)',
+            border: `1px solid ${hasCpf ? 'rgba(63,184,122,0.25)' : 'rgba(240,160,64,0.25)'}`,
+            borderRadius: '20px',
+            padding: '3px 10px',
+            fontSize: '11px',
+            fontWeight: 600,
+            color: hasCpf ? '#3FB87A' : '#F0A040',
+          }}
+        >
+          {hasCpf ? '✓ Apto para NF-e' : '⚠ CPF necessário para NF-e'}
+        </span>
+      </div>
+
+      {/* 1. Identificação */}
+      <div style={{ marginBottom: '28px' }}>
+        <SectionTitle>Identificação</SectionTitle>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <FieldGroup label="Nome completo">
+            <input style={inputStyle} value={form.name} onChange={handleChange('name')} />
+          </FieldGroup>
+          <FieldGroup label="Nome social">
+            <input style={inputStyle} value={form.social_name} onChange={handleChange('social_name')} placeholder="Opcional" />
+          </FieldGroup>
+          <FieldGroup label="CPF">
+            <input style={inputStyle} value={form.cpf} onChange={handleChange('cpf')} placeholder="000.000.000-00" />
+          </FieldGroup>
+          <FieldGroup label="Data de nascimento">
+            <input style={inputStyle} type="date" value={form.birth_date} onChange={handleChange('birth_date')} />
+          </FieldGroup>
+          <FieldGroup label="RG">
+            <input style={inputStyle} value={form.rg} onChange={handleChange('rg')} placeholder="Opcional" />
+          </FieldGroup>
+          <FieldGroup label="Gênero">
+            <select
+              style={{ ...inputStyle, cursor: 'pointer' }}
+              value={form.gender}
+              onChange={handleChange('gender')}
+            >
+              <option value="">Não informado</option>
+              <option value="M">Masculino</option>
+              <option value="F">Feminino</option>
+              <option value="NB">Não-binário</option>
+              <option value="O">Outro</option>
+            </select>
+          </FieldGroup>
+        </div>
+      </div>
+
+      {/* 2. Contatos */}
+      <div style={{ marginBottom: '28px' }}>
+        <SectionTitle>Contatos</SectionTitle>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <FieldGroup label="WhatsApp">
+            <input style={inputStyle} value={form.whatsapp_number} onChange={handleChange('whatsapp_number')} placeholder="+55 11 99999-9999" />
+          </FieldGroup>
+          <FieldGroup label="E-mail">
+            <input style={inputStyle} type="email" value={form.email} onChange={handleChange('email')} placeholder="email@exemplo.com" />
+          </FieldGroup>
+          <FieldGroup label="Instagram">
+            <input style={inputStyle} value={form.instagram} onChange={handleChange('instagram')} placeholder="@usuario" />
+          </FieldGroup>
+          <FieldGroup label="Telefone fixo">
+            <input style={inputStyle} value={form.phone_landline} onChange={handleChange('phone_landline')} placeholder="(11) 3333-4444" />
+          </FieldGroup>
+        </div>
+      </div>
+
+      {/* 3. Endereço */}
+      <div style={{ marginBottom: '28px' }}>
+        <SectionTitle>Endereço</SectionTitle>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <FieldGroup label={cepLoading ? 'CEP (buscando...)' : 'CEP'}>
+            <input
+              style={{ ...inputStyle, opacity: cepLoading ? 0.7 : 1 }}
+              value={form.zip_code}
+              onChange={handleChange('zip_code')}
+              onBlur={handleCepBlur}
+              placeholder="00000-000"
+            />
+          </FieldGroup>
+          <FieldGroup label="Cidade">
+            <input style={inputStyle} value={form.city} onChange={handleChange('city')} />
+          </FieldGroup>
+          <FieldGroup label="Estado">
+            <input style={inputStyle} value={form.state} onChange={handleChange('state')} placeholder="SP" maxLength={2} />
+          </FieldGroup>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <FieldGroup label="Endereço completo">
+              <input style={inputStyle} value={form.address_full} onChange={handleChange('address_full')} placeholder="Rua, número, complemento, bairro" />
+            </FieldGroup>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Dados PJ */}
+      <div style={{ marginBottom: '28px' }}>
+        <SectionTitle>Dados PJ (opcional)</SectionTitle>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <FieldGroup label="CNPJ">
+            <input style={inputStyle} value={form.cnpj} onChange={handleChange('cnpj')} placeholder="00.000.000/0001-00" />
+          </FieldGroup>
+          <FieldGroup label="Razão social">
+            <input style={inputStyle} value={form.company_name} onChange={handleChange('company_name')} />
+          </FieldGroup>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <FieldGroup label="Endereço empresarial">
+              <input style={inputStyle} value={form.company_address} onChange={handleChange('company_address')} />
+            </FieldGroup>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Preferências */}
+      <div style={{ marginBottom: '28px' }}>
+        <SectionTitle>Preferências</SectionTitle>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <FieldGroup label="Metal preferido">
+            <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.preferred_metal} onChange={handleChange('preferred_metal')}>
+              <option value="">Não informado</option>
+              <option value="Ouro amarelo">Ouro amarelo</option>
+              <option value="Ouro branco">Ouro branco</option>
+              <option value="Ouro rosé">Ouro rosé</option>
+              <option value="Prata">Prata</option>
+              <option value="Platina">Platina</option>
+            </select>
+          </FieldGroup>
+          <FieldGroup label="Tamanho do aro">
+            <input style={inputStyle} value={form.ring_size} onChange={handleChange('ring_size')} placeholder="Ex: 15, 16, 17..." />
+          </FieldGroup>
+          <FieldGroup label="Canal preferido">
+            <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.preferred_channel} onChange={handleChange('preferred_channel')}>
+              <option value="">Não informado</option>
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="E-mail">E-mail</option>
+              <option value="Telefone">Telefone</option>
+              <option value="Presencial">Presencial</option>
+              <option value="Instagram">Instagram</option>
+            </select>
+          </FieldGroup>
+          <FieldGroup label="Datas especiais">
+            <input style={inputStyle} value={form.special_dates} onChange={handleChange('special_dates')} placeholder="Aniversário, casamento..." />
+          </FieldGroup>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <FieldGroup label="Observações para remarketing">
+              <textarea style={textareaStyle} value={form.remarketing_notes} onChange={handleChange('remarketing_notes')} placeholder="Gostos, interesses, histórico de compras relevante..." />
+            </FieldGroup>
+          </div>
+        </div>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div
+          style={{
+            background: 'rgba(224,82,82,0.10)',
+            border: '1px solid rgba(224,82,82,0.25)',
+            borderRadius: '7px',
+            padding: '10px 12px',
+            color: '#E05252',
+            fontSize: '12px',
+            marginBottom: '12px',
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Footer */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingTop: '16px',
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
+        <span style={{ fontSize: '11px', color: '#7A7774' }}>
+          Última atualização: {fmtDate(customer.updated_at)}{' '}
+          {customer.assigned_to ? `· ${customer.assigned_to.name}` : ''}
+        </span>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            height: '34px',
+            padding: '0 20px',
+            background: saving ? '#1A1A1E' : 'rgba(200,169,122,0.15)',
+            border: '1px solid rgba(200,169,122,0.30)',
+            borderRadius: '7px',
+            color: '#C8A97A',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: saving ? 'not-allowed' : 'pointer',
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          {saving ? 'Salvando...' : 'Salvar alterações'}
+        </button>
+      </div>
+    </div>
+  );
+}
