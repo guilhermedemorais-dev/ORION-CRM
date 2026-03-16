@@ -213,7 +213,7 @@ function ProviderModal({ provider, onClose, onSaved, onToast }: ModalProps) {
                     <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#F0EDE8]">
                         {isEdit ? 'Editar Provedor' : 'Adicionar Provedor WhatsApp'}
                     </div>
-                    <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-[#7A7774] hover:text-[#F0EDE8]">
+                    <button type="button" aria-label="Fechar" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-[#7A7774] hover:text-[#F0EDE8]">
                         <X size={13} />
                     </button>
                 </div>

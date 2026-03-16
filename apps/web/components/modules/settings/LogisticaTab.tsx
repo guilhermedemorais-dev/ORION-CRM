@@ -175,7 +175,7 @@ function AddCarrierModal({ editing, onClose, onSaved, showToast }: AddCarrierMod
                             Configure as credenciais e parâmetros de integração
                         </div>
                     </div>
-                    <button onClick={onClose} style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '6px', color: '#7A7774', cursor: 'pointer' }}>
+                    <button aria-label="Fechar" onClick={onClose} style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '6px', color: '#7A7774', cursor: 'pointer' }}>
                         <X size={14} />
                     </button>
                 </div>
