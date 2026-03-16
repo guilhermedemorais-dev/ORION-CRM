@@ -2036,7 +2036,7 @@ export function AjustesClient({
                             <input className={fieldClassName} placeholder="E-mail" type="email" {...inviteForm.register('email')} />
                         </div>
                         <div className="grid gap-4 md:grid-cols-2">
-                            <select {...inviteForm.register('role')} className={fieldClassName}>
+                            <select aria-label="Função do usuário" {...inviteForm.register('role')} className={fieldClassName}>
                                 <option value="ADMIN">ADMIN</option>
                                 <option value="ATENDENTE">ATENDENTE</option>
                             </select>
@@ -2073,7 +2073,7 @@ export function AjustesClient({
                             <input className={fieldClassName} placeholder="E-mail" type="email" {...editForm.register('email')} />
                         </div>
                         <div className="grid gap-4 md:grid-cols-2">
-                            <select {...editForm.register('role')} className={fieldClassName}>
+                            <select aria-label="Função do usuário" {...editForm.register('role')} className={fieldClassName}>
                                 <option value="ADMIN">ADMIN</option>
                                 <option value="ATENDENTE">ATENDENTE</option>
                             </select>

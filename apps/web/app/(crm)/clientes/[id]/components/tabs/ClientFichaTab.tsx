@@ -211,6 +211,7 @@ export default function ClientFichaTab({ customer, customerId, onUpdate }: Props
           </FieldGroup>
           <FieldGroup label="Gênero">
             <select
+              aria-label="Gênero"
               style={{ ...inputStyle, cursor: 'pointer' }}
               value={form.gender}
               onChange={handleChange('gender')}
@@ -294,7 +295,7 @@ export default function ClientFichaTab({ customer, customerId, onUpdate }: Props
         <SectionTitle>Preferências</SectionTitle>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <FieldGroup label="Metal preferido">
-            <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.preferred_metal} onChange={handleChange('preferred_metal')}>
+            <select aria-label="Metal preferido" style={{ ...inputStyle, cursor: 'pointer' }} value={form.preferred_metal} onChange={handleChange('preferred_metal')}>
               <option value="">Não informado</option>
               <option value="Ouro amarelo">Ouro amarelo</option>
               <option value="Ouro branco">Ouro branco</option>
@@ -307,7 +308,7 @@ export default function ClientFichaTab({ customer, customerId, onUpdate }: Props
             <input style={inputStyle} value={form.ring_size} onChange={handleChange('ring_size')} placeholder="Ex: 15, 16, 17..." />
           </FieldGroup>
           <FieldGroup label="Canal preferido">
-            <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.preferred_channel} onChange={handleChange('preferred_channel')}>
+            <select aria-label="Canal preferido" style={{ ...inputStyle, cursor: 'pointer' }} value={form.preferred_channel} onChange={handleChange('preferred_channel')}>
               <option value="">Não informado</option>
               <option value="WhatsApp">WhatsApp</option>
               <option value="E-mail">E-mail</option>

@@ -332,6 +332,7 @@ export default function AttendancePopup({ customerId, block, onClose, onSaved, o
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
           {/* 1st: block type */}
           <select
+            aria-label="Tipo de bloco"
             value={blockType}
             onChange={(e) => setBlockType(e.target.value as BlockType)}
             style={{ ...inputStyle, width: '155px', cursor: 'pointer' }}
@@ -341,6 +342,7 @@ export default function AttendancePopup({ customerId, block, onClose, onSaved, o
 
           {/* 2nd: pipeline status (mini kanban) */}
           <select
+            aria-label="Status do pipeline"
             value={pipelineStatus}
             onChange={(e) => setPipelineStatus(e.target.value as PipelineStatus)}
             style={{
@@ -492,14 +494,14 @@ export default function AttendancePopup({ customerId, block, onClose, onSaved, o
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
                 <div>
                   <label style={labelStyle}>Prioridade</label>
-                  <select style={{ ...inputStyle, cursor: 'pointer' }} value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
+                  <select aria-label="Prioridade" style={{ ...inputStyle, cursor: 'pointer' }} value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
                     <option value="normal">Normal</option>
                     <option value="urgente">Urgente</option>
                   </select>
                 </div>
                 <div>
                   <label style={labelStyle}>Prazo</label>
-                  <input style={inputStyle} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                  <input aria-label="Prazo" style={inputStyle} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
                 </div>
               </div>
 
@@ -507,7 +509,7 @@ export default function AttendancePopup({ customerId, block, onClose, onSaved, o
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
                 <div>
                   <label style={labelStyle}>Metal</label>
-                  <select style={{ ...inputStyle, cursor: 'pointer' }} value={metal} onChange={(e) => setMetal(e.target.value)}>
+                  <select aria-label="Metal" style={{ ...inputStyle, cursor: 'pointer' }} value={metal} onChange={(e) => setMetal(e.target.value)}>
                     <option value="">Selecionar...</option>
                     <option value="Ouro 18k amarelo">Ouro 18k amarelo</option>
                     <option value="Ouro 18k branco">Ouro 18k branco</option>
@@ -530,7 +532,7 @@ export default function AttendancePopup({ customerId, block, onClose, onSaved, o
                 </div>
                 <div>
                   <label style={labelStyle}>Acabamento</label>
-                  <select style={{ ...inputStyle, cursor: 'pointer' }} value={finish} onChange={(e) => setFinish(e.target.value)}>
+                  <select aria-label="Acabamento" style={{ ...inputStyle, cursor: 'pointer' }} value={finish} onChange={(e) => setFinish(e.target.value)}>
                     <option value="">Selecionar...</option>
                     <option value="Polido">Polido</option>
                     <option value="Escovado">Escovado</option>

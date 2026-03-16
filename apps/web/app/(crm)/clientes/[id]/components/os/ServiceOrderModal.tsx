@@ -212,7 +212,7 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
                 </FieldGroup>
               </div>
               <FieldGroup label="Prioridade">
-                <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.priority} onChange={handleChange('priority')}>
+                <select aria-label="Prioridade" style={{ ...inputStyle, cursor: 'pointer' }} value={form.priority} onChange={handleChange('priority')}>
                   <option value="normal">Normal</option>
                   <option value="alta">Alta</option>
                   <option value="urgente">Urgente</option>
@@ -229,7 +229,7 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
             <SectionTitle>Especificações</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <FieldGroup label="Metal">
-                <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.metal} onChange={handleChange('metal')}>
+                <select aria-label="Metal" style={{ ...inputStyle, cursor: 'pointer' }} value={form.metal} onChange={handleChange('metal')}>
                   <option value="">Selecionar...</option>
                   <option value="Ouro 18k amarelo">Ouro 18k amarelo</option>
                   <option value="Ouro 18k branco">Ouro 18k branco</option>

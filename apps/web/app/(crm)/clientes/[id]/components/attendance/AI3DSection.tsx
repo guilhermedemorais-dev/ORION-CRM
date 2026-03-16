@@ -375,6 +375,7 @@ export default function AI3DSection({ blockId, onApprove }: Props) {
                   {f.label}
                 </label>
                 <select
+                  aria-label={f.label}
                   style={{ ...inputStyle, cursor: 'pointer' }}
                   value={params[f.key as keyof AI3DParams]}
                   onChange={(e) => setParams((prev) => ({ ...prev, [f.key]: e.target.value }))}
