@@ -61,8 +61,24 @@ export type AjustesTab =
     | 'usuarios'
     | 'whatsapp'
     | 'notificacoes'
-    | 'integracoes'
-    | 'fiscal';
+    | 'integracoes';
+
+export type CarrierAdapterType = 'generic_rest' | 'jadlog' | 'correios' | 'loggi' | 'tnt' | 'rapiddo';
+
+export interface CarrierConfig {
+    id: string;
+    name: string;
+    slug: string;
+    logo_url: string | null;
+    adapter_type: CarrierAdapterType;
+    base_url: string | null;
+    default_service: string | null;
+    insurance_pct: number;
+    min_insurance_cents: number;
+    active: boolean;
+    created_at: string;
+    updated_at: string;
+}
 
 export interface IntegrationWorkflowSnapshot {
     id: string;

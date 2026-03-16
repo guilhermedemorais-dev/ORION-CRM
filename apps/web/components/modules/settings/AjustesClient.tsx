@@ -12,12 +12,15 @@ import {
     Power,
     QrCode,
     RefreshCw,
-    ReceiptText,
+
     Save,
     ShieldCheck,
     Users2,
 } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
+
+import { WhatsAppTab } from './WhatsAppTab';
+import { IntegracoesTab } from './IntegracoesTab';
 import { HexColorPicker } from 'react-colorful';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -97,7 +100,6 @@ const tabItems: Array<{
     { id: 'whatsapp', label: 'WhatsApp' },
     { id: 'notificacoes', label: 'Notificações' },
     { id: 'integracoes', label: 'Integrações' },
-    { id: 'fiscal', label: 'Fiscal' },
 ];
 
 type NotificationToggleKey =
@@ -139,32 +141,6 @@ const notificationItems: Array<{
     },
 ];
 
-const marketplaceItems = [
-    {
-        label: 'Mercado Livre',
-        via: 'via Bling',
-        badge: 'ML',
-        badgeClassName: 'bg-[linear-gradient(135deg,#ffe600,#ffcf00)] text-[#333333]',
-    },
-    {
-        label: 'Shopee',
-        via: 'via Bling',
-        badge: 'SH',
-        badgeClassName: 'bg-[linear-gradient(135deg,#ee4d2d,#f55c3e)] text-white',
-    },
-    {
-        label: 'TikTok Shop',
-        via: 'via Bling',
-        badge: 'TT',
-        badgeClassName: 'bg-black text-white',
-    },
-    {
-        label: 'Amazon',
-        via: 'via Bling',
-        badge: 'AMZ',
-        badgeClassName: 'bg-[linear-gradient(135deg,#ff9900,#ff6600)] text-white',
-    },
-];
 
 const fallbackIntegrationWorkflows: IntegrationWorkflowSnapshot[] = [
     { id: 'wf_aurora_sdr_001', label: 'AURORA SDR — Atendimento WA', status: 'active' },
@@ -1412,6 +1388,8 @@ export function AjustesClient({
                         <input
                             type="file"
                             accept="image/png,image/jpeg,image/svg+xml"
+                            aria-label="Upload de logotipo"
+                            title="Upload de logotipo"
                             className="mt-4 block w-full text-sm text-[color:var(--orion-text-secondary)]"
                             onChange={(event) => {
                                 const nextFile = event.target.files?.[0];
@@ -1989,125 +1967,13 @@ export function AjustesClient({
         );
     };
 
-    const renderFiscalTab = () => (
-        <div className="space-y-5">
-            <section className="rounded-2xl border border-[color:var(--orion-gold-border)] bg-[linear-gradient(135deg,rgba(191,160,106,0.06),rgba(191,160,106,0.02))] p-6">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[color:var(--orion-gold-bg)] text-brand-gold">
-                        <ReceiptText className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1">
-                        <div
-                            className="text-[30px] font-semibold text-[color:var(--orion-gold-light)]"
-                            style={{ fontFamily: 'var(--font-orion-serif)' }}
-                        >
-                            Emissão de Nota Fiscal
-                        </div>
-                        <div className="mt-1 max-w-3xl text-sm leading-6 text-[color:var(--orion-text-secondary)]">
-                            Integração com Bling ERP para emissão de NF-e. Ao conectar, o Bling sincroniza catálogo e pedidos com os principais marketplaces.
-                        </div>
-                    </div>
-                    <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--orion-gold-border)] bg-[color:var(--orion-gold-bg)] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-gold">
-                        <ShieldCheck className="h-3.5 w-3.5" />
-                        Em breve
-                    </div>
-                </div>
-            </section>
-
-            <SectionCard
-                title="Bling ERP"
-                description="Emissão de NF-e e sincronização com marketplaces."
-                action={
-                    <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-text-secondary)]">
-                        Não configurado
-                    </span>
-                }
-            >
-                <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                        <FieldMeta label="API Key Bling" hint="Disponível em Bling → Configurações → API." />
-                        <div className={subtleFieldClassName}>••••••••••••••••••••••••••••••••</div>
-                    </div>
-                    <div className="space-y-2">
-                        <FieldMeta label="CNPJ emissor" />
-                        <div className={subtleFieldClassName}>
-                            {settings.cnpj ?? 'Não preenchido'}
-                            <span className="ml-auto text-[10px] text-[color:var(--orion-text-disabled)]">(de Empresa)</span>
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <FieldMeta label="Regime tributário" />
-                        <div className={subtleFieldClassName}>
-                            Simples Nacional
-                            <ChevronDown className="ml-auto h-4 w-4" />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <FieldMeta label="Ambiente NF-e" />
-                        <div className={subtleFieldClassName}>
-                            Homologação (teste)
-                            <ChevronDown className="ml-auto h-4 w-4" />
-                        </div>
-                    </div>
-                </div>
-            </SectionCard>
-
-            <SectionCard title="Marketplaces via Bling" description="Ao conectar o Bling, estes canais ficam disponíveis automaticamente.">
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    {marketplaceItems.map((item) => (
-                        <div key={item.label} className="rounded-[14px] border border-white/10 bg-[color:var(--orion-base)] p-4 text-center opacity-60">
-                            <div className={cn('mx-auto flex h-10 w-10 items-center justify-center rounded-[10px] text-[10px] font-extrabold uppercase', item.badgeClassName)}>
-                                {item.badge}
-                            </div>
-                            <div className="mt-3 text-sm font-semibold text-[color:var(--orion-text)]">{item.label}</div>
-                            <div className="mt-1 text-[10px] uppercase tracking-[0.16em] text-[color:var(--orion-text-muted)]">{item.via}</div>
-                            <span className="mt-3 inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-text-secondary)]">
-                                Futuro
-                            </span>
-                        </div>
-                    ))}
-                </div>
-                <div className="mt-4 rounded-[12px] border border-white/5 bg-[color:var(--orion-base)] px-4 py-3 text-sm leading-6 text-[color:var(--orion-text-muted)]">
-                    O Bling centraliza a emissão de NF-e e sincroniza automaticamente catálogo, estoque e pedidos com cada marketplace. Nenhuma integração adicional é necessária.
-                </div>
-            </SectionCard>
-
-            <SectionCard title="Configurações Fiscais" description="Disponível após a conexão do Bling." className="opacity-50">
-                <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                        <FieldMeta label="CFOP padrão (venda presencial)" />
-                        <div className={subtleFieldClassName}>
-                            5.102 — Venda de mercadoria adquirida
-                            <ChevronDown className="ml-auto h-4 w-4" />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <FieldMeta label="CFOP padrão (venda online)" />
-                        <div className={subtleFieldClassName}>
-                            6.108 — Venda à ordem
-                            <ChevronDown className="ml-auto h-4 w-4" />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <FieldMeta label="Série da NF-e" />
-                        <div className={subtleFieldClassName}>1</div>
-                    </div>
-                    <div className="space-y-2">
-                        <FieldMeta label="NCM padrão (joias)" />
-                        <div className={subtleFieldClassName}>7113.19.00 — Joias e suas partes</div>
-                    </div>
-                </div>
-            </SectionCard>
-        </div>
-    );
-
     const renderActiveTab = () => {
         if (activeTab === 'empresa') return renderCompanyTab();
         if (activeTab === 'usuarios') return renderUsersTab();
-        if (activeTab === 'whatsapp') return renderWhatsAppTab();
+        if (activeTab === 'whatsapp') return <WhatsAppTab onToast={addToast} />;
         if (activeTab === 'notificacoes') return renderNotificationsTab();
-        if (activeTab === 'integracoes') return renderIntegrationsTab();
-        return renderFiscalTab();
+        if (activeTab === 'integracoes') return <IntegracoesTab onToast={addToast} />;
+        return null;
     };
 
     const headerAction = activeTab === 'empresa' ? (

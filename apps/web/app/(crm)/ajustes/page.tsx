@@ -10,7 +10,6 @@ const validTabs = new Set<AjustesTab>([
     'whatsapp',
     'notificacoes',
     'integracoes',
-    'fiscal',
 ]);
 
 const fallbackSettings: AdminSettings = {
