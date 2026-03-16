@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORION PDV — Mockup 2: Popup Pagamento</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --gold:#C8A97A; --gold-dim:rgba(200,169,122,0.12); --gold-border:rgba(200,169,122,0.28);
+  --bg-0:#0A0A0B; --bg-1:#111113; --bg-2:#18181C; --bg-3:#202026; --bg-4:#27272E;
+  --border:rgba(255,255,255,0.07); --border-mid:rgba(255,255,255,0.11); --border-hi:rgba(255,255,255,0.17);
+  --text:#EDE8E0; --text-sec:#888480; --text-muted:#4A4A52;
+  --green:#4CAF82; --green-dim:rgba(76,175,130,0.12); --green-border:rgba(76,175,130,0.25);
+  --red:#E05252; --blue:#4A9EFF; --blue-dim:rgba(74,158,255,0.1);
+  --amber:#F0A040; --amber-dim:rgba(240,160,64,0.12);
+}
+
+body {
+  font-family:'Inter',sans-serif; background:var(--bg-0); color:var(--text);
+  min-height:100vh; display:flex; align-items:flex-start; justify-content:center;
+  gap:28px; padding:32px; flex-wrap:wrap;
+}
+
+.col { display:flex; flex-direction:column; align-items:center; gap:10px; }
+.col-label {
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+  color:var(--text-muted); padding:3px 12px; border:1px solid var(--border); border-radius:20px;
+  white-space:nowrap;
+}
+
+/* MODAL BASE */
+.modal {
+  background:var(--bg-2); border:1px solid var(--border-mid); border-radius:16px;
+  overflow:hidden; box-shadow:0 24px 72px rgba(0,0,0,.7);
+}
+
+/* HEADER */
+.modal-header {
+  padding:18px 22px 16px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.mh-left { }
+.mh-title { font-family:'Playfair Display',serif; font-size:17px; font-weight:700; }
+.mh-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
+.mh-total {
+  text-align:right;
+}
+.mh-total-lbl { font-size:10px; color:var(--text-muted); margin-bottom:2px; }
+.mh-total-val { font-family:'Playfair Display',serif; font-size:22px; font-weight:700; color:var(--gold); }
+
+/* ORDER SUMMARY */
+.order-summary {
+  background:var(--bg-3); border-bottom:1px solid var(--border);
+  padding:10px 22px; display:flex; gap:16px; align-items:center;
+}
+.os-item { font-size:11px; color:var(--text-muted); }
+.os-item span { color:var(--text-sec); font-weight:600; }
+
+/* AVISO ESTOQUE */
+.stock-warning {
+  background:var(--amber-dim); border-bottom:1px solid rgba(240,160,64,.2);
+  padding:8px 22px; display:flex; align-items:center; gap:8px;
+}
+.sw-icon { font-size:13px; }
+.sw-text { font-size:11px; color:var(--amber); font-weight:500; }
+.sw-text strong { font-weight:700; }
+
+/* PAYMENT METHODS */
+.pay-methods { padding:16px 22px 12px; }
+.pm-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted); margin-bottom:10px; }
+.pm-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.pm-btn {
+  height:52px; border-radius:9px; border:1px solid var(--border-mid);
+  background:var(--bg-3); cursor:pointer; transition:all .15s;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  font-family:'Inter',sans-serif;
+}
+.pm-btn:hover { border-color:var(--gold-border); background:var(--gold-dim); }
+.pm-btn.active { border-color:var(--gold-border); background:var(--gold-dim); box-shadow:0 0 0 1px var(--gold-border); }
+.pm-icon { font-size:16px; }
+.pm-name { font-size:9px; font-weight:600; color:var(--text-sec); }
+.pm-btn.active .pm-name { color:var(--gold); }
+
+/* PAYMENT DETAIL AREA */
+.pay-detail { padding:0 22px 16px; min-height:160px; }
+
+/* ── PIX ── */
+.pix-area { display:flex; gap:16px; align-items:flex-start; }
+.pix-qr-wrap {
+  flex-shrink:0; width:130px;
+}
+.pix-qr-box {
+  width:130px; height:130px; background:#fff; border-radius:10px;
+  display:flex; align-items:center; justify-content:center; position:relative;
+  overflow:hidden;
+}
+.pix-qr-box svg { width:110px; height:110px; }
+.pix-timer {
+  margin-top:6px; text-align:center; font-size:10px; color:var(--text-muted);
+}
+.pix-timer-val { color:var(--amber); font-weight:700; font-size:11px; }
+
+.pix-info { flex:1; }
+.pix-info-title { font-size:12px; font-weight:700; margin-bottom:8px; }
+.pix-key-wrap {
+  background:var(--bg-3); border:1px solid var(--border); border-radius:7px;
+  padding:8px 10px; display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:8px;
+}
+.pix-key-val { font-size:11px; font-weight:600; color:var(--text-sec); font-family:monospace; }
+.btn-copy {
+  height:24px; padding:0 8px; background:var(--gold-dim); border:1px solid var(--gold-border);
+  border-radius:5px; font-size:10px; font-weight:600; color:var(--gold); cursor:pointer; transition:all .15s;
+  font-family:'Inter',sans-serif;
+}
+.btn-copy:hover { background:rgba(200,169,122,0.2); }
+.pix-amount-row {
+  background:var(--bg-3); border:1px solid var(--border); border-radius:7px;
+  padding:8px 10px; display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;
+}
+.pal { font-size:11px; color:var(--text-muted); }
+.pav { font-family:'Playfair Display',serif; font-size:15px; font-weight:700; color:var(--gold); }
+
+.pix-status { display:flex; align-items:center; gap:6px; font-size:11px; }
+.pix-dot { width:8px; height:8px; border-radius:50%; background:var(--amber); animation:pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:.4; } }
+.pix-dot.confirmed { background:var(--green); animation:none; }
+
+/* ── DINHEIRO ── */
+.cash-area { display:flex; flex-direction:column; gap:10px; }
+.cash-input-label { font-size:11px; color:var(--text-muted); margin-bottom:4px; }
+.cash-input-wrap { position:relative; }
+.cash-prefix { position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:14px; font-weight:600; color:var(--text-muted); }
+.cash-input {
+  width:100%; height:46px; background:var(--bg-3); border:1px solid var(--border-hi);
+  border-radius:9px; padding:0 14px 0 34px; font-size:20px; font-weight:700;
+  font-family:'Playfair Display',serif; color:var(--text); outline:none;
+  transition:border-color .15s;
+}
+.cash-input:focus { border-color:var(--gold-border); }
+.cash-change-row {
+  background:var(--green-dim); border:1px solid var(--green-border);
+  border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;
+}
+.ccr-lbl { font-size:12px; color:var(--text-sec); }
+.ccr-val { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--green); }
+.quick-btns { display:flex; gap:6px; flex-wrap:wrap; }
+.qb {
+  height:30px; padding:0 10px; border-radius:6px; background:var(--bg-3);
+  border:1px solid var(--border); font-size:11px; font-weight:600; color:var(--text-sec);
+  cursor:pointer; transition:all .15s; font-family:'Inter',sans-serif;
+}
+.qb:hover { border-color:var(--gold-border); color:var(--gold); }
+
+/* ── CRÉDITO ── */
+.credit-area { display:flex; flex-direction:column; gap:8px; }
+.installments-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.inst-btn {
+  height:46px; border-radius:8px; background:var(--bg-3); border:1px solid var(--border);
+  cursor:pointer; transition:all .15s; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; font-family:'Inter',sans-serif;
+}
+.inst-btn:hover { border-color:var(--gold-border); }
+.inst-btn.active { border-color:var(--gold-border); background:var(--gold-dim); }
+.inst-n { font-size:14px; font-weight:700; }
+.inst-val { font-size:9px; color:var(--text-muted); margin-top:1px; }
+.inst-btn.active .inst-val { color:var(--gold); }
+.credit-note { font-size:10px; color:var(--text-muted); text-align:center; padding-top:4px; }
+
+/* ── MAQUININHA ── */
+.terminal-area { display:flex; flex-direction:column; gap:8px; align-items:center; padding:8px 0; }
+.ta-icon { font-size:36px; }
+.ta-title { font-size:13px; font-weight:600; }
+.ta-sub { font-size:11px; color:var(--text-muted); text-align:center; line-height:1.5; }
+.ta-status {
+  display:flex; align-items:center; gap:6px; font-size:11px;
+  background:var(--amber-dim); border:1px solid rgba(240,160,64,.2);
+  border-radius:6px; padding:5px 12px;
+}
+.ta-dot { width:7px; height:7px; border-radius:50%; background:var(--amber); animation:pulse 1.5s infinite; }
+.btn-manual {
+  height:32px; padding:0 16px; background:transparent; border:1px dashed var(--border-hi);
+  border-radius:7px; font-size:11px; font-weight:600; color:var(--text-muted);
+  cursor:pointer; transition:all .15s; font-family:'Inter',sans-serif;
+}
+.btn-manual:hover { color:var(--text); border-color:var(--border-hi); }
+
+/* FOOTER */
+.modal-footer { padding:12px 22px 16px; border-top:1px solid var(--border); }
+
+/* ESTADO AGUARDANDO */
+.footer-waiting { display:flex; flex-direction:column; gap:8px; }
+.waiting-progress {
+  height:4px; background:var(--bg-3); border-radius:2px; overflow:hidden;
+}
+.waiting-bar {
+  height:100%; width:60%; background:var(--amber);
+  border-radius:2px; transition:width .3s;
+  animation:progress 3s ease-in-out infinite;
+}
+@keyframes progress { 0%{width:10%} 50%{width:80%} 100%{width:95%} }
+.waiting-row { display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); }
+
+/* BOTÃO VENDA CONCLUÍDA — destaque máximo */
+.btn-concluida {
+  width:100%; height:50px; border-radius:11px; border:none;
+  background:linear-gradient(135deg, #C8A97A 0%, #E8C97A 50%, #C8A97A 100%);
+  font-size:15px; font-weight:800; font-family:'Playfair Display',serif; color:#000;
+  cursor:pointer; transition:all .2s; letter-spacing:.3px;
+  box-shadow:0 4px 20px rgba(200,169,122,0.35);
+  display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.btn-concluida:hover { transform:translateY(-2px); box-shadow:0 8px 32px rgba(200,169,122,0.5); }
+.btn-concluida:active { transform:translateY(0); }
+.btn-concluida-icon { font-size:18px; }
+
+.btn-concluida-disabled {
+  width:100%; height:50px; border-radius:11px; border:1px solid var(--border);
+  background:var(--bg-3); font-size:14px; font-weight:600; font-family:'Inter',sans-serif;
+  color:var(--text-muted); cursor:not-allowed; display:flex; align-items:center; justify-content:center; gap:7px;
+}
+
+.footer-note {
+  text-align:center; font-size:10px; color:var(--text-muted); margin-top:7px;
+  display:flex; align-items:center; justify-content:center; gap:4px;
+}
+.footer-note.warning { color:var(--amber); }
+
+.footer-two-btns { display:flex; gap:8px; }
+.btn-cancel-pay {
+  height:50px; padding:0 16px; border-radius:11px; background:transparent;
+  border:1px solid var(--border); font-size:12px; font-weight:600; color:var(--text-muted);
+  cursor:pointer; transition:all .15s; font-family:'Inter',sans-serif;
+}
+.btn-cancel-pay:hover { border-color:var(--red); color:var(--red); }
+</style>
+</head>
+<body>
+
+<!-- ESTADO 1: PIX aguardando -->
+<div class="col">
+  <div class="col-label">PIX — aguardando pagamento</div>
+  <div class="modal" style="width:480px">
+    <div class="modal-header">
+      <div class="mh-left">
+        <div class="mh-title">Pagamento</div>
+        <div class="mh-sub">OR-20260313-8980</div>
+      </div>
+      <div class="mh-total">
+        <div class="mh-total-lbl">Total a cobrar</div>
+        <div class="mh-total-val">R$ 2.500,00</div>
+      </div>
+    </div>
+
+    <div class="stock-warning">
+      <span class="sw-icon">⚠️</span>
+      <span class="sw-text"><strong>Estoque será baixado</strong> somente ao confirmar "Venda Concluída"</span>
+    </div>
+
+    <div class="pay-methods">
+      <div class="pm-label">Forma de pagamento</div>
+      <div class="pm-grid">
+        <button class="pm-btn active"><span class="pm-icon">📱</span><span class="pm-name">PIX</span></button>
+        <button class="pm-btn"><span class="pm-icon">💵</span><span class="pm-name">Dinheiro</span></button>
+        <button class="pm-btn"><span class="pm-icon">💳</span><span class="pm-name">Débito</span></button>
+        <button class="pm-btn"><span class="pm-icon">💳</span><span class="pm-name">Crédito</span></button>
+        <button class="pm-btn"><span class="pm-icon">🔗</span><span class="pm-name">Link MP</span></button>
+      </div>
+    </div>
+
+    <div class="pay-detail">
+      <div class="pix-area">
+        <!-- QR CODE PIX (SVG gerado) -->
+        <div class="pix-qr-wrap">
+          <div class="pix-qr-box">
+            <svg viewBox="0 0 37 37" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+              <!-- QR simulado — padrão real -->
+              <rect fill="#fff" width="37" height="37"/>
+              <!-- finder pattern TL -->
+              <rect x="1" y="1" width="7" height="7" fill="#000"/>
+              <rect x="2" y="2" width="5" height="5" fill="#fff"/>
+              <rect x="3" y="3" width="3" height="3" fill="#000"/>
+              <!-- finder pattern TR -->
+              <rect x="29" y="1" width="7" height="7" fill="#000"/>
+              <rect x="30" y="2" width="5" height="5" fill="#fff"/>
+              <rect x="31" y="3" width="3" height="3" fill="#000"/>
+              <!-- finder pattern BL -->
+              <rect x="1" y="29" width="7" height="7" fill="#000"/>
+              <rect x="2" y="30" width="5" height="5" fill="#fff"/>
+              <rect x="3" y="31" width="3" height="3" fill="#000"/>
+              <!-- timing -->
+              <rect x="8" y="6" width="1" height="1" fill="#000"/>
+              <rect x="10" y="6" width="1" height="1" fill="#000"/>
+              <rect x="12" y="6" width="1" height="1" fill="#000"/>
+              <rect x="6" y="8" width="1" height="1" fill="#000"/>
+              <rect x="6" y="10" width="1" height="1" fill="#000"/>
+              <rect x="6" y="12" width="1" height="1" fill="#000"/>
+              <!-- data modules simulados -->
+              <rect x="9" y="9" width="2" height="2" fill="#000"/>
+              <rect x="12" y="9" width="1" height="3" fill="#000"/>
+              <rect x="14" y="8" width="2" height="2" fill="#000"/>
+              <rect x="17" y="9" width="3" height="1" fill="#000"/>
+              <rect x="21" y="8" width="1" height="3" fill="#000"/>
+              <rect x="23" y="9" width="2" height="2" fill="#000"/>
+              <rect x="26" y="8" width="2" height="1" fill="#000"/>
+              <rect x="9" y="13" width="3" height="1" fill="#000"/>
+              <rect x="13" y="12" width="2" height="2" fill="#000"/>
+              <rect x="17" y="12" width="1" height="2" fill="#000"/>
+              <rect x="20" y="13" width="3" height="1" fill="#000"/>
+              <rect x="24" y="12" width="2" height="3" fill="#000"/>
+              <rect x="27" y="12" width="1" height="1" fill="#000"/>
+              <rect x="9" y="16" width="2" height="3" fill="#000"/>
+              <rect x="12" y="17" width="3" height="1" fill="#000"/>
+              <rect x="16" y="16" width="2" height="2" fill="#000"/>
+              <rect x="20" y="16" width="1" height="3" fill="#000"/>
+              <rect x="22" y="17" width="4" height="1" fill="#000"/>
+              <rect x="27" y="16" width="2" height="2" fill="#000"/>
+              <rect x="9" y="20" width="1" height="2" fill="#000"/>
+              <rect x="11" y="21" width="3" height="1" fill="#000"/>
+              <rect x="15" y="20" width="2" height="3" fill="#000"/>
+              <rect x="19" y="20" width="3" height="2" fill="#000"/>
+              <rect x="23" y="21" width="2" height="2" fill="#000"/>
+              <rect x="26" y="20" width="3" height="1" fill="#000"/>
+              <rect x="9" y="24" width="4" height="1" fill="#000"/>
+              <rect x="14" y="24" width="1" height="2" fill="#000"/>
+              <rect x="16" y="25" width="3" height="1" fill="#000"/>
+              <rect x="20" y="24" width="2" height="2" fill="#000"/>
+              <rect x="24" y="24" width="1" height="1" fill="#000"/>
+              <rect x="26" y="25" width="3" height="2" fill="#000"/>
+              <rect x="9" y="27" width="2" height="2" fill="#000"/>
+              <rect x="12" y="28" width="3" height="1" fill="#000"/>
+              <rect x="16" y="27" width="2" height="3" fill="#000"/>
+              <rect x="20" y="28" width="4" height="1" fill="#000"/>
+              <!-- logo PIX no centro -->
+              <rect x="16" y="16" width="5" height="5" fill="#32BCAD"/>
+              <text x="18.5" y="20" font-size="4" fill="#fff" text-anchor="middle" font-weight="bold">₱</text>
+            </svg>
+          </div>
+          <div class="pix-timer">Expira em <span class="pix-timer-val" id="timer">14:32</span></div>
+        </div>
+
+        <div class="pix-info">
+          <div class="pix-info-title">Escaneie para pagar</div>
+          <div class="pix-key-wrap">
+            <span class="pix-key-val">orinjoias@pix.com</span>
+            <button class="btn-copy">Copiar</button>
+          </div>
+          <div class="pix-amount-row">
+            <span class="pal">Valor exato</span>
+            <span class="pav">R$ 2.500,00</span>
+          </div>
+          <div class="pix-status">
+            <div class="pix-dot" id="pixDot"></div>
+            <span id="pixStatus">Aguardando pagamento...</span>
+          </div>
+          <div style="margin-top:10px;font-size:10px;color:var(--text-muted);line-height:1.6">
+            💡 Use este QR quando a maquininha não estiver disponível. O cliente paga pelo celular e você confirma ao receber.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <div class="footer-waiting">
+        <div class="waiting-row">
+          <span>Verificando pagamento...</span>
+          <span id="checkCount">3 verificações</span>
+        </div>
+        <div class="waiting-progress"><div class="waiting-bar"></div></div>
+      </div>
+      <div style="height:10px"></div>
+      <div class="footer-two-btns">
+        <button class="btn-cancel-pay">Cancelar</button>
+        <button class="btn-concluida" style="flex:1" onclick="confirmPix()">
+          <span class="btn-concluida-icon">✅</span> Confirmar Recebimento
+        </button>
+      </div>
+      <div class="footer-note warning">⚠️ Estoque será descontado ao confirmar</div>
+    </div>
+  </div>
+</div>
+
+<!-- ESTADO 2: Dinheiro -->
+<div class="col">
+  <div class="col-label">Dinheiro — troco calculado</div>
+  <div class="modal" style="width:440px">
+    <div class="modal-header">
+      <div class="mh-left">
+        <div class="mh-title">Pagamento</div>
+        <div class="mh-sub">OR-20260313-8980</div>
+      </div>
+      <div class="mh-total">
+        <div class="mh-total-lbl">Total a cobrar</div>
+        <div class="mh-total-val">R$ 2.500,00</div>
+      </div>
+    </div>
+
+    <div class="stock-warning">
+      <span class="sw-icon">⚠️</span>
+      <span class="sw-text"><strong>Estoque será baixado</strong> somente ao confirmar "Venda Concluída"</span>
+    </div>
+
+    <div class="pay-methods">
+      <div class="pm-label">Forma de pagamento</div>
+      <div class="pm-grid">
+        <button class="pm-btn"><span class="pm-icon">📱</span><span class="pm-name">PIX</span></button>
+        <button class="pm-btn active"><span class="pm-icon">💵</span><span class="pm-name">Dinheiro</span></button>
+        <button class="pm-btn"><span class="pm-icon">💳</span><span class="pm-name">Débito</span></button>
+        <button class="pm-btn"><span class="pm-icon">💳</span><span class="pm-name">Crédito</span></button>
+        <button class="pm-btn"><span class="pm-icon">🔗</span><span class="pm-name">Link MP</span></button>
+      </div>
+    </div>
+
+    <div class="pay-detail">
+      <div class="cash-area">
+        <div>
+          <div class="cash-input-label">Valor recebido do cliente</div>
+          <div class="cash-input-wrap">
+            <span class="cash-prefix">R$</span>
+            <input class="cash-input" type="text" value="3.000,00" id="cashInput" oninput="calcChange()">
+          </div>
+        </div>
+        <div class="quick-btns">
+          <button class="qb" onclick="setAmount('2500')">Exato</button>
+          <button class="qb" onclick="setAmount('3000')">R$ 3.000</button>
+          <button class="qb" onclick="setAmount('5000')">R$ 5.000</button>
+          <button class="qb" onclick="setAmount('10000')">R$ 10.000</button>
+        </div>
+        <div class="cash-change-row">
+          <span class="ccr-lbl">Troco a devolver</span>
+          <span class="ccr-val" id="changeVal">R$ 500,00</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <div class="footer-two-btns">
+        <button class="btn-cancel-pay">Cancelar</button>
+        <button class="btn-concluida" style="flex:1">
+          <span class="btn-concluida-icon">✅</span> Venda Concluída
+        </button>
+      </div>
+      <div class="footer-note warning">⚠️ Estoque descontado ao clicar — ação irreversível</div>
+    </div>
+  </div>
+</div>
+
+<!-- ESTADO 3: Crédito parcelado -->
+<div class="col">
+  <div class="col-label">Crédito — selecionar parcelas</div>
+  <div class="modal" style="width:420px">
+    <div class="modal-header">
+      <div class="mh-left">
+        <div class="mh-title">Pagamento</div>
+        <div class="mh-sub">OR-20260313-8980</div>
+      </div>
+      <div class="mh-total">
+        <div class="mh-total-lbl">Total a cobrar</div>
+        <div class="mh-total-val">R$ 2.500,00</div>
+      </div>
+    </div>
+
+    <div class="stock-warning">
+      <span class="sw-icon">⚠️</span>
+      <span class="sw-text"><strong>Estoque será baixado</strong> somente ao confirmar "Venda Concluída"</span>
+    </div>
+
+    <div class="pay-methods">
+      <div class="pm-label">Forma de pagamento</div>
+      <div class="pm-grid">
+        <button class="pm-btn"><span class="pm-icon">📱</span><span class="pm-name">PIX</span></button>
+        <button class="pm-btn"><span class="pm-icon">💵</span><span class="pm-name">Dinheiro</span></button>
+        <button class="pm-btn"><span class="pm-icon">💳</span><span class="pm-name">Débito</span></button>
+        <button class="pm-btn active"><span class="pm-icon">💳</span><span class="pm-name">Crédito</span></button>
+        <button class="pm-btn"><span class="pm-icon">🔗</span><span class="pm-name">Link MP</span></button>
+      </div>
+    </div>
+
+    <div class="pay-detail">
+      <div class="credit-area">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Número de parcelas</div>
+        <div class="installments-grid">
+          <button class="inst-btn"><span class="inst-n">1×</span><span class="inst-val">R$ 2.500</span></button>
+          <button class="inst-btn"><span class="inst-n">2×</span><span class="inst-val">R$ 1.250</span></button>
+          <button class="inst-btn active"><span class="inst-n">3×</span><span class="inst-val">R$ 833</span></button>
+          <button class="inst-btn"><span class="inst-n">4×</span><span class="inst-val">R$ 625</span></button>
+          <button class="inst-btn"><span class="inst-n">5×</span><span class="inst-val">R$ 500</span></button>
+          <button class="inst-btn"><span class="inst-n">6×</span><span class="inst-val">R$ 417</span></button>
+          <button class="inst-btn"><span class="inst-n">10×</span><span class="inst-val">R$ 250</span></button>
+          <button class="inst-btn"><span class="inst-n">12×</span><span class="inst-val">R$ 208</span></button>
+        </div>
+        <div class="credit-note">Selecione o parcelamento e processe na maquininha</div>
+
+        <!-- maquininha status -->
+        <div class="terminal-area" style="margin-top:4px">
+          <div class="ta-status">
+            <div class="ta-dot"></div>
+            <span style="font-size:11px;color:var(--amber)">Aguardando maquininha — Cielo LIO</span>
+          </div>
+          <button class="btn-manual">Processar manualmente</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <div class="footer-two-btns">
+        <button class="btn-cancel-pay">Cancelar</button>
+        <button class="btn-concluida-disabled">
+          ⏳ Aguardando maquininha...
+        </button>
+      </div>
+      <div class="footer-note">Botão habilitado após confirmação da maquininha</div>
+    </div>
+  </div>
+</div>
+
+<!-- ESTADO 4: Pedido personalizado sinal -->
+<div class="col">
+  <div class="col-label">Personalizado — pagamento de sinal</div>
+  <div class="modal" style="width:440px">
+    <div class="modal-header">
+      <div class="mh-left">
+        <div class="mh-title">Pagamento</div>
+        <div class="mh-sub">PERS-20260210-0034</div>
+      </div>
+      <div class="mh-total">
+        <div class="mh-total-lbl" style="color:var(--amber)">Sinal a cobrar</div>
+        <div class="mh-total-val" style="color:var(--amber)">R$ 500,00</div>
+      </div>
+    </div>
+
+    <!-- resumo do pedido personalizado -->
+    <div style="padding:10px 22px;border-bottom:1px solid var(--border);background:rgba(167,139,250,0.06)">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#A78BFA;margin-bottom:6px">Pedido Personalizado</div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+        <span style="color:var(--text-muted)">Anel Solitário — gravação "MF"</span>
+        <span style="font-weight:600">Total: R$ 3.200,00</span>
+      </div>
+      <div style="display:flex;gap:16px;font-size:10px;color:var(--text-muted)">
+        <span>Tipo: <strong style="color:#F0A040">SINAL (50%)</strong></span>
+        <span>Restante a pagar depois: <strong style="color:var(--text-sec)">R$ 2.700,00</strong></span>
+      </div>
+    </div>
+
+    <div class="stock-warning" style="background:rgba(167,139,250,0.08);border-color:rgba(167,139,250,.2)">
+      <span class="sw-icon">💎</span>
+      <span class="sw-text" style="color:#A78BFA">Pedido personalizado — <strong>estoque não é descontado</strong> no sinal</span>
+    </div>
+
+    <div class="pay-methods">
+      <div class="pm-label">Forma de pagamento do sinal</div>
+      <div class="pm-grid">
+        <button class="pm-btn active"><span class="pm-icon">📱</span><span class="pm-name">PIX</span></button>
+        <button class="pm-btn"><span class="pm-icon">💵</span><span class="pm-name">Dinheiro</span></button>
+        <button class="pm-btn"><span class="pm-icon">💳</span><span class="pm-name">Débito</span></button>
+        <button class="pm-btn"><span class="pm-icon">💳</span><span class="pm-name">Crédito</span></button>
+        <button class="pm-btn"><span class="pm-icon">🔗</span><span class="pm-name">Link MP</span></button>
+      </div>
+    </div>
+
+    <div class="pay-detail" style="min-height:80px;padding-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:70px;height:70px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg viewBox="0 0 37 37" xmlns="http://www.w3.org/2000/svg" style="width:60px;height:60px">
+            <rect fill="#fff" width="37" height="37"/>
+            <rect x="1" y="1" width="7" height="7" fill="#000"/>
+            <rect x="2" y="2" width="5" height="5" fill="#fff"/>
+            <rect x="3" y="3" width="3" height="3" fill="#000"/>
+            <rect x="29" y="1" width="7" height="7" fill="#000"/>
+            <rect x="30" y="2" width="5" height="5" fill="#fff"/>
+            <rect x="31" y="3" width="3" height="3" fill="#000"/>
+            <rect x="1" y="29" width="7" height="7" fill="#000"/>
+            <rect x="2" y="30" width="5" height="5" fill="#fff"/>
+            <rect x="3" y="31" width="3" height="3" fill="#000"/>
+            <rect x="16" y="16" width="5" height="5" fill="#32BCAD"/>
+            <text x="18.5" y="20" font-size="4" fill="#fff" text-anchor="middle" font-weight="bold">₱</text>
+          </svg>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Escaneie para pagar o sinal</div>
+          <div style="background:var(--bg-3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;display:flex;justify-content:space-between">
+            <span style="font-size:11px;color:var(--text-sec)">orinjoias@pix.com</span>
+            <button class="btn-copy">Copiar</button>
+          </div>
+          <div style="margin-top:5px;font-size:11px;font-weight:700;color:var(--amber)">Valor: R$ 500,00</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <div class="footer-two-btns">
+        <button class="btn-cancel-pay">Cancelar</button>
+        <button class="btn-concluida" style="flex:1;background:linear-gradient(135deg,#A78BFA,#C4B5FD);color:#1a1040">
+          <span class="btn-concluida-icon">✅</span> Sinal Recebido
+        </button>
+      </div>
+      <div class="footer-note" style="color:#A78BFA">💎 Pedido aguarda produção — restante cobrado na entrega</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function calcChange() {
+  const received = parseFloat(document.getElementById('cashInput').value.replace(',','.')) || 0;
+  const total = 2500;
+  const change = received - total;
+  document.getElementById('changeVal').textContent = change > 0
+    ? `R$ ${change.toFixed(2).replace('.',',')}`
+    : 'R$ 0,00';
+}
+
+function setAmount(val) {
+  const formatted = parseFloat(val).toLocaleString('pt-BR', {minimumFractionDigits:2});
+  document.getElementById('cashInput').value = formatted;
+  calcChange();
+}
+
+function confirmPix() {
+  const dot = document.getElementById('pixDot');
+  const status = document.getElementById('pixStatus');
+  dot.className = 'pix-dot confirmed';
+  status.textContent = '✅ PIX confirmado!';
+  status.style.color = 'var(--green)';
+}
+
+// timer countdown
+let seconds = 14*60+32;
+setInterval(() => {
+  seconds = Math.max(0, seconds-1);
+  const m = Math.floor(seconds/60);
+  const s = seconds%60;
+  const el = document.getElementById('timer');
+  if(el) el.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+}, 1000);
+</script>
+</body>
+</html>

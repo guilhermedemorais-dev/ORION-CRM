@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>ORION CRM — Painel do Cliente (Mockup Completo)</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   DESIGN SYSTEM TOKENS
+═══════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --gold:#C8A97A;--gold-dim:rgba(200,169,122,0.10);--gold-border:rgba(200,169,122,0.25);--gold-glow:rgba(200,169,122,0.18);
+  --bg-0:#070708;--bg-1:#0F0F11;--bg-2:#141417;--bg-3:#1A1A1E;--bg-4:#202026;--bg-5:#27272F;
+  --border:rgba(255,255,255,0.06);--border-mid:rgba(255,255,255,0.10);--border-hi:rgba(255,255,255,0.16);
+  --text:#F0EDE8;--text-sec:#C8C4BE;--text-muted:#7A7774;--label:#E8E4DE;
+  --green:#3FB87A;--green-dim:rgba(63,184,122,0.10);--green-b:rgba(63,184,122,0.25);
+  --red:#E05252;--red-dim:rgba(224,82,82,0.10);--red-b:rgba(224,82,82,0.25);
+  --blue:#5B9CF6;--blue-dim:rgba(91,156,246,0.10);--blue-b:rgba(91,156,246,0.25);
+  --amber:#F0A040;--amber-dim:rgba(240,160,64,0.10);--amber-b:rgba(240,160,64,0.25);
+  --purple:#A78BFA;--purple-dim:rgba(167,139,250,0.10);--purple-b:rgba(167,139,250,0.25);
+  --teal:#2DD4BF;--teal-dim:rgba(45,212,191,0.10);--teal-b:rgba(45,212,191,0.25);
+  --wa:#25D366;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg-0);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+/* ═══════════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════════ */
+.topbar{height:48px;background:var(--bg-1);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0;z-index:20}
+.tb-back{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--text-sec);transition:color .15s}
+.tb-back:hover{color:var(--gold)}
+.tb-sep{color:var(--text-muted);font-size:11px}
+.tb-crumb{font-size:11px;color:var(--text-muted)}
+.tb-name{font-size:13px;font-weight:600}
+.tb-right{margin-left:auto;display:flex;gap:7px}
+.tbtn{height:28px;padding:0 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid;font-family:'DM Sans',sans-serif;transition:all .15s;display:flex;align-items:center;gap:4px}
+.tbtn-won{background:var(--green-dim);border-color:var(--green-b);color:var(--green)}
+.tbtn-won:hover{background:rgba(63,184,122,.18)}
+.tbtn-lost{background:var(--red-dim);border-color:var(--red-b);color:var(--red)}
+.tbtn-lost:hover{background:rgba(224,82,82,.18)}
+
+/* STAGEBAR */
+.stagebar{height:40px;background:var(--bg-1);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:4px;overflow-x:auto;flex-shrink:0}
+.stagebar::-webkit-scrollbar{height:0}
+.sp{display:flex;align-items:center;gap:5px;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .15s;color:var(--text-muted)}
+.sp:hover{background:var(--bg-3);color:var(--text-sec)}
+.sp.active{background:var(--gold-dim);color:var(--gold);border:1px solid var(--gold-border)}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* ═══════════════════════════════════════════
+   MAIN LAYOUT
+═══════════════════════════════════════════ */
+.main{display:flex;flex:1;overflow:hidden}
+
+/* LEFT SIDEBAR */
+.lsb{width:224px;flex-shrink:0;background:var(--bg-1);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+.lsb::-webkit-scrollbar{width:3px}
+.lsb::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+.hero{padding:14px;border-bottom:1px solid var(--border)}
+.hero-row{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.hav{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#2a2018,#3d3020);border:1.5px solid var(--gold-border);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--gold);position:relative;flex-shrink:0}
+.hon{position:absolute;bottom:0;right:0;width:10px;height:10px;background:var(--green);border:2px solid var(--bg-1);border-radius:50%}
+.hname{font-family:'Playfair Display',serif;font-size:13px;font-weight:700}
+.hsince{font-size:10px;color:var(--text-muted);margin-top:1px}
+.badges{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:9px}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600}
+.b-wa{background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.2);color:var(--wa)}
+.b-gold{background:var(--gold-dim);border:1px solid var(--gold-border);color:var(--gold)}
+.b-vip{background:var(--purple-dim);border:1px solid var(--purple-b);color:var(--purple)}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.mbox{background:var(--bg-3);border-radius:7px;padding:7px 9px;border:1px solid var(--border)}
+.mval{font-family:'Playfair Display',serif;font-size:14px;font-weight:700}
+.mlbl{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:1px}
+
+.ls{border-bottom:1px solid var(--border);padding:10px 14px}
+.ls-t{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);margin-bottom:7px;display:flex;justify-content:space-between;align-items:center}
+.ls-t button{font-size:10px;color:var(--gold);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif}
+.ls-row{display:flex;justify-content:space-between;margin-bottom:4px}
+.ls-l{font-size:11px;color:var(--text-muted)}
+.ls-v{font-size:11px;font-weight:500;color:var(--text-sec)}
+.ls-v.g{color:var(--gold)}
+.resp-row{display:flex;align-items:center;gap:7px}
+.rav{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.rname{font-size:11px;font-weight:600}
+.rrole{font-size:10px;color:var(--text-muted)}
+.tags{display:flex;flex-wrap:wrap;gap:3px}
+.tag{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:500;background:var(--bg-4);border:1px solid var(--border-mid);color:var(--text-sec);cursor:pointer;transition:all .1s}
+.tag:hover{border-color:var(--gold-border);color:var(--gold)}
+.prow{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.pname{font-size:11px;color:var(--text-sec)}
+.prole{padding:1px 7px;border-radius:4px;font-size:9px;font-weight:700}
+.pr-m{background:var(--amber-dim);border:1px solid var(--amber-b);color:var(--amber)}
+.pr-a{background:var(--red-dim);border:1px solid var(--red-b);color:var(--red)}
+.pr-at{background:var(--blue-dim);border:1px solid var(--blue-b);color:var(--blue)}
+.pr-p{background:var(--green-dim);border:1px solid var(--green-b);color:var(--green)}
+.pr-d{background:var(--purple-dim);border:1px solid var(--purple-b);color:var(--purple)}
+
+/* CENTER */
+.center{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+
+/* TABS */
+.tabs{height:44px;background:var(--bg-2);border-bottom:1px solid var(--border);display:flex;align-items:end;padding:0 20px;gap:0;overflow-x:auto;flex-shrink:0}
+.tabs::-webkit-scrollbar{height:0}
+.tab{height:44px;padding:0 14px;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;font-family:'DM Sans',sans-serif}
+.tab:hover{color:var(--text-sec)}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.tcnt{min-width:16px;height:16px;padding:0 4px;border-radius:8px;font-size:9px;font-weight:700;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center}
+.tcnt.red{background:var(--red-dim);color:var(--red)}
+
+.tabody{flex:1;overflow-y:auto;padding:18px 20px}
+.tabody::-webkit-scrollbar{width:4px}
+.tabody::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.pane{display:none}
+.pane.active{display:block}
+
+/* ═══════════════════════════════════════════
+   FORM ELEMENTS
+═══════════════════════════════════════════ */
+.fsec{margin-bottom:18px}
+.ftitle{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text-sec);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.ff{grid-column:1/-1}
+.fl{font-size:11px;font-weight:600;color:var(--label);margin-bottom:4px;display:block}
+.fl .req{color:var(--gold)}
+.fi,.fs{width:100%;height:35px;background:var(--bg-3);border:1px solid var(--border-mid);border-radius:7px;padding:0 11px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;transition:border-color .15s}
+.fi:focus,.fs:focus{border-color:var(--gold-border);background:var(--bg-4)}
+.fi::placeholder{color:var(--text-muted)}
+.fs{appearance:none;cursor:pointer}
+.fta{width:100%;min-height:68px;background:var(--bg-3);border:1px solid var(--border-mid);border-radius:7px;padding:8px 11px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;resize:vertical;line-height:1.5}
+.fta:focus{border-color:var(--gold-border)}
+.fta::placeholder{color:var(--text-muted)}
+
+/* BUTTONS */
+.btn{height:34px;padding:0 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;display:inline-flex;align-items:center;gap:5px;border:1px solid}
+.btn-primary{background:var(--gold);border-color:var(--gold);color:#000;font-weight:700}
+.btn-primary:hover{background:#E8D5B0}
+.btn-ghost{background:transparent;border-color:var(--border-mid);color:var(--text-sec)}
+.btn-ghost:hover{border-color:var(--border-hi);color:var(--text)}
+.btn-purple{background:var(--purple-dim);border-color:var(--purple-b);color:var(--purple)}
+.btn-purple:hover{background:rgba(167,139,250,.18)}
+.btn-sm{height:26px;padding:0 10px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .1s;background:var(--bg-4);border:1px solid var(--border);color:var(--text-sec)}
+.btn-sm:hover{border-color:var(--border-hi);color:var(--text)}
+
+.nf-ok{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:600;background:var(--green-dim);border:1px solid var(--green-b);color:var(--green)}
+.save-row{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+
+/* ═══════════════════════════════════════════
+   ATENDIMENTO — BLOCOS
+═══════════════════════════════════════════ */
+.add-block-btn{width:100%;height:38px;border:1.5px dashed var(--border-hi);border-radius:9px;background:transparent;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:14px}
+.add-block-btn:hover{border-color:var(--gold-border);color:var(--gold);background:var(--gold-dim)}
+
+.ablock{background:var(--bg-3);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px;transition:border-color .15s}
+.ablock:hover{border-color:var(--border-mid)}
+.ab-head{padding:10px 14px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--border)}
+.ab-ico{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.ab-info{flex:1}
+.ab-title{font-size:13px;font-weight:600}
+.ab-meta{font-size:10px;color:var(--text-muted);margin-top:1px}
+.ab-status{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700}
+.s-open{background:var(--gold-dim);border:1px solid var(--gold-border);color:var(--gold)}
+.s-done{background:var(--green-dim);border:1px solid var(--green-b);color:var(--green)}
+.s-ai{background:var(--purple-dim);border:1px solid var(--purple-b);color:var(--purple)}
+.s-design{background:var(--teal-dim);border:1px solid var(--teal-b);color:var(--teal)}
+.ab-body{padding:11px 14px}
+.ab-note{font-size:12px;color:var(--text-sec);line-height:1.6;margin-bottom:9px}
+.ab-refs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}
+.aref{width:54px;height:54px;border-radius:7px;overflow:hidden;border:1px solid var(--border-mid);flex-shrink:0}
+.aref svg,.aref img{width:54px;height:54px;object-fit:cover}
+/* 3d preview inline */
+.ab-3d{background:var(--bg-4);border:1px solid var(--purple-b);border-radius:8px;padding:10px;margin-bottom:9px}
+.ab-3d-header{display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:11px;font-weight:700;color:var(--purple)}
+.ab-3d-views{display:flex;gap:6px}
+.ab-3d-view{flex:1;height:80px;background:linear-gradient(135deg,#0d0d14,#12121a);border-radius:7px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .15s;position:relative;overflow:hidden}
+.ab-3d-view:hover{border-color:var(--purple-b)}
+.ab-3d-view.sel{border-color:var(--gold-border)}
+.ab-3d-view.sel::after{content:'✓';position:absolute;top:4px;right:4px;width:15px;height:15px;border-radius:50%;background:var(--green);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.ab-3d-lbl{position:absolute;bottom:4px;left:0;right:0;text-align:center;font-size:9px;color:var(--text-muted)}
+/* ring anim */
+.ringa{width:40px;height:40px;border-radius:50%;border:7px solid transparent;background:linear-gradient(var(--bg-0),var(--bg-0)) padding-box,linear-gradient(135deg,#d4a96a,#f0d080,#c8a040) border-box;box-shadow:0 0 18px rgba(200,169,122,.4);animation:spina 6s linear infinite;position:relative}
+.ringb{width:38px;height:38px;border-radius:50%;border:7px solid transparent;background:linear-gradient(var(--bg-0),var(--bg-0)) padding-box,linear-gradient(45deg,#8a6020,#f0d080,#d4a96a) border-box;box-shadow:0 0 18px rgba(200,169,122,.4);transform:perspective(36px) rotateX(68deg)}
+.ringc{width:36px;height:36px;border-radius:50%;border:7px solid transparent;background:linear-gradient(var(--bg-0),var(--bg-0)) padding-box,linear-gradient(90deg,#d4a96a,#f0d080,#c8a040) border-box;box-shadow:0 0 18px rgba(200,169,122,.4);transform:perspective(36px) rotateY(58deg)}
+@keyframes spina{0%{transform:rotateY(0) rotateX(10deg)}100%{transform:rotateY(360deg) rotateX(10deg)}}
+.gem{width:10px;height:10px;background:radial-gradient(circle at 35% 35%,#fff 10%,rgba(200,220,255,.9) 40%,rgba(150,180,255,.6) 80%,transparent);clip-path:polygon(50% 0%,100% 50%,75% 100%,25% 100%,0% 50%);position:absolute;top:3px;left:50%;transform:translateX(-50%);box-shadow:0 0 6px rgba(150,200,255,.5)}
+.ab-foot{padding:8px 14px;border-top:1px solid var(--border);display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+
+/* HISTSUB NAV */
+.hist-nav{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:14px}
+.hsub{height:34px;padding:0 13px;font-size:11px;font-weight:500;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;background:none;border-top:none;border-left:none;border-right:none;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.hsub:hover{color:var(--text-sec)}
+.hsub.active{color:var(--gold);border-bottom-color:var(--gold)}
+.hpane{display:none}
+.hpane.active{display:block}
+
+/* LOG */
+.log-item{display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border)}
+.log-item:last-child{border-bottom:none}
+.log-ico{width:27px;height:27px;border-radius:7px;background:var(--bg-3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:1px}
+.log-title{font-size:12px;font-weight:600;margin-bottom:2px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.log-desc{font-size:11px;color:var(--text-sec);line-height:1.5}
+.log-meta{font-size:10px;color:var(--text-muted);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap}
+.lbadge{padding:1px 7px;border-radius:4px;font-size:9px;font-weight:700}
+.lb-h{background:var(--blue-dim);border:1px solid var(--blue-b);color:var(--blue)}
+.lb-ai{background:var(--purple-dim);border:1px solid var(--purple-b);color:var(--purple)}
+.lb-sys{background:var(--bg-4);border:1px solid var(--border);color:var(--text-muted)}
+
+/* MSG */
+.msg{padding:9px 11px;background:var(--bg-3);border:1px solid var(--border);border-radius:8px;margin-bottom:8px}
+.msg.ai{border-color:var(--purple-b);background:rgba(167,139,250,.05)}
+.msg-h{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.mav{width:22px;height:22px;border-radius:50%;background:var(--bg-4);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--text-muted);flex-shrink:0}
+.mfrom{font-size:11px;font-weight:600}
+.mtime{font-size:10px;color:var(--text-muted);margin-left:auto}
+.mbody{font-size:12px;color:var(--text-sec);line-height:1.5}
+
+/* FEEDBACK */
+.fb-card{background:var(--bg-3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
+.fb-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.stars{font-size:14px}
+.fb-c{font-size:12px;color:var(--text-sec);line-height:1.5;margin-bottom:6px}
+.fb-m{font-size:10px;color:var(--text-muted)}
+
+/* ORDERS */
+.ocard{background:var(--bg-3);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;cursor:pointer;transition:border-color .15s}
+.ocard:hover{border-color:var(--border-mid)}
+.oc-h{padding:10px 14px;display:flex;align-items:center;gap:8px}
+.onum{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--gold)}
+.otype{padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.ot-p{background:var(--blue-dim);border:1px solid var(--blue-b);color:var(--blue)}
+.ot-c{background:var(--purple-dim);border:1px solid var(--purple-b);color:var(--purple)}
+.progress{padding:0 14px 10px}
+.steps{display:flex;gap:0;align-items:center}
+.step{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;position:relative}
+.step::before{content:'';position:absolute;top:10px;left:calc(-50% + 10px);right:calc(50% + 10px);height:2px;background:var(--border);z-index:0}
+.step:first-child::before{display:none}
+.step.done::before{background:var(--green)}
+.step.active::before{background:linear-gradient(90deg,var(--green),var(--gold))}
+.sdot2{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:var(--bg-4);display:flex;align-items:center;justify-content:center;font-size:9px;z-index:1;position:relative}
+.step.done .sdot2{border-color:var(--green);background:var(--green);color:#fff}
+.step.active .sdot2{border-color:var(--gold);background:var(--gold);color:#000}
+.slbl{font-size:9px;color:var(--text-muted);text-align:center}
+.step.active .slbl{color:var(--gold);font-weight:600}
+.step.done .slbl{color:var(--green)}
+.oc-f{padding:7px 14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px}
+
+/* PROP CARD */
+.pcard{background:var(--bg-3);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.pc-h{padding:10px 14px;display:flex;align-items:center;gap:9px}
+.pcode{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--gold)}
+.pst{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;margin-left:auto}
+.ps-pend{background:var(--amber-dim);border:1px solid var(--amber-b);color:var(--amber)}
+.ps-ok{background:var(--green-dim);border:1px solid var(--green-b);color:var(--green)}
+.pc-b{padding:0 14px 9px;font-size:11px;color:var(--text-muted);line-height:1.6}
+.pc-f{padding:8px 14px;border-top:1px solid var(--border);display:flex;gap:5px;align-items:center}
+.ptotal{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:var(--gold);margin-left:auto}
+
+/* OS */
+.oscard{background:var(--bg-3);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.os-h{padding:10px 14px;display:flex;align-items:center;gap:8px}
+.osnum{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--gold)}
+.osp{padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700}
+.osp-high{background:var(--red-dim);border:1px solid var(--red-b);color:var(--red)}
+.osp-norm{background:var(--amber-dim);border:1px solid var(--amber-b);color:var(--amber)}
+.os-body{padding:0 14px 10px;display:flex;gap:12px}
+.os-info{flex:1}
+.os-f{margin-bottom:5px}
+.os-fl{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.os-fv{font-size:12px;font-weight:500;margin-top:1px}
+.os-3d-thumb{width:90px;height:80px;background:linear-gradient(135deg,#0d0d14,#12121a);border-radius:8px;border:1px solid var(--purple-b);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;position:relative;overflow:hidden}
+.os-steps{padding:0 14px 10px;display:flex;gap:5px;flex-wrap:wrap}
+.ostep{display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:600}
+.ost-done{background:var(--green-dim);border:1px solid var(--green-b);color:var(--green)}
+.ost-act{background:var(--gold-dim);border:1px solid var(--gold-border);color:var(--gold)}
+.ost-pend{background:var(--bg-4);border:1px solid var(--border);color:var(--text-muted)}
+.os-specs{padding:0 14px 10px}
+.spec-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.spec-box{background:var(--bg-4);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+.spec-lbl{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.spec-val{font-size:12px;font-weight:600;color:var(--text-sec)}
+.spec-val.g{color:var(--gold)}
+.os-attach{padding:0 14px 10px;display:flex;gap:6px;flex-wrap:wrap}
+.att{display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:6px;background:var(--bg-4);border:1px solid var(--border);font-size:11px;color:var(--text-sec);cursor:pointer;transition:all .1s}
+.att:hover{border-color:var(--border-hi);color:var(--text)}
+.att.purple{border-color:var(--purple-b);color:var(--purple);background:var(--purple-dim)}
+.os-foot{padding:8px 14px;border-top:1px solid var(--border);display:flex;gap:5px;align-items:center}
+
+/* DELIVERY */
+.dcard{background:var(--bg-3);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.dc-h{padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+.track{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.ts{display:flex;gap:9px;align-items:flex-start}
+.ts-dc{display:flex;flex-direction:column;align-items:center}
+.ts-dot{width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.tsd-ok{background:var(--green-dim);border:1px solid var(--green-b);color:var(--green)}
+.tsd-act{background:var(--gold-dim);border:1px solid var(--gold-border);color:var(--gold)}
+.tsd-pend{background:var(--bg-4);border:1px solid var(--border);color:var(--text-muted)}
+.ts-ln{width:2px;height:17px;margin:2px 0;border-radius:1px}
+.ts-ln.ok{background:var(--green)}
+.ts-ln.pend{background:var(--border)}
+.ts-c{flex:1;padding-top:3px}
+.ts-t{font-size:12px;font-weight:600}
+.ts-s{font-size:10px;color:var(--text-muted);margin-top:1px}
+.dc-f{padding:8px 14px;border-top:1px solid var(--border);display:flex;gap:5px}
+
+/* RIGHT SIDEBAR */
+.rsb{width:208px;flex-shrink:0;background:var(--bg-1);border-left:1px solid var(--border);overflow-y:auto}
+.rsb::-webkit-scrollbar{width:3px}
+.rsb::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.rs{border-bottom:1px solid var(--border);padding:10px 13px}
+.rs-t{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.rs-t button{width:18px;height:18px;border-radius:4px;background:var(--bg-3);border:1px solid var(--border);color:var(--text-sec);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
+.crow{display:flex;align-items:center;gap:8px}
+.cav{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.cname{font-size:12px;font-weight:600}
+.csub{font-size:10px;color:var(--text-muted)}
+.qbtn{width:100%;height:30px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px;padding:0 9px;font-family:'DM Sans',sans-serif;transition:all .15s;margin-bottom:5px;border:1px solid}
+.qbtn:last-child{margin-bottom:0}
+.q-wa{background:rgba(37,211,102,.08);border-color:rgba(37,211,102,.2);color:var(--wa)}
+.q-wa:hover{background:rgba(37,211,102,.15)}
+.q-prop{background:var(--gold-dim);border-color:var(--gold-border);color:var(--gold)}
+.q-prop:hover{background:var(--gold-glow)}
+.q-nf{background:var(--purple-dim);border-color:var(--purple-b);color:var(--purple)}
+.q-nf:hover{background:rgba(167,139,250,.18)}
+.q-os{background:var(--blue-dim);border-color:var(--blue-b);color:var(--blue)}
+.q-os:hover{background:rgba(91,156,246,.18)}
+.q-3d{background:var(--teal-dim);border-color:var(--teal-b);color:var(--teal)}
+.q-3d:hover{background:rgba(45,212,191,.18)}
+.fin-r{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px}
+.fin-l{color:var(--text-muted)}
+.fin-v{font-weight:600;color:var(--text-sec)}
+
+/* ═══════════════════════════════════════════
+   POPUP OVERLAY
+═══════════════════════════════════════════ */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
+.overlay.open{display:flex}
+.popup{width:100%;max-width:680px;max-height:calc(100vh - 40px);background:var(--bg-2);border:1px solid var(--border-mid);border-radius:14px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.9);display:flex;flex-direction:column}
+.popup-scroll{overflow-y:auto;flex:1}
+.popup-scroll::-webkit-scrollbar{width:4px}
+.popup-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* popup header */
+.pop-h{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;flex-shrink:0}
+.pop-type{height:29px;padding:0 10px;background:var(--bg-3);border:1px solid var(--border-mid);border-radius:7px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none}
+.pop-title{flex:1;height:29px;background:transparent;border:none;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;color:var(--text);outline:none}
+.pop-title::placeholder{color:var(--text-muted)}
+.pop-close{width:27px;height:27px;border-radius:6px;background:transparent;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.pop-close:hover{border-color:var(--red);color:var(--red)}
+
+/* popup toolbar */
+.ptb{padding:6px 13px;border-bottom:1px solid var(--border);background:var(--bg-3);display:flex;align-items:center;gap:3px;flex-wrap:wrap;flex-shrink:0}
+.ptb-btn{width:27px;height:27px;border-radius:5px;background:transparent;border:1px solid transparent;color:var(--text-muted);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .1s;font-family:'DM Sans',sans-serif;font-weight:700}
+.ptb-btn:hover,.ptb-btn.on{background:var(--bg-4);border-color:var(--border);color:var(--text)}
+.ptb-btn.on{background:var(--gold-dim);border-color:var(--gold-border);color:var(--gold)}
+.ptb-sep{width:1px;height:18px;background:var(--border);margin:0 3px}
+.ptb-wide{height:27px;padding:0 9px;border-radius:5px;background:transparent;border:1px solid transparent;color:var(--text-muted);cursor:pointer;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px;transition:all .1s;font-family:'DM Sans',sans-serif}
+.ptb-wide:hover{background:var(--bg-4);border-color:var(--border);color:var(--text)}
+.ptb-wide.rec{color:var(--red);background:var(--red-dim);border-color:var(--red-b)}
+
+/* textarea nota */
+.pop-note{padding:14px 16px;min-height:120px;font-size:13px;color:var(--text-sec);outline:none;line-height:1.7;caret-color:var(--gold)}
+.pop-note:empty::before{content:attr(data-ph);color:var(--text-muted);pointer-events:none}
+
+/* referências */
+.pop-refs{padding:9px 16px;border-top:1px solid var(--border)}
+.pop-refs-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);margin-bottom:7px}
+.refs-row{display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start}
+.ref-thumb{width:66px;height:66px;border-radius:7px;background:var(--bg-4);border:1px solid var(--border-mid);overflow:hidden;cursor:pointer;position:relative;flex-shrink:0;transition:border-color .15s}
+.ref-thumb:hover{border-color:var(--border-hi)}
+.ref-thumb svg,.ref-thumb img{width:66px;height:66px;object-fit:cover}
+.ref-del{position:absolute;top:2px;right:2px;width:15px;height:15px;background:rgba(0,0,0,.75);border-radius:3px;display:none;align-items:center;justify-content:center;font-size:9px;color:#fff;cursor:pointer}
+.ref-thumb:hover .ref-del{display:flex}
+.ref-add{width:66px;height:66px;border-radius:7px;border:1.5px dashed var(--border-hi);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;transition:all .15s;flex-shrink:0}
+.ref-add:hover{border-color:var(--gold-border);background:var(--gold-dim)}
+.ref-add-icon{font-size:18px;color:var(--text-muted)}
+.ref-add-txt{font-size:9px;color:var(--text-muted)}
+.ref-add:hover .ref-add-icon,.ref-add:hover .ref-add-txt{color:var(--gold)}
+
+/* IA 3D section in popup */
+.ia-strip{border-top:1px solid var(--border);background:linear-gradient(135deg,rgba(167,139,250,0.05),rgba(45,212,191,0.02))}
+.ia-head{padding:9px 16px;display:flex;align-items:center;gap:9px;cursor:pointer}
+.ia-head:hover{background:rgba(167,139,250,.06)}
+.ia-ico{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,rgba(167,139,250,.2),rgba(45,212,191,.15));border:1px solid var(--purple-b);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.ia-lbl h4{font-size:12px;font-weight:700;color:var(--label)}
+.ia-lbl p{font-size:10px;color:var(--text-muted);margin-top:1px}
+.ia-lbl{flex:1}
+.btn-ia{height:27px;padding:0 13px;border-radius:5px;background:var(--purple-dim);border:1px solid var(--purple-b);color:var(--purple);font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.btn-ia:hover{background:rgba(167,139,250,.18)}
+
+.ia-body{display:none;padding:13px 16px;border-top:1px solid var(--border)}
+.ia-body.open{display:block}
+.ia-hint{font-size:10px;color:var(--text-muted);line-height:1.5;padding:7px 10px;background:var(--bg-4);border:1px solid var(--border);border-radius:6px;margin-bottom:10px}
+.ia-hint strong{color:var(--purple)}
+.ia-params{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
+.ip-lbl{font-size:10px;font-weight:600;color:var(--label);margin-bottom:3px;display:block}
+.ip-sel,.ip-in{width:100%;height:31px;background:var(--bg-4);border:1px solid var(--border-mid);border-radius:7px;padding:0 9px;font-size:11px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none}
+.ip-sel:focus,.ip-in:focus{border-color:var(--purple-b)}
+.ip-full{grid-column:1/-1}
+
+.btn-gen{width:100%;height:36px;background:linear-gradient(135deg,#A78BFA,#7C6DDB);border:none;border-radius:8px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 14px rgba(167,139,250,.3)}
+.btn-gen:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(167,139,250,.45)}
+
+/* resultado 3d */
+.result-3d{margin-top:11px;background:var(--bg-3);border:1px solid var(--purple-b);border-radius:10px;overflow:hidden;display:none}
+.result-3d.show{display:block}
+.res-h{padding:9px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px}
+.res-title{font-size:12px;font-weight:700}
+.res-ok{padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700;background:var(--green-dim);border:1px solid var(--green-b);color:var(--green)}
+.views3{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)}
+.view3{background:linear-gradient(135deg,#0d0d14,#12121a);height:120px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s;position:relative;overflow:hidden}
+.view3:hover{background:linear-gradient(135deg,#111118,#161620)}
+.view3.sel{outline:1px solid var(--gold)}
+.view3.sel::after{content:'✓';position:absolute;top:5px;right:5px;width:16px;height:16px;border-radius:50%;background:var(--green);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.view3-lbl{position:absolute;bottom:5px;left:0;right:0;text-align:center;font-size:9px;color:var(--text-muted)}
+
+/* adjust manual */
+.manual{margin:10px 13px;padding:9px 11px;background:var(--bg-4);border:1px solid var(--amber-b);border-radius:7px}
+.manual-t{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--amber);margin-bottom:7px}
+.manual-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:7px}
+.man-lbl{font-size:10px;font-weight:600;color:var(--label);margin-bottom:3px;display:block}
+.man-in{width:100%;height:27px;background:var(--bg-3);border:1px solid var(--border-mid);border-radius:6px;padding:0 8px;font-size:11px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none}
+.man-in:focus{border-color:var(--amber-b)}
+.btn-recalc{height:27px;padding:0 11px;border-radius:5px;background:var(--amber-dim);border:1px solid var(--amber-b);color:var(--amber);font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
+
+.res-actions{padding:8px 13px;border-top:1px solid var(--border);display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.ra-btn{height:25px;padding:0 9px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;background:var(--bg-4);border:1px solid var(--border);color:var(--text-sec);font-family:'DM Sans',sans-serif;transition:all .1s}
+.ra-btn:hover{border-color:var(--border-hi);color:var(--text)}
+.ra-prim{height:25px;padding:0 11px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;background:var(--gold);border:none;color:#000;font-family:'DM Sans',sans-serif;margin-left:auto;transition:all .15s}
+.ra-prim:hover{background:#E8D5B0}
+
+/* popup footer */
+.pop-f{padding:11px 16px;border-top:1px solid var(--border);background:var(--bg-3);display:flex;align-items:center;gap:7px;flex-shrink:0}
+.pop-meta{font-size:10px;color:var(--text-muted)}
+
+/* IA PROPOSTA banner */
+.ai-banner{background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(91,156,246,.07));border:1px solid var(--purple-b);border-radius:10px;padding:13px;margin-bottom:13px;display:flex;align-items:center;gap:11px}
+.ai-icon{font-size:22px;flex-shrink:0}
+.ai-text h4{font-size:13px;font-weight:700;margin-bottom:2px}
+.ai-text p{font-size:11px;color:var(--text-muted);line-height:1.5}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     TOPBAR
+═══════════════════════════════════════════ -->
+<div class="topbar">
+  <div class="tb-back">← Pipeline Leads</div>
+  <span class="tb-sep">/</span>
+  <span class="tb-crumb">Leads</span>
+  <span class="tb-sep">/</span>
+  <span class="tb-name">Maria Fernanda Costa</span>
+  <div class="tb-right">
+    <button class="tbtn tbtn-won">✓ Ganhou</button>
+    <button class="tbtn tbtn-lost">✕ Perdeu</button>
+  </div>
+</div>
+
+<!-- STAGEBAR -->
+<div class="stagebar">
+  <div class="sp"><div class="sdot" style="background:#3FB87A"></div>Novo</div>
+  <div class="sp active"><div class="sdot" style="background:#C8A97A"></div>Qualificado</div>
+  <div class="sp"><div class="sdot" style="background:#A78BFA"></div>Proposta Enviada</div>
+  <div class="sp"><div class="sdot" style="background:#F0A040"></div>Negociação</div>
+  <div class="sp"><div class="sdot" style="background:#3FB87A"></div>Convertido</div>
+  <div class="sp"><div class="sdot" style="background:#E05252"></div>Perdido</div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MAIN
+═══════════════════════════════════════════ -->
+<div class="main">
+
+<!-- LEFT SIDEBAR -->
+<div class="lsb">
+  <div class="hero">
+    <div class="hero-row">
+      <div class="hav">MF<div class="hon"></div></div>
+      <div><div class="hname">Maria Fernanda</div><div class="hsince">Cliente desde Jan 2026</div></div>
+    </div>
+    <div class="badges">
+      <span class="badge b-wa">💬 WhatsApp</span>
+      <span class="badge b-gold">Qualificado</span>
+      <span class="badge b-vip">⭐ VIP</span>
+    </div>
+    <div class="metrics">
+      <div class="mbox"><div class="mval" style="color:var(--gold)">R$7.4k</div><div class="mlbl">LTV Total</div></div>
+      <div class="mbox"><div class="mval" style="color:var(--green)">4</div><div class="mlbl">Compras</div></div>
+      <div class="mbox"><div class="mval" style="color:var(--blue)">2</div><div class="mlbl">Em aberto</div></div>
+      <div class="mbox"><div class="mval" style="color:var(--amber)">11d</div><div class="mlbl">Sem interação</div></div>
+    </div>
+  </div>
+  <div class="ls">
+    <div class="ls-t">Informações</div>
+    <div class="ls-row"><span class="ls-l">Origem</span><span class="ls-v">WhatsApp</span></div>
+    <div class="ls-row"><span class="ls-l">Valor est.</span><span class="ls-v g">R$ 3.200</span></div>
+    <div class="ls-row"><span class="ls-l">Previsão</span><span class="ls-v">—</span></div>
+    <div class="ls-row"><span class="ls-l">Criado</span><span class="ls-v">03/03/2026</span></div>
+  </div>
+  <div class="ls">
+    <div class="ls-t">Responsável</div>
+    <div class="resp-row">
+      <div class="rav" style="background:linear-gradient(135deg,#1a3a2a,#2a5a3a);color:var(--green)">JS</div>
+      <div><div class="rname">João Silva</div><div class="rrole">Atendente</div></div>
+    </div>
+  </div>
+  <div class="ls">
+    <div class="ls-t">Tags <button>+</button></div>
+    <div class="tags"><span class="tag">WhatsApp</span><span class="tag">Qualificado</span><span class="tag">Anel</span><span class="tag">Presente</span></div>
+  </div>
+  <div class="ls">
+    <div class="ls-t">Acessos</div>
+    <div class="prow"><span class="pname">Admin</span><span class="prole pr-m">Mestre</span></div>
+    <div class="prow"><span class="pname">João Silva</span><span class="prole pr-at">Atendente</span></div>
+    <div class="prow"><span class="pname">Carlos 3D</span><span class="prole pr-d">Designer 3D</span></div>
+    <div class="prow"><span class="pname">Pedro Gomes</span><span class="prole pr-p">Produção</span></div>
+  </div>
+</div>
+
+<!-- CENTER -->
+<div class="center">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('ficha',this)">👤 Ficha</button>
+    <button class="tab" onclick="switchTab('atend',this)">💬 Atendimento <span class="tcnt">3</span></button>
+    <button class="tab" onclick="switchTab('prop',this)">📋 Proposta <span class="tcnt">2</span></button>
+    <button class="tab" onclick="switchTab('pedido',this)">🛍️ Pedidos <span class="tcnt">4</span></button>
+    <button class="tab" onclick="switchTab('os',this)">⚙️ OS <span class="tcnt">1</span></button>
+    <button class="tab" onclick="switchTab('entrega',this)">📦 Entrega</button>
+    <button class="tab" onclick="switchTab('hist',this)">🕐 Histórico</button>
+  </div>
+
+  <div class="tabody">
+
+    <!-- ① FICHA -->
+    <div class="pane active" id="tab-ficha">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div><div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700">Ficha do Cliente</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px">Dados completos · NF-e · Remarketing</div></div>
+        <div style="display:flex;gap:8px;align-items:center"><span class="nf-ok">✓ Apto para NF-e</span><button class="btn btn-primary">Salvar</button></div>
+      </div>
+      <div class="fsec"><div class="ftitle">👤 Identificação Pessoal</div>
+        <div class="fg">
+          <div><label class="fl">Nome completo<span class="req">*</span></label><input class="fi" value="Maria Fernanda Costa"></div>
+          <div><label class="fl">Nome social / apelido</label><input class="fi" value="Mari"></div>
+          <div><label class="fl">CPF<span class="req">*</span></label><input class="fi" value="123.456.789-00"></div>
+          <div><label class="fl">Data de nascimento</label><input class="fi" value="12/04/1990"></div>
+          <div><label class="fl">RG</label><input class="fi" placeholder="—"></div>
+          <div><label class="fl">Gênero</label><select class="fs"><option>Feminino</option><option>Masculino</option><option>Outro</option></select></div>
+        </div>
+      </div>
+      <div class="fsec"><div class="ftitle">📱 Contatos</div>
+        <div class="fg">
+          <div><label class="fl">WhatsApp<span class="req">*</span></label><input class="fi" value="+55 47 99123-4567"></div>
+          <div><label class="fl">E-mail</label><input class="fi" value="maria@email.com"></div>
+          <div><label class="fl">Instagram</label><input class="fi" placeholder="@usuario"></div>
+          <div><label class="fl">Telefone fixo</label><input class="fi" placeholder="—"></div>
+        </div>
+      </div>
+      <div class="fsec"><div class="ftitle">🏠 Endereço</div>
+        <div class="fg">
+          <div><label class="fl">CEP</label><input class="fi" value="88330-000"></div>
+          <div><label class="fl">Cidade / Estado</label><input class="fi" value="Balneário Camboriú / SC"></div>
+          <div class="ff"><label class="fl">Endereço completo</label><input class="fi" value="Av. Atlântica, 1234, Apto 502 — Centro"></div>
+        </div>
+      </div>
+      <div class="fsec"><div class="ftitle">🏢 Dados Empresariais (PJ)</div>
+        <div class="fg">
+          <div><label class="fl">CNPJ</label><input class="fi" placeholder="—"></div>
+          <div><label class="fl">Razão social</label><input class="fi" placeholder="—"></div>
+          <div class="ff"><label class="fl">Endereço empresarial</label><input class="fi" placeholder="—"></div>
+        </div>
+      </div>
+      <div class="fsec"><div class="ftitle">💎 Preferências & Remarketing</div>
+        <div class="fg">
+          <div><label class="fl">Metal preferido</label><select class="fs"><option>Ouro 18k</option><option>Prata 925</option><option>Ouro Rosé</option></select></div>
+          <div><label class="fl">Tamanho de anel</label><input class="fi" value="17"></div>
+          <div><label class="fl">Canal preferido</label><select class="fs"><option>WhatsApp</option><option>E-mail</option></select></div>
+          <div><label class="fl">Datas especiais</label><input class="fi" placeholder="Ex: Aniversário em Abril"></div>
+          <div class="ff"><label class="fl">Observações de remarketing</label><textarea class="fta" placeholder="Gosta de anéis solitários. Interesse em presentes..."></textarea></div>
+        </div>
+      </div>
+      <div class="save-row">
+        <div style="font-size:10px;color:var(--text-muted)"><span style="color:var(--green)">●</span> Hoje 14:32 · João Silva &nbsp;·&nbsp; <span style="color:var(--purple)">🤖 IA atualizou 13/03</span></div>
+        <div style="display:flex;gap:8px"><button class="btn btn-ghost">Descartar</button><button class="btn btn-primary">Salvar alterações</button></div>
+      </div>
+    </div>
+
+    <!-- ② ATENDIMENTO -->
+    <div class="pane" id="tab-atend">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700">Atendimento</div>
+        <button class="btn btn-primary" onclick="openPopup()">+ Novo bloco</button>
+      </div>
+
+      <button class="add-block-btn" onclick="openPopup()">+ Adicionar bloco de atendimento</button>
+
+      <!-- bloco com 3d -->
+      <div class="ablock">
+        <div class="ab-head">
+          <div class="ab-ico" style="background:var(--gold-dim);border:1px solid var(--gold-border)">💍</div>
+          <div class="ab-info"><div class="ab-title">Consulta — Anel Solitário Personalizado</div><div class="ab-meta">João Silva · 13/03/2026 · WhatsApp</div></div>
+          <span class="ab-status s-open">Em andamento</span>
+        </div>
+        <div class="ab-body">
+          <div class="ab-note">Cliente interessada em anel solitário Ouro 18k com brilhante central. Tamanho <strong>17</strong>. Gravação interna <em>"MF"</em>. Orçamento R$ 2.500–3.500. Prazo: antes de Abril.</div>
+          <div class="ab-refs">
+            <div class="aref"><svg viewBox="0 0 54 54"><rect fill="#2a1a0a" width="54" height="54"/><circle cx="27" cy="27" r="15" fill="none" stroke="#C8A97A" stroke-width="6"/><circle cx="27" cy="15" r="4" fill="#e0eaff" opacity=".9"/></svg></div>
+            <div class="aref"><svg viewBox="0 0 54 54"><rect fill="#0a1020" width="54" height="54"/><circle cx="27" cy="27" r="14" fill="none" stroke="#E8D5A8" stroke-width="5"/><circle cx="27" cy="27" r="9" fill="none" stroke="#C8A97A" stroke-width="2" stroke-dasharray="3 2"/></svg></div>
+          </div>
+          <!-- 3d resultado inline -->
+          <div class="ab-3d">
+            <div class="ab-3d-header">🤖 Modelo 3D gerado pela IA — <span style="color:var(--teal)">aprovado pela cliente</span></div>
+            <div class="ab-3d-views">
+              <div class="ab-3d-view sel" onclick="this.closest('.ab-3d-views').querySelectorAll('.ab-3d-view').forEach(v=>v.classList.remove('sel'));this.classList.add('sel')">
+                <div style="position:relative;display:flex;align-items:center;justify-content:center"><div class="ringa"></div><div class="gem"></div></div>
+                <div class="ab-3d-lbl">Frontal</div>
+              </div>
+              <div class="ab-3d-view" onclick="this.closest('.ab-3d-views').querySelectorAll('.ab-3d-view').forEach(v=>v.classList.remove('sel'));this.classList.add('sel')">
+                <div style="position:relative;display:flex;align-items:center;justify-content:center"><div class="ringb"></div><div class="gem"></div></div>
+                <div class="ab-3d-lbl">Superior</div>
+              </div>
+              <div class="ab-3d-view" onclick="this.closest('.ab-3d-views').querySelectorAll('.ab-3d-view').forEach(v=>v.classList.remove('sel'));this.classList.add('sel')">
+                <div style="position:relative;display:flex;align-items:center;justify-content:center"><div class="ringc"></div><div class="gem"></div></div>
+                <div class="ab-3d-lbl">Lateral</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ab-foot">
+          <button class="btn-sm">✏️ Editar</button><button class="btn-sm">📎 Anexar</button>
+          <button class="btn-sm">💬 Enviar 3D</button>
+          <button class="btn-sm" style="background:var(--teal-dim);border-color:var(--teal-b);color:var(--teal)">⚙️ Criar OS c/ specs</button>
+          <span style="font-size:10px;color:var(--text-muted);margin-left:auto">13/03/2026 23:21</span>
+        </div>
+      </div>
+
+      <!-- bloco concluído -->
+      <div class="ablock">
+        <div class="ab-head">
+          <div class="ab-ico" style="background:var(--green-dim);border:1px solid var(--green-b)">📿</div>
+          <div class="ab-info"><div class="ab-title">Venda — Colar Veneziana</div><div class="ab-meta">João Silva · 10/02/2026 · Presencial</div></div>
+          <span class="ab-status s-done">Concluído</span>
+        </div>
+        <div class="ab-body">
+          <div class="ab-note">Cliente veio à loja, fechou na hora. Pagamento PIX. Produto entregue em mãos.</div>
+        </div>
+        <div class="ab-foot"><button class="btn-sm">🧾 NF-e</button><button class="btn-sm">📋 Ver pedido</button><span style="font-size:10px;color:var(--text-muted);margin-left:auto">10/02/2026</span></div>
+      </div>
+
+      <!-- bloco IA -->
+      <div class="ablock">
+        <div class="ab-head">
+          <div class="ab-ico" style="background:var(--purple-dim);border:1px solid var(--purple-b)">🤖</div>
+          <div class="ab-info"><div class="ab-title">Qualificação automática — Aurora IA</div><div class="ab-meta">IA Aurora · 03/03/2026 · WhatsApp</div></div>
+          <span class="ab-status s-ai">IA</span>
+        </div>
+        <div class="ab-body">
+          <div class="ab-note">DISC: Dominante/Influente. Preferências coletadas: Ouro 18k, anéis, presente. Handoff para humano às 00:32.</div>
+        </div>
+        <div class="ab-foot"><button class="btn-sm">📄 Ver conversa</button><span style="font-size:10px;color:var(--text-muted);margin-left:auto">03/03/2026</span></div>
+      </div>
+    </div>
+
+    <!-- ③ PROPOSTA -->
+    <div class="pane" id="tab-prop">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700">Propostas</div>
+        <button class="btn btn-primary">+ Nova Proposta</button>
+      </div>
+      <div class="ai-banner">
+        <div class="ai-icon">🤖</div>
+        <div class="ai-text"><h4>Gerar proposta com IA</h4><p>Usa dados da ficha + atendimento para criar proposta personalizada automaticamente.</p></div>
+        <button class="btn btn-purple" style="flex-shrink:0">Gerar →</button>
+      </div>
+      <div class="pcard">
+        <div class="pc-h"><div><div class="pcode">PROP-20260313-0042</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">13/03/2026 · Válida 24h</div></div><span class="pst ps-pend">⏳ Aguardando</span></div>
+        <div class="pc-b">Anel Solitário Ouro 18k + Brinco Pérola · Desconto R$ 170</div>
+        <div class="pc-f"><button class="btn-sm">💬 WA</button><button class="btn-sm">✉️ E-mail</button><button class="btn-sm">🖨️ Imprimir</button><button class="btn-sm">✏️ Editar</button><span class="ptotal">R$ 2.500,00</span></div>
+      </div>
+      <div class="pcard">
+        <div class="pc-h"><div><div class="pcode">PROP-20260210-0019</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">10/02/2026 · Aceita</div></div><span class="pst ps-ok">✓ Aceita</span></div>
+        <div class="pc-b">Colar Veneziana Ouro 18k · Pedido: OR-20260212-1230</div>
+        <div class="pc-f"><button class="btn-sm">📄 PDF</button><button class="btn-sm">🧾 NF-e</button><span class="ptotal">R$ 1.890,00</span></div>
+      </div>
+    </div>
+
+    <!-- ④ PEDIDOS -->
+    <div class="pane" id="tab-pedido">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700">Pedidos</div>
+        <span style="font-size:11px;color:var(--text-muted)">LTV: <strong style="color:var(--gold)">R$ 7.430</strong></span>
+      </div>
+      <div class="ocard">
+        <div class="oc-h"><div style="flex:1"><div class="onum">PERS-20260210-0034</div><div style="font-size:11px;color:var(--text-muted);margin-top:1px">Anel Solitário Personalizado — gravação "MF"</div></div><span class="otype ot-c">Personalizado</span></div>
+        <div class="progress"><div class="steps">
+          <div class="step done"><div class="sdot2">✓</div><div class="slbl">Sinal</div></div>
+          <div class="step done"><div class="sdot2">✓</div><div class="slbl">Design</div></div>
+          <div class="step done"><div class="sdot2">✓</div><div class="slbl">3D</div></div>
+          <div class="step active"><div class="sdot2">⚙</div><div class="slbl">Produção</div></div>
+          <div class="step"><div class="sdot2"></div><div class="slbl">Acabamento</div></div>
+          <div class="step"><div class="sdot2"></div><div class="slbl">Entrega</div></div>
+        </div></div>
+        <div class="oc-f"><span style="font-size:10px;color:var(--text-muted)">10/02/2026</span><span style="font-size:11px;color:var(--green)">Sinal: R$ 500</span><span style="font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:var(--gold);margin-left:auto">R$ 3.200,00</span></div>
+      </div>
+      <div class="ocard">
+        <div class="oc-h"><div style="flex:1"><div class="onum">OR-20260212-1230</div><div style="font-size:11px;color:var(--text-muted);margin-top:1px">Colar Veneziana Ouro 18k</div></div><span class="otype ot-p">Pronta entrega</span></div>
+        <div class="progress"><div class="steps">
+          <div class="step done"><div class="sdot2">✓</div><div class="slbl">Pedido</div></div>
+          <div class="step done"><div class="sdot2">✓</div><div class="slbl">Pagamento</div></div>
+          <div class="step done"><div class="sdot2">✓</div><div class="slbl">Separação</div></div>
+          <div class="step done"><div class="sdot2">✓</div><div class="slbl">Entregue</div></div>
+        </div></div>
+        <div class="oc-f"><span style="font-size:10px;color:var(--text-muted)">Entregue 15/02</span><span style="font-size:11px;color:var(--green)">✓ Concluído</span><span style="font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:var(--gold);margin-left:auto">R$ 1.890,00</span></div>
+      </div>
+    </div>
+
+    <!-- ⑤ OS -->
+    <div class="pane" id="tab-os">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700">Ordem de Serviço</div>
+        <button class="btn btn-primary">+ Nova OS</button>
+      </div>
+      <div class="oscard">
+        <div class="os-h">
+          <span class="osnum">OS-20260211-0034</span>
+          <span class="osp osp-high">● ALTA</span>
+          <span style="font-size:10px;color:var(--amber);margin-left:auto">Em produção · 32d</span>
+        </div>
+        <div class="os-body">
+          <div class="os-info">
+            <div class="os-f"><div class="os-fl">Produto</div><div class="os-fv">Anel Solitário Personalizado</div></div>
+            <div class="os-f"><div class="os-fl">Cliente</div><div class="os-fv">Maria Fernanda Costa</div></div>
+            <div class="os-f"><div class="os-fl">Designer 3D</div><div class="os-fv" style="color:var(--teal)">Carlos Mendes</div></div>
+            <div class="os-f"><div class="os-fl">Ourives</div><div class="os-fv">Pedro Gomes</div></div>
+            <div class="os-f"><div class="os-fl">Prazo</div><div class="os-fv" style="color:var(--amber)">30/04/2026</div></div>
+          </div>
+          <div class="os-3d-thumb" onclick="alert('Abrir visualizador 3D em tela cheia')">
+            <div style="position:relative;display:flex;align-items:center;justify-content:center"><div class="ringa"></div><div class="gem"></div></div>
+            <div style="position:absolute;bottom:4px;left:0;right:0;text-align:center;font-size:9px;color:var(--purple)">⛶ Tela cheia</div>
+          </div>
+        </div>
+
+        <!-- SPECS DE FABRICAÇÃO -->
+        <div class="os-specs">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);margin-bottom:8px">Especificações de Fabricação</div>
+          <div class="spec-grid">
+            <div class="spec-box"><div class="spec-lbl">Metal</div><div class="spec-val g">Ouro 18k Amarelo</div></div>
+            <div class="spec-box"><div class="spec-lbl">Pedra central</div><div class="spec-val">Brilhante 0.25ct</div></div>
+            <div class="spec-box"><div class="spec-lbl">Tamanho aro</div><div class="spec-val">17 (diâm. 17.1mm)</div></div>
+            <div class="spec-box"><div class="spec-lbl">Espessura aro</div><div class="spec-val">2.0mm</div></div>
+            <div class="spec-box"><div class="spec-lbl">Altura cravação</div><div class="spec-val">5.5mm</div></div>
+            <div class="spec-box"><div class="spec-lbl">Nº garras</div><div class="spec-val">4 garras</div></div>
+            <div class="spec-box"><div class="spec-lbl">Perfil aro</div><div class="spec-val">Meia-cana</div></div>
+            <div class="spec-box"><div class="spec-lbl">Acabamento</div><div class="spec-val">Polido alto brilho</div></div>
+            <div class="spec-box"><div class="spec-lbl">Gravação</div><div class="spec-val">"MF" interna</div></div>
+            <div class="spec-box"><div class="spec-lbl">Peso estimado</div><div class="spec-val">4.2g</div></div>
+            <div class="spec-box"><div class="spec-lbl">Tolerância</div><div class="spec-val">±0.1mm</div></div>
+            <div class="spec-box"><div class="spec-lbl">Origem specs</div><div class="spec-val" style="color:var(--purple)">🤖 IA + Ajuste</div></div>
+          </div>
+        </div>
+
+        <!-- ARQUIVOS -->
+        <div class="os-attach">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);width:100%;margin-bottom:6px">Arquivos do Designer 3D</div>
+          <div class="att purple">💎 modelo-anel-MF.stl <span style="font-size:9px;opacity:.7">3.2MB</span></div>
+          <div class="att purple">📐 modelo-anel-MF.3dm <span style="font-size:9px;opacity:.7">Rhinoceros</span></div>
+          <div class="att">🖼️ render-frontal.jpg</div>
+          <div class="att">🖼️ render-superior.jpg</div>
+          <div class="att">📄 briefing-cliente.pdf</div>
+          <div class="att" style="border-style:dashed;cursor:pointer">+ Adicionar arquivo</div>
+        </div>
+
+        <div class="os-steps">
+          <span class="ostep ost-done">✓ Design aprovado</span>
+          <span class="ostep ost-done">✓ 3D modelado</span>
+          <span class="ostep ost-done">✓ Material separado</span>
+          <span class="ostep ost-act">⚙ Fundição</span>
+          <span class="ostep ost-pend">Cravação</span>
+          <span class="ostep ost-pend">Polimento</span>
+          <span class="ostep ost-pend">QC</span>
+          <span class="ostep ost-pend">Embalagem</span>
+        </div>
+        <div class="os-foot">
+          <button class="btn-sm">📝 Atualizar etapa</button>
+          <button class="btn-sm">📷 Foto progresso</button>
+          <button class="btn-sm">💬 Avisar cliente</button>
+          <button class="btn-sm" style="color:var(--teal);border-color:var(--teal-b);background:var(--teal-dim)">📐 Ver 3D completo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑥ ENTREGA -->
+    <div class="pane" id="tab-entrega">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700">Entregas</div>
+        <button class="btn btn-primary">+ Nova entrega</button>
+      </div>
+      <div class="dcard">
+        <div class="dc-h">
+          <div style="flex:1"><div style="font-size:13px;font-weight:700">PERS-20260210-0034 · Anel Solitário</div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">Previsão 30/04/2026</div></div>
+          <span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:var(--blue-dim);border:1px solid var(--blue-b);color:var(--blue)">🏪 Retirada na loja</span>
+        </div>
+        <div class="track">
+          <div class="ts"><div class="ts-dc"><div class="ts-dot tsd-ok">✓</div><div class="ts-ln ok"></div></div><div class="ts-c"><div class="ts-t">Pedido confirmado e sinal pago</div><div class="ts-s">10/02/2026</div></div></div>
+          <div class="ts"><div class="ts-dc"><div class="ts-dot tsd-ok">✓</div><div class="ts-ln ok"></div></div><div class="ts-c"><div class="ts-t">Design aprovado pelo cliente</div><div class="ts-s">12/02/2026 · Modelo 3D enviado por WhatsApp</div></div></div>
+          <div class="ts"><div class="ts-dc"><div class="ts-dot tsd-ok">✓</div><div class="ts-ln ok"></div></div><div class="ts-c"><div class="ts-t">Arquivo .STL enviado para fabricação</div><div class="ts-s">14/02/2026 · Designer: Carlos Mendes</div></div></div>
+          <div class="ts"><div class="ts-dc"><div class="ts-dot tsd-act">⚙</div><div class="ts-ln pend"></div></div><div class="ts-c"><div class="ts-t" style="color:var(--gold)">Fundição em andamento</div><div class="ts-s">Estimado: 25/04/2026 · Ourives: Pedro Gomes</div></div></div>
+          <div class="ts"><div class="ts-dc"><div class="ts-dot tsd-pend">○</div><div class="ts-ln pend"></div></div><div class="ts-c"><div class="ts-t" style="color:var(--text-muted)">Pronto para retirada</div><div class="ts-s" style="color:var(--text-muted)">Cliente será notificada via WhatsApp</div></div></div>
+          <div class="ts"><div class="ts-dc"><div class="ts-dot tsd-pend">○</div></div><div class="ts-c"><div class="ts-t" style="color:var(--text-muted)">Retirado na loja</div><div class="ts-s" style="color:var(--text-muted)">Saldo a pagar: R$ 2.700</div></div></div>
+        </div>
+        <div class="dc-f"><button class="btn-sm">💬 Avisar cliente</button><button class="btn-sm">✏️ Atualizar</button><button class="btn-sm">✓ Marcar entregue</button></div>
+      </div>
+    </div>
+
+    <!-- ⑦ HISTÓRICO -->
+    <div class="pane" id="tab-hist">
+      <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;margin-bottom:13px">Histórico</div>
+      <div class="hist-nav">
+        <button class="hsub active" onclick="switchHist('log',this)">📋 Log</button>
+        <button class="hsub" onclick="switchHist('wa',this)">💬 WhatsApp</button>
+        <button class="hsub" onclick="switchHist('email',this)">✉️ E-mail</button>
+        <button class="hsub" onclick="switchHist('fb',this)">⭐ Feedback</button>
+      </div>
+      <div class="hpane active" id="hp-log">
+        <div class="log-item"><div class="log-ico" style="background:var(--gold-dim);border-color:var(--gold-border)">💬</div><div><div class="log-title">Bloco criado — Consulta Anel Solitário <span class="lbadge lb-h">Humano</span></div><div class="log-desc">João Silva criou bloco. Proposta PROP-20260313-0042 gerada. Modelo 3D aprovado pela cliente.</div><div class="log-meta"><span>13/03/2026 23:21</span><span>João Silva · Atendente</span></div></div></div>
+        <div class="log-item"><div class="log-ico" style="background:var(--teal-dim);border-color:var(--teal-b)">📐</div><div><div class="log-title">Arquivo 3D enviado para OS <span class="lbadge" style="background:var(--teal-dim);border:1px solid var(--teal-b);color:var(--teal)">Designer 3D</span></div><div class="log-desc">Carlos Mendes entregou modelo-anel-MF.stl e .3dm. OS atualizada com specs de fabricação.</div><div class="log-meta"><span>14/02/2026</span><span>Carlos Mendes · Designer 3D</span></div></div></div>
+        <div class="log-item"><div class="log-ico" style="background:var(--green-dim);border-color:var(--green-b)">✓</div><div><div class="log-title">Venda concluída — Colar Veneziana <span class="lbadge lb-h">Humano</span></div><div class="log-desc">Pedido OR-20260212-1230 criado. PIX confirmado. Entregue em mãos.</div><div class="log-meta"><span>10/02/2026</span><span>João Silva · Atendente</span></div></div></div>
+        <div class="log-item"><div class="log-ico" style="background:var(--purple-dim);border-color:var(--purple-b)">🤖</div><div><div class="log-title">Lead criado e qualificado pela IA <span class="lbadge lb-ai">IA Aurora</span></div><div class="log-desc">Atendimento automático WhatsApp. DISC: Dominante/Influente. Handoff para humano às 00:32.</div><div class="log-meta"><span>03/03/2026</span><span>Aurora · IA</span></div></div></div>
+      </div>
+      <div class="hpane" id="hp-wa">
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <button class="btn-sm">Todos</button><button class="btn-sm">Humano</button><button class="btn-sm">IA Aurora</button>
+        </div>
+        <div class="msg"><div class="msg-h"><div class="mav" style="background:linear-gradient(135deg,#1a3a2a,#2a5a3a);color:var(--green)">JS</div><span class="mfrom">João Silva</span><span style="font-size:9px;padding:1px 6px;border-radius:3px;background:var(--blue-dim);border:1px solid var(--blue-b);color:var(--blue)">Humano</span><span class="mtime">13/03 23:18</span></div><div class="mbody">Olá Maria! Proposta PROP-20260313-0042 enviada. Válida por 24h. Qualquer dúvida é só chamar! 😊</div></div>
+        <div class="msg ai"><div class="msg-h"><div class="mav">🤖</div><span class="mfrom">Aurora IA</span><span style="font-size:9px;padding:1px 6px;border-radius:3px;background:var(--purple-dim);border:1px solid var(--purple-b);color:var(--purple)">IA</span><span class="mtime">03/03 00:28</span></div><div class="mbody">Que incrível, Maria! Anéis em Ouro 18k são nossa especialidade ✨ Para te ajudar melhor, qual seria a ocasião especial?</div></div>
+        <div class="msg"><div class="msg-h"><div class="mav" style="background:linear-gradient(135deg,#2a1a3a,#3a2a4a);color:var(--purple)">MF</div><span class="mfrom">Maria Fernanda</span><span class="mtime">03/03 00:29</span></div><div class="mbody">É de aniversário pro meu marido, ele adora anel. Quero um bonito de ouro!</div></div>
+      </div>
+      <div class="hpane" id="hp-email">
+        <div class="msg"><div class="msg-h"><div class="mav" style="background:var(--blue-dim);color:var(--blue)">JS</div><span class="mfrom">João Silva → <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="dcb1bdaeb5bd9cb9b1bdb5b0f2bfb3b1">[email&#160;protected]</a></span><span class="mtime">13/03 23:30</span></div><div class="mbody"><strong style="color:var(--text-sec)">Assunto:</strong> Sua proposta exclusiva — ORIN JOIAS<br><br>Olá Maria! Segue em anexo a proposta PROP-20260313-0042 com condições especiais...</div><div style="margin-top:7px"><span class="att">📎 proposta.pdf</span></div></div>
+        <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12px">1 e-mail registrado</div>
+      </div>
+      <div class="hpane" id="hp-fb">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="font-size:12px;color:var(--text-muted)">2 avaliações · Média <strong style="color:var(--gold)">4.5 ⭐</strong></span><button class="btn-sm">+ Solicitar feedback</button></div>
+        <div class="fb-card"><div class="fb-h"><div><div style="font-size:12px;font-weight:600">Colar Veneziana</div><div style="font-size:10px;color:var(--text-muted)">15/02/2026</div></div><div class="stars">⭐⭐⭐⭐⭐</div></div><div class="fb-c">"Adorei o atendimento e a qualidade da peça. João foi super atencioso!"</div><div class="fb-m">Maria Fernanda · WhatsApp · <span style="color:var(--green)">✓ Verificado</span></div></div>
+        <div class="fb-card"><div class="fb-h"><div><div style="font-size:12px;font-weight:600">Atendimento geral</div><div style="font-size:10px;color:var(--text-muted)">20/01/2026</div></div><div class="stars">⭐⭐⭐⭐</div></div><div class="fb-c">"Ótimo atendimento, mas gostaria que o prazo de entrega fosse mais curto."</div><div class="fb-m">Maria Fernanda · E-mail · <span style="color:var(--green)">✓ Verificado</span></div></div>
+      </div>
+    </div>
+
+  </div><!-- /tabody -->
+</div><!-- /center -->
+
+<!-- RIGHT SIDEBAR -->
+<div class="rsb">
+  <div class="rs"><div class="rs-t">Contato <button>›</button></div><div class="crow"><div class="cav" style="background:linear-gradient(135deg,#1a2a3a,#2a3a4a);border:1px solid var(--blue-b);color:var(--blue)">MF</div><div><div class="cname">Maria Fernanda</div><div class="csub">+55 47 99123-4567</div><div class="csub"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="89e4e8fbe0e8c9ece4e8e0e5a7eae6e4">[email&#160;protected]</a></div></div></div></div>
+  <div class="rs"><div class="rs-t">Ações rápidas</div>
+    <button class="qbtn q-wa">💬 WhatsApp</button>
+    <button class="qbtn q-prop">📋 Gerar Proposta</button>
+    <button class="qbtn q-os">⚙️ Nova OS</button>
+    <button class="qbtn q-nf">🧾 Emitir NF-e</button>
+    <button class="qbtn q-3d" onclick="openPopup()">💎 Novo Bloco / 3D</button>
+  </div>
+  <div class="rs"><div class="rs-t">Empresa <button>›</button></div><div class="crow"><div class="cav" style="background:linear-gradient(135deg,#1a2030,#252840);border:1px solid var(--purple-b);color:var(--purple)">OJ</div><div><div class="cname">ORIN JOIAS</div><div class="csub">Conta vinculada</div></div></div></div>
+  <div class="rs"><div class="rs-t">Arquivos <button>+</button></div><div style="display:flex;gap:5px;flex-wrap:wrap"><span class="att">📄 proposta.pdf</span><span class="att">✏️ esboço.jpg</span><span class="att purple">💎 anel.stl</span></div></div>
+  <div class="rs"><div class="rs-t">Financeiro</div>
+    <div class="fin-r"><span class="fin-l">LTV</span><span style="font-family:'Playfair Display',serif;font-weight:700;color:var(--gold)">R$ 7.430</span></div>
+    <div class="fin-r"><span class="fin-l">Em aberto</span><span style="font-weight:600;color:var(--amber)">R$ 2.700</span></div>
+    <div class="fin-r"><span class="fin-l">Ticket médio</span><span class="fin-v">R$ 1.857</span></div>
+    <div class="fin-r"><span class="fin-l">NF-e emitidas</span><span style="color:var(--green);font-weight:600">2/4</span></div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<!-- ═══════════════════════════════════════════
+     POPUP — NOVO BLOCO DE ATENDIMENTO
+═══════════════════════════════════════════ -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closePopup()">
+<div class="popup">
+  <div class="pop-h">
+    <select class="pop-type">
+      <option>📝 Atendimento</option>
+      <option>💍 Consulta de peça</option>
+      <option>📞 Ligação</option>
+      <option>🤝 Visita presencial</option>
+      <option>✉️ E-mail</option>
+    </select>
+    <input class="pop-title" placeholder="Título do bloco..." value="Consulta — Anel Solitário Personalizado">
+    <button class="pop-close" onclick="closePopup()">✕</button>
+  </div>
+
+  <div class="ptb">
+    <button class="ptb-btn on">B</button>
+    <button class="ptb-btn"><i>I</i></button>
+    <button class="ptb-btn" style="text-decoration:underline">U</button>
+    <div class="ptb-sep"></div>
+    <button class="ptb-btn">☰</button>
+    <button class="ptb-btn">①</button>
+    <button class="ptb-btn">☑</button>
+    <div class="ptb-sep"></div>
+    <button class="ptb-btn">🔗</button>
+    <button class="ptb-btn">@</button>
+    <div class="ptb-sep"></div>
+    <button class="ptb-wide" id="recBtn" onclick="toggleRec()">🎙️ Gravar voz</button>
+    <button class="ptb-wide" onclick="document.getElementById('fi2').click()">📷 Adicionar foto</button>
+    <input type="file" id="fi2" accept="image/*" style="display:none" onchange="addRefPhoto(this)">
+    <div style="margin-left:auto">
+      <select class="pop-type" style="height:25px;font-size:11px">
+        <option>🟡 Normal</option><option>🔴 Urgente</option><option>🟢 Concluído</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="popup-scroll">
+    <div class="pop-note" contenteditable id="popNote"
+      data-ph="Descreva o atendimento... preferências do cliente, medidas, orçamento, ocasião especial, estilo desejado...">Cliente interessada em anel solitário em <strong>Ouro 18k</strong> com brilhante central. Tamanho <strong>17</strong>. Gravação interna <em>"MF"</em>. Referências enviadas (fotos abaixo). Orçamento: R$ 2.500–3.500. Prazo: antes de Abril.</div>
+
+    <div class="pop-refs">
+      <div class="pop-refs-lbl">Fotos de referência</div>
+      <div class="refs-row" id="refsGrid">
+        <div class="ref-thumb"><div class="ref-del">✕</div><svg viewBox="0 0 66 66"><rect fill="#2a1a0a" width="66" height="66"/><circle cx="33" cy="33" r="18" fill="none" stroke="#C8A97A" stroke-width="7"/><circle cx="33" cy="17" r="5" fill="#e0eaff" opacity=".9"/></svg></div>
+        <div class="ref-thumb"><div class="ref-del">✕</div><svg viewBox="0 0 66 66"><rect fill="#0a1020" width="66" height="66"/><circle cx="33" cy="33" r="16" fill="none" stroke="#E8D5A8" stroke-width="5"/><circle cx="33" cy="33" r="10" fill="none" stroke="#C8A97A" stroke-width="2" stroke-dasharray="3 2"/></svg></div>
+        <div class="ref-add" onclick="document.getElementById('fi2').click()"><div class="ref-add-icon">＋</div><div class="ref-add-txt">Foto</div></div>
+      </div>
+    </div>
+
+    <!-- IA 3D -->
+    <div class="ia-strip">
+      <div class="ia-head" onclick="toggleIA3D()">
+        <div class="ia-ico">🤖</div>
+        <div class="ia-lbl">
+          <h4>Gerar modelo 3D com IA</h4>
+          <p>Usa este bloco + fotos como briefing · ajuste manual disponível · resultado vai para OS</p>
+        </div>
+        <button class="btn-ia" id="ia3dBtn">✨ Gerar</button>
+      </div>
+      <div class="ia-body" id="ia3dBody">
+        <div class="ia-hint">🧠 <strong>Contexto desta nota:</strong> a IA lê exatamente o que foi escrito acima + as fotos. Confirme os parâmetros extraídos antes de gerar.</div>
+        <div class="ia-params">
+          <div><label class="ip-lbl">Tipo de peça</label><select class="ip-sel"><option>Anel Solitário</option><option>Aliança</option><option>Colar</option><option>Brinco</option></select></div>
+          <div><label class="ip-lbl">Metal</label><select class="ip-sel"><option>Ouro 18k Amarelo</option><option>Ouro 18k Branco</option><option>Ouro Rosé 18k</option><option>Prata 925</option></select></div>
+          <div><label class="ip-lbl">Pedra central</label><select class="ip-sel"><option>Brilhante 0.25ct</option><option>Brilhante 0.50ct</option><option>Brilhante 1.0ct</option><option>Sem pedra</option></select></div>
+          <div><label class="ip-lbl">Aro</label><select class="ip-sel"><option>Fino liso</option><option>Fino trabalhado</option><option>Largo liso</option></select></div>
+          <div><label class="ip-lbl">Acabamento</label><select class="ip-sel"><option>Polido alto brilho</option><option>Fosco escovado</option><option>Misto</option></select></div>
+          <div><label class="ip-lbl">Tamanho (aro)</label><input class="ip-in" value="17"></div>
+          <div class="ip-full"><label class="ip-lbl">Detalhes extras (extraído da nota)</label><input class="ip-in" value='Gravação interna "MF", cravação 4 garras, aro fino meia-cana'></div>
+        </div>
+        <button class="btn-gen" onclick="showResult3D()">✨ Gerar modelo 3D</button>
+
+        <div class="result-3d" id="popResult">
+          <div class="res-h">
+            <span style="font-size:13px">💍</span>
+            <span class="res-title">Anel Solitário Ouro 18k — 3 vistas</span>
+            <span class="res-ok">✓ Gerado</span>
+            <span style="margin-left:auto;font-size:10px;color:var(--text-muted)">4s · Esboço para aprovação</span>
+          </div>
+          <div class="views3">
+            <div class="view3 sel" onclick="selV(this)">
+              <div style="position:relative;display:flex;align-items:center;justify-content:center"><div class="ringa"></div><div class="gem"></div></div>
+              <div class="view3-lbl">Frontal</div>
+            </div>
+            <div class="view3" onclick="selV(this)">
+              <div style="position:relative;display:flex;align-items:center;justify-content:center"><div class="ringb"></div><div class="gem"></div></div>
+              <div class="view3-lbl">Superior</div>
+            </div>
+            <div class="view3" onclick="selV(this)">
+              <div style="position:relative;display:flex;align-items:center;justify-content:center"><div class="ringc"></div><div class="gem"></div></div>
+              <div class="view3-lbl">Lateral</div>
+            </div>
+          </div>
+          <div class="manual">
+            <div class="manual-t">⚙️ Ajuste manual — sem software 3D</div>
+            <div class="manual-grid">
+              <div><label class="man-lbl">Espessura aro (mm)</label><input class="man-in" value="2.0"></div>
+              <div><label class="man-lbl">Altura cravação (mm)</label><input class="man-in" value="5.5"></div>
+              <div><label class="man-lbl">Nº garras</label><input class="man-in" value="4"></div>
+              <div><label class="man-lbl">Perfil do aro</label><select class="man-in"><option>Meia-cana</option><option>Plano</option><option>Côncavo</option></select></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn-recalc">🔄 Atualizar modelo</button>
+              <span style="font-size:10px;color:var(--text-muted)">Ajustes aplicados sobre o modelo gerado</span>
+            </div>
+          </div>
+          <div style="padding:8px 13px 9px;font-size:10px;color:var(--text-muted);background:rgba(45,212,191,.04);border-top:1px solid var(--border)">
+            ⚠️ <strong style="color:var(--teal)">Este é um esboço de aprovação.</strong> Ao criar a OS, o modelo será enviado ao Designer 3D (Carlos Mendes) para modelagem técnica em Rhinoceros/MatrixGold antes da fabricação.
+          </div>
+          <div class="res-actions">
+            <button class="ra-btn">💬 Enviar por WhatsApp</button>
+            <button class="ra-btn">📄 Exportar PDF</button>
+            <button class="ra-btn">🔄 Regerar</button>
+            <button class="ra-prim" onclick="approveToOS()">✓ Aprovado → Criar OS com specs</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pop-f">
+    <span class="pop-meta">Maria Fernanda Costa · João Silva · agora</span>
+    <div style="margin-left:auto;display:flex;gap:7px">
+      <button class="btn btn-ghost" onclick="closePopup()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveBlock()">Salvar bloco</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// ── TABS ──
+function switchTab(id,btn){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── HIST SUBTABS ──
+function switchHist(id,btn){
+  document.querySelectorAll('.hpane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.hsub').forEach(b=>b.classList.remove('active'));
+  document.getElementById('hp-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── POPUP ──
+function openPopup(){
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('popNote').focus();
+}
+function closePopup(){
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('popResult').classList.remove('show');
+  document.getElementById('ia3dBody').classList.remove('open');
+  document.getElementById('ia3dBtn').textContent='✨ Gerar';
+}
+function saveBlock(){
+  // In real app: POST /api/v1/leads/:id/blocks
+  closePopup();
+  // feedback visual
+  const btn=document.querySelector('[onclick="openPopup()"]');
+  if(btn){const orig=btn.textContent;btn.textContent='✓ Bloco salvo!';btn.style.color='var(--green)';setTimeout(()=>{btn.textContent=orig;btn.style.color=''},2000)}
+}
+
+// ── IA 3D ──
+function toggleIA3D(){
+  const b=document.getElementById('ia3dBody');
+  const btn=document.getElementById('ia3dBtn');
+  const o=b.classList.toggle('open');
+  btn.textContent=o?'▲ Fechar':'✨ Gerar';
+}
+function showResult3D(){
+  const r=document.getElementById('popResult');
+  r.classList.add('show');
+  setTimeout(()=>r.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+}
+function selV(el){
+  el.closest('.views3').querySelectorAll('.view3').forEach(v=>v.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function approveToOS(){
+  const btn=event.currentTarget;
+  btn.textContent='✓ OS criada com specs!';
+  btn.style.background='var(--green)';
+  setTimeout(()=>{
+    closePopup();
+    // Switch to OS tab
+    document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    document.getElementById('tab-os').classList.add('active');
+    document.querySelectorAll('.tab')[4].classList.add('active');
+    btn.textContent='✓ Aprovado → Criar OS com specs';
+    btn.style.background='';
+  },1200);
+}
+
+// ── GRAVAÇÃO ──
+function toggleRec(){
+  const btn=document.getElementById('recBtn');
+  const on=btn.textContent.includes('Gravar');
+  btn.textContent=on?'⏹ Parar gravação':'🎙️ Gravar voz';
+  btn.classList.toggle('rec',on);
+}
+
+// ── UPLOAD FOTO REF ──
+function addRefPhoto(input){
+  if(!input.files[0])return;
+  const r=new FileReader();
+  r.onload=e=>{
+    const g=document.getElementById('refsGrid');
+    const add=g.querySelector('.ref-add');
+    const d=document.createElement('div');
+    d.className='r

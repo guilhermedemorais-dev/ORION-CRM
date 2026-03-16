@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORION PDV — Mockup 3: Comprovante</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --gold:#C8A97A; --gold-dim:rgba(200,169,122,0.12); --gold-border:rgba(200,169,122,0.28);
+  --bg-0:#0A0A0B; --bg-1:#111113; --bg-2:#18181C; --bg-3:#202026;
+  --border:rgba(255,255,255,0.07); --border-mid:rgba(255,255,255,0.11);
+  --text:#EDE8E0; --text-sec:#888480; --text-muted:#4A4A52;
+  --green:#4CAF82; --green-dim:rgba(76,175,130,0.12); --green-border:rgba(76,175,130,0.25);
+  --red:#E05252; --blue:#4A9EFF; --blue-dim:rgba(74,158,255,0.1);
+  --purple:#A78BFA; --purple-dim:rgba(167,139,250,0.12);
+  --wa:#25D366; --wa-dim:rgba(37,211,102,0.12);
+  --amber:#F0A040;
+}
+body {
+  font-family:'Inter',sans-serif; background:var(--bg-0); color:var(--text);
+  min-height:100vh; display:flex; align-items:flex-start; justify-content:center;
+  gap:32px; padding:32px; flex-wrap:wrap;
+}
+.col { display:flex; flex-direction:column; align-items:center; gap:10px; }
+.col-label {
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+  color:var(--text-muted); padding:3px 12px; border:1px solid var(--border); border-radius:20px;
+}
+
+/* ── COMPROVANTE DARK ── */
+.receipt-dark {
+  width:430px; background:var(--bg-2); border:1px solid var(--border-mid);
+  border-radius:16px; overflow:hidden; box-shadow:0 24px 72px rgba(0,0,0,.7);
+}
+
+/* HEADER */
+.rh { padding:20px 24px 16px; text-align:center; border-bottom:1px solid var(--border); }
+.rh-icon {
+  width:50px; height:50px; background:var(--green-dim); border:1px solid var(--green-border);
+  border-radius:14px; display:flex; align-items:center; justify-content:center;
+  font-size:24px; margin:0 auto 10px;
+}
+.rh-title { font-family:'Playfair Display',serif; font-size:19px; font-weight:700; }
+.rh-order { font-size:12px; color:var(--text-muted); margin-top:3px; }
+
+/* BODY */
+.rb { padding:16px 24px; max-height:480px; overflow-y:auto; }
+.rb::-webkit-scrollbar { width:3px; }
+.rb::-webkit-scrollbar-thumb { background:var(--border); }
+
+/* STORE */
+.store-head { text-align:center; padding-bottom:12px; margin-bottom:12px; border-bottom:1px dashed var(--border-mid); }
+.sn { font-family:'Playfair Display',serif; font-size:15px; font-weight:700; color:var(--gold); letter-spacing:.5px; }
+.si { font-size:10px; color:var(--text-muted); margin-top:3px; line-height:1.7; }
+
+/* META */
+.meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px 12px; margin-bottom:10px; }
+.mg-row { display:flex; flex-direction:column; }
+.mg-l { font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+.mg-v { font-size:12px; font-weight:600; margin-top:1px; }
+
+/* CLIENTE BADGE */
+.client-badge {
+  display:flex; align-items:center; gap:8px; margin-bottom:12px;
+  background:var(--gold-dim); border:1px solid var(--gold-border);
+  border-radius:7px; padding:8px 12px;
+}
+.cb-av {
+  width:30px; height:30px; border-radius:50%; background:rgba(200,169,122,.2);
+  border:1px solid var(--gold-border); display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; color:var(--gold); flex-shrink:0;
+}
+.cb-nm { font-size:12px; font-weight:600; }
+.cb-dc { font-size:10px; color:var(--text-muted); }
+
+/* DIVIDER */
+.div { border:none; border-top:1px dashed var(--border-mid); margin:10px 0; }
+
+/* ITENS */
+.item-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+.ir-info .ir-name { font-size:13px; font-weight:600; }
+.ir-info .ir-detail { font-size:10px; color:var(--text-muted); margin-top:2px; }
+.ir-total { font-family:'Playfair Display',serif; font-size:13px; font-weight:700; color:var(--gold); }
+
+/* PERSONALIZADO TAG */
+.pers-tag {
+  display:inline-block; font-size:9px; font-weight:700; text-transform:uppercase;
+  background:var(--purple-dim); color:var(--purple); border:1px solid rgba(167,139,250,.2);
+  border-radius:4px; padding:1px 6px; margin-left:5px; vertical-align:middle;
+}
+
+/* TOTALS */
+.total-row { display:flex; justify-content:space-between; margin-bottom:4px; }
+.tr-l { font-size:11px; color:var(--text-sec); }
+.tr-v { font-size:11px; font-weight:600; }
+.total-final { display:flex; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px solid var(--border-mid); }
+.tf-l { font-size:14px; font-weight:700; }
+.tf-v { font-family:'Playfair Display',serif; font-size:20px; font-weight:700; color:var(--gold); }
+
+/* PAYMENT BOX */
+.pay-box {
+  background:var(--bg-3); border:1px solid var(--border); border-radius:8px;
+  padding:10px 13px; margin-top:10px;
+}
+.pb-row { display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; }
+.pb-row:last-child { margin-bottom:0; }
+.pbl { color:var(--text-muted); }
+.pbv { font-weight:600; }
+
+/* QR PIX INLINE */
+.pix-inline {
+  display:flex; align-items:center; gap:10px; margin-top:8px; padding-top:8px;
+  border-top:1px solid var(--border);
+}
+.pix-qr-small {
+  width:54px; height:54px; background:#fff; border-radius:7px;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.pix-qr-small svg { width:46px; height:46px; }
+.pix-inline-info { flex:1; }
+.pix-il { font-size:9px; color:var(--text-muted); margin-bottom:3px; }
+.pix-ik { font-size:11px; font-weight:600; color:var(--text-sec); font-family:monospace; }
+.pix-iv { font-size:11px; font-weight:700; color:var(--gold); margin-top:2px; }
+.pix-badge {
+  font-size:9px; font-weight:700; background:rgba(50,188,173,.12);
+  border:1px solid rgba(50,188,173,.25); color:#32BCAD; padding:2px 6px; border-radius:4px;
+  display:inline-block; margin-top:3px;
+}
+
+/* FOOTER RECEIPT */
+.rf { padding-top:12px; margin-top:12px; border-top:1px dashed var(--border-mid); text-align:center; }
+.rf-thanks { font-family:'Playfair Display',serif; font-size:12px; color:var(--gold); margin-bottom:5px; }
+.rf-policy { font-size:10px; color:var(--text-muted); line-height:1.7; }
+
+/* AÇÕES PRINCIPAIS */
+.ra { padding:12px 24px 6px; display:flex; gap:6px; }
+.btn-ra {
+  height:36px; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer;
+  transition:all .15s; display:flex; align-items:center; justify-content:center; gap:5px;
+  font-family:'Inter',sans-serif;
+}
+.btn-close { width:36px; flex-shrink:0; background:transparent; border:1px solid var(--border); color:var(--text-muted); }
+.btn-close:hover { border-color:var(--red); color:var(--red); }
+.btn-print { flex:1; background:var(--bg-3); border:1px solid var(--border-mid); color:var(--text); }
+.btn-print:hover { border-color:var(--gold-border); color:var(--gold); }
+.btn-nova { flex:1; background:var(--gold); border:none; color:#000; font-weight:700; }
+.btn-nova:hover { background:#E8D5B0; }
+
+/* AÇÕES NF / ENVIO */
+.ra-nf { padding:0 24px 8px; display:flex; gap:6px; }
+.btn-nf {
+  flex:1; height:34px; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer;
+  transition:all .15s; display:flex; align-items:center; justify-content:center; gap:5px;
+  font-family:'Inter',sans-serif;
+}
+.btn-nf-emit { background:var(--purple-dim); border:1px solid rgba(167,139,250,.25); color:var(--purple); }
+.btn-nf-emit:hover { background:rgba(167,139,250,.2); }
+.btn-nf-wa { background:var(--wa-dim); border:1px solid rgba(37,211,102,.25); color:var(--wa); }
+.btn-nf-wa:hover { background:rgba(37,211,102,.2); }
+.btn-nf-em { background:var(--blue-dim); border:1px solid rgba(74,158,255,.2); color:var(--blue); }
+.btn-nf-em:hover { background:rgba(74,158,255,.2); }
+.ra-nf-hint { padding:0 24px 14px; font-size:10px; color:var(--text-muted); text-align:center; }
+
+/* ── PRINT VERSION ── */
+.receipt-print {
+  width:300px; background:#fff; border-radius:10px; padding:18px;
+  box-shadow:0 8px 32px rgba(0,0,0,.4); font-family:'Inter',sans-serif; color:#1a1a1a;
+}
+.pp-store { font-family:'Playfair Display',serif; font-size:14px; font-weight:700; color:#B8924A; text-align:center; letter-spacing:.5px; }
+.pp-store-info { font-size:9px; color:#888; text-align:center; margin-top:2px; line-height:1.6; }
+.pp-div { border:none; border-top:1px dashed #ddd; margin:8px 0; }
+.pp-meta { font-size:9px; color:#888; display:flex; justify-content:space-between; margin-bottom:2px; }
+.pp-sec { font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:#bbb; margin-top:8px; margin-bottom:5px; }
+.pp-item { display:flex; justify-content:space-between; margin-bottom:6px; }
+.pp-item-l { font-size:10px; font-weight:700; }
+.pp-item-d { font-size:8px; color:#888; }
+.pp-item-v { font-family:'Playfair Display',serif; font-size:11px; font-weight:700; color:#B8924A; }
+.pp-total-row { display:flex; justify-content:space-between; font-size:9px; color:#666; margin-bottom:2px; }
+.pp-total-fin { display:flex; justify-content:space-between; margin-top:5px; padding-top:5px; border-top:2px solid #111; }
+.pp-total-fin .l { font-size:11px; font-weight:700; }
+.pp-total-fin .v { font-family:'Playfair Display',serif; font-size:14px; font-weight:700; color:#B8924A; }
+.pp-pay { background:#f5f5f5; border-radius:4px; padding:6px 9px; margin-top:6px; }
+.pp-pay-row { display:flex; justify-content:space-between; font-size:9px; margin-bottom:2px; }
+.pp-pay-l { color:#888; }
+.pp-pay-v { font-weight:600; }
+
+/* QR no comprovante impresso */
+.pp-qr-area { margin-top:10px; display:flex; flex-direction:column; align-items:center; gap:4px; }
+.pp-qr-label { font-size:8px; color:#888; text-align:center; }
+.pp-qr-box { width:80px; height:80px; background:#fff; border:1px solid #ddd; border-radius:6px; display:flex; align-items:center; justify-content:center; }
+.pp-qr-box svg { width:70px; height:70px; }
+
+.pp-footer { text-align:center; margin-top:10px; padding-top:8px; border-top:1px dashed #ddd; }
+.pp-thanks { font-family:'Playfair Display',serif; font-size:10px; color:#B8924A; margin-bottom:4px; }
+.pp-policy { font-size:8px; color:#bbb; line-height:1.6; }
+.pp-barcode { margin-top:8px; font-size:7px; color:#aaa; letter-spacing:2px; text-align:center; font-family:monospace; }
+
+/* QR SVG helper */
+</style>
+</head>
+<body>
+
+<!-- COMPROVANTE DARK (tela) — com cliente, pagamento PIX -->
+<div class="col">
+  <div class="col-label">Comprovante dark — PIX + cliente</div>
+  <div class="receipt-dark">
+
+    <div class="rh">
+      <div class="rh-icon">✅</div>
+      <div class="rh-title">Venda Concluída!</div>
+      <div class="rh-order">OR-20260313-8980 · Estoque descontado</div>
+    </div>
+
+    <div class="rb">
+
+      <div class="store-head">
+        <div class="sn">ORIN JOIAS</div>
+        <div class="si">Av. Atlântica, 1234 · Balneário Camboriú - SC<br>CNPJ: 00.000.000/0001-00 · (47) 99999-9999</div>
+      </div>
+
+      <div class="meta-grid">
+        <div class="mg-row"><span class="mg-l">Data / Hora</span><span class="mg-v">13/03/2026 14:32</span></div>
+        <div class="mg-row"><span class="mg-l">Atendente</span><span class="mg-v">João Silva</span></div>
+      </div>
+
+      <div class="client-badge">
+        <div class="cb-av">MF</div>
+        <div>
+          <div class="cb-nm">Maria Fernanda Costa</div>
+          <div class="cb-dc">CPF: 123.456.789-00 · (47) 99123-4567</div>
+        </div>
+      </div>
+
+      <hr class="div">
+
+      <div class="item-row">
+        <div class="ir-info">
+          <div class="ir-name">Anel Solitário Ouro 18k</div>
+          <div class="ir-detail">AN-0042 · Ouro 18k · 4,2g · 1 un × R$ 1.890,00</div>
+        </div>
+        <div class="ir-total">R$ 1.890</div>
+      </div>
+
+      <div class="item-row">
+        <div class="ir-info">
+          <div class="ir-name">Brinco Pérola Clássico</div>
+          <div class="ir-detail">BR-0022 · Prata 925 · 1,8g · 1 un × R$ 780,00</div>
+        </div>
+        <div class="ir-total">R$ 780</div>
+      </div>
+
+      <hr class="div">
+
+      <div class="total-row"><span class="tr-l">Subtotal</span><span class="tr-v">R$ 2.670,00</span></div>
+      <div class="total-row"><span class="tr-l">Desconto</span><span class="tr-v" style="color:var(--red)">− R$ 170,00</span></div>
+      <div class="total-final"><span class="tf-l">Total</span><span class="tf-v">R$ 2.500,00</span></div>
+
+      <div class="pay-box">
+        <div class="pb-row"><span class="pbl">Forma de pagamento</span><span class="pbv">PIX</span></div>
+        <div class="pb-row"><span class="pbl">Status</span><span class="pbv" style="color:var(--green)">✓ Confirmado</span></div>
+
+        <!-- QR PIX embutido no comprovante -->
+        <div class="pix-inline">
+          <div class="pix-qr-small">
+            <svg viewBox="0 0 37 37" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+              <rect fill="#fff" width="37" height="37"/>
+              <rect x="1" y="1" width="7" height="7" fill="#000"/>
+              <rect x="2" y="2" width="5" height="5" fill="#fff"/>
+              <rect x="3" y="3" width="3" height="3" fill="#000"/>
+              <rect x="29" y="1" width="7" height="7" fill="#000"/>
+              <rect x="30" y="2" width="5" height="5" fill="#fff"/>
+              <rect x="31" y="3" width="3" height="3" fill="#000"/>
+              <rect x="1" y="29" width="7" height="7" fill="#000"/>
+              <rect x="2" y="30" width="5" height="5" fill="#fff"/>
+              <rect x="3" y="31" width="3" height="3" fill="#000"/>
+              <rect x="9" y="9" width="2" height="2" fill="#000"/>
+              <rect x="12" y="9" width="1" height="3" fill="#000"/>
+              <rect x="15" y="8" width="3" height="2" fill="#000"/>
+              <rect x="20" y="9" width="2" height="2" fill="#000"/>
+              <rect x="24" y="8" width="2" height="3" fill="#000"/>
+              <rect x="9" y="14" width="3" height="1" fill="#000"/>
+              <rect x="14" y="13" width="2" height="2" fill="#000"/>
+              <rect x="18" y="14" width="3" height="1" fill="#000"/>
+              <rect x="23" y="13" width="2" height="2" fill="#000"/>
+              <rect x="27" y="14" width="1" height="2" fill="#000"/>
+              <rect x="16" y="16" width="5" height="5" fill="#32BCAD"/>
+              <text x="18.5" y="20" font-size="4" fill="#fff" text-anchor="middle" font-weight="bold">₱</text>
+            </svg>
+          </div>
+          <div class="pix-inline-info">
+            <div class="pix-il">Chave PIX</div>
+            <div class="pix-ik">orinjoias@pix.com</div>
+            <div class="pix-iv">R$ 2.500,00</div>
+            <span class="pix-badge">✓ PAGO</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rf">
+        <div class="rf-thanks">Obrigado pela preferência ✦</div>
+        <div class="rf-policy">Troca em até 30 dias · Garantia 1 ano contra defeito de fabricação<br>(47) 99999-9999</div>
+      </div>
+
+    </div>
+
+    <!-- BOTÕES PRINCIPAIS -->
+    <div class="ra">
+      <button class="btn-ra btn-close">✕</button>
+      <button class="btn-ra btn-print">🖨️ Imprimir</button>
+      <button class="btn-ra btn-nova">Nova Venda</button>
+    </div>
+
+    <!-- NF + ENVIO — cliente vinculado -->
+    <div class="ra-nf">
+      <button class="btn-nf btn-nf-emit">🧾 Emitir NF-e</button>
+      <button class="btn-nf btn-nf-wa">💬 WhatsApp</button>
+      <button class="btn-nf btn-nf-em">✉️ E-mail</button>
+    </div>
+    <div class="ra-nf-hint">Disponível pois cliente Maria Fernanda está vinculado</div>
+
+  </div>
+</div>
+
+<!-- COMPROVANTE DARK — pedido personalizado / sinal -->
+<div class="col">
+  <div class="col-label">Comprovante — sinal recebido</div>
+  <div class="receipt-dark" style="width:410px">
+
+    <div class="rh" style="border-color:rgba(167,139,250,.2);background:rgba(167,139,250,.05)">
+      <div class="rh-icon" style="background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.25)">💎</div>
+      <div class="rh-title">Sinal Registrado!</div>
+      <div class="rh-order">PERS-20260210-0034 · Em produção</div>
+    </div>
+
+    <div class="rb">
+      <div class="store-head">
+        <div class="sn">ORIN JOIAS</div>
+        <div class="si">Av. Atlântica, 1234 · Balneário Camboriú - SC<br>CNPJ: 00.000.000/0001-00 · (47) 99999-9999</div>
+      </div>
+
+      <div class="meta-grid">
+        <div class="mg-row"><span class="mg-l">Data / Hora</span><span class="mg-v">13/03/2026 14:32</span></div>
+        <div class="mg-row"><span class="mg-l">Atendente</span><span class="mg-v">João Silva</span></div>
+      </div>
+
+      <div class="client-badge">
+        <div class="cb-av">MF</div>
+        <div>
+          <div class="cb-nm">Maria Fernanda Costa</div>
+          <div class="cb-dc">CPF: 123.456.789-00 · (47) 99123-4567</div>
+        </div>
+      </div>
+
+      <hr class="div">
+
+      <div class="item-row" style="align-items:flex-start">
+        <div class="ir-info" style="flex:1">
+          <div class="ir-name">Anel Solitário Personalizado <span class="pers-tag">PERSONALIZADO</span></div>
+          <div class="ir-detail">PERS-20260210-0034 · Ouro 18k · gravação "MF"</div>
+          <div style="margin-top:8px;background:var(--bg-3);border:1px solid var(--border);border-radius:6px;padding:8px 10px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center">
+              <div><div style="font-size:9px;color:var(--text-muted)">Total pedido</div><div style="font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--gold)">R$ 3.200</div></div>
+              <div><div style="font-size:9px;color:var(--text-muted)">Sinal pago hoje</div><div style="font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--green)">R$ 500</div></div>
+              <div><div style="font-size:9px;color:var(--text-muted)">A pagar na entrega</div><div style="font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:var(--amber)">R$ 2.700</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="div">
+
+      <div class="total-row"><span class="tr-l">Sinal recebido hoje</span><span class="tr-v" style="color:var(--green)">R$ 500,00</span></div>
+      <div class="total-row"><span class="tr-l">Saldo a pagar na entrega</span><span class="tr-v" style="color:var(--amber)">R$ 2.700,00</span></div>
+
+      <div class="pay-box">
+        <div class="pb-row"><span class="pbl">Pagamento do sinal</span><span class="pbv">PIX</span></div>
+        <div class="pb-row"><span class="pbl">Status</span><span class="pbv" style="color:var(--green)">✓ Confirmado</span></div>
+        <div class="pb-row"><span class="pbl">Previsão de entrega</span><span class="pbv">30/04/2026</span></div>
+      </div>
+
+      <div class="rf">
+        <div class="rf-thanks">Obrigado pela confiança ✦</div>
+        <div class="rf-policy">Sua peça está em produção. Entraremos em contato<br>quando estiver pronta para retirada.</div>
+      </div>
+    </div>
+
+    <div class="ra">
+      <button class="btn-ra btn-close">✕</button>
+      <button class="btn-ra btn-print">🖨️ Imprimir</button>
+      <button class="btn-ra btn-nova">Nova Venda</button>
+    </div>
+
+    <div class="ra-nf">
+      <button class="btn-nf btn-nf-emit">🧾 Emitir NF-e</button>
+      <button class="btn-nf btn-nf-wa">💬 WhatsApp</button>
+      <button class="btn-nf btn-nf-em">✉️ E-mail</button>
+    </div>
+    <div class="ra-nf-hint">Comprovante de sinal disponível para envio</div>
+
+  </div>
+</div>
+
+<!-- PRINT 80MM -->
+<div class="col">
+  <div class="col-label">🖨️ Impresso 80mm</div>
+  <div class="receipt-print">
+    <div class="pp-store">ORIN JOIAS</div>
+    <div class="pp-store-info">Av. Atlântica, 1234 · Balneário Camboriú - SC<br>CNPJ: 00.000.000/0001-00 · (47) 99999-9999</div>
+    <hr class="pp-div">
+    <div class="pp-meta"><span>OR-20260313-8980</span><span>13/03/2026 14:32</span></div>
+    <div class="pp-meta"><span>João Silva</span><span>Maria F. Costa</span></div>
+    <hr class="pp-div">
+    <div class="pp-sec">Itens</div>
+    <div class="pp-item">
+      <div><div class="pp-item-l">Anel Solitário Ouro 18k</div><div class="pp-item-d">AN-0042 · Ouro 18k · 1 un</div></div>
+      <div class="pp-item-v">R$ 1.890</div>
+    </div>
+    <div class="pp-item">
+      <div><div class="pp-item-l">Brinco Pérola Clássico</div><div class="pp-item-d">BR-0022 · Prata · 1 un</div></div>
+      <div class="pp-item-v">R$ 780</div>
+    </div>
+    <hr class="pp-div">
+    <div class="pp-total-row"><span>Subtotal</span><span>R$ 2.670,00</span></div>
+    <div class="pp-total-row"><span>Desconto</span><span style="color:#e05252">− R$ 170,00</span></div>
+    <div class="pp-total-fin"><span class="l">TOTAL</span><span class="v">R$ 2.500,00</span></div>
+    <div class="pp-pay">
+      <div class="pp-pay-row"><span class="pp-pay-l">Pagamento</span><span class="pp-pay-v">PIX</span></div>
+      <div class="pp-pay-row"><span class="pp-pay-l">Status</span><span class="pp-pay-v" style="color:#16a05a">✓ Pago</span></div>
+    </div>
+
+    <!-- QR PIX no impresso -->
+    <div class="pp-qr-area">
+      <div class="pp-qr-label">QR Code PIX — pagamento alternativo</div>
+      <div class="pp-qr-box">
+        <svg viewBox="0 0 37 37" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+          <rect fill="#fff" width="37" height="37"/>
+          <rect x="1" y="1" width="7" height="7" fill="#000"/>
+          <rect x="2" y="2" width="5" height="5" fill="#fff"/>
+          <rect x="3" y="3" width="3" height="3" fill="#000"/>
+          <rect x="29" y="1" width="7" height="7" fill="#000"/>
+          <rect x="30" y="2" width="5" height="5" fill="#fff"/>
+          <rect x="31" y="3" width="3" height="3" fill="#000"/>
+          <rect x="1" y="29" width="7" height="7" fill="#000"/>
+          <rect x="2" y="30" width="5" height="5" fill="#fff"/>
+          <rect x="3" y="31" width="3" height="3" fill="#000"/>
+          <rect x="16" y="16" width="5" height="5" fill="#32BCAD"/>
+          <text x="18.5" y="20" font-size="4" fill="#fff" text-anchor="middle" font-weight="bold">₱</text>
+          <rect x="9" y="9" width="2" height="2" fill="#000"/>
+          <rect x="12" y="9" width="1" height="3" fill="#000"/>
+          <rect x="14" y="8" width="2" height="2" fill="#000"/>
+          <rect x="9" y="14" width="3" height="1" fill="#000"/>
+          <rect x="24" y="9" width="2" height="2" fill="#000"/>
+          <rect x="27" y="14" width="1" height="2" fill="#000"/>
+          <rect x="9" y="23" width="4" height="1" fill="#000"/>
+          <rect x="14" y="24" width="1" height="2" fill="#000"/>
+          <rect x="20" y="24" width="2" height="2" fill="#000"/>
+          <rect x="26" y="25" width="3" height="2" fill="#000"/>
+          <rect x="9" y="27" width="2" height="2" fill="#000"/>
+          <rect x="20" y="28" width="4" height="1" fill="#000"/>
+        </svg>
+      </div>
+      <div class="pp-qr-label" style="font-size:7px;color:#aaa">orinjoias@pix.com · R$ 2.500,00</div>
+    </div>
+
+    <div class="pp-footer">
+      <div class="pp-thanks">Obrigado pela preferência ✦</div>
+      <div class="pp-policy">Troca em até 30 dias com este recibo.<br>Garantia 1 ano contra defeito de fabricação.</div>
+      <div class="pp-barcode">|||  OR-20260313-8980  |||</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

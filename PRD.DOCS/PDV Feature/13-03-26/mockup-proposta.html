@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORION — Proposta Comercial</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --gold:#C8A97A; --gold-light:#E8D5A8; --gold-dark:#A8894A;
+  --bg-0:#0A0A0B; --bg-1:#111113; --bg-2:#18181C; --bg-3:#202026;
+  --border:rgba(255,255,255,0.07); --border-mid:rgba(255,255,255,0.11);
+  --text:#EDE8E0; --text-sec:#888480; --text-muted:#4A4A52;
+  --green:#4CAF82; --red:#E05252; --amber:#F0A040;
+}
+body {
+  font-family:'Inter',sans-serif; background:var(--bg-0); color:var(--text);
+  min-height:100vh; padding:32px; display:flex; gap:40px; justify-content:center;
+  flex-wrap:wrap; align-items:flex-start;
+}
+
+.col { display:flex; flex-direction:column; align-items:center; gap:12px; }
+.col-label {
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+  color:var(--text-muted); padding:3px 12px; border:1px solid var(--border); border-radius:20px;
+}
+
+/* ═══════════════════════
+   PROPOSTA — VERSÃO DIGITAL
+═══════════════════════ */
+.proposal-digital {
+  width:480px; background:#fff; border-radius:16px; overflow:hidden;
+  box-shadow:0 24px 72px rgba(0,0,0,.8); color:#1a1a1a;
+  font-family:'Inter',sans-serif;
+}
+
+/* TOPO DOURADO */
+.pd-top {
+  background:linear-gradient(135deg, #1a1408 0%, #2C2010 40%, #1a1408 100%);
+  padding:24px 28px 20px; position:relative; overflow:hidden;
+}
+.pd-top::before {
+  content:''; position:absolute; inset:0;
+  background:repeating-linear-gradient(45deg, rgba(200,169,122,0.03) 0px, rgba(200,169,122,0.03) 1px, transparent 1px, transparent 20px);
+}
+.pd-logo { font-family:'Playfair Display',serif; font-size:22px; font-weight:900; color:var(--gold); letter-spacing:1px; position:relative; }
+.pd-logo-sub { font-size:10px; font-weight:400; color:rgba(200,169,122,0.6); letter-spacing:3px; text-transform:uppercase; margin-top:1px; position:relative; }
+.pd-top-right { position:absolute; top:24px; right:28px; text-align:right; }
+.pd-prop-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:rgba(200,169,122,0.5); }
+.pd-prop-code { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--gold); margin-top:2px; }
+.pd-validity { font-size:10px; color:rgba(200,169,122,0.6); margin-top:3px; }
+.pd-validity span { color:var(--amber); font-weight:600; }
+
+/* DECORAÇÃO LINHA DOURADA */
+.pd-gold-line { height:3px; background:linear-gradient(90deg, #C8A97A, #E8D5A8, #C8A97A); }
+
+/* BODY DA PROPOSTA */
+.pd-body { padding:22px 28px; }
+
+/* DADOS DO CLIENTE */
+.pd-client-row {
+  display:flex; align-items:center; gap:12px; padding:12px 14px;
+  background:#f8f6f0; border-radius:8px; border-left:3px solid var(--gold);
+  margin-bottom:18px;
+}
+.pd-c-avatar {
+  width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#C8A97A,#E8D5A8);
+  display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; flex-shrink:0;
+}
+.pd-c-name { font-size:13px; font-weight:700; color:#1a1a1a; }
+.pd-c-sub { font-size:10px; color:#888; margin-top:1px; }
+
+/* ITENS */
+.pd-items-title {
+  font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.8px;
+  color:#888; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #e8e0d0;
+}
+.pd-item { display:flex; align-items:flex-start; gap:12px; padding:10px 0; border-bottom:1px solid #f0ebe0; }
+.pd-item:last-child { border-bottom:none; }
+.pd-item-img {
+  width:42px; height:42px; background:linear-gradient(135deg,#f0ebe0,#e8e0d0);
+  border-radius:7px; display:flex; align-items:center; justify-content:center;
+  font-size:20px; flex-shrink:0; border:1px solid #e8e0d0;
+}
+.pd-item-info { flex:1; }
+.pd-item-name { font-size:13px; font-weight:700; color:#1a1a1a; }
+.pd-item-detail { font-size:10px; color:#888; margin-top:2px; }
+.pd-item-qty { font-size:10px; color:#aaa; margin-top:1px; }
+.pd-item-price { text-align:right; flex-shrink:0; }
+.pd-item-unit { font-size:10px; color:#aaa; }
+.pd-item-total { font-family:'Playfair Display',serif; font-size:14px; font-weight:700; color:var(--gold-dark); }
+
+/* TOTAIS */
+.pd-totals { margin-top:14px; padding-top:14px; border-top:2px solid #e8e0d0; }
+.pd-total-row { display:flex; justify-content:space-between; margin-bottom:5px; }
+.pd-tr-l { font-size:12px; color:#888; }
+.pd-tr-v { font-size:12px; font-weight:600; color:#333; }
+.pd-total-final {
+  display:flex; justify-content:space-between; margin-top:10px; padding-top:10px;
+  border-top:2px solid #1a1408;
+}
+.pd-tf-l { font-size:14px; font-weight:800; color:#1a1408; }
+.pd-tf-v { font-family:'Playfair Display',serif; font-size:22px; font-weight:700; color:var(--gold-dark); }
+
+/* SEÇÃO PIX */
+.pd-pix {
+  margin-top:18px; padding:16px; background:#f8f6f0;
+  border-radius:10px; border:1.5px solid #e8d8b8;
+}
+.pd-pix-title {
+  display:flex; align-items:center; gap:7px; font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.6px; color:#a8884a; margin-bottom:12px;
+}
+.pd-pix-inner { display:flex; gap:14px; align-items:center; }
+.pd-pix-qr {
+  width:100px; height:100px; background:#fff; border-radius:8px;
+  border:1.5px solid #e8d8b8; display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+.pd-pix-qr svg { width:86px; height:86px; }
+.pd-pix-info { flex:1; }
+.pd-pix-label { font-size:10px; color:#888; margin-bottom:4px; }
+.pd-pix-key {
+  background:#fff; border:1px solid #e8d8b8; border-radius:6px;
+  padding:7px 10px; display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:6px;
+}
+.pd-pix-key-val { font-size:11px; font-weight:600; color:#333; font-family:monospace; }
+.pd-pix-amount { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--gold-dark); margin-bottom:4px; }
+.pd-pix-hint { font-size:9px; color:#aaa; line-height:1.6; }
+
+/* CÓDIGO DE CONFIRMAÇÃO */
+.pd-code-box {
+  margin-top:14px; background:#1a1408; border-radius:8px;
+  padding:12px 14px; text-align:center;
+}
+.pd-code-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:rgba(200,169,122,.5); margin-bottom:4px; }
+.pd-code-val { font-family:'Playfair Display',serif; font-size:22px; font-weight:700; color:var(--gold); letter-spacing:3px; }
+.pd-code-hint { font-size:9px; color:rgba(200,169,122,.4); margin-top:3px; }
+
+/* FOOTER */
+.pd-footer {
+  padding:12px 28px 16px; background:#f8f6f0; border-top:1px solid #e8e0d0;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.pd-footer-left { font-size:9px; color:#aaa; line-height:1.7; }
+.pd-footer-right { text-align:right; font-size:9px; color:#aaa; line-height:1.7; }
+.pd-footer strong { color:#888; }
+
+/* BADGES DE STATUS */
+.status-badge {
+  display:inline-flex; align-items:center; gap:5px; padding:4px 10px;
+  border-radius:20px; font-size:10px; font-weight:700;
+}
+.sb-pending { background:#FEF3C7; color:#92400E; border:1px solid #FCD34D; }
+.sb-paid { background:#D1FAE5; color:#065F46; border:1px solid #6EE7B7; }
+.sb-expired { background:#FEE2E2; color:#991B1B; border:1px solid #FCA5A5; }
+
+/* ═══════════════════════
+   PROPOSTA — VERSÃO 80MM IMPRESSA
+═══════════════════════ */
+.proposal-print {
+  width:300px; background:#fff; border-radius:10px; padding:18px;
+  box-shadow:0 8px 32px rgba(0,0,0,.5); font-family:'Inter',sans-serif; color:#1a1a1a;
+}
+.pp-store { font-family:'Playfair Display',serif; font-size:15px; font-weight:700; color:#A8894A; text-align:center; }
+.pp-store-sub { font-size:9px; color:#888; text-align:center; line-height:1.6; margin-top:2px; }
+.pp-div { border:none; border-top:1px dashed #ddd; margin:8px 0; }
+.pp-prop-code { text-align:center; margin:8px 0; }
+.pp-prop-code-label { font-size:8px; color:#aaa; text-transform:uppercase; letter-spacing:1px; }
+.pp-prop-code-val { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:#A8894A; letter-spacing:2px; margin-top:2px; }
+.pp-validity { font-size:9px; color:#e07000; text-align:center; font-weight:600; margin-bottom:2px; }
+.pp-client { font-size:10px; color:#555; margin-bottom:4px; }
+.pp-client strong { color:#1a1a1a; }
+.pp-section-title { font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:#bbb; margin:8px 0 5px; }
+.pp-item { display:flex; justify-content:space-between; margin-bottom:6px; }
+.pp-item-name { font-size:10px; font-weight:700; }
+.pp-item-detail { font-size:8px; color:#888; }
+.pp-item-val { font-family:'Playfair Display',serif; font-size:11px; font-weight:700; color:#A8894A; text-align:right; flex-shrink:0; }
+.pp-total-row { display:flex; justify-content:space-between; font-size:9px; color:#666; margin-bottom:2px; }
+.pp-total-fin { display:flex; justify-content:space-between; margin-top:6px; padding-top:6px; border-top:2px solid #1a1a1a; }
+.pp-total-fin .l { font-size:12px; font-weight:800; }
+.pp-total-fin .v { font-family:'Playfair Display',serif; font-size:16px; font-weight:700; color:#A8894A; }
+
+/* QR NA IMPRESSA */
+.pp-pix-section { margin-top:10px; padding:10px; background:#f8f6f0; border-radius:6px; border:1px solid #e8d8b8; }
+.pp-pix-title { font-size:9px; font-weight:700; text-transform:uppercase; color:#a8884a; text-align:center; margin-bottom:8px; letter-spacing:.5px; }
+.pp-pix-body { display:flex; gap:10px; align-items:center; }
+.pp-pix-qr { width:70px; height:70px; background:#fff; border:1px solid #e8d8b8; border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.pp-pix-qr svg { width:62px; height:62px; }
+.pp-pix-right { flex:1; }
+.pp-pix-key-label { font-size:8px; color:#aaa; }
+.pp-pix-key-val { font-size:10px; font-weight:600; color:#333; margin-top:1px; }
+.pp-pix-val { font-family:'Playfair Display',serif; font-size:14px; font-weight:700; color:#A8894A; margin-top:3px; }
+.pp-pix-or { font-size:8px; color:#aaa; margin-top:3px; }
+
+.pp-code-confirm { margin-top:10px; background:#1a1408; border-radius:6px; padding:10px; text-align:center; }
+.pp-cc-label { font-size:8px; color:rgba(200,169,122,.5); text-transform:uppercase; letter-spacing:1px; }
+.pp-cc-val { font-family:'Playfair Display',serif; font-size:20px; font-weight:700; color:#C8A97A; letter-spacing:3px; margin-top:2px; }
+.pp-cc-hint { font-size:8px; color:rgba(200,169,122,.35); margin-top:2px; }
+
+.pp-footer { margin-top:10px; text-align:center; padding-top:8px; border-top:1px dashed #ddd; }
+.pp-thanks { font-family:'Playfair Display',serif; font-size:10px; color:#A8894A; }
+.pp-policy { font-size:8px; color:#bbb; line-height:1.6; margin-top:3px; }
+</style>
+</head>
+<body>
+
+<!-- PROPOSTA DIGITAL (WhatsApp / tela) -->
+<div class="col">
+  <div class="col-label">📱 Proposta digital — WhatsApp / tela</div>
+  <div class="proposal-digital">
+
+    <div class="pd-top">
+      <div class="pd-logo">ORIN JOIAS</div>
+      <div class="pd-logo-sub">Joalheria Exclusiva</div>
+      <div class="pd-top-right">
+        <div class="pd-prop-label">Proposta Comercial</div>
+        <div class="pd-prop-code">PROP-20260313-0042</div>
+        <div class="pd-validity">Válida até <span>14/03/2026 às 14:32</span></div>
+      </div>
+    </div>
+    <div class="pd-gold-line"></div>
+
+    <div class="pd-body">
+
+      <!-- cliente -->
+      <div class="pd-client-row">
+        <div class="pd-c-avatar">MF</div>
+        <div>
+          <div class="pd-c-name">Maria Fernanda Costa</div>
+          <div class="pd-c-sub">📱 (47) 99123-4567 · maria@email.com</div>
+        </div>
+        <div style="margin-left:auto">
+          <span class="status-badge sb-pending">⏳ Aguardando</span>
+        </div>
+      </div>
+
+      <!-- itens -->
+      <div class="pd-items-title">Itens da proposta</div>
+
+      <div class="pd-item">
+        <div class="pd-item-img">💍</div>
+        <div class="pd-item-info">
+          <div class="pd-item-name">Anel Solitário Ouro 18k</div>
+          <div class="pd-item-detail">AN-0042 · Ouro 18k · 4,2g · Brilhante central 0.25ct</div>
+          <div class="pd-item-qty">1 unidade</div>
+        </div>
+        <div class="pd-item-price">
+          <div class="pd-item-unit">R$ 1.890,00/un</div>
+          <div class="pd-item-total">R$ 1.890,00</div>
+        </div>
+      </div>
+
+      <div class="pd-item">
+        <div class="pd-item-img">✨</div>
+        <div class="pd-item-info">
+          <div class="pd-item-name">Brinco Pérola Clássico</div>
+          <div class="pd-item-detail">BR-0022 · Prata 925 · Pérola natural 8mm</div>
+          <div class="pd-item-qty">1 unidade</div>
+        </div>
+        <div class="pd-item-price">
+          <div class="pd-item-unit">R$ 780,00/un</div>
+          <div class="pd-item-total">R$ 780,00</div>
+        </div>
+      </div>
+
+      <!-- totais -->
+      <div class="pd-totals">
+        <div class="pd-total-row"><span class="pd-tr-l">Subtotal</span><span class="pd-tr-v">R$ 2.670,00</span></div>
+        <div class="pd-total-row"><span class="pd-tr-l">Desconto aplicado</span><span class="pd-tr-v" style="color:#c05050">− R$ 170,00</span></div>
+        <div class="pd-total-final">
+          <span class="pd-tf-l">Total da Proposta</span>
+          <span class="pd-tf-v">R$ 2.500,00</span>
+        </div>
+      </div>
+
+      <!-- PIX -->
+      <div class="pd-pix">
+        <div class="pd-pix-title">
+          <span style="font-size:14px">📱</span>
+          Pague via PIX
+        </div>
+        <div class="pd-pix-inner">
+          <div class="pd-pix-qr">
+            <svg viewBox="0 0 37 37" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+              <rect fill="#fff" width="37" height="37"/>
+              <rect x="1" y="1" width="7" height="7" fill="#1a1408"/>
+              <rect x="2" y="2" width="5" height="5" fill="#fff"/>
+              <rect x="3" y="3" width="3" height="3" fill="#1a1408"/>
+              <rect x="29" y="1" width="7" height="7" fill="#1a1408"/>
+              <rect x="30" y="2" width="5" height="5" fill="#fff"/>
+              <rect x="31" y="3" width="3" height="3" fill="#1a1408"/>
+              <rect x="1" y="29" width="7" height="7" fill="#1a1408"/>
+              <rect x="2" y="30" width="5" height="5" fill="#fff"/>
+              <rect x="3" y="31" width="3" height="3" fill="#1a1408"/>
+              <rect x="9" y="9" width="2" height="2" fill="#1a1408"/>
+              <rect x="12" y="9" width="1" height="3" fill="#1a1408"/>
+              <rect x="14" y="8" width="3" height="2" fill="#1a1408"/>
+              <rect x="18" y="9" width="2" height="2" fill="#1a1408"/>
+              <rect x="21" y="8" width="1" height="3" fill="#1a1408"/>
+              <rect x="24" y="9" width="2" height="2" fill="#1a1408"/>
+              <rect x="27" y="9" width="1" height="2" fill="#1a1408"/>
+              <rect x="9" y="13" width="3" height="1" fill="#1a1408"/>
+              <rect x="13" y="12" width="2" height="2" fill="#1a1408"/>
+              <rect x="17" y="13" width="3" height="1" fill="#1a1408"/>
+              <rect x="22" y="12" width="2" height="2" fill="#1a1408"/>
+              <rect x="26" y="13" width="2" height="1" fill="#1a1408"/>
+              <rect x="16" y="16" width="5" height="5" fill="#32BCAD"/>
+              <rect x="17" y="17" width="3" height="3" fill="#fff"/>
+              <text x="18.5" y="20.5" font-size="3.5" fill="#32BCAD" text-anchor="middle" font-weight="bold">₱</text>
+              <rect x="9" y="17" width="2" height="3" fill="#1a1408"/>
+              <rect x="12" y="18" width="3" height="1" fill="#1a1408"/>
+              <rect x="24" y="17" width="2" height="2" fill="#1a1408"/>
+              <rect x="27" y="18" width="1" height="3" fill="#1a1408"/>
+              <rect x="9" y="22" width="4" height="1" fill="#1a1408"/>
+              <rect x="14" y="22" width="2" height="2" fill="#1a1408"/>
+              <rect x="22" y="22" width="3" height="1" fill="#1a1408"/>
+              <rect x="26" y="23" width="2" height="2" fill="#1a1408"/>
+              <rect x="9" y="25" width="2" height="3" fill="#1a1408"/>
+              <rect x="12" y="26" width="3" height="1" fill="#1a1408"/>
+              <rect x="16" y="25" width="2" height="3" fill="#1a1408"/>
+              <rect x="20" y="26" width="4" height="1" fill="#1a1408"/>
+              <rect x="25" y="25" width="1" height="2" fill="#1a1408"/>
+              <rect x="27" y="26" width="2" height="2" fill="#1a1408"/>
+            </svg>
+          </div>
+          <div class="pd-pix-info">
+            <div class="pd-pix-label">Chave PIX</div>
+            <div class="pd-pix-key">
+              <span class="pd-pix-key-val">orinjoias@pix.com</span>
+            </div>
+            <div class="pd-pix-amount">R$ 2.500,00</div>
+            <div class="pd-pix-hint">
+              Escaneie o QR ou copie a chave no seu banco.<br>
+              Confirmação automática após o pagamento.
+            </div>
+          </div>
+        </div>
+
+        <!-- código de confirmação -->
+        <div class="pd-code-box">
+          <div class="pd-code-label">Código da proposta</div>
+          <div class="pd-code-val">PROP-20260313-0042</div>
+          <div class="pd-code-hint">Informe ao atendente para confirmação manual</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="pd-footer">
+      <div class="pd-footer-left">
+        <strong>ORIN JOIAS</strong><br>
+        Av. Atlântica, 1234 · Balneário Camboriú - SC<br>
+        CNPJ: 00.000.000/0001-00
+      </div>
+      <div class="pd-footer-right">
+        Proposta gerada em 13/03/2026 às 14:32<br>
+        Atendente: <strong>João Silva</strong><br>
+        Validade: <strong style="color:#e07000">24 horas</strong>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- PROPOSTA 80MM IMPRESSA -->
+<div class="col">
+  <div class="col-label">🖨️ Proposta impressa 80mm</div>
+  <div class="proposal-print">
+
+    <div class="pp-store">ORIN JOIAS</div>
+    <div class="pp-store-sub">Av. Atlântica, 1234 · Balneário Camboriú - SC<br>CNPJ: 00.000.000/0001-00 · (47) 99999-9999</div>
+
+    <hr class="pp-div">
+
+    <div class="pp-prop-code">
+      <div class="pp-prop-code-label">Proposta Comercial</div>
+      <div class="pp-prop-code-val">PROP-20260313-0042</div>
+    </div>
+    <div class="pp-validity">⏳ Válida até 14/03/2026 às 14:32</div>
+
+    <hr class="pp-div">
+
+    <div class="pp-client"><strong>Cliente:</strong> Maria Fernanda Costa<br><strong>Atendente:</strong> João Silva · 13/03/2026</div>
+
+    <hr class="pp-div">
+
+    <div class="pp-section-title">Itens</div>
+
+    <div class="pp-item">
+      <div>
+        <div class="pp-item-name">Anel Solitário Ouro 18k</div>
+        <div class="pp-item-detail">AN-0042 · Ouro 18k · 1 un</div>
+      </div>
+      <div class="pp-item-val">R$ 1.890</div>
+    </div>
+    <div class="pp-item">
+      <div>
+        <div class="pp-item-name">Brinco Pérola Clássico</div>
+        <div class="pp-item-detail">BR-0022 · Prata 925 · 1 un</div>
+      </div>
+      <div class="pp-item-val">R$ 780</div>
+    </div>
+
+    <hr class="pp-div">
+
+    <div class="pp-total-row"><span>Subtotal</span><span>R$ 2.670,00</span></div>
+    <div class="pp-total-row"><span>Desconto</span><span style="color:#c05050">− R$ 170,00</span></div>
+    <div class="pp-total-fin">
+      <span class="l">TOTAL</span>
+      <span class="v">R$ 2.500,00</span>
+    </div>
+
+    <!-- QR PIX na impressa -->
+    <div class="pp-pix-section">
+      <div class="pp-pix-title">📱 Pague via PIX</div>
+      <div class="pp-pix-body">
+        <div class="pp-pix-qr">
+          <svg viewBox="0 0 37 37" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+            <rect fill="#fff" width="37" height="37"/>
+            <rect x="1" y="1" width="7" height="7" fill="#1a1408"/>
+            <rect x="2" y="2" width="5" height="5" fill="#fff"/>
+            <rect x="3" y="3" width="3" height="3" fill="#1a1408"/>
+            <rect x="29" y="1" width="7" height="7" fill="#1a1408"/>
+            <rect x="30" y="2" width="5" height="5" fill="#fff"/>
+            <rect x="31" y="3" width="3" height="3" fill="#1a1408"/>
+            <rect x="1" y="29" width="7" height="7" fill="#1a1408"/>
+            <rect x="2" y="30" width="5" height="5" fill="#fff"/>
+            <rect x="3" y="31" width="3" height="3" fill="#1a1408"/>
+            <rect x="16" y="16" width="5" height="5" fill="#32BCAD"/>
+            <text x="18.5" y="20.5" font-size="3.5" fill="#fff" text-anchor="middle" font-weight="bold">₱</text>
+            <rect x="9" y="9" width="2" height="2" fill="#1a1408"/>
+            <rect x="12" y="9" width="3" height="1" fill="#1a1408"/>
+            <rect x="16" y="8" width="2" height="2" fill="#1a1408"/>
+            <rect x="24" y="9" width="2" height="3" fill="#1a1408"/>
+          </svg>
+        </div>
+        <div class="pp-pix-right">
+          <div class="pp-pix-key-label">Chave PIX</div>
+          <div class="pp-pix-key-val">orinjoias@pix.com</div>
+          <div class="pp-pix-val">R$ 2.500,00</div>
+          <div class="pp-pix-or">Escaneie ou use a chave</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- código de confirmação em destaque -->
+    <div class="pp-code-confirm">
+      <div class="pp-cc-label">Código de confirmação</div>
+      <div class="pp-cc-val">PROP-20260313-0042</div>
+      <div class="pp-cc-hint">Informe ao atendente</div>
+    </div>
+
+    <div class="pp-footer">
+      <div class="pp-thanks">Obrigado pela preferência ✦</div>
+      <div class="pp-policy">
+        Proposta válida por 24 horas.<br>
+        Preços sujeitos a alteração após o vencimento.<br>
+        Dúvidas? (47) 99999-9999
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

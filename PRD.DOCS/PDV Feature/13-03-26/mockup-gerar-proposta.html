@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORION — Modal Gerar Proposta + Confirmar no PDV</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --gold:#C8A97A; --gold-dim:rgba(200,169,122,0.12); --gold-border:rgba(200,169,122,0.28);
+  --bg-0:#0A0A0B; --bg-1:#111113; --bg-2:#18181C; --bg-3:#202026; --bg-4:#27272E;
+  --border:rgba(255,255,255,0.07); --border-mid:rgba(255,255,255,0.11); --border-hi:rgba(255,255,255,0.17);
+  --text:#EDE8E0; --text-sec:#888480; --text-muted:#4A4A52;
+  --green:#4CAF82; --green-dim:rgba(76,175,130,0.12); --green-border:rgba(76,175,130,0.3);
+  --red:#E05252; --red-dim:rgba(224,82,82,0.12);
+  --blue:#4A9EFF; --blue-dim:rgba(74,158,255,0.1);
+  --purple:#A78BFA; --purple-dim:rgba(167,139,250,0.12);
+  --amber:#F0A040; --amber-dim:rgba(240,160,64,0.12);
+  --wa:#25D366; --wa-dim:rgba(37,211,102,0.12);
+}
+body {
+  font-family:'Inter',sans-serif; background:var(--bg-0); color:var(--text);
+  min-height:100vh; padding:32px; display:flex; gap:32px; justify-content:center;
+  flex-wrap:wrap; align-items:flex-start;
+}
+.col { display:flex; flex-direction:column; align-items:center; gap:10px; }
+.col-label {
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+  color:var(--text-muted); padding:3px 12px; border:1px solid var(--border); border-radius:20px;
+  white-space:nowrap;
+}
+
+/* BASE CARD */
+.card {
+  background:var(--bg-2); border:1px solid var(--border-mid); border-radius:14px;
+  overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.6);
+}
+
+/* ═══════════════════════════════
+   MODAL — GERAR PROPOSTA
+═══════════════════════════════ */
+.modal-generate { width:460px; }
+.mg-header {
+  padding:18px 22px 16px; border-bottom:1px solid var(--border);
+  display:flex; align-items:flex-start; justify-content:space-between;
+}
+.mg-title { font-family:'Playfair Display',serif; font-size:17px; font-weight:700; }
+.mg-sub { font-size:11px; color:var(--text-muted); margin-top:3px; }
+
+/* origem da proposta */
+.mg-origin {
+  padding:10px 22px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:8px; background:var(--bg-3);
+}
+.mg-origin-badge {
+  display:flex; align-items:center; gap:5px; font-size:10px; font-weight:700;
+  padding:3px 9px; border-radius:5px;
+}
+.ob-pdv { background:var(--gold-dim); color:var(--gold); border:1px solid var(--gold-border); }
+.ob-order { background:var(--blue-dim); color:var(--blue); border:1px solid rgba(74,158,255,.2); }
+.ob-lead { background:var(--purple-dim); color:var(--purple); border:1px solid rgba(167,139,250,.2); }
+.mg-origin-detail { font-size:11px; color:var(--text-muted); }
+.mg-origin-detail strong { color:var(--text-sec); }
+
+/* body */
+.mg-body { padding:16px 22px; display:flex; flex-direction:column; gap:14px; }
+
+/* RESUMO DOS ITENS */
+.mg-items { background:var(--bg-3); border:1px solid var(--border); border-radius:9px; overflow:hidden; }
+.mg-items-head {
+  padding:8px 14px; border-bottom:1px solid var(--border);
+  display:flex; justify-content:space-between;
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-muted);
+}
+.mg-item { display:flex; justify-content:space-between; align-items:center; padding:8px 14px; border-bottom:1px solid var(--border); }
+.mg-item:last-child { border-bottom:none; }
+.mg-item-name { font-size:12px; font-weight:600; }
+.mg-item-detail { font-size:10px; color:var(--text-muted); }
+.mg-item-val { font-family:'Playfair Display',serif; font-size:13px; font-weight:700; color:var(--gold); }
+
+/* TOTAIS */
+.mg-totals {
+  background:var(--bg-3); border:1px solid var(--border); border-radius:9px; padding:10px 14px;
+}
+.mg-tot-row { display:flex; justify-content:space-between; margin-bottom:5px; font-size:12px; }
+.mt-l { color:var(--text-muted); }
+.mt-v { font-weight:600; }
+.mg-tot-final { display:flex; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px solid var(--border-mid); }
+.mtf-l { font-size:13px; font-weight:700; }
+.mtf-v { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--gold); }
+
+/* CONFIGURAÇÕES */
+.mg-config { display:flex; flex-direction:column; gap:10px; }
+.mg-config-row { display:flex; gap:10px; }
+.mg-field { flex:1; }
+.mg-field-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--text-muted); margin-bottom:5px; }
+.mg-input {
+  width:100%; height:36px; background:var(--bg-3); border:1px solid var(--border);
+  border-radius:7px; padding:0 12px; font-size:13px; font-family:'Inter',sans-serif;
+  color:var(--text); outline:none; transition:border-color .15s;
+}
+.mg-input:focus { border-color:var(--gold-border); }
+.mg-select {
+  width:100%; height:36px; background:var(--bg-3); border:1px solid var(--border);
+  border-radius:7px; padding:0 12px; font-size:13px; font-family:'Inter',sans-serif;
+  color:var(--text); outline:none; appearance:none;
+}
+
+/* OPÇÕES DE ENVIO */
+.mg-send-opts { display:flex; flex-direction:column; gap:6px; }
+.mg-send-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-muted); }
+.mg-send-btns { display:flex; gap:6px; flex-wrap:wrap; }
+.mg-send-btn {
+  height:32px; padding:0 12px; border-radius:7px; font-size:11px; font-weight:600;
+  cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:5px;
+  font-family:'Inter',sans-serif;
+}
+.msb-pdf { background:var(--bg-4); border:1px solid var(--border-mid); color:var(--text-sec); }
+.msb-pdf:hover { border-color:var(--gold-border); color:var(--gold); }
+.msb-print { background:var(--bg-4); border:1px solid var(--border-mid); color:var(--text-sec); }
+.msb-print:hover { border-color:var(--gold-border); color:var(--gold); }
+.msb-wa { background:var(--wa-dim); border:1px solid rgba(37,211,102,.2); color:var(--wa); }
+.msb-wa:hover { background:rgba(37,211,102,.2); }
+.msb-email { background:var(--blue-dim); border:1px solid rgba(74,158,255,.15); color:var(--blue); }
+.msb-email:hover { background:rgba(74,158,255,.2); }
+
+/* FOOTER */
+.mg-footer { padding:12px 22px 16px; border-top:1px solid var(--border); display:flex; gap:8px; }
+.btn-cancel {
+  height:42px; padding:0 16px; background:transparent; border:1px solid var(--border);
+  border-radius:9px; font-size:12px; color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif;
+}
+.btn-cancel:hover { border-color:var(--border-hi); color:var(--text); }
+.btn-generate {
+  flex:1; height:42px; background:linear-gradient(135deg,#C8A97A,#E8C97A,#C8A97A);
+  border:none; border-radius:9px; font-size:13px; font-weight:800;
+  font-family:'Playfair Display',serif; color:#000; cursor:pointer; transition:all .2s;
+  display:flex; align-items:center; justify-content:center; gap:7px;
+  box-shadow:0 4px 16px rgba(200,169,122,.3);
+}
+.btn-generate:hover { transform:translateY(-1px); box-shadow:0 6px 24px rgba(200,169,122,.45); }
+
+/* ═══════════════════════════════
+   MODAL — PROPOSTA GERADA (sucesso)
+═══════════════════════════════ */
+.modal-generated { width:440px; }
+.mgen-header { padding:20px 22px; text-align:center; border-bottom:1px solid var(--border); }
+.mgen-icon {
+  width:50px; height:50px; background:var(--gold-dim); border:1px solid var(--gold-border);
+  border-radius:13px; display:flex; align-items:center; justify-content:center;
+  font-size:24px; margin:0 auto 10px;
+}
+.mgen-title { font-family:'Playfair Display',serif; font-size:17px; font-weight:700; }
+.mgen-sub { font-size:11px; color:var(--text-muted); margin-top:3px; }
+
+.mgen-body { padding:14px 22px; display:flex; flex-direction:column; gap:10px; }
+
+/* código gerado em destaque */
+.code-display {
+  background:var(--bg-3); border:1px solid var(--gold-border);
+  border-radius:10px; padding:14px; text-align:center;
+}
+.cd-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px; }
+.cd-code { font-family:'Playfair Display',serif; font-size:24px; font-weight:700; color:var(--gold); letter-spacing:3px; }
+.cd-validity { font-size:11px; color:var(--amber); margin-top:5px; }
+
+/* info da proposta */
+.mgen-info { background:var(--bg-3); border:1px solid var(--border); border-radius:8px; padding:10px 14px; }
+.mi-row { display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; }
+.mi-row:last-child { margin-bottom:0; }
+.mi-l { color:var(--text-muted); }
+.mi-v { font-weight:600; }
+
+/* envio rápido */
+.mgen-send { }
+.ms-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-muted); margin-bottom:7px; }
+.ms-btns { display:flex; gap:6px; }
+.msb {
+  flex:1; height:38px; border-radius:8px; font-size:11px; font-weight:600;
+  cursor:pointer; transition:all .15s; display:flex; align-items:center; justify-content:center; gap:5px;
+  font-family:'Inter',sans-serif;
+}
+.msb-wh { background:var(--wa-dim); border:1px solid rgba(37,211,102,.25); color:var(--wa); }
+.msb-wh:hover { background:rgba(37,211,102,.2); }
+.msb-em { background:var(--blue-dim); border:1px solid rgba(74,158,255,.2); color:var(--blue); }
+.msb-em:hover { background:rgba(74,158,255,.2); }
+.msb-pr { background:var(--bg-4); border:1px solid var(--border-mid); color:var(--text-sec); }
+.msb-pr:hover { border-color:var(--gold-border); color:var(--gold); }
+
+.mgen-footer { padding:10px 22px 14px; display:flex; gap:7px; border-top:1px solid var(--border); }
+.btn-mgen-close { flex:1; height:38px; background:transparent; border:1px solid var(--border); border-radius:8px; font-size:12px; color:var(--text-muted); cursor:pointer; font-family:'Inter',sans-serif; }
+.btn-mgen-pdv { flex:1; height:38px; background:var(--gold); border:none; border-radius:8px; font-size:12px; font-weight:700; color:#000; cursor:pointer; font-family:'Inter',sans-serif; }
+.btn-mgen-pdv:hover { background:#E8D5B0; }
+
+/* ═══════════════════════════════
+   PDV — PAINEL CONFIRMAR PROPOSTA
+═══════════════════════════════ */
+.pdv-confirm-panel { width:370px; }
+.pcp-header { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.pcp-title { font-family:'Playfair Display',serif; font-size:15px; font-weight:700; }
+.pcp-tab-row { display:flex; padding:10px 18px 0; gap:6px; }
+.pcp-tab {
+  height:32px; padding:0 14px; border-radius:7px 7px 0 0; font-size:11px; font-weight:600;
+  cursor:pointer; transition:all .15s; font-family:'Inter',sans-serif; border:none;
+}
+.pcp-tab.active { background:var(--bg-3); color:var(--text); border-top:1px solid var(--border-mid); border-left:1px solid var(--border-mid); border-right:1px solid var(--border-mid); }
+.pcp-tab:not(.active) { background:transparent; color:var(--text-muted); }
+.pcp-tab:not(.active):hover { color:var(--text-sec); }
+
+/* ÁREA NORMAL (carrinho) */
+.pcp-normal { padding:12px 18px; border-top:1px solid var(--border); }
+.hint-text { font-size:11px; color:var(--text-muted); margin-bottom:8px; }
+
+/* ÁREA CONFIRMAR PROPOSTA */
+.pcp-proposal { padding:12px 18px; border-top:1px solid var(--border); background:rgba(200,169,122,0.04); }
+.pcp-p-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted); margin-bottom:8px; }
+
+.code-input-wrap { position:relative; margin-bottom:8px; }
+.ci-icon { position:absolute; left:11px; top:50%; transform:translateY(-50%); font-size:14px; color:var(--text-muted); }
+.code-input {
+  width:100%; height:44px; background:var(--bg-3); border:1.5px solid var(--gold-border);
+  border-radius:9px; padding:0 14px 0 36px;
+  font-family:'Playfair Display',serif; font-size:18px; font-weight:700;
+  color:var(--gold); outline:none; letter-spacing:2px; transition:all .15s;
+  text-transform:uppercase;
+}
+.code-input::placeholder { color:var(--text-muted); font-size:13px; letter-spacing:0; font-family:'Inter',sans-serif; font-weight:400; }
+.code-input:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(200,169,122,.12); }
+
+.btn-buscar-prop {
+  width:100%; height:38px; background:var(--gold-dim); border:1px solid var(--gold-border);
+  border-radius:8px; font-size:12px; font-weight:700; color:var(--gold);
+  cursor:pointer; transition:all .15s; font-family:'Inter',sans-serif;
+}
+.btn-buscar-prop:hover { background:rgba(200,169,122,.2); }
+
+/* proposta encontrada */
+.prop-found {
+  background:var(--bg-3); border:1px solid var(--gold-border);
+  border-radius:9px; padding:12px 14px; margin-top:8px;
+}
+.pf-badge {
+  display:flex; align-items:center; gap:6px; margin-bottom:8px;
+}
+.pf-code { font-family:'Playfair Display',serif; font-size:14px; font-weight:700; color:var(--gold); }
+.pf-status { font-size:9px; font-weight:700; padding:2px 7px; border-radius:4px; }
+.pf-s-pending { background:var(--amber-dim); color:var(--amber); border:1px solid rgba(240,160,64,.2); }
+.pf-s-paid { background:var(--green-dim); color:var(--green); border:1px solid var(--green-border); }
+
+.pf-items { font-size:11px; color:var(--text-sec); margin-bottom:6px; }
+.pf-items span { color:var(--text); font-weight:600; }
+.pf-client { font-size:11px; color:var(--text-muted); margin-bottom:8px; }
+.pf-client span { color:var(--text-sec); font-weight:600; }
+.pf-total { display:flex; justify-content:space-between; align-items:center; padding-top:8px; border-top:1px solid var(--border); }
+.pft-l { font-size:11px; color:var(--text-muted); }
+.pft-v { font-family:'Playfair Display',serif; font-size:16px; font-weight:700; color:var(--gold); }
+
+/* proposta PAGA automaticamente */
+.prop-auto-paid {
+  background:var(--green-dim); border:1px solid var(--green-border);
+  border-radius:9px; padding:12px 14px; margin-top:8px; text-align:center;
+}
+.pap-icon { font-size:24px; margin-bottom:6px; }
+.pap-title { font-size:13px; font-weight:700; color:var(--green); margin-bottom:3px; }
+.pap-sub { font-size:11px; color:var(--text-muted); }
+
+.btn-confirmar-prop {
+  width:100%; height:44px; margin-top:10px;
+  background:linear-gradient(135deg,#C8A97A,#E8C97A,#C8A97A);
+  border:none; border-radius:10px; font-size:14px; font-weight:800;
+  font-family:'Playfair Display',serif; color:#000; cursor:pointer; transition:all .2s;
+  box-shadow:0 4px 16px rgba(200,169,122,.3);
+  display:flex; align-items:center; justify-content:center; gap:7px;
+}
+.btn-confirmar-prop:hover { transform:translateY(-1px); box-shadow:0 6px 24px rgba(200,169,122,.45); }
+
+.pcp-footer { padding:10px 18px; border-top:1px solid var(--border); }
+.pf-row { display:flex; justify-content:space-between; margin-bottom:4px; }
+.pfl { font-size:11px; color:var(--text-sec); }
+.pfv { font-size:11px; font-weight:600; }
+.pf-total-final { display:flex; justify-content:space-between; margin-top:7px; padding-top:7px; border-top:1px solid var(--border-mid); }
+.ptfl { font-size:13px; font-weight:700; }
+.ptfv { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--gold); }
+</style>
+</head>
+<body>
+
+<!-- MODAL: GERAR PROPOSTA (PDV) -->
+<div class="col">
+  <div class="col-label">① Modal — Gerar Proposta (PDV)</div>
+  <div class="card modal-generate">
+    <div class="mg-header">
+      <div>
+        <div class="mg-title">Gerar Proposta</div>
+        <div class="mg-sub">Proposta com QR PIX será gerada para este carrinho</div>
+      </div>
+      <span style="color:var(--text-muted);cursor:pointer;font-size:16px">✕</span>
+    </div>
+
+    <!-- origem -->
+    <div class="mg-origin">
+      <span class="mg-origin-badge ob-pdv">💰 PDV</span>
+      <span class="mg-origin-detail">Carrinho atual · <strong>2 itens</strong></span>
+    </div>
+
+    <div class="mg-body">
+
+      <!-- itens resumidos -->
+      <div class="mg-items">
+        <div class="mg-items-head"><span>Produto</span><span>Total</span></div>
+        <div class="mg-item">
+          <div>
+            <div class="mg-item-name">Anel Solitário Ouro 18k</div>
+            <div class="mg-item-detail">AN-0042 · 1 un × R$ 1.890,00</div>
+          </div>
+          <div class="mg-item-val">R$ 1.890</div>
+        </div>
+        <div class="mg-item">
+          <div>
+            <div class="mg-item-name">Brinco Pérola Clássico</div>
+            <div class="mg-item-detail">BR-0022 · 1 un × R$ 780,00</div>
+          </div>
+          <div class="mg-item-val">R$ 780</div>
+        </div>
+      </div>
+
+      <!-- totais -->
+      <div class="mg-totals">
+        <div class="mg-tot-row"><span class="mt-l">Subtotal</span><span class="mt-v">R$ 2.670,00</span></div>
+        <div class="mg-tot-row"><span class="mt-l">Desconto</span><span class="mt-v" style="color:var(--red)">− R$ 170,00</span></div>
+        <div class="mg-tot-final"><span class="mtf-l">Total da Proposta</span><span class="mtf-v">R$ 2.500,00</span></div>
+      </div>
+
+      <!-- configurações -->
+      <div class="mg-config">
+        <div class="mg-config-row">
+          <div class="mg-field">
+            <div class="mg-field-label">Validade</div>
+            <select class="mg-select">
+              <option>24 horas (padrão)</option>
+              <option>48 horas</option>
+              <option>72 horas</option>
+              <option>7 dias</option>
+            </select>
+          </div>
+          <div class="mg-field">
+            <div class="mg-field-label">Chave PIX</div>
+            <select class="mg-select">
+              <option>orinjoias@pix.com</option>
+              <option>CNPJ: 00.000.000/0001</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="mg-field-label">Observação (aparece na proposta)</div>
+          <input class="mg-input" type="text" placeholder="Ex: Condições especiais válidas até amanhã...">
+        </div>
+      </div>
+
+      <!-- como enviar -->
+      <div class="mg-send-opts">
+        <div class="mg-send-label">Após gerar, enviar por</div>
+        <div class="mg-send-btns">
+          <button class="mg-send-btn msb-wa">💬 WhatsApp</button>
+          <button class="mg-send-btn msb-email">✉️ E-mail</button>
+          <button class="mg-send-btn msb-print">🖨️ Imprimir</button>
+          <button class="mg-send-btn msb-pdf">📄 PDF</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="mg-footer">
+      <button class="btn-cancel">Cancelar</button>
+      <button class="btn-generate">📋 Gerar Proposta</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PROPOSTA GERADA (sucesso) -->
+<div class="col">
+  <div class="col-label">② Proposta gerada — envio</div>
+  <div class="card modal-generated">
+    <div class="mgen-header">
+      <div class="mgen-icon">📋</div>
+      <div class="mgen-title">Proposta Gerada!</div>
+      <div class="mgen-sub">QR Code PIX criado · aguardando pagamento do cliente</div>
+    </div>
+
+    <div class="mgen-body">
+
+      <!-- código em destaque -->
+      <div class="code-display">
+        <div class="cd-label">Código da proposta</div>
+        <div class="cd-code">PROP-20260313-0042</div>
+        <div class="cd-validity">⏳ Válida por 24h · expira 14/03/2026 às 14:32</div>
+      </div>
+
+      <!-- resumo -->
+      <div class="mgen-info">
+        <div class="mi-row"><span class="mi-l">Total</span><span class="mi-v" style="color:var(--gold)">R$ 2.500,00</span></div>
+        <div class="mi-row"><span class="mi-l">Cliente</span><span class="mi-v">Maria Fernanda Costa</span></div>
+        <div class="mi-row"><span class="mi-l">Chave PIX</span><span class="mi-v">orinjoias@pix.com</span></div>
+        <div class="mi-row"><span class="mi-l">Confirmação</span><span class="mi-v" style="color:var(--green)">Automática via webhook</span></div>
+      </div>
+
+      <!-- envio rápido -->
+      <div class="mgen-send">
+        <div class="ms-title">Enviar proposta agora</div>
+        <div class="ms-btns">
+          <button class="msb msb-wh">💬 WhatsApp</button>
+          <button class="msb msb-em">✉️ E-mail</button>
+          <button class="msb msb-pr">🖨️ Imprimir</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="mgen-footer">
+      <button class="btn-mgen-close">Fechar</button>
+      <button class="btn-mgen-pdv">← Voltar ao PDV</button>
+    </div>
+  </div>
+</div>
+
+<!-- PDV: CONFIRMAR PROPOSTA (aba no carrinho) -->
+<div class="col">
+  <div class="col-label">③ PDV — confirmar proposta</div>
+  <div class="card pdv-confirm-panel">
+    <div class="pcp-header">
+      <div class="pcp-title">Carrinho</div>
+      <span style="font-size:11px;color:var(--text-muted)">Venda normal</span>
+    </div>
+
+    <!-- abas -->
+    <div class="pcp-tab-row">
+      <button class="pcp-tab">🛒 Normal</button>
+      <button class="pcp-tab active">📋 Proposta</button>
+    </div>
+
+    <!-- aba proposta ativa -->
+    <div class="pcp-proposal">
+      <div class="pcp-p-label">Confirmar proposta existente</div>
+
+      <div class="code-input-wrap">
+        <span class="ci-icon">📋</span>
+        <input class="code-input" type="text" placeholder="PROP-..." value="PROP-20260313-0042">
+      </div>
+      <button class="btn-buscar-prop">Buscar proposta</button>
+
+      <!-- ESTADO A: proposta encontrada, aguardando pagamento -->
+      <div class="prop-found">
+        <div class="pf-badge">
+          <span class="pf-code">PROP-20260313-0042</span>
+          <span class="pf-status pf-s-pending">⏳ Aguardando</span>
+        </div>
+        <div class="pf-items">2 itens · <span>Anel Solitário + Brinco Pérola</span></div>
+        <div class="pf-client">Cliente: <span>Maria Fernanda Costa</span></div>
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px">Chave PIX: orinjoias@pix.com · Válida até 14/03 às 14:32</div>
+        <div class="pf-total">
+          <span class="pft-l">Total da proposta</span>
+          <span class="pft-v">R$ 2.500,00</span>
+        </div>
+
+        <button class="btn-confirmar-prop" style="background:var(--gold-dim);border:1px solid var(--gold-border);color:var(--gold);box-shadow:none;font-family:'Inter',sans-serif;font-weight:700;font-size:13px">
+          ✅ Confirmar Recebimento Manual
+        </button>
+        <div style="font-size:10px;color:var(--text-muted);text-align:center;margin-top:5px">Use somente se o PIX não foi confirmado automaticamente</div>
+      </div>
+
+    </div>
+
+    <div class="pcp-footer">
+      <div class="pf-row"><span class="pfl">Proposta vinculada</span><span class="pfv">PROP-20260313-0042</span></div>
+      <div class="pf-row"><span class="pfl">Desconto</span><span class="pfv" style="color:var(--red)">− R$ 170,00</span></div>
+      <div class="pf-total-final">
+        <span class="ptfl">Total</span>
+        <span class="ptfv">R$ 2.500,00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIANTE: proposta já paga automaticamente -->
+  <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:4px">↓ variante: PIX confirmado automaticamente</div>
+  <div class="card pdv-confirm-panel" style="margin-top:0">
+    <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <span style="font-family:'Playfair Display',serif;font-size:14px;font-weight:700">Carrinho</span>
+      <span style="font-size:11px;color:var(--text-muted)">Confirmar proposta</span>
+    </div>
+    <div style="padding:12px 18px;background:rgba(200,169,122,0.04)">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);margin-bottom:8px">Proposta</div>
+      <input class="code-input" type="text" placeholder="PROP-..." value="PROP-20260313-0042" style="margin-bottom:8px">
+
+      <div class="prop-auto-paid">
+        <div class="pap-icon">✅</div>
+        <div class="pap-title">PIX Confirmado Automaticamente!</div>
+        <div class="pap-sub">Pagamento recebido às 14:45 · R$ 2.500,00</div>
+      </div>
+
+      <button class="btn-confirmar-prop" style="margin-top:8px">
+        ✅ Registrar Venda e Baixar Estoque
+      </button>
+      <div style="font-size:10px;color:var(--amber);text-align:center;margin-top:5px">⚠️ Estoque descontado ao clicar — ação irreversível</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

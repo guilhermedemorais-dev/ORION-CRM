@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORION — Estoque</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --gold:        #C8A97A;
+  --gold-dim:    rgba(200,169,122,0.12);
+  --gold-border: rgba(200,169,122,0.28);
+  --bg-0:        #0A0A0B;
+  --bg-1:        #111113;
+  --bg-2:        #18181C;
+  --bg-3:        #202026;
+  --bg-hover:    rgba(255,255,255,0.03);
+  --border:      rgba(255,255,255,0.07);
+  --border-mid:  rgba(255,255,255,0.11);
+  --text:        #EDE8E0;
+  --text-sec:    #888480;
+  --text-muted:  #4A4A52;
+  --green:       #4CAF82;
+  --green-dim:   rgba(76,175,130,0.12);
+  --red:         #E05252;
+  --red-dim:     rgba(224,82,82,0.12);
+  --amber:       #F0A040;
+  --amber-dim:   rgba(240,160,64,0.12);
+  --blue:        #4A9EFF;
+  --blue-dim:    rgba(74,158,255,0.12);
+}
+body { font-family:'Inter',sans-serif; background:var(--bg-0); color:var(--text); min-height:100vh; display:flex; flex-direction:column; }
+
+/* ── TOPBAR ── */
+.topbar {
+  height:52px; background:var(--bg-1); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; padding:0 24px; flex-shrink:0;
+}
+.topbar-left { display:flex; align-items:center; gap:12px; }
+.breadcrumb { font-size:10px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+.page-title { font-family:'Playfair Display',serif; font-size:17px; font-weight:700; }
+
+/* ── PAGE ── */
+.page { flex:1; display:flex; flex-direction:column; padding:24px; gap:20px; overflow:hidden; }
+
+/* ── KPI ROW ── */
+.kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; flex-shrink:0; }
+.kpi {
+  background:var(--bg-2); border:1px solid var(--border); border-radius:10px;
+  padding:14px 16px; position:relative; overflow:hidden;
+}
+.kpi::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+}
+.kpi.green::before { background:var(--green); }
+.kpi.amber::before { background:var(--amber); }
+.kpi.red::before   { background:var(--red); }
+.kpi.blue::before  { background:var(--blue); }
+.kpi-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted); margin-bottom:6px; }
+.kpi-value { font-family:'Playfair Display',serif; font-size:22px; font-weight:700; }
+.kpi.green .kpi-value { color:var(--green); }
+.kpi.amber .kpi-value { color:var(--amber); }
+.kpi.red   .kpi-value { color:var(--red); }
+.kpi.blue  .kpi-value { color:var(--blue); }
+.kpi-sub { font-size:11px; color:var(--text-muted); margin-top:3px; }
+
+/* ── TOOLBAR ── */
+.toolbar {
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-shrink:0;
+}
+.toolbar-left { display:flex; align-items:center; gap:8px; }
+.toolbar-right { display:flex; align-items:center; gap:8px; }
+
+.search-wrap { position:relative; }
+.s-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:13px; }
+.s-input {
+  height:36px; width:240px; background:var(--bg-2); border:1px solid var(--border);
+  border-radius:8px; padding:0 12px 0 32px; font-size:13px; font-family:'Inter',sans-serif;
+  color:var(--text); outline:none; transition:border-color .15s;
+}
+.s-input::placeholder { color:var(--text-muted); }
+.s-input:focus { border-color:var(--gold-border); background:var(--bg-3); }
+
+.sel {
+  height:36px; background:var(--bg-2); border:1px solid var(--border); border-radius:8px;
+  padding:0 12px; font-size:12px; font-family:'Inter',sans-serif; color:var(--text-sec);
+  outline:none; cursor:pointer; transition:border-color .15s;
+}
+.sel:focus { border-color:var(--gold-border); }
+
+.btn {
+  height:36px; padding:0 14px; border-radius:8px; font-size:12px; font-weight:600;
+  font-family:'Inter',sans-serif; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:6px; border:none;
+}
+.btn-ghost { background:var(--bg-2); border:1px solid var(--border); color:var(--text-sec); }
+.btn-ghost:hover { border-color:var(--border-mid); color:var(--text); }
+.btn-primary { background:var(--gold); color:#000; font-weight:700; }
+.btn-primary:hover { background:#E8D5B0; transform:translateY(-1px); }
+.btn-danger { background:var(--red-dim); border:1px solid rgba(224,82,82,0.2); color:var(--red); }
+.btn-danger:hover { background:rgba(224,82,82,0.2); }
+
+/* ── TABLE ── */
+.table-wrap {
+  flex:1; background:var(--bg-1); border:1px solid var(--border); border-radius:12px;
+  overflow:hidden; display:flex; flex-direction:column; min-height:0;
+}
+.table-scroll { flex:1; overflow-y:auto; }
+.table-scroll::-webkit-scrollbar { width:4px; }
+.table-scroll::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+table { width:100%; border-collapse:collapse; }
+thead { position:sticky; top:0; z-index:2; }
+thead tr { background:var(--bg-2); border-bottom:1px solid var(--border-mid); }
+th {
+  padding:10px 14px; text-align:left; font-size:10px; font-weight:600;
+  text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted);
+  white-space:nowrap; user-select:none; cursor:pointer;
+}
+th:hover { color:var(--text-sec); }
+th .sort-icon { margin-left:4px; opacity:.4; }
+th.sorted .sort-icon { opacity:1; color:var(--gold); }
+
+tbody tr {
+  border-bottom:1px solid var(--border); transition:background .1s; cursor:pointer;
+}
+tbody tr:last-child { border-bottom:none; }
+tbody tr:hover { background:var(--bg-hover); }
+tbody tr.selected { background:var(--gold-dim); }
+tbody tr.selected td { color:var(--text); }
+
+td { padding:10px 14px; font-size:13px; vertical-align:middle; }
+
+.td-check input[type=checkbox] { width:15px; height:15px; accent-color:var(--gold); cursor:pointer; }
+
+.product-cell { display:flex; align-items:center; gap:10px; }
+.product-thumb {
+  width:38px; height:38px; border-radius:7px; background:var(--bg-3);
+  display:flex; align-items:center; justify-content:center; font-size:18px;
+  flex-shrink:0; overflow:hidden; border:1px solid var(--border);
+}
+.product-thumb img { width:100%; height:100%; object-fit:cover; }
+.product-name { font-weight:600; font-size:13px; }
+.product-code { font-size:11px; color:var(--text-muted); margin-top:1px; }
+
+.badge {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 8px; border-radius:5px; font-size:11px; font-weight:600;
+}
+.b-ok     { background:var(--green-dim); color:var(--green); }
+.b-low    { background:var(--amber-dim); color:var(--amber); }
+.b-out    { background:var(--red-dim);   color:var(--red); }
+.b-cat    { background:var(--blue-dim);  color:var(--blue); }
+
+.price-cell { font-family:'Playfair Display',serif; font-size:14px; font-weight:700; color:var(--gold); }
+.stock-num { font-weight:700; }
+.stock-low  { color:var(--amber); }
+.stock-out  { color:var(--red); }
+.stock-ok   { color:var(--text); }
+
+/* ── TABLE FOOTER ── */
+.table-footer {
+  padding:10px 16px; border-top:1px solid var(--border); display:flex;
+  align-items:center; justify-content:space-between; background:var(--bg-2); flex-shrink:0;
+}
+.page-info { font-size:12px; color:var(--text-muted); }
+.pagination { display:flex; gap:4px; }
+.pg-btn {
+  min-width:30px; height:30px; border-radius:6px; border:1px solid var(--border);
+  background:transparent; font-size:12px; color:var(--text-sec); cursor:pointer; transition:all .15s;
+  display:flex; align-items:center; justify-content:center; padding:0 8px;
+}
+.pg-btn:hover { border-color:var(--gold-border); color:var(--gold); }
+.pg-btn.active { background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:700; }
+
+/* ── MODAL OVERLAY ── */
+.overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center; z-index:100; padding:20px;
+}
+.modal {
+  background:var(--bg-2); border:1px solid var(--border-mid);
+  border-radius:16px; width:720px; max-width:100%; max-height:92vh;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+
+.modal-head {
+  padding:20px 24px 16px; border-bottom:1px solid var(--border); flex-shrink:0;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.modal-title { font-family:'Playfair Display',serif; font-size:17px; font-weight:700; }
+.modal-sub { font-size:12px; color:var(--text-muted); margin-top:2px; }
+.close-btn {
+  width:30px; height:30px; border-radius:8px; border:1px solid var(--border);
+  background:transparent; color:var(--text-muted); cursor:pointer; font-size:16px;
+  display:flex; align-items:center; justify-content:center; transition:all .15s;
+}
+.close-btn:hover { border-color:var(--red); color:var(--red); }
+
+.modal-body { flex:1; overflow-y:auto; padding:20px 24px; }
+.modal-body::-webkit-scrollbar { width:4px; }
+.modal-body::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+/* PHOTO UPLOAD */
+.photo-section { margin-bottom:20px; }
+.photo-upload-area {
+  border:2px dashed var(--border-mid); border-radius:10px; padding:24px;
+  display:flex; align-items:center; gap:16px; cursor:pointer; transition:all .15s;
+  background:var(--bg-3);
+}
+.photo-upload-area:hover { border-color:var(--gold-border); background:var(--gold-dim); }
+.photo-preview-box {
+  width:72px; height:72px; border-radius:10px; background:var(--bg-2);
+  border:1px solid var(--border); display:flex; align-items:center; justify-content:center;
+  font-size:28px; flex-shrink:0; overflow:hidden;
+}
+.photo-preview-box img { width:100%; height:100%; object-fit:cover; border-radius:10px; }
+.photo-upload-text .upload-lbl { font-size:13px; font-weight:600; margin-bottom:3px; }
+.photo-upload-text .upload-hint { font-size:11px; color:var(--text-muted); }
+.photo-upload-text .upload-hint span { color:var(--gold); cursor:pointer; }
+
+/* FORM GRID */
+.form-section-title {
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.7px;
+  color:var(--text-muted); margin-bottom:12px; padding-bottom:6px;
+  border-bottom:1px solid var(--border);
+}
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+.form-grid.cols-3 { grid-template-columns:1fr 1fr 1fr; }
+.form-grid.cols-1 { grid-template-columns:1fr; }
+.form-group { display:flex; flex-direction:column; gap:5px; }
+.form-group.span-2 { grid-column:span 2; }
+.form-label { font-size:11px; font-weight:600; color:var(--text-sec); letter-spacing:.2px; }
+.form-input, .form-select, .form-textarea {
+  height:38px; background:var(--bg-3); border:1px solid var(--border);
+  border-radius:8px; padding:0 12px; font-size:13px; font-family:'Inter',sans-serif;
+  color:var(--text); outline:none; transition:border-color .15s; width:100%;
+}
+.form-input::placeholder, .form-textarea::placeholder { color:var(--text-muted); }
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color:var(--gold-border); background:var(--bg-2); }
+.form-textarea { height:80px; padding:10px 12px; resize:vertical; }
+.form-input-prefix { position:relative; }
+.form-input-prefix .prefix {
+  position:absolute; left:10px; top:50%; transform:translateY(-50%);
+  font-size:12px; color:var(--text-muted);
+}
+.form-input-prefix .form-input { padding-left:28px; }
+.form-hint { font-size:10px; color:var(--text-muted); margin-top:2px; }
+
+.form-check { display:flex; align-items:center; gap:8px; margin-top:4px; cursor:pointer; }
+.form-check input { width:14px; height:14px; accent-color:var(--gold); }
+.form-check-label { font-size:13px; font-weight:500; color:var(--text-sec); }
+
+/* STOCK PREVIEW */
+.stock-preview {
+  background:var(--bg-3); border:1px solid var(--border); border-radius:8px;
+  padding:12px 14px; display:flex; align-items:center; justify-content:space-between;
+  margin-top:4px;
+}
+.sp-lbl { font-size:11px; color:var(--text-muted); }
+.sp-val { font-family:'Playfair Display',serif; font-size:16px; font-weight:700; color:var(--gold); }
+
+.modal-foot {
+  padding:14px 24px; border-top:1px solid var(--border); flex-shrink:0;
+  display:flex; align-items:center; justify-content:space-between; background:var(--bg-2);
+}
+.modal-foot-left { font-size:11px; color:var(--text-muted); }
+.modal-foot-right { display:flex; gap:8px; }
+.btn-modal-cancel {
+  height:38px; padding:0 16px; border-radius:8px; border:1px solid var(--border);
+  background:transparent; font-size:13px; font-weight:600; color:var(--text-sec); cursor:pointer; transition:all .15s;
+}
+.btn-modal-cancel:hover { border-color:var(--border-mid); color:var(--text); }
+.btn-modal-save {
+  height:38px; padding:0 20px; border-radius:8px; background:var(--gold); border:none;
+  font-size:13px; font-weight:700; font-family:'Inter',sans-serif; color:#000; cursor:pointer; transition:all .15s;
+}
+.btn-modal-save:hover { background:#E8D5B0; }
+
+/* ── BULK BAR ── */
+.bulk-bar {
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+  background:var(--bg-2); border:1px solid var(--border-mid); border-radius:12px;
+  padding:10px 16px; display:flex; align-items:center; gap:12px;
+  box-shadow:0 8px 32px rgba(0,0,0,.5); z-index:50;
+  animation:slideUp .2s ease;
+}
+@keyframes slideUp { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+.bulk-count { font-size:13px; font-weight:600; color:var(--gold); }
+.bulk-divider { width:1px; height:20px; background:var(--border); }
+
+/* ── DETAIL PANEL (slide-in from right) ── */
+.detail-panel {
+  position:fixed; top:0; right:0; bottom:0; width:360px;
+  background:var(--bg-2); border-left:1px solid var(--border-mid);
+  display:flex; flex-direction:column; z-index:60;
+  transform:translateX(100%); transition:transform .25s cubic-bezier(.4,0,.2,1);
+}
+.detail-panel.open { transform:translateX(0); }
+.dp-head {
+  padding:16px 20px; border-bottom:1px solid var(--border); flex-shrink:0;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.dp-title { font-family:'Playfair Display',serif; font-size:15px; font-weight:700; }
+.dp-body { flex:1; overflow-y:auto; padding:16px 20px; }
+.dp-thumb {
+  width:100%; aspect-ratio:1.6; border-radius:10px; background:var(--bg-3);
+  display:flex; align-items:center; justify-content:center; font-size:48px; margin-bottom:16px;
+}
+.dp-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); }
+.dp-row:last-child { border-bottom:none; }
+.dp-lbl { font-size:12px; color:var(--text-muted); }
+.dp-val { font-size:13px; font-weight:600; }
+.dp-actions { padding:14px 20px; border-top:1px solid var(--border); display:flex; gap:8px; }
+.btn-dp { flex:1; height:36px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; }
+.btn-dp-edit { background:var(--gold); border:none; color:#000; }
+.btn-dp-edit:hover { background:#E8D5B0; }
+.btn-dp-adj { background:var(--bg-3); border:1px solid var(--border); color:var(--text-sec); }
+.btn-dp-adj:hover { border-color:var(--gold-border); color:var(--gold); }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div>
+      <div class="breadcrumb">Catálogo</div>
+      <div class="page-title">Estoque</div>
+    </div>
+  </div>
+  <div style="font-size:12px;color:var(--text-sec)">Admin Inbox</div>
+</div>
+
+<!-- PAGE -->
+<div class="page">
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi green">
+      <div class="kpi-label">Produtos Ativos</div>
+      <div class="kpi-value">84</div>
+      <div class="kpi-sub">Disponíveis para venda</div>
+    </div>
+    <div class="kpi amber">
+      <div class="kpi-label">Estoque Crítico</div>
+      <div class="kpi-value">7</div>
+      <div class="kpi-sub">Abaixo do mínimo configurado</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">Sem Estoque</div>
+      <div class="kpi-value">3</div>
+      <div class="kpi-sub">Ruptura — reposição urgente</div>
+    </div>
+    <div class="kpi blue">
+      <div class="kpi-label">Valor em Estoque</div>
+      <div class="kpi-value">R$ 284k</div>
+      <div class="kpi-sub">Custo total × quantidade</div>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="search-wrap">
+        <span class="s-icon">🔍</span>
+        <input class="s-input" type="text" placeholder="Buscar por nome ou código...">
+      </div>
+      <select class="sel">
+        <option>Todas as categorias</option>
+        <option>Anel</option>
+        <option>Colar</option>
+        <option>Brinco</option>
+        <option>Pulseira</option>
+        <option>Outro</option>
+      </select>
+      <select class="sel">
+        <option>Todos os status</option>
+        <option>Em estoque</option>
+        <option>Estoque crítico</option>
+        <option>Sem estoque</option>
+      </select>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn btn-ghost" onclick="exportCSV()">↑ Exportar CSV</button>
+      <button class="btn btn-ghost" onclick="importCSV()">↓ Importar CSV</button>
+      <button class="btn btn-primary" onclick="openModal()">+ Adicionar Produto</button>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px" class="td-check"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
+            <th class="sorted">Produto <span class="sort-icon">↑</span></th>
+            <th>SKU / Código</th>
+            <th>Categoria</th>
+            <th>Estoque <span class="sort-icon">↕</span></th>
+            <th>Mínimo</th>
+            <th>Metal</th>
+            <th>Peso</th>
+            <th>Preço</th>
+            <th>Status</th>
+            <th>Atualizado</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+
+          <tr onclick="openDetail('p1')" class="selected">
+            <td class="td-check"><input type="checkbox" checked onclick="event.stopPropagation()"></td>
+            <td>
+              <div class="product-cell">
+                <div class="product-thumb">💍</div>
+                <div>
+                  <div class="product-name">Anel Solitário Ouro 18k</div>
+                  <div class="product-code">AN-0042</div>
+                </div>
+              </div>
+            </td>
+            <td style="color:var(--text-sec);font-size:12px">AN-0042</td>
+            <td><span class="badge b-cat">Anel</span></td>
+            <td><span class="stock-num stock-ok">14</span></td>
+            <td style="color:var(--text-muted);font-size:12px">5</td>
+            <td style="font-size:12px;color:var(--text-sec)">Ouro 18k</td>
+            <td style="font-size:12px;color:var(--text-sec)">4,2g</td>
+            <td class="price-cell">R$ 1.890</td>
+            <td><span class="badge b-ok">● Em estoque</span></td>
+            <td style="font-size:11px;color:var(--text-muted)">10/mar</td>
+          </tr>
+
+          <tr onclick="openDetail('p2')">
+            <td class="td-check"><input type="checkbox" onclick="event.stopPropagation()"></td>
+            <td>
+              <div class="product-cell">
+                <div class="product-thumb">📿</div>
+                <div>
+                  <div class="product-name">Colar Veneziana Prata 925</div>
+                  <div class="product-code">CO-0018</div>
+                </div>
+              </div>
+            </td>
+            <td style="color:var(--text-sec);font-size:12px">CO-0018</td>
+            <td><span class="badge b-cat">Colar</span></td>
+            <td><span class="stock-num stock-low">2</span></td>
+            <td style="color:var(--text-muted);font-size:12px">5</td>
+            <td style="font-size:12px;color:var(--text-sec)">Prata 925</td>
+            <td style="font-size:12px;color:var(--text-sec)">8,5g</td>
+            <td class="price-cell">R$ 450</td>
+            <td><span class="badge b-low">⚠ Crítico</span></td>
+            <td style="font-size:11px;color:var(--text-muted)">09/mar</td>
+          </tr>
+
+          <tr onclick="openDetail('p3')">
+            <td class="td-check"><input type="checkbox" onclick="event.stopPropagation()"></td>
+            <td>
+              <div class="product-cell">
+                <div class="product-thumb">💎</div>
+                <div>
+                  <div class="product-name">Brinco Argola Ouro 18k</div>
+                  <div class="product-code">BR-0007</div>
+                </div>
+              </div>
+            </td>
+            <td style="color:var(--text-sec);font-size:12px">BR-0007</td>
+            <td><span class="badge b-cat">Brinco</span></td>
+            <td><span class="stock-num stock-out">0</span></td>
+            <td style="color:var(--text-muted);font-size:12px">3</td>
+            <td style="font-size:12px;color:var(--text-sec)">Ouro 18k</td>
+            <td style="font-size:12px;color:var(--text-sec)">3,1g</td>
+            <td class="price-cell">R$ 2.200</td>
+            <td><span class="badge b-out">✕ Sem estoque</span></td>
+            <td style="font-size:11px;color:var(--text-muted)">05/mar</td>
+          </tr>
+
+          <tr onclick="openDetail('p4')">
+            <td class="td-check"><input type="checkbox" onclick="event.stopPropagation()"></td>
+            <td>
+              <div class="product-cell">
+                <div class="product-thumb">🔗</div>
+                <div>
+                  <div class="product-name">Pulseira Elos Ouro 18k</div>
+                  <div class="product-code">PU-0031</div>
+                </div>
+              </div>
+            </td>
+            <td style="color:var(--text-sec);font-size:12px">PU-0031</td>
+            <td><span class="badge b-cat">Pulseira</span></td>
+            <td><span class="stock-num stock-ok">8</span></td>
+            <td style="color:var(--text-muted);font-size:12px">3</td>
+            <td style="font-size:12px;color:var(--text-sec)">Ouro 18k</td>
+            <td style="font-size:12px;color:var(--text-sec)">12,8g</td>
+            <td class="price-cell">R$ 3.200</td>
+            <td><span class="badge b-ok">● Em estoque</span></td>
+            <td style="font-size:11px;color:var(--text-muted)">08/mar</td>
+          </tr>
+
+          <tr onclick="openDetail('p5')">
+            <td class="td-check"><input type="checkbox" onclick="event.stopPropagation()"></td>
+            <td>
+              <div class="product-cell">
+                <div class="product-thumb">💍</div>
+                <div>
+                  <div class="product-name">Anel Aparador Prata 925</div>
+                  <div class="product-code">AN-0055</div>
+                </div>
+              </div>
+            </td>
+            <td style="color:var(--text-sec);font-size:12px">AN-0055</td>
+            <td><span class="badge b-cat">Anel</span></td>
+            <td><span class="stock-num stock-ok">22</span></td>
+            <td style="color:var(--text-muted);font-size:12px">5</td>
+            <td style="font-size:12px;color:var(--text-sec)">Prata 925</td>
+            <td style="font-size:12px;color:var(--text-sec)">2,4g</td>
+            <td class="price-cell">R$ 120</td>
+            <td><span class="badge b-ok">● Em estoque</span></td>
+            <td style="font-size:11px;color:var(--text-muted)">11/mar</td>
+          </tr>
+
+          <tr onclick="openDetail('p6')">
+            <td class="td-check"><input type="checkbox" onclick="event.stopPropagation()"></td>
+            <td>
+              <div class="product-cell">
+                <div class="product-thumb">✨</div>
+                <div>
+                  <div class="product-name">Brinco Pérola Clássico</div>
+                  <div class="product-code">BR-0022</div>
+                </div>
+              </div>
+            </td>
+            <td style="color:var(--text-sec);font-size:12px">BR-0022</td>
+            <td><span class="badge b-cat">Brinco</span></td>
+            <td><span class="stock-num stock-low">3</span></td>
+            <td style="color:var(--text-muted);font-size:12px">5</td>
+            <td style="font-size:12px;color:var(--text-sec)">Prata 925</td>
+            <td style="font-size:12px;color:var(--text-sec)">1,8g</td>
+            <td class="price-cell">R$ 780</td>
+            <td><span class="badge b-low">⚠ Crítico</span></td>
+            <td style="font-size:11px;color:var(--text-muted)">07/mar</td>
+          </tr>
+
+          <tr onclick="openDetail('p7')">
+            <td class="td-check"><input type="checkbox" onclick="event.stopPropagation()"></td>
+            <td>
+              <div class="product-cell">
+                <div class="product-thumb">💎</div>
+                <div>
+                  <div class="product-name">Colar Riviera Diamante</div>
+                  <div class="product-code">CO-0041</div>
+                </div>
+              </div>
+            </td>
+            <td style="color:var(--text-sec);font-size:12px">CO-0041</td>
+            <td><span class="badge b-cat">Colar</span></td>
+            <td><span class="stock-num stock-ok">5</span></td>
+            <td style="color:var(--text-muted);font-size:12px">2</td>
+            <td style="font-size:12px;color:var(--text-sec)">Ouro 18k</td>
+            <td style="font-size:12px;color:var(--text-sec)">6,3g</td>
+            <td class="price-cell">R$ 8.400</td>
+            <td><span class="badge b-ok">● Em estoque</span></td>
+            <td style="font-size:11px;color:var(--text-muted)">12/mar</td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+    <!-- TABLE FOOTER -->
+    <div class="table-footer">
+      <div class="page-info">Exibindo 7 de 84 produtos</div>
+      <div class="pagination">
+        <button class="pg-btn">Anterior</button>
+        <button class="pg-btn active">1</button>
+        <button class="pg-btn">2</button>
+        <button class="pg-btn">3</button>
+        <button class="pg-btn">4</button>
+        <button class="pg-btn">Próximo</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<!-- BULK BAR (aparece ao selecionar itens) -->
+<div class="bulk-bar" id="bulkBar" style="display:none">
+  <span class="bulk-count" id="bulkCount">2 selecionados</span>
+  <div class="bulk-divider"></div>
+  <button class="btn btn-ghost" style="height:32px;font-size:12px">↓ Exportar seleção</button>
+  <button class="btn btn-ghost" style="height:32px;font-size:12px">± Ajustar estoque</button>
+  <button class="btn btn-danger" style="height:32px;font-size:12px">🗑 Excluir</button>
+</div>
+
+<!-- MODAL: ADICIONAR PRODUTO -->
+<div class="overlay" id="modalOverlay" style="display:none" onclick="handleOverlayClick(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">Novo Produto</div>
+        <div class="modal-sub">Preencha os dados para cadastrar no catálogo e PDV</div>
+      </div>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- FOTO -->
+      <div class="photo-section">
+        <div class="form-section-title">Foto do Produto</div>
+        <div class="photo-upload-area" onclick="document.getElementById('fileInput').click()">
+          <div class="photo-preview-box" id="photoPreview">📸</div>
+          <div class="photo-upload-text">
+            <div class="upload-lbl">Arraste uma imagem ou <span onclick="event.stopPropagation();document.getElementById('fileInput').click()">clique para fazer upload</span></div>
+            <div class="upload-hint">PNG, JPG ou WEBP · Máx. 5MB · Recomendado 800×800px</div>
+          </div>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="previewPhoto(this)">
+      </div>
+
+      <!-- IDENTIFICAÇÃO -->
+      <div class="form-section-title">Identificação</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Código Interno *</label>
+          <input class="form-input" type="text" placeholder="Ex: AN-0099">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nome do Produto *</label>
+          <input class="form-input" type="text" placeholder="Ex: Anel Solitário Ouro 18k">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Categoria *</label>
+          <select class="form-select">
+            <option value="">Selecionar...</option>
+            <option>Anel</option>
+            <option>Colar</option>
+            <option>Brinco</option>
+            <option>Pulseira</option>
+            <option>Outro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Coleção</label>
+          <input class="form-input" type="text" placeholder="Ex: Verão 2026">
+        </div>
+        <div class="form-group span-2">
+          <label class="form-label">Descrição Interna</label>
+          <textarea class="form-textarea" placeholder="Descrição para uso interno — não exibida ao cliente"></textarea>
+        </div>
+      </div>
+
+      <!-- PREÇO -->
+      <div class="form-section-title">Precificação</div>
+      <div class="form-grid cols-3">
+        <div class="form-group">
+          <label class="form-label">Preço de Venda *</label>
+          <div class="form-input-prefix">
+            <span class="prefix">R$</span>
+            <input class="form-input" type="number" placeholder="0,00" id="priceInput">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Custo de Aquisição</label>
+          <div class="form-input-prefix">
+            <span class="prefix">R$</span>
+            <input class="form-input" type="number" placeholder="0,00">
+          </div>
+          <span class="form-hint">Usado para cálculo do valor em estoque</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Margem Estimada</label>
+          <input class="form-input" type="text" placeholder="—" id="marginDisplay" readonly style="color:var(--green);font-weight:700">
+        </div>
+      </div>
+
+      <!-- ESTOQUE -->
+      <div class="form-section-title">Estoque</div>
+      <div class="form-grid cols-3">
+        <div class="form-group">
+          <label class="form-label">Estoque Inicial *</label>
+          <input class="form-input" type="number" placeholder="0" min="0" id="stockInput" oninput="updateStockPreview()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estoque Mínimo</label>
+          <input class="form-input" type="number" placeholder="5" min="0" id="minStockInput" oninput="updateStockPreview()">
+          <span class="form-hint">Alerta de reposição abaixo deste valor</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Localização</label>
+          <input class="form-input" type="text" placeholder="Ex: Vitrine A3">
+        </div>
+      </div>
+      <div class="stock-preview">
+        <div>
+          <div class="sp-lbl">Status inicial do estoque</div>
+        </div>
+        <span class="badge b-ok" id="stockStatusBadge">● Em estoque</span>
+      </div>
+
+      <!-- ESPECIFICAÇÕES -->
+      <div class="form-section-title" style="margin-top:20px">Especificações do Produto</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Metal / Material</label>
+          <select class="form-select">
+            <option value="">Selecionar...</option>
+            <option>Ouro 18k</option>
+            <option>Ouro 14k</option>
+            <option>Prata 925</option>
+            <option>Aço inox</option>
+            <option>Ouro Rosé 18k</option>
+            <option>Outro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Peso (gramas)</label>
+          <input class="form-input" type="number" placeholder="0,0" step="0.1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tamanho / Medida</label>
+          <input class="form-input" type="text" placeholder="Ex: 18mm, P/M/G">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pedras / Cravação</label>
+          <input class="form-input" type="text" placeholder="Ex: Zircônia 4mm">
+        </div>
+      </div>
+
+      <!-- FLAGS -->
+      <div class="form-grid cols-3" style="margin-top:4px">
+        <label class="form-check">
+          <input type="checkbox" checked>
+          <span class="form-check-label">Produto ativo</span>
+        </label>
+        <label class="form-check">
+          <input type="checkbox">
+          <span class="form-check-label">Disponível no PDV</span>
+        </label>
+        <label class="form-check">
+          <input type="checkbox">
+          <span class="form-check-label">Requer produção</span>
+        </label>
+      </div>
+
+    </div>
+
+    <div class="modal-foot">
+      <div class="modal-foot-left">* Campos obrigatórios</div>
+      <div class="modal-foot-right">
+        <button class="btn-modal-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="btn-modal-save">Cadastrar Produto</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-head">
+    <div class="dp-title" id="dpTitle">Produto</div>
+    <button class="close-btn" onclick="closeDetail()">✕</button>
+  </div>
+  <div class="dp-body">
+    <div class="dp-thumb" id="dpThumb">💍</div>
+    <div id="dpRows"></div>
+  </div>
+  <div class="dp-actions">
+    <button class="btn-dp btn-dp-edit">✏ Editar</button>
+    <button class="btn-dp btn-dp-adj">± Ajustar estoque</button>
+  </div>
+</div>
+
+<script>
+// MODAL
+function openModal() {
+  document.getElementById('modalOverlay').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closeModal() {
+  document.getElementById('modalOverlay').style.display='none';
+  document.body.style.overflow='';
+}
+function handleOverlayClick(e) {
+  if(e.target===document.getElementById('modalOverlay')) closeModal();
+}
+
+// PHOTO PREVIEW
+function previewPhoto(input) {
+  const file=input.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const box=document.getElementById('photoPreview');
+    box.innerHTML=`<img src="${e.target.result}" alt="preview">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+// STOCK STATUS
+function updateStockPreview() {
+  const stock=parseInt(document.getElementById('stockInput').value)||0;
+  const min=parseInt(document.getElementById('minStockInput').value)||5;
+  const badge=document.getElementById('stockStatusBadge');
+  if(stock===0){ badge.className='badge b-out'; badge.textContent='✕ Sem estoque'; }
+  else if(stock<=min){ badge.className='badge b-low'; badge.textContent='⚠ Estoque crítico'; }
+  else { badge.className='badge b-ok'; badge.textContent='● Em estoque'; }
+}
+
+// SELECT ALL
+function toggleAll(cb) {
+  document.querySelectorAll('tbody input[type=checkbox]').forEach(c=>c.checked=cb.checked);
+  updateBulkBar();
+}
+document.querySelectorAll('tbody input[type=checkbox]').forEach(cb=>{
+  cb.addEventListener('change', updateBulkBar);
+});
+function updateBulkBar() {
+  const checked=document.querySelectorAll('tbody input[type=checkbox]:checked').length;
+  const bar=document.getElementById('bulkBar');
+  if(checked>0){
+    bar.style.display='flex';
+    document.getElementById('bulkCount').textContent=`${checked} selecionado${checked>1?'s':''}`;
+  } else {
+    bar.style.display='none';
+  }
+}
+
+// DETAIL PANEL
+const products = {
+  p1: { name:'Anel Solitário Ouro 18k', icon:'💍', code:'AN-0042', cat:'Anel', stock:14, min:5, price:'R$ 1.890', metal:'Ouro 18k', weight:'4,2g', status:'Em estoque', updated:'10/mar/2026' },
+  p2: { name:'Colar Veneziana Prata 925', icon:'📿', code:'CO-0018', cat:'Colar', stock:2, min:5, price:'R$ 450', metal:'Prata 925', weight:'8,5g', status:'Crítico', updated:'09/mar/2026' },
+  p3: { name:'Brinco Argola Ouro 18k', icon:'💎', code:'BR-0007', cat:'Brinco', stock:0, min:3, price:'R$ 2.200', metal:'Ouro 18k', weight:'3,1g', status:'Sem estoque', updated:'05/mar/2026' },
+  p4: { name:'Pulseira Elos Ouro 18k', icon:'🔗', code:'PU-0031', cat:'Pulseira', stock:8, min:3, price:'R$ 3.200', metal:'Ouro 18k', weight:'12,8g', status:'Em estoque', updated:'08/mar/2026' },
+  p5: { name:'Anel Aparador Prata 925', icon:'💍', code:'AN-0055', cat:'Anel', stock:22, min:5, price:'R$ 120', metal:'Prata 925', weight:'2,4g', status:'Em estoque', updated:'11/mar/2026' },
+  p6: { name:'Brinco Pérola Clássico', icon:'✨', code:'BR-0022', cat:'Brinco', stock:3, min:5, price:'R$ 780', metal:'Prata 925', weight:'1,8g', status:'Crítico', updated:'07/mar/2026' },
+  p7: { name:'Colar Riviera Diamante', icon:'💎', code:'CO-0041', cat:'Colar', stock:5, min:2, price:'R$ 8.400', metal:'Ouro 18k', weight:'6,3g', status:'Em estoque', updated:'12/mar/2026' },
+};
+
+function openDetail(id) {
+  const p=products[id]; if(!p) return;
+  document.getElementById('dpTitle').textContent=p.name;
+  document.getElementById('dpThumb').textContent=p.icon;
+  const statusMap={'Em estoque':'b-ok','Crítico':'b-low','Sem estoque':'b-out'};
+  document.getElementById('dpRows').innerHTML=`
+    <div class="dp-row"><span class="dp-lbl">Código</span><span class="dp-val">${p.code}</span></div>
+    <div class="dp-row"><span class="dp-lbl">Categoria</span><span class="dp-val">${p.cat}</span></div>
+    <div class="dp-row"><span class="dp-lbl">Preço</span><span class="dp-val" style="color:var(--gold);font-family:'Playfair Display',serif">${p.price}</span></div>
+    <div class="dp-row"><span class="dp-lbl">Em estoque</span><span class="dp-val">${p.stock} un</span></div>
+    <div class="dp-row"><span class="dp-lbl">Estoque mínimo</span><span class="dp-val">${p.min} un</span></div>
+    <div class="dp-row"><span class="dp-lbl">Metal</span><span class="dp-val">${p.metal}</span></div>
+    <div class="dp-row"><span class="dp-lbl">Peso</span><span class="dp-val">${p.weight}</span></div>
+    <div class="dp-row"><span class="dp-lbl">Status</span><span class="badge ${statusMap[p.status]}">${p.status}</span></div>
+    <div class="dp-row"><span class="dp-lbl">Atualizado</span><span class="dp-val">${p.updated}</span></div>
+  `;
+  document.getElementById('detailPanel').classList.add('open');
+}
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('open');
+}
+
+function exportCSV() { alert('Exportar CSV — conectar à API'); }
+function importCSV() { alert('Importar CSV — conectar à API'); }
+
+// ESC fecha
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){ closeModal(); closeDetail(); }
+});
+</script>
+</body>
+</html>

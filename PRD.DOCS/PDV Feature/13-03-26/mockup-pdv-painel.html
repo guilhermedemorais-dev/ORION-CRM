@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORION PDV — Mockup 1: Painel Direito</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --gold:#C8A97A; --gold-dim:rgba(200,169,122,0.12); --gold-border:rgba(200,169,122,0.28);
+  --bg-0:#0A0A0B; --bg-1:#111113; --bg-2:#18181C; --bg-3:#202026;
+  --border:rgba(255,255,255,0.07); --border-mid:rgba(255,255,255,0.11);
+  --text:#EDE8E0; --text-sec:#888480; --text-muted:#4A4A52;
+  --green:#4CAF82; --green-dim:rgba(76,175,130,0.12);
+  --red:#E05252; --red-dim:rgba(224,82,82,0.12);
+  --purple:#A78BFA; --purple-dim:rgba(167,139,250,0.12);
+  --amber:#F0A040; --amber-dim:rgba(240,160,64,0.12);
+}
+body {
+  font-family:'Inter',sans-serif; background:var(--bg-0); color:var(--text);
+  min-height:100vh; display:flex; align-items:flex-start; justify-content:center;
+  gap:32px; padding:32px; flex-wrap:wrap;
+}
+
+.col { display:flex; flex-direction:column; align-items:center; gap:10px; }
+.col-label {
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+  color:var(--text-muted); padding:3px 12px; border:1px solid var(--border); border-radius:20px;
+}
+
+/* PAINEL BASE */
+.panel {
+  width:370px; background:var(--bg-1);
+  border:1px solid var(--border-mid); border-radius:14px; overflow:hidden;
+  box-shadow:0 16px 48px rgba(0,0,0,.5);
+}
+.panel-head {
+  padding:14px 18px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.panel-title { font-family:'Playfair Display',serif; font-size:15px; font-weight:700; }
+.cart-badge { background:var(--gold); color:#000; border-radius:20px; font-size:10px; font-weight:700; padding:2px 7px; margin-left:6px; }
+
+/* SEÇÃO */
+.sec { border-top:1px solid var(--border); }
+.sec-header {
+  padding:10px 18px 8px; display:flex; align-items:center; justify-content:space-between;
+  cursor:pointer;
+}
+.sec-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted); }
+.sec-opt { font-size:10px; color:var(--text-muted); background:var(--bg-3); padding:2px 7px; border-radius:4px; }
+.sec-body { padding:0 18px 12px; display:flex; flex-direction:column; gap:8px; }
+
+/* INPUTS */
+.search-wrap { position:relative; }
+.s-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--text-muted); }
+.s-input {
+  width:100%; height:34px; background:var(--bg-3); border:1px solid var(--border);
+  border-radius:7px; padding:0 12px 0 30px; font-size:12px; font-family:'Inter',sans-serif;
+  color:var(--text); outline:none; transition:border-color .15s;
+}
+.s-input::placeholder { color:var(--text-muted); }
+.s-input:focus { border-color:var(--gold-border); }
+
+/* DROPDOWN resultado busca */
+.search-results {
+  background:var(--bg-2); border:1px solid var(--border-mid); border-radius:8px;
+  overflow:hidden; margin-top:2px;
+}
+.result-item {
+  padding:8px 12px; display:flex; align-items:center; gap:10px;
+  cursor:pointer; transition:background .1s; border-bottom:1px solid var(--border);
+}
+.result-item:last-child { border-bottom:none; }
+.result-item:hover { background:var(--bg-hover); }
+.ri-avatar {
+  width:28px; height:28px; border-radius:50%; background:var(--gold-dim);
+  border:1px solid var(--gold-border); display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:700; color:var(--gold); flex-shrink:0;
+}
+.ri-name { font-size:12px; font-weight:600; }
+.ri-sub { font-size:10px; color:var(--text-muted); }
+
+.btn-cadastrar {
+  width:100%; height:32px; background:var(--gold-dim); border:1px dashed var(--gold-border);
+  border-radius:7px; font-size:11px; font-weight:600; color:var(--gold);
+  cursor:pointer; transition:all .15s; display:flex; align-items:center; justify-content:center; gap:5px;
+}
+.btn-cadastrar:hover { background:rgba(200,169,122,0.2); }
+
+/* MINI FORM */
+.mini-form { display:flex; flex-direction:column; gap:7px; }
+.mini-input {
+  width:100%; height:32px; background:var(--bg-3); border:1px solid var(--border);
+  border-radius:7px; padding:0 11px; font-size:12px; font-family:'Inter',sans-serif;
+  color:var(--text); outline:none; transition:border-color .15s;
+}
+.mini-input::placeholder { color:var(--text-muted); }
+.mini-input:focus { border-color:var(--gold-border); }
+.mini-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+.mini-actions { display:flex; gap:6px; margin-top:2px; }
+.btn-ms { flex:1; height:30px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; transition:all .15s; font-family:'Inter',sans-serif; }
+.btn-ms-save { background:var(--gold); border:none; color:#000; }
+.btn-ms-save:hover { background:#E8D5B0; }
+.btn-ms-cancel { background:transparent; border:1px solid var(--border); color:var(--text-muted); }
+.btn-ms-cancel:hover { color:var(--text); }
+
+/* CLIENTE VINCULADO */
+.client-card {
+  background:var(--bg-3); border:1px solid var(--gold-border);
+  border-radius:8px; padding:10px 12px; display:flex; align-items:center; gap:9px;
+}
+.c-avatar {
+  width:32px; height:32px; border-radius:50%; background:var(--gold-dim);
+  border:1px solid var(--gold-border); display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; color:var(--gold); flex-shrink:0;
+}
+.c-info { flex:1; min-width:0; }
+.c-name { font-size:12px; font-weight:600; cursor:pointer; transition:color .15s; }
+.c-name:hover { color:var(--gold); text-decoration:underline; }
+.c-sub { font-size:10px; color:var(--text-muted); margin-top:1px; }
+.c-unlink { color:var(--text-muted); cursor:pointer; font-size:13px; transition:color .15s; }
+.c-unlink:hover { color:var(--red); }
+
+/* PEDIDO PERSONALIZADO */
+.order-card {
+  background:var(--bg-3); border:1px solid var(--purple-dim);
+  border-radius:8px; padding:10px 12px;
+}
+.oc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.oc-badge {
+  display:flex; align-items:center; gap:5px; font-size:10px; font-weight:600;
+  color:var(--purple); background:var(--purple-dim); border:1px solid rgba(167,139,250,.2);
+  border-radius:5px; padding:2px 8px;
+}
+.oc-num { font-size:10px; color:var(--text-muted); }
+.oc-name { font-size:12px; font-weight:600; margin-bottom:3px; }
+.oc-detail { font-size:10px; color:var(--text-muted); line-height:1.5; }
+.oc-values { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:8px; }
+.oc-val-box { background:var(--bg-2); border-radius:6px; padding:6px 8px; text-align:center; }
+.oc-val-lbl { font-size:9px; color:var(--text-muted); margin-bottom:2px; }
+.oc-val-num { font-family:'Playfair Display',serif; font-size:13px; font-weight:700; }
+.oc-val-num.total { color:var(--gold); }
+.oc-val-num.pago { color:var(--green); }
+.oc-val-num.restante { color:var(--amber); }
+.btn-puxar {
+  width:100%; height:30px; margin-top:8px; background:var(--purple-dim);
+  border:1px solid rgba(167,139,250,.25); border-radius:6px;
+  font-size:11px; font-weight:600; color:var(--purple); cursor:pointer; transition:all .15s;
+}
+.btn-puxar:hover { background:rgba(167,139,250,.2); }
+
+/* BUSCA PEDIDO */
+.search-order-results {
+  background:var(--bg-2); border:1px solid var(--border-mid); border-radius:8px; overflow:hidden;
+}
+.sor-item {
+  padding:8px 12px; cursor:pointer; transition:background .1s; border-bottom:1px solid var(--border);
+}
+.sor-item:last-child { border-bottom:none; }
+.sor-item:hover { background:var(--bg-hover); }
+.sor-num { font-size:11px; font-weight:700; color:var(--purple); }
+.sor-name { font-size:12px; font-weight:600; margin-top:1px; }
+.sor-meta { font-size:10px; color:var(--text-muted); }
+
+/* ITENS CARRINHO */
+.cart-items { padding:8px 18px; }
+.ci { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--border); }
+.ci:last-child { border-bottom:none; }
+.ci-thumb { width:32px; height:32px; border-radius:6px; background:var(--bg-3); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.ci-info { flex:1; }
+.ci-name { font-size:12px; font-weight:600; }
+.ci-unit { font-size:10px; color:var(--text-muted); }
+.ci-total { font-family:'Playfair Display',serif; font-size:13px; font-weight:700; color:var(--gold); }
+
+/* TOTAL + FINALIZAR */
+.panel-total { padding:10px 18px; border-top:1px solid var(--border); }
+.total-row { display:flex; justify-content:space-between; margin-bottom:5px; }
+.t-lbl { font-size:12px; color:var(--text-sec); }
+.t-val { font-size:12px; font-weight:600; }
+.total-final { display:flex; justify-content:space-between; margin-top:7px; padding-top:7px; border-top:1px solid var(--border-mid); }
+.tf-lbl { font-size:13px; font-weight:700; }
+.tf-val { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--gold); }
+.btn-finalizar {
+  width:100%; height:44px; background:var(--gold); border:none; border-radius:10px;
+  font-size:14px; font-weight:700; font-family:'Inter',sans-serif; color:#000;
+  cursor:pointer; transition:all .15s; margin-top:10px; margin-bottom:4px;
+}
+.btn-finalizar:hover { background:#E8D5B0; transform:translateY(-1px); }
+
+/* TAGS DE ESTADO */
+.state-tag {
+  display:inline-flex; align-items:center; gap:5px; padding:3px 9px;
+  border-radius:20px; font-size:10px; font-weight:600; margin-bottom:12px;
+}
+.st-normal { background:var(--bg-3); color:var(--text-muted); border:1px solid var(--border); }
+.st-active { background:var(--gold-dim); color:var(--gold); border:1px solid var(--gold-border); }
+</style>
+</head>
+<body>
+
+<!-- ESTADO A: sem cliente, sem pedido personalizado -->
+<div class="col">
+  <div class="col-label">Estado A — padrão</div>
+  <div class="panel">
+    <div class="panel-head">
+      <div style="display:flex;align-items:center">
+        <span class="panel-title">Carrinho</span>
+        <span class="cart-badge">2</span>
+      </div>
+      <span style="font-size:11px;color:var(--text-muted)">Limpar</span>
+    </div>
+
+    <!-- itens -->
+    <div class="cart-items">
+      <div class="ci">
+        <div class="ci-thumb">💍</div>
+        <div class="ci-info"><div class="ci-name">Anel Solitário Ouro 18k</div><div class="ci-unit">1 × R$ 1.890,00</div></div>
+        <div class="ci-total">R$ 1.890</div>
+      </div>
+    </div>
+
+    <!-- cliente opcional -->
+    <div class="sec">
+      <div class="sec-header">
+        <span class="sec-label">Cliente</span>
+        <span class="sec-opt">opcional</span>
+      </div>
+      <div class="sec-body">
+        <div class="search-wrap">
+          <span class="s-icon">🔍</span>
+          <input class="s-input" type="text" placeholder="Nome, WhatsApp ou CPF...">
+        </div>
+        <button class="btn-cadastrar" onclick="showFormA()">+ Cadastro rápido</button>
+
+        <!-- mini form -->
+        <div class="mini-form" id="formA" style="display:none">
+          <input class="mini-input" type="text" placeholder="Nome completo *">
+          <div class="mini-grid">
+            <input class="mini-input" type="text" placeholder="WhatsApp *">
+            <input class="mini-input" type="text" placeholder="E-mail">
+          </div>
+          <input class="mini-input" type="text" placeholder="CPF ou CNPJ">
+          <div class="mini-actions">
+            <button class="btn-ms btn-ms-cancel" onclick="hideFormA()">Cancelar</button>
+            <button class="btn-ms btn-ms-save">Salvar e vincular</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- pedido personalizado -->
+    <div class="sec">
+      <div class="sec-header">
+        <span class="sec-label">Pedido personalizado</span>
+        <span class="sec-opt">opcional</span>
+      </div>
+      <div class="sec-body">
+        <div class="search-wrap">
+          <span class="s-icon">💎</span>
+          <input class="s-input" type="text" placeholder="Buscar por nº do pedido ou cliente...">
+        </div>
+      </div>
+    </div>
+
+    <!-- totais -->
+    <div class="panel-total">
+      <div class="total-row"><span class="t-lbl">Subtotal</span><span class="t-val">R$ 1.890,00</span></div>
+      <div class="total-final"><span class="tf-lbl">Total</span><span class="tf-val">R$ 1.890,00</span></div>
+      <button class="btn-finalizar">Ir para pagamento →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ESTADO B: cliente vinculado + resultado busca pedido -->
+<div class="col">
+  <div class="col-label">Estado B — cliente + buscando pedido</div>
+  <div class="panel">
+    <div class="panel-head">
+      <div style="display:flex;align-items:center">
+        <span class="panel-title">Carrinho</span>
+        <span class="cart-badge">1</span>
+      </div>
+      <span style="font-size:11px;color:var(--text-muted)">Limpar</span>
+    </div>
+
+    <div class="cart-items">
+      <div class="ci">
+        <div class="ci-thumb">✨</div>
+        <div class="ci-info"><div class="ci-name">Brinco Pérola Clássico</div><div class="ci-unit">1 × R$ 780,00</div></div>
+        <div class="ci-total">R$ 780</div>
+      </div>
+    </div>
+
+    <!-- cliente vinculado -->
+    <div class="sec">
+      <div class="sec-header">
+        <span class="sec-label">Cliente</span>
+        <span class="sec-opt">opcional</span>
+      </div>
+      <div class="sec-body">
+        <div class="client-card">
+          <div class="c-avatar">MF</div>
+          <div class="c-info">
+            <div class="c-name">Maria Fernanda Costa</div>
+            <div class="c-sub">📱 (47) 99123-4567 · CPF: 123.456.789-00</div>
+          </div>
+          <span class="c-unlink">✕</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- buscando pedido personalizado -->
+    <div class="sec">
+      <div class="sec-header">
+        <span class="sec-label">Pedido personalizado</span>
+        <span class="sec-opt">opcional</span>
+      </div>
+      <div class="sec-body">
+        <div class="search-wrap">
+          <span class="s-icon">💎</span>
+          <input class="s-input" type="text" placeholder="Buscar por nº do pedido ou cliente..." value="Maria">
+        </div>
+        <!-- resultados -->
+        <div class="search-order-results">
+          <div class="sor-item">
+            <div class="sor-num">PERS-20260210-0034</div>
+            <div class="sor-name">Anel Solitário Personalizado — gravação "MF"</div>
+            <div class="sor-meta">Maria Fernanda · Sinal: R$ 500 pago · Restante: R$ 2.700</div>
+          </div>
+          <div class="sor-item">
+            <div class="sor-num">PERS-20260105-0019</div>
+            <div class="sor-name">Colar Veneziana Personalizado</div>
+            <div class="sor-meta">Maria Fernanda · Pagamento integral pendente: R$ 1.200</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-total">
+      <div class="total-row"><span class="t-lbl">Subtotal</span><span class="t-val">R$ 780,00</span></div>
+      <div class="total-final"><span class="tf-lbl">Total</span><span class="tf-val">R$ 780,00</span></div>
+      <button class="btn-finalizar">Ir para pagamento →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ESTADO C: pedido personalizado puxado para o carrinho -->
+<div class="col">
+  <div class="col-label">Estado C — pedido personalizado no carrinho</div>
+  <div class="panel">
+    <div class="panel-head">
+      <div style="display:flex;align-items:center">
+        <span class="panel-title">Carrinho</span>
+        <span class="cart-badge">1</span>
+      </div>
+      <span style="font-size:11px;color:var(--text-muted)">Limpar</span>
+    </div>
+
+    <!-- pedido personalizado como item -->
+    <div class="cart-items">
+      <div class="ci" style="align-items:flex-start;padding:10px 0">
+        <div class="ci-thumb" style="background:var(--purple-dim);font-size:14px">💎</div>
+        <div class="ci-info" style="flex:1">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <span class="ci-name">Anel Solitário Personalizado</span>
+            <span style="font-size:9px;font-weight:600;color:var(--purple);background:var(--purple-dim);padding:1px 6px;border-radius:4px">PERS</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);line-height:1.5">
+            PERS-20260210-0034 · gravação "MF"<br>
+            Sinal pago: <span style="color:var(--green)">R$ 500,00</span>
+          </div>
+          <!-- breakdown de pagamento -->
+          <div class="oc-values" style="margin-top:7px">
+            <div class="oc-val-box"><div class="oc-val-lbl">Total pedido</div><div class="oc-val-num total">R$ 3.200</div></div>
+            <div class="oc-val-box"><div class="oc-val-lbl">Já pago</div><div class="oc-val-num pago">R$ 500</div></div>
+            <div class="oc-val-box"><div class="oc-val-lbl">A cobrar</div><div class="oc-val-num restante">R$ 2.700</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- cliente auto-vinculado -->
+    <div class="sec">
+      <div class="sec-header"><span class="sec-label">Cliente</span></div>
+      <div class="sec-body">
+        <div class="client-card">
+          <div class="c-avatar">MF</div>
+          <div class="c-info">
+            <div class="c-name">Maria Fernanda Costa</div>
+            <div class="c-sub">📱 (47) 99123-4567 · CPF: 123.456.789-00</div>
+          </div>
+          <span class="c-unlink">✕</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-total">
+      <div class="total-row"><span class="t-lbl">Valor do pedido</span><span class="t-val">R$ 3.200,00</span></div>
+      <div class="total-row"><span class="t-lbl">Sinal já pago</span><span class="t-val" style="color:var(--green)">− R$ 500,00</span></div>
+      <div class="total-final"><span class="tf-lbl">Total a cobrar</span><span class="tf-val">R$ 2.700,00</span></div>
+      <button class="btn-finalizar">Ir para pagamento →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showFormA() {
+  document.getElementById('formA').style.display = 'flex';
+  event.currentTarget.style.display = 'none';
+}
+function hideFormA() {
+  document.getElementById('formA').style.display = 'none';
+  document.querySelector('.btn-cadastrar').style.display = 'flex';
+}
+</script>
+</body>
+</html>

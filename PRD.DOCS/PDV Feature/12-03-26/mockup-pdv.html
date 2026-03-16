@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORION PDV</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --gold:         #C8A97A;
+  --gold-dim:     rgba(200,169,122,0.15);
+  --gold-border:  rgba(200,169,122,0.3);
+  --bg-0:         #0A0A0B;
+  --bg-1:         #111113;
+  --bg-2:         #18181C;
+  --bg-3:         #202024;
+  --bg-hover:     rgba(255,255,255,0.035);
+  --border:       rgba(255,255,255,0.07);
+  --border-mid:   rgba(255,255,255,0.11);
+  --text:         #EDE8E0;
+  --text-sec:     #888480;
+  --text-muted:   #4A4A52;
+  --green:        #4CAF82;
+  --green-dim:    rgba(76,175,130,0.12);
+  --red:          #E05252;
+  --red-dim:      rgba(224,82,82,0.12);
+  --amber:        #F0A040;
+  --amber-dim:    rgba(240,160,64,0.12);
+}
+body { font-family:'Inter',sans-serif; background:var(--bg-0); color:var(--text); height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+
+/* ── TOPBAR ─────────────────────────── */
+.topbar {
+  height:52px; background:var(--bg-1); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; padding:0 24px; flex-shrink:0;
+}
+.topbar-left { display:flex; align-items:center; gap:16px; }
+.breadcrumb { font-size:10px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+.page-title { font-family:'Playfair Display',serif; font-size:17px; font-weight:700; }
+.conn {
+  display:flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px;
+  font-size:11px; font-weight:600; background:var(--green-dim); color:var(--green);
+  border:1px solid rgba(76,175,130,0.18);
+}
+.conn.offline { background:var(--red-dim); color:var(--red); border-color:rgba(224,82,82,0.18); }
+.conn-dot { width:6px; height:6px; border-radius:50%; background:var(--green); }
+.conn.offline .conn-dot { background:var(--red); }
+.user-chip { font-size:12px; color:var(--text-sec); }
+
+/* ── LAYOUT ─────────────────────────── */
+.pdv { display:flex; flex:1; overflow:hidden; }
+
+/* ── LEFT PANEL ─────────────────────── */
+.left { flex:1; display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--border); }
+
+.search-area { padding:14px 20px 10px; background:var(--bg-1); border-bottom:1px solid var(--border); flex-shrink:0; }
+.search-wrap { position:relative; }
+.s-icon { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:13px; }
+.s-input {
+  width:100%; height:38px; background:var(--bg-2); border:1px solid var(--border); border-radius:8px;
+  padding:0 72px 0 34px; font-size:13px; font-family:'Inter',sans-serif; color:var(--text); outline:none;
+  transition:border-color .15s;
+}
+.s-input::placeholder { color:var(--text-muted); }
+.s-input:focus { border-color:var(--gold-border); background:var(--bg-3); }
+.s-kbd {
+  position:absolute; right:10px; top:50%; transform:translateY(-50%);
+  padding:2px 6px; background:var(--bg-3); border:1px solid var(--border);
+  border-radius:4px; font-size:10px; color:var(--text-muted); font-weight:600;
+}
+
+.pills {
+  display:flex; gap:5px; padding:8px 20px 9px;
+  background:var(--bg-1); border-bottom:1px solid var(--border); flex-shrink:0; overflow-x:auto;
+}
+.pills::-webkit-scrollbar { display:none; }
+.pill {
+  padding:4px 12px; border-radius:20px; font-size:11px; font-weight:500;
+  border:1px solid var(--border); background:transparent; color:var(--text-sec);
+  cursor:pointer; white-space:nowrap; transition:all .15s; flex-shrink:0;
+}
+.pill.on { background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); font-weight:600; }
+.pill:hover:not(.on) { background:var(--bg-hover); color:var(--text); }
+
+.grid-scroll { flex:1; overflow-y:auto; padding:16px 20px; background:var(--bg-0); }
+.grid-scroll::-webkit-scrollbar { width:3px; }
+.grid-scroll::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(155px,1fr)); gap:10px; }
+
+.card {
+  background:var(--bg-2); border:1px solid var(--border); border-radius:10px;
+  overflow:hidden; cursor:pointer; transition:all .15s;
+}
+.card:hover:not(.off) { border-color:var(--gold-border); background:var(--bg-3); transform:translateY(-1px); box-shadow:0 4px 16px rgba(0,0,0,.4); }
+.card.off { opacity:.35; cursor:not-allowed; }
+.card.incart { border-color:var(--gold-border); background:rgba(200,169,122,.06); }
+.card-thumb { width:100%; aspect-ratio:1; background:var(--bg-3); display:flex; align-items:center; justify-content:center; font-size:28px; }
+.card-body { padding:8px 10px 10px; }
+.card-code { font-size:9px; color:var(--text-muted); font-weight:600; letter-spacing:.5px; margin-bottom:3px; }
+.card-name { font-size:12px; font-weight:600; line-height:1.3; margin-bottom:6px; }
+.card-price { font-family:'Playfair Display',serif; font-size:14px; font-weight:700; color:var(--gold); }
+.card-foot { display:flex; align-items:center; justify-content:space-between; margin-top:7px; }
+.badge { font-size:9px; font-weight:600; padding:2px 6px; border-radius:4px; }
+.b-ok   { background:var(--green-dim); color:var(--green); }
+.b-last { background:var(--amber-dim); color:var(--amber); }
+.b-out  { background:var(--red-dim);   color:var(--red); }
+.add-btn {
+  width:24px; height:24px; border-radius:6px; background:var(--gold); border:none;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:700; color:#000; flex-shrink:0; transition:all .15s;
+}
+.add-btn:hover { background:#E8D5B0; }
+.add-btn:disabled { background:var(--bg-3); color:var(--text-muted); cursor:not-allowed; }
+
+/* ── RIGHT PANEL ────────────────────── */
+.right { width:370px; flex-shrink:0; display:flex; flex-direction:column; background:var(--bg-1); }
+
+.cart-head {
+  padding:13px 18px 11px; border-bottom:1px solid var(--border); flex-shrink:0;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.cart-title { font-family:'Playfair Display',serif; font-size:15px; font-weight:700; display:flex; align-items:center; gap:7px; }
+.cart-badge { background:var(--gold); color:#000; border-radius:20px; font-size:10px; font-weight:700; padding:2px 7px; }
+.clear-lnk { font-size:11px; color:var(--text-muted); cursor:pointer; transition:color .15s; }
+.clear-lnk:hover { color:var(--red); }
+
+.cart-scroll { flex:1; overflow-y:auto; padding:10px 18px; }
+.cart-scroll::-webkit-scrollbar { width:3px; }
+.cart-scroll::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+.empty { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:var(--text-muted); text-align:center; }
+.empty-icon { font-size:34px; opacity:.25; }
+.empty-txt { font-size:12px; line-height:1.6; }
+
+.ci { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); }
+.ci:last-child { border-bottom:none; }
+.ci-thumb { width:36px; height:36px; border-radius:6px; background:var(--bg-3); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.ci-info { flex:1; min-width:0; }
+.ci-name { font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ci-unit { font-size:11px; color:var(--text-muted); margin-top:1px; }
+.qty-wrap { display:flex; align-items:center; gap:5px; flex-shrink:0; }
+.qty-btn {
+  width:22px; height:22px; border-radius:5px; border:1px solid var(--border);
+  background:var(--bg-3); cursor:pointer; font-size:13px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; color:var(--text); transition:all .1s;
+}
+.qty-btn:hover { border-color:var(--gold-border); color:var(--gold); }
+.qty-n { font-size:13px; font-weight:700; min-width:18px; text-align:center; }
+.ci-total { font-family:'Playfair Display',serif; font-size:13px; font-weight:700; color:var(--gold); min-width:68px; text-align:right; flex-shrink:0; }
+.rm { color:var(--text-muted); cursor:pointer; font-size:13px; padding:2px; transition:color .1s; }
+.rm:hover { color:var(--red); }
+
+/* ── SECTIONS ───────────────────────── */
+.sec { padding:10px 18px; border-top:1px solid var(--border); flex-shrink:0; }
+.sec-lbl { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted); margin-bottom:8px; }
+
+.disc-toggle { display:flex; gap:5px; margin-bottom:7px; }
+.disc-t {
+  flex:1; height:28px; border-radius:6px; border:1px solid var(--border);
+  background:transparent; font-size:11px; font-weight:600; cursor:pointer; color:var(--text-sec); transition:all .15s;
+}
+.disc-t.on { background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+.disc-wrap { position:relative; }
+.disc-pfx { position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--text-muted); }
+.disc-in {
+  width:100%; height:34px; background:var(--bg-2); border:1px solid var(--border);
+  border-radius:7px; padding:0 12px 0 26px; font-size:13px; font-family:'Inter',sans-serif;
+  color:var(--text); outline:none; transition:border-color .15s;
+}
+.disc-in:focus { border-color:var(--gold-border); }
+
+.total-row { display:flex; justify-content:space-between; margin-bottom:5px; }
+.t-lbl { font-size:12px; color:var(--text-sec); }
+.t-val { font-size:12px; font-weight:600; }
+.total-row.final { margin-top:8px; padding-top:8px; border-top:1px solid var(--border-mid); }
+.total-row.final .t-lbl { font-size:14px; font-weight:700; color:var(--text); }
+.total-row.final .t-val { font-family:'Playfair Display',serif; font-size:19px; font-weight:700; color:var(--gold); }
+.troco-row {
+  margin-top:6px; background:var(--green-dim); border:1px solid rgba(76,175,130,.18);
+  border-radius:7px; padding:7px 10px; display:flex; justify-content:space-between; align-items:center;
+}
+.troco-lbl { font-size:11px; font-weight:600; color:var(--green); }
+.troco-val { font-family:'Playfair Display',serif; font-size:14px; font-weight:700; color:var(--green); }
+
+.pay-grid { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+.pay-card {
+  border:1px solid var(--border); border-radius:8px; padding:9px 8px;
+  cursor:pointer; transition:all .15s; background:var(--bg-2); text-align:center;
+}
+.pay-card:hover { border-color:var(--gold-border); background:var(--bg-3); }
+.pay-card.on { border-color:var(--gold-border); background:var(--gold-dim); }
+.pay-ico { font-size:16px; margin-bottom:3px; }
+.pay-lbl { font-size:11px; font-weight:600; color:var(--text-sec); }
+.pay-card.on .pay-lbl { color:var(--gold); }
+
+.pay-extra { margin-top:8px; }
+.pe-lbl { font-size:11px; color:var(--text-sec); margin-bottom:5px; }
+.pe-wrap { position:relative; }
+.pe-pfx { position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--text-muted); }
+.pe-in {
+  width:100%; height:34px; background:var(--bg-2); border:1px solid var(--border);
+  border-radius:7px; padding:0 12px 0 26px;
+  font-size:14px; font-family:'Playfair Display',serif; font-weight:700;
+  color:var(--text); outline:none; transition:border-color .15s;
+}
+.pe-in:focus { border-color:var(--gold-border); }
+
+.pix-box {
+  background:var(--bg-2); border:1px solid var(--border); border-radius:7px; padding:9px 12px;
+}
+.pix-klbl { font-size:10px; color:var(--text-muted); margin-bottom:3px; }
+.pix-krow { display:flex; align-items:center; justify-content:space-between; }
+.pix-k { font-size:12px; font-weight:600; }
+.copy-btn {
+  padding:3px 8px; border-radius:5px; border:1px solid var(--gold-border);
+  background:var(--gold-dim); font-size:10px; font-weight:600; color:var(--gold); cursor:pointer; transition:all .15s;
+}
+.copy-btn:hover { background:rgba(200,169,122,.25); }
+
+.parc-sel {
+  width:100%; height:34px; background:var(--bg-2); border:1px solid var(--border);
+  border-radius:7px; padding:0 12px; font-size:12px; font-family:'Inter',sans-serif;
+  color:var(--text); outline:none; transition:border-color .15s;
+}
+.parc-sel:focus { border-color:var(--gold-border); }
+
+.fin-sec { padding:10px 18px 14px; flex-shrink:0; }
+.btn-fin {
+  width:100%; height:46px; background:var(--gold); border:none; border-radius:10px;
+  font-size:14px; font-weight:700; font-family:'Inter',sans-serif;
+  color:#000; cursor:pointer; transition:all .15s;
+  display:flex; align-items:center; justify-content:center;
+}
+.btn-fin:hover { background:#E8D5B0; transform:translateY(-1px); box-shadow:0 4px 16px rgba(200,169,122,.2); }
+.btn-fin:disabled { background:var(--bg-3); color:var(--text-muted); cursor:not-allowed; transform:none; box-shadow:none; }
+
+/* ── MODAL ──────────────────────────── */
+.overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.75); backdrop-filter:blur(4px);
+  display:flex; align-items:center; justify-content:center; z-index:100;
+}
+.modal {
+  background:var(--bg-2); border:1px solid var(--border-mid);
+  border-radius:14px; padding:26px; width:400px; max-height:90vh; overflow-y:auto;
+}
+.m-head { text-align:center; margin-bottom:18px; }
+.m-ico { font-size:36px; margin-bottom:8px; }
+.m-title { font-family:'Playfair Display',serif; font-size:19px; font-weight:700; }
+.m-sub { font-size:12px; color:var(--text-sec); margin-top:4px; }
+.rdiv { border:none; border-top:1px dashed var(--border-mid); margin:14px 0; }
+.ri { display:flex; justify-content:space-between; margin-bottom:7px; font-size:12px; }
+.ri-lbl { color:var(--text-sec); }
+.ri-val { font-weight:600; }
+.r-total { display:flex; justify-content:space-between; font-size:15px; font-weight:700; padding-top:10px; border-top:1px solid var(--border-mid); }
+.r-total-v { font-family:'Playfair Display',serif; font-size:17px; color:var(--gold); }
+.m-actions { display:flex; gap:8px; margin-top:18px; }
+.btn-print {
+  flex:1; height:38px; border:1px solid var(--border-mid); border-radius:8px;
+  background:var(--bg-3); font-size:12px; font-weight:600; color:var(--text); cursor:pointer; transition:all .15s;
+}
+.btn-print:hover { border-color:var(--gold-border); color:var(--gold); }
+.btn-new {
+  flex:1; height:38px; background:var(--gold); border:none; border-radius:8px;
+  font-size:12px; font-weight:700; color:#000; cursor:pointer; transition:all .15s;
+}
+.btn-new:hover { background:#E8D5B0; }
+
+@media print {
+  body > *:not(.overlay) { display:none; }
+  .overlay { position:static; background:none; backdrop-filter:none; }
+  .modal { color:#000; background:#fff; border:none; box-shadow:none; }
+  .m-actions { display:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div>
+      <div class="breadcrumb">Caixa e Comissões</div>
+      <div class="page-title">PDV — Ponto de Venda</div>
+    </div>
+    <div class="conn" id="connEl">
+      <div class="conn-dot"></div>
+      <span id="connTxt">Online</span>
+    </div>
+  </div>
+  <div class="user-chip">João Silva · ATENDENTE</div>
+</div>
+
+<!-- SPLIT -->
+<div class="pdv">
+
+  <!-- LEFT -->
+  <div class="left">
+    <div class="search-area">
+      <div class="search-wrap">
+        <span class="s-icon">🔍</span>
+        <input class="s-input" id="sInput" type="text" placeholder="Buscar por nome ou código...">
+        <span class="s-kbd">F2</span>
+      </div>
+    </div>
+
+    <div class="pills">
+      <div class="pill on" onclick="setcat(this)">Todos</div>
+      <div class="pill" onclick="setcat(this)">Anel</div>
+      <div class="pill" onclick="setcat(this)">Colar</div>
+      <div class="pill" onclick="setcat(this)">Brinco</div>
+      <div class="pill" onclick="setcat(this)">Pulseira</div>
+      <div class="pill" onclick="setcat(this)">Outro</div>
+    </div>
+
+    <div class="grid-scroll">
+      <div class="grid">
+
+        <div class="card" onclick="add('p1','Anel Solitário Ouro 18k','💍',189000,3)">
+          <div class="card-thumb">💍</div>
+          <div class="card-body">
+            <div class="card-code">AN-0042</div>
+            <div class="card-name">Anel Solitário Ouro 18k</div>
+            <div class="card-price">R$ 1.890,00</div>
+            <div class="card-foot">
+              <span class="badge b-ok">3 un</span>
+              <button class="add-btn" onclick="event.stopPropagation();add('p1','Anel Solitário Ouro 18k','💍',189000,3)">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" onclick="add('p2','Colar Veneziana Prata','📿',45000,1)">
+          <div class="card-thumb">📿</div>
+          <div class="card-body">
+            <div class="card-code">CO-0018</div>
+            <div class="card-name">Colar Veneziana Prata</div>
+            <div class="card-price">R$ 450,00</div>
+            <div class="card-foot">
+              <span class="badge b-last">Último</span>
+              <button class="add-btn" onclick="event.stopPropagation();add('p2','Colar Veneziana Prata','📿',45000,1)">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card off">
+          <div class="card-thumb" style="opacity:.3">💎</div>
+          <div class="card-body">
+            <div class="card-code">BR-0007</div>
+            <div class="card-name">Brinco Argola Ouro</div>
+            <div class="card-price">R$ 2.200,00</div>
+            <div class="card-foot">
+              <span class="badge b-out">Sem estoque</span>
+              <button class="add-btn" disabled>+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" onclick="add('p4','Pulseira Elos Ouro','🔗',320000,5)">
+          <div class="card-thumb">🔗</div>
+          <div class="card-body">
+            <div class="card-code">PU-0031</div>
+            <div class="card-name">Pulseira Elos Ouro 18k</div>
+            <div class="card-price">R$ 3.200,00</div>
+            <div class="card-foot">
+              <span class="badge b-ok">5 un</span>
+              <button class="add-btn" onclick="event.stopPropagation();add('p4','Pulseira Elos Ouro','🔗',320000,5)">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" onclick="add('p5','Anel Aparador Prata','💍',12000,8)">
+          <div class="card-thumb">💍</div>
+          <div class="card-body">
+            <div class="card-code">AN-0055</div>
+            <div class="card-name">Anel Aparador Prata</div>
+            <div class="card-price">R$ 120,00</div>
+            <div class="card-foot">
+              <span class="badge b-ok">8 un</span>
+              <button class="add-btn" onclick="event.stopPropagation();add('p5','Anel Aparador Prata','💍',12000,8)">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" onclick="add('p6','Brinco Pérola Clássico','✨',78000,4)">
+          <div class="card-thumb">✨</div>
+          <div class="card-body">
+            <div class="card-code">BR-0022</div>
+            <div class="card-name">Brinco Pérola Clássico</div>
+            <div class="card-price">R$ 780,00</div>
+            <div class="card-foot">
+              <span class="badge b-ok">4 un</span>
+              <button class="add-btn" onclick="event.stopPropagation();add('p6','Brinco Pérola Clássico','✨',78000,4)">+</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div><!-- /left -->
+
+  <!-- RIGHT: CART -->
+  <div class="right">
+
+    <div class="cart-head">
+      <div class="cart-title">
+        Carrinho
+        <span class="cart-badge" id="cCount">0</span>
+      </div>
+      <span class="clear-lnk" onclick="clearCart()">Limpar tudo</span>
+    </div>
+
+    <div class="cart-scroll" id="cScroll">
+      <div class="empty">
+        <div class="empty-icon">🛍️</div>
+        <div class="empty-txt">Carrinho vazio.<br>Clique em um produto para adicionar.</div>
+      </div>
+    </div>
+
+    <!-- desconto -->
+    <div class="sec" id="secDisc" style="display:none">
+      <div class="sec-lbl">Desconto</div>
+      <div class="disc-toggle">
+        <button class="disc-t on" id="dR" onclick="setDT('real')">R$ Valor</button>
+        <button class="disc-t" id="dP" onclick="setDT('pct')">% Percentual</button>
+      </div>
+      <div class="disc-wrap">
+        <span class="disc-pfx" id="dPfx">R$</span>
+        <input class="disc-in" id="dIn" type="number" min="0" placeholder="0,00" oninput="renderTotals()">
+      </div>
+    </div>
+
+    <!-- totais -->
+    <div class="sec" id="secTotals" style="display:none">
+      <div class="total-row">
+        <span class="t-lbl">Subtotal</span>
+        <span class="t-val" id="tSub">R$ 0,00</span>
+      </div>
+      <div class="total-row">
+        <span class="t-lbl">Desconto</span>
+        <span class="t-val" style="color:var(--red)" id="tDisc">− R$ 0,00</span>
+      </div>
+      <div class="total-row final">
+        <span class="t-lbl">Total</span>
+        <span class="t-val" id="tTotal">R$ 0,00</span>
+      </div>
+      <div class="troco-row" id="trocoRow" style="display:none">
+        <span class="troco-lbl">Troco</span>
+        <span class="troco-val" id="trocoV">R$ 0,00</span>
+      </div>
+    </div>
+
+    <!-- pagamento -->
+    <div class="sec" id="secPay" style="display:none">
+      <div class="sec-lbl">Forma de pagamento</div>
+      <div class="pay-grid">
+        <div class="pay-card" id="py-dinheiro" onclick="setPay('dinheiro')"><div class="pay-ico">💵</div><div class="pay-lbl">Dinheiro</div></div>
+        <div class="pay-card" id="py-pix"      onclick="setPay('pix')"     ><div class="pay-ico">📱</div><div class="pay-lbl">PIX</div></div>
+        <div class="pay-card" id="py-debito"   onclick="setPay('debito')"  ><div class="pay-ico">💳</div><div class="pay-lbl">Débito</div></div>
+        <div class="pay-card" id="py-credito"  onclick="setPay('credito')" ><div class="pay-ico">💳</div><div class="pay-lbl">Crédito</div></div>
+      </div>
+
+      <div id="xDinheiro" style="display:none" class="pay-extra">
+        <div class="pe-lbl">Valor recebido</div>
+        <div class="pe-wrap">
+          <span class="pe-pfx">R$</span>
+          <input class="pe-in" id="dinIn" type="number" min="0" placeholder="0,00" oninput="calcTroco()">
+        </div>
+      </div>
+
+      <div id="xPix" style="display:none" class="pay-extra">
+        <div class="pix-box">
+          <div class="pix-klbl">Chave PIX</div>
+          <div class="pix-krow">
+            <div class="pix-k">contato@orinjoia.com.br</div>
+            <button class="copy-btn" onclick="copyPix()">📋 Copiar</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="xCredito" style="display:none" class="pay-extra">
+        <div class="pe-lbl">Parcelas</div>
+        <select class="parc-sel">
+          <option>1× sem juros</option>
+          <option>2× sem juros</option>
+          <option>3× sem juros</option>
+          <option>4× com juros (1,99%)</option>
+          <option>6× com juros (1,99%)</option>
+          <option>12× com juros (1,99%)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="fin-sec">
+      <button class="btn-fin" id="btnFin" disabled onclick="finalize()">Finalizar Venda</button>
+    </div>
+
+  </div><!-- /right -->
+</div>
+
+<!-- MODAL RECIBO -->
+<div class="overlay" id="modalEl" style="display:none">
+  <div class="modal">
+    <div class="m-head">
+      <div class="m-ico">✅</div>
+      <div class="m-title">Venda Finalizada!</div>
+      <div class="m-sub" id="mOrder"></div>
+    </div>
+    <hr class="rdiv">
+    <div id="mItens"></div>
+    <hr class="rdiv">
+    <div class="ri"><span class="ri-lbl">Subtotal</span><span class="ri-val" id="mSub"></span></div>
+    <div class="ri" id="mDiscRow"><span class="ri-lbl">Desconto</span><span class="ri-val" style="color:var(--red)" id="mDisc"></span></div>
+    <div class="ri"><span class="ri-lbl">Pagamento</span><span class="ri-val" id="mPay"></span></div>
+    <div class="r-total"><span>Total</span><span class="r-total-v" id="mTotal"></span></div>
+    <div class="m-actions">
+      <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+      <button class="btn-new" onclick="newSale()">Nova Venda</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let cart={}, selPay=null, dType='real';
+const fmt=c=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(c/100);
+
+function add(id,name,icon,price,stock){
+  if(cart[id]){if(cart[id].qty<stock)cart[id].qty++;}
+  else cart[id]={id,name,icon,price,stock,qty:1};
+  render();
+}
+function getSub(){return Object.values(cart).reduce((s,i)=>s+(i.price*i.qty),0);}
+function getDisc(){
+  const sub=getSub(),v=parseFloat(document.getElementById('dIn').value)||0;
+  return dType==='pct'?Math.min(Math.round(sub*v/100),sub):Math.min(Math.round(v*100),sub);
+}
+
+function render(){
+  const items=Object.values(cart);
+  document.getElementById('cCount').textContent=items.reduce((s,i)=>s+i.qty,0);
+  const show=items.length>0;
+  ['secDisc','secTotals','secPay'].forEach(id=>document.getElementById(id).style.display=show?'':'none');
+  if(!show){
+    document.getElementById('btnFin').disabled=true;
+    document.getElementById('cScroll').innerHTML='<div class="empty"><div class="empty-icon">🛍️</div><div class="empty-txt">Carrinho vazio.<br>Clique em um produto para adicionar.</div></div>';
+    return;
+  }
+  document.getElementById('cScroll').innerHTML=items.map(i=>`
+    <div class="ci">
+      <div class="ci-thumb">${i.icon}</div>
+      <div class="ci-info">
+        <div class="ci-name">${i.name}</div>
+        <div class="ci-unit">${fmt(i.price)} / un</div>
+      </div>
+      <div class="qty-wrap">
+        <button class="qty-btn" onclick="chg('${i.id}',-1)">−</button>
+        <span class="qty-n">${i.qty}</span>
+        <button class="qty-btn" onclick="chg('${i.id}',1)" ${i.qty>=i.stock?'disabled':''}>+</button>
+      </div>
+      <div class="ci-total">${fmt(i.price*i.qty)}</div>
+      <span class="rm" onclick="rm('${i.id}')">✕</span>
+    </div>
+  `).join('');
+  renderTotals();
+}
+
+function chg(id,d){cart[id].qty+=d;if(cart[id].qty<=0)delete cart[id];render();}
+function rm(id){delete cart[id];render();}
+function clearCart(){cart={};selPay=null;render();}
+
+function renderTotals(){
+  const sub=getSub(),disc=getDisc(),total=sub-disc;
+  document.getElementById('tSub').textContent=fmt(sub);
+  document.getElementById('tDisc').textContent=disc>0?`− ${fmt(disc)}`:'− R$ 0,00';
+  document.getElementById('tTotal').textContent=fmt(total);
+  calcTroco();validate();
+}
+
+function calcTroco(){
+  const total=getSub()-getDisc();
+  const rec=(parseFloat(document.getElementById('dinIn')?.value||0))*100;
+  const row=document.getElementById('trocoRow');
+  if(selPay==='dinheiro'&&rec>0){
+    row.style.display='flex';
+    document.getElementById('trocoV').textContent=fmt(Math.max(0,rec-total));
+  }else{row.style.display='none';}
+  validate();
+}
+
+function setDT(t){
+  dType=t;
+  document.getElementById('dR').classList.toggle('on',t==='real');
+  document.getElementById('dP').classList.toggle('on',t==='pct');
+  document.getElementById('dPfx').textContent=t==='real'?'R$':'%';
+  document.getElementById('dIn').value='';
+  renderTotals();
+}
+
+function setPay(t){
+  selPay=t;
+  ['dinheiro','pix','debito','credito'].forEach(p=>document.getElementById('py-'+p).classList.toggle('on',p===t));
+  document.getElementById('xDinheiro').style.display=t==='dinheiro'?'':'none';
+  document.getElementById('xPix').style.display=t==='pix'?'':'none';
+  document.getElementById('xCredito').style.display=t==='credito'?'':'none';
+  if(t!=='dinheiro')document.getElementById('trocoRow').style.display='none';
+  validate();
+}
+
+function validate(){
+  const items=Object.values(cart);
+  if(!items.length||!selPay){document.getElementById('btnFin').disabled=true;return;}
+  if(selPay==='dinheiro'){
+    const total=getSub()-getDisc(),rec=(parseFloat(document.getElementById('dinIn')?.value||0))*100;
+    document.getElementById('btnFin').disabled=rec<total;return;
+  }
+  document.getElementById('btnFin').disabled=false;
+}
+
+function setcat(el){document.querySelectorAll('.pill').forEach(p=>p.classList.remove('on'));el.classList.add('on');}
+
+function copyPix(){
+  navigator.clipboard?.writeText('contato@orinjoia.com.br');
+  const b=document.querySelector('#xPix .copy-btn');
+  b.textContent='✓ Copiado';setTimeout(()=>b.textContent='📋 Copiar',2000);
+}
+
+function finalize(){
+  const items=Object.values(cart),sub=getSub(),disc=getDisc(),total=sub-disc;
+  const num=`OR-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(Math.floor(Math.random()*9000)+1000)}`;
+  document.getElementById('mOrder').textContent=num;
+  document.getElementById('mSub').textContent=fmt(sub);
+  document.getElementById('mDisc').textContent=`− ${fmt(disc)}`;
+  document.getElementById('mDiscRow').style.display=disc>0?'':'none';
+  document.getElementById('mTotal').textContent=fmt(total);
+  document.getElementById('mPay').textContent={dinheiro:'Dinheiro',pix:'PIX',debito:'Débito',credito:'Crédito'}[selPay];
+  document.getElementById('mItens').innerHTML=items.map(i=>`<div class="ri"><span class="ri-lbl">${i.icon} ${i.name} × ${i.qty}</span><span class="ri-val">${fmt(i.price*i.qty)}</span></div>`).join('');
+  document.getElementById('modalEl').style.display='flex';
+}
+
+function newSale(){
+  document.getElementById('modalEl').style.display='none';
+  clearCart();selPay=null;
+  ['dIn','dinIn'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='F2'){e.preventDefault();document.getElementById('sInput').focus();}});
+window.addEventListener('online',()=>{document.getElementById('connEl').classList.remove('offline');document.getElementById('connTxt').textContent='Online';});
+window.addEventListener('offline',()=>{document.getElementById('connEl').classList.add('offline');document.getElementById('connTxt').textContent='Sem conexão';document.getElementById('btnFin').disabled=true;});
+</script>
+</body>
+</html>
