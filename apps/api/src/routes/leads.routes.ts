@@ -231,6 +231,7 @@ async function fetchLeadById(leadId: string): Promise<LeadRow | null> {
             l.whatsapp_number,
             l.email,
             l.stage,
+            l.pipeline_id,
             l.stage_id,
             ps.name AS stage_name,
             ps.color AS stage_color,
@@ -1381,6 +1382,53 @@ router.get(
         } catch (error) {
             next(error);
         }
+    }
+);
+
+// ── POST /leads/:id/won ───────────────────────────────────────────────────────
+router.post(
+    '/:id/won',
+    authenticate,
+    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const leadId = req.params['id'] as string;
+            const wonStage = await query<{ id: string }>(
+                `SELECT id FROM pipeline_stages WHERE is_won = true ORDER BY position ASC LIMIT 1`
+            );
+            const wonStageId = wonStage.rows[0]?.id ?? null;
+
+            await query(
+                `UPDATE leads SET stage = 'CONVERTIDO', stage_id = COALESCE($1, stage_id), updated_at = NOW() WHERE id = $2`,
+                [wonStageId, leadId]
+            );
+            await createAuditLog({ userId: req.user!.id, action: 'UPDATE', entityType: 'leads', entityId: leadId, oldValue: null, newValue: { stage: 'CONVERTIDO' }, req });
+            res.json({ message: 'Lead marcado como ganho.' });
+        } catch (err) { next(err); }
+    }
+);
+
+// ── POST /leads/:id/lost ──────────────────────────────────────────────────────
+router.post(
+    '/:id/lost',
+    authenticate,
+    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const leadId = req.params['id'] as string;
+            const reason = String(req.body['reason'] ?? '');
+            const lostStage = await query<{ id: string }>(
+                `SELECT id FROM pipeline_stages WHERE is_lost = true ORDER BY position ASC LIMIT 1`
+            );
+            const lostStageId = lostStage.rows[0]?.id ?? null;
+
+            await query(
+                `UPDATE leads SET stage = 'PERDIDO', stage_id = COALESCE($1, stage_id), updated_at = NOW() WHERE id = $2`,
+                [lostStageId, leadId]
+            );
+            await createAuditLog({ userId: req.user!.id, action: 'UPDATE', entityType: 'leads', entityId: leadId, oldValue: null, newValue: { stage: 'PERDIDO', reason }, req });
+            res.json({ message: 'Lead marcado como perdido.' });
+        } catch (err) { next(err); }
     }
 );
 

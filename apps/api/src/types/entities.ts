@@ -5,7 +5,7 @@
 
 // ---- Enums ----
 
-export type UserRole = 'ADMIN' | 'ATENDENTE' | 'PRODUCAO' | 'FINANCEIRO';
+export type UserRole = 'ADMIN' | 'ATENDENTE' | 'PRODUCAO' | 'FINANCEIRO' | 'MESTRE' | 'DESIGNER_3D';
 export type UserStatus = 'active' | 'inactive';
 
 export type LeadStage = 'NOVO' | 'QUALIFICADO' | 'PROPOSTA_ENVIADA' | 'NEGOCIACAO' | 'CONVERTIDO' | 'PERDIDO';
@@ -73,6 +73,10 @@ export interface Settings {
     notify_order_paid: boolean;
     notify_production_delayed: boolean;
     notify_low_stock: boolean;
+    pix_key: string | null;
+    receipt_thanks_message: string | null;
+    receipt_exchange_policy: string | null;
+    receipt_warranty: string | null;
     plan: PlanType;
     status: InstanceStatus;
     operator_instance_id: string | null;

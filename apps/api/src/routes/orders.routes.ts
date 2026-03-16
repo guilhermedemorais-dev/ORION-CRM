@@ -577,6 +577,127 @@ router.post(
     }
 );
 
+// ── POST /orders/:id/nfe ─────────────────────────────────────────────────────
+router.post(
+    '/:id/nfe',
+    authenticate,
+    requireRole(['ADMIN', 'ATENDENTE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const orderId = String(req.params['id'] ?? '');
+            const orderRes = await query<{ id: string; customer_id: string | null }>(
+                `SELECT id, customer_id FROM orders WHERE id = $1 LIMIT 1`,
+                [orderId]
+            );
+            const o = orderRes.rows[0];
+            if (!o) { next(AppError.notFound('Pedido não encontrado.')); return; }
+            if (!o.customer_id) {
+                next(new AppError(422, 'NFE_NO_CUSTOMER', 'Pedido sem cliente vinculado. Vincule um cliente antes de emitir NF-e.'));
+                return;
+            }
+
+            const customerRes = await query<{ cpf: string | null }>(
+                `SELECT cpf FROM customers WHERE id = $1 LIMIT 1`,
+                [o.customer_id]
+            );
+            if (!customerRes.rows[0]?.cpf) {
+                next(new AppError(422, 'NFE_NO_CPF', 'Cliente sem CPF/CNPJ cadastrado.'));
+                return;
+            }
+
+            const existing = await query<{ id: string }>(
+                `SELECT id FROM fiscal_documents WHERE order_id = $1 AND status IN ('PENDENTE','PROCESSANDO','EMITIDA') LIMIT 1`,
+                [orderId]
+            );
+            if (existing.rows[0]) {
+                res.json({ status: 'PENDENTE', message: 'NF-e já solicitada para este pedido.' });
+                return;
+            }
+
+            const result = await query<{ id: string }>(
+                `INSERT INTO fiscal_documents (order_id, customer_id, requested_by) VALUES ($1, $2, $3) RETURNING id`,
+                [orderId, o.customer_id, req.user!.id]
+            );
+
+            res.status(201).json({
+                id: result.rows[0]?.id,
+                status: 'PENDENTE',
+                message: 'NF-e solicitada. Você será notificado quando emitida.',
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+// ── POST /orders/:id/send-receipt ─────────────────────────────────────────────
+const sendReceiptSchema = z.object({ channel: z.enum(['whatsapp', 'email']) });
+
+router.post(
+    '/:id/send-receipt',
+    authenticate,
+    requireRole(['ADMIN', 'ATENDENTE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const orderId = String(req.params['id'] ?? '');
+            const parsed = sendReceiptSchema.safeParse(req.body);
+            if (!parsed.success) { next(AppError.badRequest('Canal inválido.')); return; }
+
+            const orderRes = await query<{
+                id: string; order_number: string; customer_id: string | null;
+                final_amount_cents: number; created_at: Date;
+            }>(
+                `SELECT id, order_number, customer_id, final_amount_cents, created_at FROM orders WHERE id = $1 LIMIT 1`,
+                [orderId]
+            );
+            const o = orderRes.rows[0];
+            if (!o) { next(AppError.notFound('Pedido não encontrado.')); return; }
+            if (!o.customer_id) {
+                next(new AppError(422, 'RECEIPT_NO_CUSTOMER', 'Pedido sem cliente vinculado.')); return;
+            }
+
+            const cRes = await query<{ name: string; whatsapp_number: string; email: string | null }>(
+                `SELECT name, whatsapp_number, email FROM customers WHERE id = $1 LIMIT 1`,
+                [o.customer_id]
+            );
+            const customer = cRes.rows[0];
+            if (!customer) { next(AppError.notFound('Cliente não encontrado.')); return; }
+
+            const sRes = await query<{ company_name: string; receipt_thanks_message: string | null }>(
+                `SELECT company_name, receipt_thanks_message FROM settings LIMIT 1`
+            );
+            const s = sRes.rows[0];
+            const storeName = s?.company_name ?? 'nossa loja';
+
+            const fmtCurrency = (c: number) =>
+                new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(c / 100);
+            const fmtDate = (d: Date) =>
+                new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(d));
+
+            if (parsed.data.channel === 'whatsapp') {
+                if (!customer.whatsapp_number) {
+                    next(new AppError(422, 'RECEIPT_NO_PHONE', 'Cliente sem WhatsApp cadastrado.')); return;
+                }
+                const phone = customer.whatsapp_number.replace(/\D/g, '').replace(/^55/, '');
+                const thanks = s?.receipt_thanks_message ?? 'Obrigado pela preferência!';
+                const msg = `Olá ${customer.name.split(' ')[0]}! Segue o comprovante da sua compra na ${storeName}:`
+                    + ` Pedido ${o.order_number} · Total: ${fmtCurrency(o.final_amount_cents)} · Data: ${fmtDate(o.created_at)}.`
+                    + ` ${thanks}`;
+                res.json({ url: `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}` });
+                return;
+            }
+
+            // email — sem infra de envio; retorna endereço para mailto no front
+            if (!customer.email) {
+                next(new AppError(422, 'RECEIPT_NO_EMAIL', 'Cliente sem e-mail cadastrado.')); return;
+            }
+            res.json({ sent: true, email: customer.email });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
 router.patch(
     '/:id/status',
     authenticate,

@@ -189,7 +189,10 @@ router.get(
     async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const result = await query<Settings>(
-                'SELECT company_name, logo_url, primary_color, favicon_url FROM settings LIMIT 1'
+                `SELECT company_name, logo_url, primary_color, favicon_url,
+                        pix_key, cnpj, phone, address,
+                        receipt_thanks_message, receipt_exchange_policy, receipt_warranty
+                 FROM settings LIMIT 1`
             );
             const settings = result.rows[0];
 
@@ -199,6 +202,13 @@ router.get(
                     logo_url: null,
                     primary_color: '#C8A97A',
                     favicon_url: null,
+                    pix_key: null,
+                    cnpj: null,
+                    phone: null,
+                    address: null,
+                    receipt_thanks_message: 'Obrigado pela preferência ✦',
+                    receipt_exchange_policy: 'Troca em até 30 dias com este recibo.',
+                    receipt_warranty: 'Garantia de 1 ano contra defeito de fabricação.',
                 });
                 return;
             }
@@ -208,6 +218,13 @@ router.get(
                 logo_url: settings.logo_url,
                 primary_color: settings.primary_color,
                 favicon_url: settings.favicon_url,
+                pix_key: settings.pix_key,
+                cnpj: settings.cnpj,
+                phone: settings.phone,
+                address: settings.address,
+                receipt_thanks_message: settings.receipt_thanks_message,
+                receipt_exchange_policy: settings.receipt_exchange_policy,
+                receipt_warranty: settings.receipt_warranty,
             });
         } catch (err) {
             next(err);
