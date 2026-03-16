@@ -29,7 +29,7 @@ export function AppShell({
                 userName={user.name}
                 userRole={user.role}
             />
-            <div className="ml-64 flex min-h-screen flex-1 flex-col">
+            <div className="ml-64 flex min-h-screen min-w-0 flex-1 flex-col">
                 <Topbar userName={user.name} />
                 <main className="flex-1 overflow-y-auto overflow-x-hidden p-6">{children}</main>
             </div>

@@ -1,7 +1,10 @@
 'use client';
 
-import { Bell, Command, Search } from 'lucide-react';
+import { useState } from 'react';
+import { Bell, Command, Search, HelpCircle } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { HelpPanel } from '@/components/help/HelpPanel';
+import { useHelpContext } from '@/hooks/useHelpContext';
 
 const routeLabels: Array<{ match: RegExp; label: string; section: string }> = [
     { match: /^\/pipeline\//, label: 'Pipeline', section: 'Operação comercial' },
@@ -22,8 +25,11 @@ function resolvePathMeta(pathname: string) {
 export function Topbar({ userName }: { userName: string }) {
     const pathname = usePathname();
     const meta = resolvePathMeta(pathname);
+    const [helpOpen, setHelpOpen] = useState(false);
+    const helpContext = useHelpContext();
 
     return (
+        <>
         <header className="sticky top-0 z-20 flex h-[52px] items-center justify-between border-b border-white/5 bg-[color:var(--orion-nav)] px-5 lg:px-7">
             <div className="min-w-0">
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--orion-text-muted)]">
@@ -43,6 +49,15 @@ export function Topbar({ userName }: { userName: string }) {
                 </div>
                 <button
                     type="button"
+                    onClick={() => setHelpOpen(true)}
+                    title="Ajuda"
+                    className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-white/5 text-[color:var(--orion-text-secondary)] transition hover:border-[color:var(--orion-gold-border)] hover:text-[color:var(--orion-gold)]"
+                    aria-label="Ajuda"
+                >
+                    <HelpCircle className="h-[15px] w-[15px]" />
+                </button>
+                <button
+                    type="button"
                     className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[color:var(--orion-text-secondary)] transition hover:text-[color:var(--orion-text)]"
                     aria-label="Notificações"
                 >
@@ -53,5 +68,7 @@ export function Topbar({ userName }: { userName: string }) {
                 </div>
             </div>
         </header>
+        {helpOpen && <HelpPanel context={helpContext} onClose={() => setHelpOpen(false)} />}
+        </>
     );
 }
