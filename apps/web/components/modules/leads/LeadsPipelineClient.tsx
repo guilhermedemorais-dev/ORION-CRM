@@ -119,44 +119,10 @@ export function LeadsPipelineClient({
     const noteTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
     const boardRef = useRef<HTMLDivElement | null>(null);
     const contentRef = useRef<HTMLDivElement | null>(null);
-    const trackRef = useRef<HTMLDivElement | null>(null);
-    const [scrollMeta, setScrollMeta] = useState({ viewport: 0, content: 0, left: 0, track: 0 });
 
     useEffect(() => {
         setHasMounted(true);
     }, []);
-
-    useEffect(() => {
-        const update = () => {
-            const board = boardRef.current;
-            const track = trackRef.current;
-            const content = contentRef.current;
-            if (!board || !track) return;
-            const contentWidth = content?.scrollWidth ?? board.scrollWidth;
-            setScrollMeta({
-                viewport: board.clientWidth,
-                content: contentWidth,
-                left: board.scrollLeft,
-                track: track.clientWidth,
-            });
-        };
-
-        update();
-
-        const board = boardRef.current;
-        const track = trackRef.current;
-        const content = contentRef.current;
-        const ro = new ResizeObserver(update);
-        if (board) ro.observe(board);
-        if (track) ro.observe(track);
-        if (content) ro.observe(content);
-        window.addEventListener('resize', update);
-
-        return () => {
-            ro.disconnect();
-            window.removeEventListener('resize', update);
-        };
-    }, [stages.length, leads.length]);
 
     useEffect(() => {
         const handler = (event: WheelEvent) => {
@@ -609,7 +575,7 @@ export function LeadsPipelineClient({
 
                 <div
                     ref={boardRef}
-                    className="flex-1 min-h-0 min-w-0 overflow-x-scroll overflow-y-hidden px-5 pb-5 pt-3 [scrollbar-gutter:stable] overscroll-x-contain"
+                    className="kanban-board flex-1 min-h-0 min-w-0 overflow-x-scroll overflow-y-hidden px-5 pb-5 pt-3 [scrollbar-gutter:stable] overscroll-x-contain"
                     onWheel={(event) => {
                         const board = boardRef.current;
                         if (!board) return;
@@ -645,18 +611,6 @@ export function LeadsPipelineClient({
                             board.scrollLeft += delta;
                             event.preventDefault();
                         }
-                    }}
-                    onScroll={() => {
-                        const board = boardRef.current;
-                        const track = trackRef.current;
-                        if (!board || !track) return;
-                        setScrollMeta((current) => ({
-                            ...current,
-                            viewport: board.clientWidth,
-                            content: board.scrollWidth,
-                            left: board.scrollLeft,
-                            track: track.clientWidth,
-                        }));
                     }}
                 >
                     <div ref={contentRef} className="inline-flex h-full min-w-max w-max items-start gap-3">
@@ -802,50 +756,6 @@ export function LeadsPipelineClient({
                     </div>
                 </div>
 
-                <div className="px-5 pb-4">
-                    <div
-                        ref={trackRef}
-                        className="relative h-2 w-full rounded-full bg-white/10"
-                    >
-                        {scrollMeta.content > scrollMeta.viewport ? (
-                            <div
-                                className="absolute top-0 h-2 cursor-grab rounded-full bg-white/40"
-                                style={{
-                                    width: `${Math.max((scrollMeta.viewport / scrollMeta.content) * scrollMeta.track, 28)}px`,
-                                    transform: `translateX(${
-                                        scrollMeta.content - scrollMeta.viewport <= 0
-                                            ? 0
-                                            : (scrollMeta.left / (scrollMeta.content - scrollMeta.viewport)) *
-                                              (scrollMeta.track - Math.max((scrollMeta.viewport / scrollMeta.content) * scrollMeta.track, 28))
-                                    }px)`,
-                                }}
-                                onPointerDown={(event) => {
-                                    event.preventDefault();
-                                    const board = boardRef.current;
-                                    if (!board) return;
-                                    const startX = event.clientX;
-                                    const startLeft = board.scrollLeft;
-                                    const thumbWidth = Math.max((scrollMeta.viewport / scrollMeta.content) * scrollMeta.track, 28);
-                                    const maxThumbLeft = scrollMeta.track - thumbWidth;
-                                    const maxScroll = scrollMeta.content - scrollMeta.viewport;
-                                    const ratio = maxThumbLeft > 0 ? maxScroll / maxThumbLeft : 0;
-
-                                    const onMove = (moveEvent: PointerEvent) => {
-                                        if (!board) return;
-                                        const delta = moveEvent.clientX - startX;
-                                        board.scrollLeft = startLeft + delta * ratio;
-                                    };
-                                    const onUp = () => {
-                                        window.removeEventListener('pointermove', onMove);
-                                        window.removeEventListener('pointerup', onUp);
-                                    };
-                                    window.addEventListener('pointermove', onMove);
-                                    window.addEventListener('pointerup', onUp);
-                                }}
-                            />
-                        ) : null}
-                    </div>
-                </div>
             </main>
 
             {showNewLeadForm ? (
@@ -858,6 +768,7 @@ export function LeadsPipelineClient({
                             </div>
                             <button
                                 type="button"
+                                title="Fechar"
                                 onClick={() => setShowNewLeadForm(false)}
                                 className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#E8E5E0] text-[#6B7280] transition hover:border-[#C8A97A] hover:text-[#A8895A]"
                             >
@@ -876,6 +787,7 @@ export function LeadsPipelineClient({
                             <Input name="whatsapp_number" placeholder="+5511999999999" required className="h-10 border-[#E8E5E0] bg-[#F8F7F5] text-[#111827]" />
                             <select
                                 name="source"
+                                title="Origem do lead"
                                 defaultValue="WHATSAPP"
                                 className="h-10 w-full rounded-md border border-[#E8E5E0] bg-[#F8F7F5] px-3 text-sm text-[#111827] outline-none"
                             >
@@ -908,6 +820,7 @@ export function LeadsPipelineClient({
                             </div>
                             <button
                                 type="button"
+                                title="Fechar"
                                 onClick={() => setShowPipelineConfig(false)}
                                 className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-[color:var(--orion-text-secondary)] transition hover:border-brand-gold hover:text-brand-gold"
                             >
@@ -926,6 +839,7 @@ export function LeadsPipelineClient({
                                     />
                                     <input
                                         type="color"
+                                        title="Cor da etapa"
                                         value={newStageColor}
                                         onChange={(event) => setNewStageColor(event.target.value)}
                                         className="h-10 w-full cursor-pointer rounded-md border border-white/10 bg-[color:var(--orion-base)] px-2"
