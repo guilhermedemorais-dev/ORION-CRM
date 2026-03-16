@@ -233,6 +233,13 @@ export interface PublicSettings {
     logo_url: string | null;
     primary_color: string;
     favicon_url: string | null;
+    pix_key?: string | null;
+    cnpj?: string | null;
+    phone?: string | null;
+    address?: Record<string, string> | null;
+    receipt_thanks_message?: string | null;
+    receipt_exchange_policy?: string | null;
+    receipt_warranty?: string | null;
 }
 
 export interface StockMovementRecord {

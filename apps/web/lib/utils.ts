@@ -34,3 +34,23 @@ export function formatDate(value: string | Date | null | undefined): string {
 export function formatPhone(value: string): string {
     return value.replace(/^(\+\d{2})(\d{2})(\d{4,5})(\d{4})$/, '$1 $2 $3-$4');
 }
+
+export function getInitials(name: string): string {
+    return name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
+}
+
+export function daysSince(dateStr: string): string {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const d = Math.floor(diff / 86400000);
+    if (d === 0) return 'hoje';
+    if (d === 1) return 'ontem';
+    if (d < 30) return `${d}d atrás`;
+    if (d < 365) return `${Math.floor(d / 30)}m atrás`;
+    return `${Math.floor(d / 365)}a atrás`;
+}
+
+export function formatCurrencyShort(cents: number): string {
+    if (cents >= 100000000) return `R$${(cents / 100000000).toFixed(1)}M`;
+    if (cents >= 100000) return `R$${(cents / 100000).toFixed(0)}k`;
+    return formatCurrencyFromCents(cents);
+}
