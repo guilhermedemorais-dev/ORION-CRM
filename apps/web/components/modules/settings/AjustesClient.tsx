@@ -868,12 +868,26 @@ export function AjustesClient({
             }
 
             const payload = await response.json() as { url: string };
+            
+            // Atualizar preview imediatamente
             setLogoPreview(payload.url);
             setLogoFile(null);
             
             // Limpar o input file
             if (logoInputRef.current) {
                 logoInputRef.current.value = '';
+            }
+            
+            // Refetch settings completas para sincronizar
+            try {
+                const settingsResponse = await fetch('/api/internal/settings');
+                if (settingsResponse.ok) {
+                    const newSettings = await settingsResponse.json() as AdminSettings;
+                    setSettings(newSettings);
+                    setLogoPreview(newSettings.logo_url || payload.url);
+                }
+            } catch {
+                // Se falhar, mantém a preview que já setamos acima
             }
             
             addToast('success', 'Logo atualizada com sucesso.');
