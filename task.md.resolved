@@ -3,9 +3,11 @@
 ## Status Atual
 - Branch atual: `feat/orion-evolution-foundations`
 - Últimos commits desta trilha:
-  - `27f19fc` `feat(orion): advance storefront and assistant operations`
-  - `d9be155` `feat(analytics): add sales dashboard foundation`
-  - `792a452` `feat(orion): deliver crm evolution foundations`
+  - `561e4bf` `feat: implementar busca global funcional`
+  - `724b3cd` `fix: corrigir problemas criticos de QA`
+  - `b9697d4` `fix(a11y): add aria-label to icon-only close buttons`
+  - `a69aca9` `fix(a11y): add aria-label to form elements and suppress no-inline-styles webhint`
+  - `0539d6d` `feat(web): add HelpPanel and helpContent components`
 - Fonte funcional do roadmap atual: `PRD.DOCS`
 - Fonte visual canônica do projeto:
   - `PRD.DOCS/Designer Systems/ORION-DESIGN-SYSTEM.html`
@@ -41,6 +43,8 @@
   - `019_store_foundation.sql`
 - [x] Rastreabilidade de sync da loja -> CRM em código
   - `020_store_order_crm_sync.sql`
+- [x] Proposal attachments foundation em código
+  - `035_proposal_attachments.sql`
 - [ ] Migrations novas ainda precisam ser aplicadas no banco real
 
 ### API / Backend
@@ -49,6 +53,8 @@
 - [x] Automações com catálogo/backend n8n base
 - [x] Financeiro canônico `/api/v1/financeiro/*`
 - [x] Loja pública com checkout, webhook e sync interno
+- [x] Busca global `/api/internal/search`
+- [x] Proposal attachments endpoints `/api/v1/customers/:id/proposals/attachments`
 - [x] Simulação local de venda aprovada para teste sem produção
 - [x] Analytics de vendas `/api/v1/analytics/sales`
 - [x] Assistente IA com tool/fallback/RBAC/usage
@@ -71,6 +77,7 @@
   - `/loja/produto/[slug]`
 - [x] Admin da loja já existe visualmente
   - `/settings/loja`
+- [x] Busca global funcional com Cmd+K
 - [x] Assistente IA já aparece no shell como dock/widget
 - [ ] Ainda faltam fechamentos visuais em automações, inbox multicanal e analytics completo
 
@@ -86,6 +93,7 @@
   - `/loja`
   - `/loja/produto/[slug]`
   - `/settings/loja`
+  - Busca global (Cmd+K) funcional
 - Onde a mudança ainda é mais de backend/banco do que de interface final:
   - integrações reais do Mercado Pago
   - multicanal real além de WhatsApp
@@ -93,6 +101,34 @@
   - tabs restantes do analytics
 
 ## Histórico Entregue
+
+### Correções Críticas de QA (16 de março de 2026)
+Status: concluída
+
+Banco:
+- [x] Migration `035_proposal_attachments.sql`
+- [x] Tabela `proposal_attachments` para anexos de propostas
+
+API/Backend:
+- [x] Endpoint `/api/internal/search` para busca global
+- [x] Busca simultânea em clientes, produtos, pedidos e leads
+- [x] Endpoint `/api/v1/customers/:id/proposals/attachments` (GET, POST, DELETE)
+- [x] Correção da query `open_proposals` para usar status válidos
+- [x] NODE_ENV=production nos containers web e api
+
+Frontend/UI:
+- [x] Componente `GlobalSearch.tsx` com modal de busca
+- [x] Atalho de teclado Cmd+K/Ctrl+K no Topbar
+- [x] Botão "Busca global" funcional (não decorativo)
+- [x] Interface de busca com resultados categorizados
+
+Principais arquivos:
+- `apps/api/src/db/migrations/035_proposal_attachments.sql`
+- `apps/api/src/routes/search.routes.ts`
+- `apps/api/src/routes/customers.routes.ts` (correção open_proposals)
+- `apps/web/components/ui/GlobalSearch.tsx`
+- `apps/web/components/layout/Topbar.tsx` (integração Cmd+K)
+- `docker-compose.yml` (NODE_ENV=production)
 
 ### Base original do sistema
 - [x] Bloco 1: fundação backend
@@ -272,11 +308,16 @@ Ainda falta:
 - [x] `apps/api`: `npm test`
 - [x] `apps/api`: `npm run typecheck -- --pretty false`
 - [x] `apps/web`: `npm run typecheck`
+- [x] Build Docker completo sem erros
+- [x] Health check da API funcionando
+- [x] Busca global operacional (endpoint + frontend)
 
 Último estado verificado antes deste registro:
 - API: `8/8` testes verdes
 - API typecheck: verde
 - Web typecheck: verde
+- Docker build: verde
+- Busca global: funcional
 
 ## Pendências Reais para Fechar 100%
 
@@ -312,6 +353,9 @@ Ainda falta:
 - [x] Assistente: abrir dock e testar perguntas por role
 - [x] Analytics: validar `/analytics`
 - [x] Pipeline: validar `/pipeline/[slug]` e builder inicial
+- [x] Busca global: pressionar Cmd+K ou clicar no botão "Busca global" no Topbar
+  - testar busca por nomes de clientes, produtos, pedidos
+  - validar navegação por resultados
 
 ## Observações
 - Os arquivos de `PRD.DOCS` continuam fora dos commits de código.
