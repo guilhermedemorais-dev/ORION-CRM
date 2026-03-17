@@ -107,14 +107,14 @@ services:
 
   # ---- NGINX (Reverse Proxy) ----
   nginx:
-    image: nginx:alpine
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
       - uploads_data:/app/uploads:ro
     depends_on:
       - api
