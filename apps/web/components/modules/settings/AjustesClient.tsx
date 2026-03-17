@@ -1216,6 +1216,12 @@ export function AjustesClient({
         });
     }, [currentUser, personalWhatsappForm]);
 
+    useEffect(() => {
+        if (settings.logo_url) {
+            setLogoPreview(settings.logo_url);
+        }
+    }, [settings.logo_url]);
+
     const qrCodeSrc = qrCodeBase64
         ? (qrCodeBase64.startsWith('data:') ? qrCodeBase64 : `data:image/png;base64,${qrCodeBase64}`)
         : null;
@@ -1409,7 +1415,16 @@ export function AjustesClient({
                             style={{ backgroundColor: `${selectedColor}18` }}
                         >
                             {logoPreview ? (
-                                <img src={logoPreview} alt="Logo preview" className="h-16 w-auto rounded-xl bg-white p-2" />
+                                <div
+                                    className="inline-block rounded-xl p-2"
+                                    style={{
+                                        backgroundImage: 'linear-gradient(45deg, #e5e5e5 25%, transparent 25%, transparent 75%, #e5e5e5 75%, #e5e5e5), linear-gradient(45deg, #e5e5e5 25%, transparent 25%, transparent 75%, #e5e5e5 75%, #e5e5e5)',
+                                        backgroundSize: '16px 16px',
+                                        backgroundPosition: '0 0, 8px 8px',
+                                    }}
+                                >
+                                    <img src={logoPreview} alt="Logo preview" className="h-16 w-auto rounded-lg" />
+                                </div>
                             ) : (
                                 <div
                                     className="text-2xl font-semibold text-[color:var(--orion-text)]"
