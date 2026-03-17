@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs/promises';
 import { query } from '../db/pool.js';
 import { AppError } from '../lib/errors.js';
 import { authenticate } from '../middleware/auth.js';
@@ -480,7 +483,7 @@ router.get(
                     [id]
                 ),
                 query<{ open_proposals: string }>(
-                    `SELECT COUNT(*)::text AS open_proposals FROM orders WHERE customer_id = $1 AND status IN ('PENDING','CONFIRMED','PROCESSING')`,
+                    `SELECT COUNT(*)::text AS open_proposals FROM orders WHERE customer_id = $1 AND status IN ('AGUARDANDO_PAGAMENTO', 'RASCUNHO')`,
                     [id]
                 ),
             ]);
@@ -570,3 +573,143 @@ router.post(
 );
 
 export default router;
+
+// ── Multer config for proposal attachments ──────────────────────────────────
+const uploadDir = path.join(process.cwd(), 'uploads', 'proposals');
+const upload = multer({
+    dest: uploadDir,
+    limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'application/pdf') {
+            cb(null, true);
+        } else {
+            cb(new Error('Apenas arquivos PDF são aceitos'));
+        }
+    },
+});
+
+// Ensure upload directory exists
+fs.mkdir(uploadDir, { recursive: true }).catch(() => {});
+
+// ── GET /customers/:id/proposals/attachments ────────────────────────────────
+router.get(
+    '/:id/proposals/attachments',
+    authenticate,
+    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const id = req.params['id'] as string;
+
+            const result = await query(
+                `SELECT id, filename, original_name, file_size, created_at
+                 FROM proposal_attachments
+                 WHERE customer_id = $1
+                 ORDER BY created_at DESC`,
+                [id]
+            );
+
+            res.json(result.rows);
+        } catch (err) { next(err); }
+    }
+);
+
+// ── POST /customers/:id/proposals/attachments ───────────────────────────────
+router.post(
+    '/:id/proposals/attachments',
+    authenticate,
+    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    upload.single('file'),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const id = req.params['id'] as string;
+            const file = req.file;
+
+            if (!file) {
+                throw new AppError(400, 'FILE_MISSING', 'Arquivo não enviado');
+            }
+
+            // Generate unique filename
+            const ext = path.extname(file.originalname);
+            const filename = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}${ext}`;
+            const filePath = path.join('proposals', filename);
+
+            // Move file to final location
+            const finalPath = path.join(uploadDir, filename);
+            await fs.rename(file.path, finalPath);
+
+            // Insert into database
+            const result = await query(
+                `INSERT INTO proposal_attachments (customer_id, filename, original_name, mime_type, file_size, file_path, uploaded_by)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)
+                 RETURNING id, filename, original_name, file_size, created_at`,
+                [id, filename, file.originalname, file.mimetype, file.size, filePath, req.user!.id]
+            );
+
+            const attachment = result.rows[0];
+            if (!attachment) {
+                throw new AppError(500, 'INSERT_FAILED', 'Falha ao salvar anexo');
+            }
+
+            await createAuditLog({
+                req,
+                userId: req.user!.id,
+                action: 'CREATE',
+                entityType: 'proposal_attachment',
+                entityId: attachment['id'],
+                oldValue: null,
+                newValue: attachment
+            });
+
+            res.status(201).json(attachment);
+        } catch (err) { next(err); }
+    }
+);
+
+// ── DELETE /customers/:id/proposals/attachments/:attachmentId ──────────────
+router.delete(
+    '/:id/proposals/attachments/:attachmentId',
+    authenticate,
+    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const { id, attachmentId } = req.params;
+            const customerId = id;
+            const attId = attachmentId;
+
+            // Get file info before deleting
+            const fileResult = await query(
+                `SELECT file_path FROM proposal_attachments WHERE id = $1 AND customer_id = $2`,
+                [attId, customerId]
+            );
+
+            if (fileResult.rows.length === 0) {
+                throw new AppError(404, 'ATTACHMENT_NOT_FOUND', 'Anexo não encontrado');
+            }
+
+            const fileInfo = fileResult.rows[0] as Record<string, unknown>;
+
+            // Delete from database
+            await query(
+                `DELETE FROM proposal_attachments WHERE id = $1 AND customer_id = $2`,
+                [attId, customerId]
+            );
+
+            // Delete file from disk
+            const filePathStr = fileInfo['file_path'] as string;
+            const filePath = path.join(process.cwd(), 'uploads', filePathStr);
+            await fs.unlink(filePath).catch(() => {}); // Ignore if file doesn't exist
+
+            await createAuditLog({
+                req,
+                userId: req.user!.id,
+                action: 'DELETE',
+                entityType: 'proposal_attachment',
+                entityId: attId as string,
+                oldValue: fileInfo,
+                newValue: null
+            });
+
+            res.json({ message: 'Anexo removido com sucesso' });
+        } catch (err) { next(err); }
+    }
+);
