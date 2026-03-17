@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type DragEvent } from 'react';
+import { useEffect, useMemo, useState, useRef, type DragEvent } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
     Check,
@@ -12,7 +12,7 @@ import {
     Power,
     QrCode,
     RefreshCw,
-
+    Trash2,
     Save,
     ShieldCheck,
     Users2,
@@ -389,6 +389,7 @@ export function AjustesClient({
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState(initialSettings.logo_url);
+    const logoInputRef = useRef<HTMLInputElement>(null);
     const [dragActive, setDragActive] = useState(false);
     const [inviteOpen, setInviteOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
@@ -869,6 +870,12 @@ export function AjustesClient({
             const payload = await response.json() as { url: string };
             setLogoPreview(payload.url);
             setLogoFile(null);
+            
+            // Limpar o input file
+            if (logoInputRef.current) {
+                logoInputRef.current.value = '';
+            }
+            
             addToast('success', 'Logo atualizada com sucesso.');
             router.refresh();
         } catch (error) {
@@ -876,6 +883,18 @@ export function AjustesClient({
         } finally {
             setUploadingLogo(false);
         }
+    }
+
+    function onRemoveLogo() {
+        setLogoFile(null);
+        setLogoPreview(initialSettings.logo_url || null);
+        
+        // Limpar o input file
+        if (logoInputRef.current) {
+            logoInputRef.current.value = '';
+        }
+        
+        addToast('success', 'Logo removida. Clique em "Enviar logo" para confirmar.');
     }
 
     function applyLogoFile(file: File) {
@@ -1392,6 +1411,7 @@ export function AjustesClient({
                     >
                         <UploadHint />
                         <input
+                            ref={logoInputRef}
                             type="file"
                             accept="image/png,image/jpeg,image/svg+xml"
                             aria-label="Upload de logotipo"
@@ -1415,15 +1435,26 @@ export function AjustesClient({
                             style={{ backgroundColor: `${selectedColor}18` }}
                         >
                             {logoPreview ? (
-                                <div
-                                    className="inline-block rounded-xl p-2"
-                                    style={{
-                                        backgroundImage: 'linear-gradient(45deg, #e5e5e5 25%, transparent 25%, transparent 75%, #e5e5e5 75%, #e5e5e5), linear-gradient(45deg, #e5e5e5 25%, transparent 25%, transparent 75%, #e5e5e5 75%, #e5e5e5)',
-                                        backgroundSize: '16px 16px',
-                                        backgroundPosition: '0 0, 8px 8px',
-                                    }}
-                                >
-                                    <img src={logoPreview} alt="Logo preview" className="h-16 w-auto rounded-lg" />
+                                <div className="flex items-end gap-3">
+                                    <div
+                                        className="inline-block rounded-xl p-2"
+                                        style={{
+                                            backgroundImage: 'linear-gradient(45deg, #e5e5e5 25%, transparent 25%, transparent 75%, #e5e5e5 75%, #e5e5e5), linear-gradient(45deg, #e5e5e5 25%, transparent 25%, transparent 75%, #e5e5e5 75%, #e5e5e5)',
+                                            backgroundSize: '16px 16px',
+                                            backgroundPosition: '0 0, 8px 8px',
+                                        }}
+                                    >
+                                        <img src={logoPreview} alt="Logo preview" className="h-16 w-auto rounded-lg" />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className={secondaryButtonClassName}
+                                        onClick={onRemoveLogo}
+                                        title="Remover logo atual"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        Remover
+                                    </button>
                                 </div>
                             ) : (
                                 <div
