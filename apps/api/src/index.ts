@@ -47,6 +47,7 @@ import serviceOrdersRoutes from './routes/service-orders.routes.js';
 import deliveriesRoutes from './routes/deliveries.routes.js';
 import carriersRoutes from './routes/carriers.routes.js';
 import whatsappProvidersRoutes from './routes/whatsapp-providers.routes.js';
+import searchRoutes from './routes/search.routes.js';
 import integrationProvidersRoutes from './routes/integration-providers.routes.js';
 import { initializeWhatsAppWebhookWorker, shutdownWhatsAppWebhookWorker } from './workers/whatsappWebhook.worker.js';
 import { seedN8nSystemWorkflows } from './startup/seed-n8n-workflows.js';
@@ -136,6 +137,9 @@ app.use('/api/v1/org', settingsRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/webhooks/whatsapp', whatsappRoutes);
 app.use('/api/v1/whatsapp', whatsappAdminRoutes);
+
+// Internal routes (not exposed via NGINX)
+app.use('/api/internal/search', searchRoutes);
 
 // 404 handler
 app.use((_req, res) => {
