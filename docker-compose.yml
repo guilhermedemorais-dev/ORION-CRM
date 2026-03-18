@@ -118,10 +118,10 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.orion-crm.rule=Host(`crm.orinjoias.com.br`) || Host(`api.crm.orinjoias.com.br`)"
-      - "traefik.http.routers.orion-crm.entrypoints=websecure"
-      - "traefik.http.routers.orion-crm.tls.certresolver=letsencrypt"
-      - "traefik.http.services.orion-crm.loadbalancer.server.port=80"
+      - "traefik.http.routers.orion.rule=Host(`crm.orinjoias.com.br`) || Host(`api.crm.orinjoias.com.br`)"
+      - "traefik.http.routers.orion.entrypoints=web,websecure"
+      - "traefik.http.routers.orion.tls.certresolver=letsencrypt"
+      - "traefik.http.services.orion.loadbalancer.server.port=80"
     volumes:
       - uploads_data:/app/uploads:ro
     depends_on:
