@@ -22,7 +22,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --maxmemory 256mb --maxmemory-policy noeviction
     volumes:
       - redis_data:/data
     networks:
@@ -99,6 +99,7 @@ services:
       N8N_SECURE_COOKIE: "false"
       GENERIC_TIMEZONE: America/Sao_Paulo
       N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      N8N_RUNNERS_ENABLED: "true"
       N8N_EDITOR_BASE_URL: ${APP_URL:-http://localhost}
       WEBHOOK_URL: ${APP_URL:-http://localhost}
     volumes:
