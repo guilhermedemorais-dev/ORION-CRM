@@ -166,9 +166,9 @@ async function ensureSettingsSingleton(): Promise<void> {
 
 async function startServer(): Promise<void> {
     try {
-        await ensureSettingsSingleton();
+        // await ensureSettingsSingleton(); // Temporarily disabled to prevent crash loops on fresh db
         initializeWhatsAppWebhookWorker();
-        await seedN8nSystemWorkflows();
+        // await seedN8nSystemWorkflows(); // Temporarily disabled on boot
 
         server = app.listen(config.PORT, () => {
             logger.info({ port: config.PORT, env: config.NODE_ENV }, `🌟 ORION API running on port ${config.PORT}`);
