@@ -38,6 +38,7 @@ services:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
+    image: orion-api:latest
     restart: unless-stopped
     command: sh -c "node dist/db/migrate.js && node dist/index.js"
     environment:
@@ -49,8 +50,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_me_12345678901234567890}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_change_me_123456789012345}
       OPERATOR_WEBHOOK_SECRET: ${OPERATOR_WEBHOOK_SECRET:-dev_operator_secret_change_me_123456789012}
-      APP_URL: ${APP_URL:-http://localhost}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      APP_URL: https://crm.orinjoias.com.br
+      FRONTEND_URL: https://crm.orinjoias.com.br
       MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-5}
       UPLOAD_PATH: ${UPLOAD_PATH:-/app/uploads}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -75,6 +76,7 @@ services:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
+    image: orion-web:latest
     restart: unless-stopped
     environment:
       NODE_OPTIONS: "--dns-result-order=ipv4first"
@@ -107,13 +109,13 @@ services:
     networks:
       - app_network
 
-  # ---- NGINX (Reverse Proxy) ----
+  # ---- NGINX (Internal Router) ----
   nginx:
     build:
       context: ./nginx
       dockerfile: Dockerfile
+    image: orion-nginx:latest
     restart: unless-stopped
-    # Ports removed because Traefik handles incoming traffic
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.orion-crm.rule=Host(`crm.orinjoias.com.br`) || Host(`api.crm.orinjoias.com.br`)"
