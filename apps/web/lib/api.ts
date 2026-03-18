@@ -441,11 +441,22 @@ async function parseJson<T>(response: Response): Promise<T> {
 }
 
 export async function fetchPublicSettings(): Promise<PublicSettings> {
-    const response = await fetch(`${getApiBaseUrl()}/settings/public`, {
-        cache: 'no-store',
-    });
+    try {
+        const response = await fetch(`${getApiBaseUrl()}/settings/public`, {
+            cache: 'no-store',
+        });
 
-    if (!response.ok) {
+        if (!response.ok) {
+            return {
+                company_name: 'ORIN CRM',
+                logo_url: null,
+                primary_color: '#C8A97A',
+                favicon_url: null,
+            };
+        }
+
+        return parseJson<PublicSettings>(response);
+    } catch {
         return {
             company_name: 'ORIN CRM',
             logo_url: null,
@@ -453,8 +464,6 @@ export async function fetchPublicSettings(): Promise<PublicSettings> {
             favicon_url: null,
         };
     }
-
-    return parseJson<PublicSettings>(response);
 }
 
 export async function fetchPublicCatalog(params?: {
@@ -468,26 +477,44 @@ export async function fetchPublicCatalog(params?: {
         limit: number;
     };
 }> {
-    const query = new URLSearchParams();
+    try {
+        const query = new URLSearchParams();
 
-    if (params?.q) {
-        query.set('q', params.q);
-    }
+        if (params?.q) {
+            query.set('q', params.q);
+        }
 
-    if (params?.category) {
-        query.set('category', params.category);
-    }
+        if (params?.category) {
+            query.set('category', params.category);
+        }
 
-    if (params?.limit) {
-        query.set('limit', String(params.limit));
-    }
+        if (params?.limit) {
+            query.set('limit', String(params.limit));
+        }
 
-    const suffix = query.toString() ? `?${query.toString()}` : '';
-    const response = await fetch(`${getApiBaseUrl()}/public/catalog${suffix}`, {
-        cache: 'no-store',
-    });
+        const suffix = query.toString() ? `?${query.toString()}` : '';
+        const response = await fetch(`${getApiBaseUrl()}/public/catalog${suffix}`, {
+            cache: 'no-store',
+        });
 
-    if (!response.ok) {
+        if (!response.ok) {
+            return {
+                data: [],
+                meta: {
+                    total: 0,
+                    limit: params?.limit ?? 24,
+                },
+            };
+        }
+
+        return parseJson<{
+            data: PublicCatalogProduct[];
+            meta: {
+                total: number;
+                limit: number;
+            };
+        }>(response);
+    } catch {
         return {
             data: [],
             meta: {
@@ -496,14 +523,6 @@ export async function fetchPublicCatalog(params?: {
             },
         };
     }
-
-    return parseJson<{
-        data: PublicCatalogProduct[];
-        meta: {
-            total: number;
-            limit: number;
-        };
-    }>(response);
 }
 
 export async function capturePublicLead(payload: LeadCapturePayload): Promise<{
@@ -537,43 +556,51 @@ export async function capturePublicLead(payload: LeadCapturePayload): Promise<{
 }
 
 export async function fetchStorefrontConfig(): Promise<StorePublicConfig> {
-    const response = await fetch(`${getApiBaseUrl()}/store/config`, {
-        cache: 'no-store',
-    });
+    const fallback: StorePublicConfig = {
+        is_active: false,
+        theme: 'light',
+        accent_color: '#BFA06A',
+        logo_url: null,
+        store_name: 'Minha Joalheria',
+        slogan: null,
+        custom_domain: null,
+        hero_image_url: null,
+        hero_title: 'Coleção ORION',
+        hero_subtitle: null,
+        hero_cta_label: 'Ver Coleção',
+        wa_number: null,
+        seo_title: 'Minha Joalheria',
+        seo_description: null,
+    };
 
-    if (!response.ok) {
-        return {
-            is_active: false,
-            theme: 'light',
-            accent_color: '#BFA06A',
-            logo_url: null,
-            store_name: 'Minha Joalheria',
-            slogan: null,
-            custom_domain: null,
-            hero_image_url: null,
-            hero_title: 'Coleção ORION',
-            hero_subtitle: null,
-            hero_cta_label: 'Ver Coleção',
-            wa_number: null,
-            seo_title: 'Minha Joalheria',
-            seo_description: null,
-        };
+    try {
+        const response = await fetch(`${getApiBaseUrl()}/store/config`, {
+            cache: 'no-store',
+        });
+
+        if (!response.ok) return fallback;
+        return parseJson<StorePublicConfig>(response);
+    } catch {
+        return fallback;
     }
-
-    return parseJson<StorePublicConfig>(response);
 }
 
 export async function fetchStorefrontCategories(): Promise<{ data: StorePublicCategory[] }> {
-    const response = await fetch(`${getApiBaseUrl()}/store/categories`, {
-        cache: 'no-store',
-    });
+    try {
+        const response = await fetch(`${getApiBaseUrl()}/store/categories`, {
+            cache: 'no-store',
+        });
 
-    if (!response.ok) {
+        if (!response.ok) {
+            return { data: [] };
+        }
+
+        return parseJson<{ data: StorePublicCategory[] }>(response);
+    } catch {
         return { data: [] };
     }
-
-    return parseJson<{ data: StorePublicCategory[] }>(response);
 }
+
 
 export async function fetchStorefrontProducts(params?: {
     search?: string;
