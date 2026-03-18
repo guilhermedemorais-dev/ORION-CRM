@@ -41,6 +41,7 @@ services:
     restart: unless-stopped
     command: sh -c "npm run db:migrate && node dist/index.js"
     environment:
+      NODE_OPTIONS: "--dns-result-order=ipv4first"
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-4000}
       DATABASE_URL: postgres://orion:${POSTGRES_PASSWORD:-orion_dev_password}@postgres:5432/orion_db
@@ -76,6 +77,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
+      NODE_OPTIONS: "--dns-result-order=ipv4first"
       NODE_ENV: ${NODE_ENV:-production}
       ORION_API_URL: http://api:4000/api/v1
     depends_on:
