@@ -39,7 +39,7 @@ services:
       context: ./apps/api
       dockerfile: Dockerfile
     restart: unless-stopped
-    command: sh -c "node dist/index.js"
+    command: sh -c "node dist/db/migrate.js && node dist/index.js"
     environment:
       NODE_OPTIONS: "--dns-result-order=ipv4first"
       NODE_ENV: ${NODE_ENV:-production}

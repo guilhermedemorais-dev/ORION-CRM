@@ -20,8 +20,8 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/src/db/migrate.ts ./src/db/migrate.ts
-COPY --from=builder /app/src/db/migrations ./src/db/migrations
+# Migration SQL files must be at dist/db/migrations (migrate.js uses __dirname)
+COPY --from=builder /app/src/db/migrations ./dist/db/migrations
 
 # Create uploads directory
 RUN mkdir -p /app/uploads && chown -R orion:nodejs /app/uploads
