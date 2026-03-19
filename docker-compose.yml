@@ -22,7 +22,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: redis-server --maxmemory 256mb --maxmemory-policy noeviction
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
     volumes:
       - redis_data:/data
     networks:
@@ -50,8 +50,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_me_12345678901234567890}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_change_me_123456789012345}
       OPERATOR_WEBHOOK_SECRET: ${OPERATOR_WEBHOOK_SECRET:-dev_operator_secret_change_me_123456789012}
-      APP_URL: https://crm.orinjoias.com.br
-      FRONTEND_URL: https://crm.orinjoias.com.br
+      APP_URL: https://crm.orinjoias.com
+      FRONTEND_URL: https://crm.orinjoias.com
       MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-5}
       UPLOAD_PATH: ${UPLOAD_PATH:-/app/uploads}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -88,27 +88,6 @@ services:
     networks:
       - app_network
 
-  # ---- n8n (Automacoes internas / nao exposto publicamente) ----
-  n8n:
-    image: docker.n8n.io/n8nio/n8n:1.88.0
-    restart: unless-stopped
-    environment:
-      N8N_HOST: n8n
-      N8N_PORT: 5678
-      N8N_PROTOCOL: http
-      N8N_SECURE_COOKIE: "false"
-      GENERIC_TIMEZONE: America/Sao_Paulo
-      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
-      N8N_RUNNERS_ENABLED: "true"
-      N8N_EDITOR_BASE_URL: ${APP_URL:-http://localhost}
-      WEBHOOK_URL: ${APP_URL:-http://localhost}
-    volumes:
-      - n8n_data:/home/node/.n8n
-    depends_on:
-      api:
-        condition: service_started
-    networks:
-      - app_network
 
   # ---- NGINX (Internal Router) ----
   nginx:
@@ -119,7 +98,7 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.orion-crm.rule=Host(`crm.orinjoias.com.br`) || Host(`api.crm.orinjoias.com.br`) || Host(`local.orinjoias.com.br`)"
+      - "traefik.http.routers.orion-crm.rule=Host(`crm.orinjoias.com`) || Host(`api.crm.orinjoias.com`) || Host(`local.orinjoias.com`)"
       - "traefik.http.routers.orion-crm.entrypoints=websecure"
       - "traefik.http.routers.orion-crm.tls.certresolver=letsencrypt"
       - "traefik.http.services.orion-crm.loadbalancer.server.port=80"
@@ -129,7 +108,6 @@ services:
     depends_on:
       - api
       - web
-      - n8n
     networks:
       - app_network
       - traefik-proxy
@@ -138,7 +116,7 @@ volumes:
   postgres_data:
   redis_data:
   uploads_data:
-  n8n_data:
+
 
 networks:
   app_network:
