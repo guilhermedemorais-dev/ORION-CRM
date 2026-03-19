@@ -158,6 +158,24 @@ router.post(
                 return;
             }
 
+            if (user.role !== 'ADMIN') {
+                const settingsResult = await query<{ security_login_protection: boolean }>(
+                    'SELECT security_login_protection FROM settings LIMIT 1'
+                );
+                const protectionEnabled = settingsResult.rows[0]?.security_login_protection;
+
+                if (protectionEnabled) {
+                    const now = new Date();
+                    // Assuming local time for the business (timezone should be configured correctly on the server)
+                    const hour = now.getHours();
+                    
+                    if (hour < 8 || hour >= 18) {
+                        next(new AppError(403, 'FORBIDDEN', 'Acesso restrito: O sistema só pode ser acessado em horário comercial (08:00 às 18:00).'));
+                        return;
+                    }
+                }
+            }
+
             // Verify password
             const valid = await bcrypt.compare(password, user.password_hash);
             if (!valid) {

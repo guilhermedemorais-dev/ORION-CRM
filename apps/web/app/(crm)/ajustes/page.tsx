@@ -28,6 +28,7 @@ const fallbackSettings: AdminSettings = {
     notify_order_paid: false,
     notify_production_delayed: false,
     notify_low_stock: false,
+    security_login_protection: false,
     plan: 'starter',
 };
 
