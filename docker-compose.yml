@@ -112,6 +112,26 @@ services:
       - app_network
       - traefik-proxy
 
+  # ---- Adminer (DB Admin UI) ----
+  adminer:
+    image: adminer:latest
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: dracula
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adminer.rule=Host(`db.crm.orinjoias.com`)"
+      - "traefik.http.routers.adminer.entrypoints=websecure"
+      - "traefik.http.routers.adminer.tls.certresolver=letsencrypt"
+      - "traefik.http.services.adminer.loadbalancer.server.port=8080"
+      - "traefik.docker.network=traefik-proxy"
+    depends_on:
+      - postgres
+    networks:
+      - app_network
+      - traefik-proxy
+
 volumes:
   postgres_data:
   redis_data:
