@@ -102,7 +102,7 @@ services:
       - "traefik.http.routers.orion-crm.entrypoints=websecure"
       - "traefik.http.routers.orion-crm.tls.certresolver=letsencrypt"
       - "traefik.http.services.orion-crm.loadbalancer.server.port=80"
-      - "traefik.docker.network=app_network"
+      - "traefik.docker.network=traefik-proxy"
     volumes:
       - uploads_data:/app/uploads:ro
     depends_on:
@@ -110,38 +110,16 @@ services:
       - web
     networks:
       - app_network
-
-  # ---- TRAEFIK (Reverse Proxy & SSL) ----
-  traefik:
-    image: traefik:v3.1
-    restart: unless-stopped
-    command:
-      - "--api.insecure=false"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.letsencrypt.acme.email=orinjoias@gmail.com"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - traefik_certs:/letsencrypt
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - app_network
+      - traefik-proxy
 
 volumes:
   postgres_data:
   redis_data:
   uploads_data:
-  traefik_certs:
+
 
 networks:
   app_network:
     driver: bridge
+  traefik-proxy:
+    external: true
