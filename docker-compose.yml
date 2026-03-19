@@ -1,22 +1,5 @@
-# Backend deployável do Bloco 1 (sem frontend e serviços de fases futuras).
+# Backend deployável. PostgreSQL externo (postgresql-sqyu) na porta 32768.
 services:
-  # ---- PostgreSQL ----
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: orion
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orion_dev_password}
-      POSTGRES_DB: orion_db
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - app_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U orion -d orion_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # ---- Redis ----
   redis:
@@ -41,11 +24,13 @@ services:
     image: orion-api:latest
     restart: unless-stopped
     command: sh -c "node dist/db/migrate.js && node dist/index.js"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       NODE_OPTIONS: "--dns-result-order=ipv4first"
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-4000}
-      DATABASE_URL: postgres://orion:${POSTGRES_PASSWORD:-orion_dev_password}@postgres:5432/orion_db
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_me_12345678901234567890}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_change_me_123456789012345}
@@ -62,8 +47,6 @@ services:
     ports:
       - "4000:4000"
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -112,12 +95,14 @@ services:
       - app_network
       - traefik-proxy
 
-  # ---- Adminer (DB Admin UI) ----
+  # ---- Adminer (DB Admin UI — aponta para postgres externo) ----
   adminer:
     image: adminer:latest
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
-      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DEFAULT_SERVER: host.docker.internal
       ADMINER_DESIGN: dracula
     labels:
       - "traefik.enable=true"
@@ -126,14 +111,11 @@ services:
       - "traefik.http.routers.adminer.tls.certresolver=letsencrypt"
       - "traefik.http.services.adminer.loadbalancer.server.port=8080"
       - "traefik.docker.network=traefik-proxy"
-    depends_on:
-      - postgres
     networks:
       - app_network
       - traefik-proxy
 
 volumes:
-  postgres_data:
   redis_data:
   uploads_data:
 
