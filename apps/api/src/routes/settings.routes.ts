@@ -35,6 +35,7 @@ const updateSettingsSchema = z.object({
     whatsapp_greeting: z.string().nullable().optional(),
     email_from_name: z.string().max(255).nullable().optional(),
     security_login_protection: z.boolean().optional(),
+    security_session_timeout_minutes: z.number().int().min(0).max(43200).optional(),
 });
 
 const uploadBrandingSchema = z.object({
@@ -107,7 +108,7 @@ async function handleGetSettings(_req: Request, res: Response, next: NextFunctio
             `SELECT company_name, logo_url, favicon_url, primary_color, secondary_color,
             cnpj, phone, address, instagram, whatsapp_greeting, email_from_name,
             notify_new_lead_whatsapp, notify_order_paid, notify_production_delayed, notify_low_stock,
-            security_login_protection, plan
+            security_login_protection, security_session_timeout_minutes, plan
      FROM settings LIMIT 1`
         );
         const settings = result.rows[0];
@@ -172,7 +173,7 @@ async function handleUpdateSettings(req: Request, res: Response, next: NextFunct
             `SELECT company_name, logo_url, favicon_url, primary_color, secondary_color,
             cnpj, phone, address, instagram, whatsapp_greeting, email_from_name,
             notify_new_lead_whatsapp, notify_order_paid, notify_production_delayed, notify_low_stock,
-            security_login_protection, plan
+            security_login_protection, security_session_timeout_minutes, plan
      FROM settings LIMIT 1`
         );
 

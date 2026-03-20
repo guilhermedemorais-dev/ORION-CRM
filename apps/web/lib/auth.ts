@@ -42,13 +42,14 @@ export function requireSession(): WebSession {
     return session;
 }
 
-export function setSession(session: WebSession): void {
+export function setSession(session: WebSession, maxAgeSeconds?: number): void {
+    const effectiveMaxAge = maxAgeSeconds ?? 60 * 60 * 8; // default 8h
     cookies().set(SESSION_COOKIE, JSON.stringify(session), {
         httpOnly: true,
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
         path: '/',
-        maxAge: 60 * 60 * 8,
+        maxAge: effectiveMaxAge > 0 ? effectiveMaxAge : 60 * 60 * 24 * 365, // 0 = never expire (1 year)
     });
 }
 

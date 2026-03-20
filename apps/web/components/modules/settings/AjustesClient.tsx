@@ -2060,6 +2060,37 @@ export function AjustesClient({
             return <LoadingPanel title="Segurança" />;
         }
 
+        const timeoutOptions = [
+            { value: 480, label: '8 horas' },
+            { value: 1440, label: '24 horas' },
+            { value: 0, label: 'Sem limite (nunca deslogar)' },
+        ];
+
+        async function onChangeSessionTimeout(minutes: number) {
+            setSavingSecurity(true);
+            const prev = settings.security_session_timeout_minutes;
+            setSettings((s) => s ? ({ ...s, security_session_timeout_minutes: minutes }) : s);
+
+            try {
+                const response = await fetch('/api/internal/org/settings', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ security_session_timeout_minutes: minutes }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(await parseError(response));
+                }
+
+                addToast('success', 'Tempo de sessão atualizado. Aplica-se no próximo login.');
+            } catch (error) {
+                setSettings((s) => s ? ({ ...s, security_session_timeout_minutes: prev }) : s);
+                addToast('error', error instanceof Error ? error.message : 'Falha ao atualizar tempo de sessão.');
+            } finally {
+                setSavingSecurity(false);
+            }
+        }
+
         return (
             <div className="space-y-5">
                 <SectionCard
@@ -2080,6 +2111,38 @@ export function AjustesClient({
                             onCheckedChange={(checked) => void onToggleSecurityLoginProtection(checked)}
                             disabled={savingSecurity}
                         />
+                    </div>
+                </SectionCard>
+
+                <SectionCard
+                    title="Tempo de Sessão"
+                    description="Controle por quanto tempo o sistema mantém o usuário logado antes de exigir novo login."
+                >
+                    <div className="flex items-center justify-between gap-4 rounded-[14px] border border-white/10 bg-[color:var(--orion-base)] px-4 py-4">
+                        <div className="flex-1">
+                            <div className="text-sm font-medium text-[color:var(--orion-text)]">
+                                Auto-logout
+                            </div>
+                            <div className="mt-1 text-xs text-[color:var(--orion-text-secondary)]">
+                                Define o tempo máximo de sessão. Após esse período, o usuário precisará logar novamente. Aplica-se no próximo login.
+                            </div>
+                        </div>
+                        <select
+                            value={settings.security_session_timeout_minutes}
+                            onChange={(e) => void onChangeSessionTimeout(Number(e.target.value))}
+                            disabled={savingSecurity}
+                            className={cn(
+                                'h-10 min-w-[200px] rounded-[10px] border border-white/10 bg-[color:var(--orion-base)] px-3 text-[13px] text-[color:var(--orion-text)] outline-none transition',
+                                'focus:border-brand-gold/40 focus:ring-2 focus:ring-brand-gold/10',
+                                'disabled:cursor-not-allowed disabled:opacity-60'
+                            )}
+                        >
+                            {timeoutOptions.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </SectionCard>
             </div>

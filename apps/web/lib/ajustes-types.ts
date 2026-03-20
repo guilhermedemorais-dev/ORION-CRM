@@ -15,6 +15,7 @@ export interface AdminSettings {
     notify_production_delayed: boolean;
     notify_low_stock: boolean;
     security_login_protection: boolean;
+    security_session_timeout_minutes: number;
     plan: 'starter' | 'professional' | 'enterprise';
 }
 

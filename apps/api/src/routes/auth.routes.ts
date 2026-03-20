@@ -186,11 +186,21 @@ router.post(
 
             clearFailedLogin(failedLoginKey);
 
+            // Read session timeout from settings
+            const timeoutResult = await query<{ security_session_timeout_minutes: number }>(
+                'SELECT security_session_timeout_minutes FROM settings LIMIT 1'
+            );
+            const sessionTimeoutMinutes = timeoutResult.rows[0]?.security_session_timeout_minutes ?? 480;
+            const jwtExpiresInSec = sessionTimeoutMinutes > 0 ? sessionTimeoutMinutes * 60 : 365 * 24 * 60 * 60;
+            const cookieMaxAgeMs = sessionTimeoutMinutes > 0
+                ? sessionTimeoutMinutes * 60 * 1000
+                : 365 * 24 * 60 * 60 * 1000;
+
             // Generate tokens
             const accessToken = jwt.sign(
                 { id: user.id, email: user.email, role: user.role, name: user.name },
                 env().JWT_SECRET,
-                { expiresIn: '15m' }
+                { expiresIn: jwtExpiresInSec }
             );
 
             const refreshToken = crypto.randomBytes(64).toString('hex');
@@ -199,7 +209,7 @@ router.post(
                 .update(refreshToken)
                 .digest('hex');
 
-            const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+            const expiresAt = new Date(Date.now() + cookieMaxAgeMs);
 
             // Store refresh token
             await query(
@@ -230,12 +240,13 @@ router.post(
                 httpOnly: true,
                 secure: env().NODE_ENV === 'production',
                 sameSite: 'strict',
-                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+                maxAge: cookieMaxAgeMs,
                 path: '/api/v1/auth/refresh',
             });
 
             res.json({
                 accessToken,
+                session_timeout_minutes: sessionTimeoutMinutes,
                 user: {
                     id: user.id,
                     name: user.name,
@@ -322,11 +333,21 @@ router.post(
                     throw AppError.unauthorized();
                 }
 
+                // Read session timeout from settings
+                const timeoutResult = await client.query<{ security_session_timeout_minutes: number }>(
+                    'SELECT security_session_timeout_minutes FROM settings LIMIT 1'
+                );
+                const sessionTimeoutMinutes = timeoutResult.rows[0]?.security_session_timeout_minutes ?? 480;
+                const jwtExpiresInSec = sessionTimeoutMinutes > 0 ? sessionTimeoutMinutes * 60 : 365 * 24 * 60 * 60;
+                const cookieMaxAgeMs = sessionTimeoutMinutes > 0
+                    ? sessionTimeoutMinutes * 60 * 1000
+                    : 365 * 24 * 60 * 60 * 1000;
+
                 // Generate new token pair
                 const newAccessToken = jwt.sign(
                     { id: user.id, email: user.email, role: user.role, name: user.name },
                     env().JWT_SECRET,
-                    { expiresIn: '15m' }
+                    { expiresIn: jwtExpiresInSec }
                 );
 
                 const newRefreshToken = crypto.randomBytes(64).toString('hex');
@@ -335,7 +356,7 @@ router.post(
                     .update(newRefreshToken)
                     .digest('hex');
 
-                const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+                const expiresAt = new Date(Date.now() + cookieMaxAgeMs);
 
                 await client.query(
                     `INSERT INTO refresh_tokens (user_id, token_hash, expires_at, ip_address)
@@ -343,7 +364,7 @@ router.post(
                     [user.id, newRefreshTokenHash, expiresAt, req.ip || null]
                 );
 
-                return { user, accessToken: newAccessToken, refreshToken: newRefreshToken };
+                return { user, accessToken: newAccessToken, refreshToken: newRefreshToken, sessionTimeoutMinutes, cookieMaxAgeMs };
             });
 
             // Set new refresh token cookie
@@ -351,12 +372,13 @@ router.post(
                 httpOnly: true,
                 secure: env().NODE_ENV === 'production',
                 sameSite: 'strict',
-                maxAge: 7 * 24 * 60 * 60 * 1000,
+                maxAge: result.cookieMaxAgeMs,
                 path: '/api/v1/auth/refresh',
             });
 
             res.json({
                 accessToken: result.accessToken,
+                session_timeout_minutes: result.sessionTimeoutMinutes,
                 user: {
                     id: result.user.id,
                     name: result.user.name,

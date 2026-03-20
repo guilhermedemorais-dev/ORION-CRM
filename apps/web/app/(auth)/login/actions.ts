@@ -31,6 +31,7 @@ export async function loginAction(formData: FormData) {
     const payload = await response.json() as {
         message?: string;
         accessToken?: string;
+        session_timeout_minutes?: number;
         user?: {
             id: string;
             name: string;
@@ -44,10 +45,14 @@ export async function loginAction(formData: FormData) {
         redirect(`/login?error=${encodeURIComponent(message)}`);
     }
 
+    const maxAgeSec = payload.session_timeout_minutes != null
+        ? payload.session_timeout_minutes * 60
+        : undefined;
+
     setSession({
         accessToken: payload.accessToken,
         user: payload.user,
-    });
+    }, maxAgeSec);
 
     redirect('/dashboard');
 }
