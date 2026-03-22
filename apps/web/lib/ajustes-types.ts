@@ -14,6 +14,8 @@ export interface AdminSettings {
     notify_order_paid: boolean;
     notify_production_delayed: boolean;
     notify_low_stock: boolean;
+    security_login_protection: boolean;
+    security_session_timeout_minutes: number;
     plan: 'starter' | 'professional' | 'enterprise';
 }
 
@@ -61,6 +63,7 @@ export type AjustesTab =
     | 'usuarios'
     | 'whatsapp'
     | 'notificacoes'
+    | 'seguranca'
     | 'integracoes';
 
 export type CarrierAdapterType = 'generic_rest' | 'jadlog' | 'correios' | 'loggi' | 'tnt' | 'rapiddo';

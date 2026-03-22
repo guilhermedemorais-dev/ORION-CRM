@@ -99,6 +99,7 @@ const tabItems: Array<{
     { id: 'usuarios', label: 'Usuários' },
     { id: 'whatsapp', label: 'WhatsApp' },
     { id: 'notificacoes', label: 'Notificações' },
+    { id: 'seguranca', label: 'Segurança' },
     { id: 'integracoes', label: 'Integrações' },
 ];
 
@@ -386,6 +387,7 @@ export function AjustesClient({
     const [usersLoading, setUsersLoading] = useState(false);
     const [toastItems, setToastItems] = useState<ToastRecord[]>([]);
     const [savingCompany, setSavingCompany] = useState(false);
+    const [savingSecurity, setSavingSecurity] = useState(false);
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState(initialSettings.logo_url);
@@ -1075,6 +1077,32 @@ export function AjustesClient({
             addToast('error', error instanceof Error ? error.message : 'Falha ao desconectar número.');
         } finally {
             setWhatsAppLoading(false);
+        }
+    }
+
+    async function onToggleSecurityLoginProtection(value: boolean) {
+        if (!settings) return;
+
+        setSavingSecurity(true);
+        setSettings((prev) => prev ? ({ ...prev, security_login_protection: value }) : prev);
+
+        try {
+            const response = await fetch('/api/internal/org/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ security_login_protection: value }),
+            });
+
+            if (!response.ok) {
+                throw new Error(await parseError(response));
+            }
+
+            addToast('success', 'Configurações de segurança atualizadas.');
+        } catch (error) {
+            setSettings((prev) => prev ? ({ ...prev, security_login_protection: !value }) : prev);
+            addToast('error', error instanceof Error ? error.message : 'Falha ao atualizar configurações.');
+        } finally {
+            setSavingSecurity(false);
         }
     }
 
@@ -2027,11 +2055,106 @@ export function AjustesClient({
         );
     };
 
+    const renderSecurityTab = () => {
+        if (!settings) {
+            return <LoadingPanel title="Segurança" />;
+        }
+
+        const timeoutOptions = [
+            { value: 480, label: '8 horas' },
+            { value: 1440, label: '24 horas' },
+            { value: 0, label: 'Sem limite (nunca deslogar)' },
+        ];
+
+        async function onChangeSessionTimeout(minutes: number) {
+            setSavingSecurity(true);
+            const prev = settings.security_session_timeout_minutes;
+            setSettings((s) => s ? ({ ...s, security_session_timeout_minutes: minutes }) : s);
+
+            try {
+                const response = await fetch('/api/internal/org/settings', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ security_session_timeout_minutes: minutes }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(await parseError(response));
+                }
+
+                addToast('success', 'Tempo de sessão atualizado. Aplica-se no próximo login.');
+            } catch (error) {
+                setSettings((s) => s ? ({ ...s, security_session_timeout_minutes: prev }) : s);
+                addToast('error', error instanceof Error ? error.message : 'Falha ao atualizar tempo de sessão.');
+            } finally {
+                setSavingSecurity(false);
+            }
+        }
+
+        return (
+            <div className="space-y-5">
+                <SectionCard
+                    title="Proteção de Acesso"
+                    description="Restrições adicionais para login de usuários no sistema."
+                >
+                    <div className="flex items-center justify-between gap-4 rounded-[14px] border border-white/10 bg-[color:var(--orion-base)] px-4 py-4">
+                        <div>
+                            <div className="text-sm font-medium text-[color:var(--orion-text)]">
+                                Restringir Horário e IP
+                            </div>
+                            <div className="mt-1 text-xs text-[color:var(--orion-text-secondary)]">
+                                Impede o login fora do horário comercial (08:00 - 18:00) ou a partir de redes externas não autorizadas.
+                            </div>
+                        </div>
+                        <Switch
+                            checked={Boolean(settings.security_login_protection)}
+                            onCheckedChange={(checked) => void onToggleSecurityLoginProtection(checked)}
+                            disabled={savingSecurity}
+                        />
+                    </div>
+                </SectionCard>
+
+                <SectionCard
+                    title="Tempo de Sessão"
+                    description="Controle por quanto tempo o sistema mantém o usuário logado antes de exigir novo login."
+                >
+                    <div className="flex items-center justify-between gap-4 rounded-[14px] border border-white/10 bg-[color:var(--orion-base)] px-4 py-4">
+                        <div className="flex-1">
+                            <div className="text-sm font-medium text-[color:var(--orion-text)]">
+                                Auto-logout
+                            </div>
+                            <div className="mt-1 text-xs text-[color:var(--orion-text-secondary)]">
+                                Define o tempo máximo de sessão. Após esse período, o usuário precisará logar novamente. Aplica-se no próximo login.
+                            </div>
+                        </div>
+                        <select
+                            value={settings.security_session_timeout_minutes}
+                            onChange={(e) => void onChangeSessionTimeout(Number(e.target.value))}
+                            disabled={savingSecurity}
+                            className={cn(
+                                'h-10 min-w-[200px] rounded-[10px] border border-white/10 bg-[color:var(--orion-base)] px-3 text-[13px] text-[color:var(--orion-text)] outline-none transition',
+                                'focus:border-brand-gold/40 focus:ring-2 focus:ring-brand-gold/10',
+                                'disabled:cursor-not-allowed disabled:opacity-60'
+                            )}
+                        >
+                            {timeoutOptions.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </SectionCard>
+            </div>
+        );
+    };
+
     const renderActiveTab = () => {
         if (activeTab === 'empresa') return renderCompanyTab();
         if (activeTab === 'usuarios') return renderUsersTab();
         if (activeTab === 'whatsapp') return <WhatsAppTab onToast={addToast} />;
         if (activeTab === 'notificacoes') return renderNotificationsTab();
+        if (activeTab === 'seguranca') return renderSecurityTab();
         if (activeTab === 'integracoes') return <IntegracoesTab onToast={addToast} />;
         return null;
     };

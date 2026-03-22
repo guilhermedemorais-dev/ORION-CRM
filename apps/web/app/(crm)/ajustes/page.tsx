@@ -9,6 +9,7 @@ const validTabs = new Set<AjustesTab>([
     'usuarios',
     'whatsapp',
     'notificacoes',
+    'seguranca',
     'integracoes',
 ]);
 
@@ -28,6 +29,8 @@ const fallbackSettings: AdminSettings = {
     notify_order_paid: false,
     notify_production_delayed: false,
     notify_low_stock: false,
+    security_login_protection: false,
+    security_session_timeout_minutes: 480,
     plan: 'starter',
 };
 
