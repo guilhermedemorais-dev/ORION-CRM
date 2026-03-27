@@ -19,16 +19,21 @@ export async function loginAction(formData: FormData) {
         redirect('/login?error=Verifique%20os%20campos%20informados.');
     }
 
-    const response = await fetch(`${process.env.ORION_API_URL ?? 'http://localhost:4000/api/v1'}/auth/login`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(parsed.data),
-        cache: 'no-store',
-    });
+    let response: Response;
+    try {
+        response = await fetch(`${process.env.ORION_API_URL ?? 'http://localhost:4000/api/v1'}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(parsed.data),
+            cache: 'no-store',
+        });
+    } catch {
+        redirect('/login?error=Servi%C3%A7o%20indispon%C3%ADvel.%20Tente%20novamente.');
+    }
 
-    const payload = await response.json() as {
+    let payload: {
         message?: string;
         accessToken?: string;
         session_timeout_minutes?: number;
@@ -39,6 +44,11 @@ export async function loginAction(formData: FormData) {
             role: string;
         };
     };
+    try {
+        payload = await response.json() as typeof payload;
+    } catch {
+        redirect('/login?error=Erro%20ao%20processar%20resposta%20do%20servidor.');
+    }
 
     if (!response.ok || !payload.accessToken || !payload.user) {
         const message = payload.message ?? 'Não foi possível autenticar.';
