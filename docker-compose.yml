@@ -1,5 +1,6 @@
 # Backend deployável do Bloco 1 (sem frontend e serviços de fases futuras).
 services:
+
   # ---- PostgreSQL ----
   postgres:
     image: postgres:16-alpine
@@ -58,8 +59,8 @@ services:
       N8N_URL: ${N8N_URL:-http://n8n:5678}
       N8N_API_KEY: ${N8N_API_KEY:-}
       N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://n8n:5678/webhook/orion-lead-captured}
-    ports:
-      - "4000:4000"
+    expose:
+      - "4000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,22 +81,20 @@ services:
       NODE_OPTIONS: "--dns-result-order=ipv4first"
       NODE_ENV: ${NODE_ENV:-production}
       ORION_API_URL: http://api:4000/api/v1
-    extra_hosts:
-      - "api:host-gateway"
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     depends_on:
       api:
         condition: service_started
     networks:
       - app_network_v2
 
-
   # ---- NGINX (Internal Router) ----
   nginx:
-    image: nginx:alpine
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
     restart: unless-stopped
-    command: ["nginx", "-g", "daemon off;", "-c", "/opt/orion.conf"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.orion-crm.rule=Host(`crm.orinjoias.com`) || Host(`api.crm.orinjoias.com`) || Host(`local.orinjoias.com`)"
@@ -104,7 +103,6 @@ services:
       - "traefik.http.services.orion-crm.loadbalancer.server.port=80"
       - "traefik.docker.network=traefik-proxy"
     volumes:
-      - ./nginx/nginx.conf:/opt/orion.conf:ro
       - uploads_data:/app/uploads:ro
     depends_on:
       - api
@@ -115,7 +113,7 @@ services:
 
   # ---- Adminer (DB Admin UI) ----
   adminer:
-    image: adminer:latest
+    image: adminer:4.8.1
     restart: unless-stopped
     environment:
       ADMINER_DEFAULT_SERVER: postgres
@@ -138,10 +136,8 @@ volumes:
   redis_data:
   uploads_data:
 
-
 networks:
   app_network_v2:
-    name: app_network_v2
-    driver: bridge
+    external: true
   traefik-proxy:
     external: true
