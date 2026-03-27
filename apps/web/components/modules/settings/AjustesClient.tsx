@@ -7,14 +7,19 @@ import {
     ChevronDown,
     Copy,
     ExternalLink,
+    Eye,
+    EyeOff,
     ImageUp,
     Loader2,
+    Lock,
     Power,
     QrCode,
     RefreshCw,
+    Shield,
     Trash2,
     Save,
     ShieldCheck,
+    User,
     Users2,
 } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -48,10 +53,66 @@ const companySchema = z.object({
 const inviteSchema = z.object({
     name: z.string().trim().min(2, 'Nome obrigatório.'),
     email: z.string().trim().email('Email inválido.'),
-    role: z.enum(['ADMIN', 'ATENDENTE']),
+    role: z.enum(['ROOT', 'ADMIN', 'GERENTE', 'VENDEDOR', 'ATENDENTE', 'PRODUCAO', 'FINANCEIRO']),
     personal_whatsapp: z.string().trim().max(25).optional(),
     commission_rate: z.coerce.number().min(0).max(100),
-});
+    password: z.string().min(6, 'Mín. 6 caracteres.').max(128).optional().or(z.literal('')),
+    password_confirm: z.string().max(128).optional().or(z.literal('')),
+}).refine((data) => {
+    if (data.password && data.password !== data.password_confirm) return false;
+    return true;
+}, { message: 'As senhas não coincidem.', path: ['password_confirm'] });
+
+type UserRoleKey = 'ROOT' | 'ADMIN' | 'GERENTE' | 'VENDEDOR' | 'ATENDENTE' | 'PRODUCAO' | 'FINANCEIRO';
+
+interface PermissionModule {
+    key: string;
+    label: string;
+    icon: string;
+}
+
+const FIXED_PERMISSION_MODULES: PermissionModule[] = [
+    { key: 'leads', label: 'Leads & Pipeline', icon: '📊' },
+    { key: 'clientes', label: 'Clientes', icon: '👤' },
+    { key: 'pedidos', label: 'Pedidos', icon: '📦' },
+    { key: 'producao', label: 'Produção', icon: '⚙️' },
+    { key: 'pdv', label: 'PDV', icon: '🏪' },
+    { key: 'estoque', label: 'Estoque', icon: '📋' },
+    { key: 'financeiro', label: 'Financeiro', icon: '💰' },
+    { key: 'analytics', label: 'Analytics', icon: '📈' },
+    { key: 'usuarios', label: 'Usuários', icon: '👥' },
+    { key: 'assistente_ia', label: 'Assistente IA', icon: '🤖' },
+];
+
+const DEFAULT_PERMS_BY_ROLE: Record<UserRoleKey, Record<string, boolean>> = {
+    ROOT: Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, true])),
+    ADMIN: Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, true])),
+    GERENTE: Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['leads', 'clientes', 'pedidos', 'producao', 'pdv', 'estoque', 'analytics', 'assistente_ia'].includes(m.key)])),
+    VENDEDOR: Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['leads', 'clientes', 'pedidos', 'pdv', 'assistente_ia'].includes(m.key)])),
+    ATENDENTE: Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['leads', 'clientes', 'pedidos', 'assistente_ia'].includes(m.key)])),
+    PRODUCAO: Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['producao', 'estoque', 'pedidos'].includes(m.key)])),
+    FINANCEIRO: Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['financeiro', 'pedidos', 'analytics'].includes(m.key)])),
+};
+
+const ROLE_LABELS: Record<UserRoleKey, string> = {
+    ROOT: 'Root',
+    ADMIN: 'Admin',
+    GERENTE: 'Gerente',
+    VENDEDOR: 'Vendedor',
+    ATENDENTE: 'Atendente',
+    PRODUCAO: 'Produção',
+    FINANCEIRO: 'Financeiro',
+};
+
+const ROLE_COLORS: Record<UserRoleKey, string> = {
+    ROOT: '#C9A55C',
+    ADMIN: '#6366F1',
+    GERENTE: '#22C55E',
+    VENDEDOR: '#3B82F6',
+    ATENDENTE: '#A855F7',
+    PRODUCAO: '#F97316',
+    FINANCEIRO: '#14B8A6',
+};
 
 const personalWhatsappSchema = z.object({
     personal_whatsapp: z.string().trim().max(25).optional(),
@@ -373,11 +434,13 @@ export function AjustesClient({
     initialSettings,
     initialUsers,
     currentUserId,
+    currentUserRole,
 }: {
     initialTab: AjustesTab;
     initialSettings: AdminSettings;
     initialUsers: AdminUser[];
     currentUserId: string;
+    currentUserRole: string;
 }) {
     const router = useRouter();
     const pathname = usePathname();
@@ -398,6 +461,11 @@ export function AjustesClient({
     const [savingInvite, setSavingInvite] = useState(false);
     const [savingEdit, setSavingEdit] = useState(false);
     const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
+    const [showInvitePassword, setShowInvitePassword] = useState(false);
+    const [showInvitePasswordConfirm, setShowInvitePasswordConfirm] = useState(false);
+    const [invitePerms, setInvitePerms] = useState<Record<string, boolean>>({...DEFAULT_PERMS_BY_ROLE.VENDEDOR});
+    const [editPerms, setEditPerms] = useState<Record<string, boolean>>({});
+    const [pipelinesForPerms, setPipelinesForPerms] = useState<Array<{id: string; name: string; icon: string}>>([]);
     const [whatsAppStatus, setWhatsAppStatus] = useState<WhatsAppStatusPayload>({
         status: 'DISCONNECTED',
         connected_number: null,
@@ -439,9 +507,11 @@ export function AjustesClient({
         defaultValues: {
             name: '',
             email: '',
-            role: 'ATENDENTE',
+            role: 'VENDEDOR',
             personal_whatsapp: '',
             commission_rate: 0,
+            password: '',
+            password_confirm: '',
         },
     });
 
@@ -450,7 +520,7 @@ export function AjustesClient({
         defaultValues: {
             name: '',
             email: '',
-            role: 'ATENDENTE',
+            role: 'VENDEDOR',
             personal_whatsapp: '',
             commission_rate: 0,
         },
@@ -934,17 +1004,36 @@ export function AjustesClient({
         }
     }
 
+    async function fetchPipelinesForPerms() {
+        try {
+            const res = await fetch('/api/internal/users/pipelines-for-perms');
+            if (res.ok) {
+                const payload = await res.json() as { data: Array<{id: string; name: string; icon: string}> };
+                setPipelinesForPerms(payload.data ?? []);
+            }
+        } catch { /* ignore */ }
+    }
+
     async function onInviteUser(values: InviteFormValues) {
         setSavingInvite(true);
 
         try {
+            const body: Record<string, unknown> = {
+                name: values.name,
+                email: values.email,
+                role: values.role,
+                personal_whatsapp: values.personal_whatsapp?.trim() || null,
+                commission_rate: values.commission_rate,
+            };
+            if (values.password && values.password.length >= 6) {
+                body.password = values.password;
+                body.password_confirm = values.password_confirm;
+            }
+
             const response = await fetch('/api/internal/users/invite', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...values,
-                    personal_whatsapp: values.personal_whatsapp?.trim() || null,
-                }),
+                body: JSON.stringify(body),
             });
 
             if (!response.ok) {
@@ -955,10 +1044,13 @@ export function AjustesClient({
             inviteForm.reset({
                 name: '',
                 email: '',
-                role: 'ATENDENTE',
+                role: 'VENDEDOR',
                 personal_whatsapp: '',
                 commission_rate: 0,
+                password: '',
+                password_confirm: '',
             });
+            setInvitePerms({...DEFAULT_PERMS_BY_ROLE.VENDEDOR});
             setInviteOpen(false);
             await refreshUsers(false);
             addToast(
@@ -980,13 +1072,22 @@ export function AjustesClient({
         setSavingEdit(true);
 
         try {
+            const body: Record<string, unknown> = {
+                name: values.name,
+                email: values.email,
+                role: values.role,
+                personal_whatsapp: values.personal_whatsapp?.trim() || null,
+                commission_rate: values.commission_rate,
+            };
+            if (values.password && values.password.length >= 6) {
+                body.password = values.password;
+                body.password_confirm = values.password_confirm;
+            }
+
             const response = await fetch(`/api/internal/users/${editingUser.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...values,
-                    personal_whatsapp: values.personal_whatsapp?.trim() || null,
-                }),
+                body: JSON.stringify(body),
             });
 
             if (!response.ok) {
@@ -1056,6 +1157,31 @@ export function AjustesClient({
             addToast('error', error instanceof Error ? error.message : 'Falha ao alterar status do usuário.');
         } finally {
             setTogglingUserId(null);
+        }
+    }
+
+    async function onDeleteUser(user: AdminUser) {
+        if (user.id === currentUserId) {
+            addToast('error', 'Você não pode excluir sua própria conta.');
+            return;
+        }
+
+        const confirmed = window.confirm(`Tem certeza que deseja excluir o usuário "${user.name}"? Esta ação é irreversível.`);
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch(`/api/internal/users/${user.id}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                throw new Error(await parseError(response));
+            }
+
+            setUsers(prev => prev.filter(u => u.id !== user.id));
+            addToast('success', 'Usuário excluído com sucesso.');
+        } catch (error) {
+            addToast('error', error instanceof Error ? error.message : 'Falha ao excluir usuário.');
         }
     }
 
@@ -1261,13 +1387,18 @@ export function AjustesClient({
 
     useEffect(() => {
         if (editingUser) {
+            const validRoles: UserRoleKey[] = ['ROOT', 'ADMIN', 'GERENTE', 'VENDEDOR', 'ATENDENTE', 'PRODUCAO', 'FINANCEIRO'];
+            const role = validRoles.includes(editingUser.role as UserRoleKey)
+                ? (editingUser.role as UserRoleKey)
+                : 'ATENDENTE';
             editForm.reset({
                 name: editingUser.name,
                 email: editingUser.email,
-                role: editingUser.role === 'ADMIN' ? 'ADMIN' : 'ATENDENTE',
+                role,
                 personal_whatsapp: editingUser.personal_whatsapp ?? '',
                 commission_rate: Number(editingUser.commission_rate || 0),
             });
+            setEditPerms({...DEFAULT_PERMS_BY_ROLE[role]});
         }
     }, [editingUser, editForm]);
 
@@ -1518,7 +1649,7 @@ export function AjustesClient({
             title="Equipe e Permissões"
             description="Lista operacional de usuários com role, comissão, status e ações administrativas."
             action={
-                <button type="button" className={primaryButtonClassName} onClick={() => setInviteOpen(true)}>
+                <button type="button" className={primaryButtonClassName} onClick={() => { setInviteOpen(true); void fetchPipelinesForPerms(); }}>
                     <Users2 className="h-3.5 w-3.5" />
                     Convidar usuário
                 </button>
@@ -1570,22 +1701,44 @@ export function AjustesClient({
                                     <td className="py-4 pr-4 text-[color:var(--orion-text-secondary)]">{formatDate(user.created_at)}</td>
                                     <td className="py-4">
                                         <div className="flex flex-wrap gap-2">
-                                            <button type="button" className={secondaryButtonClassName} onClick={() => setEditingUser(user)}>
-                                                Editar
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className={secondaryButtonClassName}
-                                                disabled={togglingUserId === user.id}
-                                                onClick={() => void onToggleUserStatus(user)}
-                                            >
-                                                {togglingUserId === user.id ? (
-                                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                ) : (
-                                                    <Power className="h-3.5 w-3.5" />
-                                                )}
-                                                {user.status === 'active' ? 'Desativar' : 'Ativar'}
-                                            </button>
+                                            {(currentUserRole === 'ROOT' || user.role !== 'ROOT') && (<>
+                                                <button type="button" className={secondaryButtonClassName} onClick={() => {
+                                                    const role = (user.role as UserRoleKey) || 'ATENDENTE';
+                                                    editForm.reset({
+                                                        name: user.name,
+                                                        email: user.email,
+                                                        role: role,
+                                                        personal_whatsapp: user.personal_whatsapp ?? '',
+                                                        commission_rate: user.commission_rate ?? 0,
+                                                    });
+                                                    setEditPerms({...DEFAULT_PERMS_BY_ROLE[role]});
+                                                    setEditingUser(user);
+                                                    void fetchPipelinesForPerms();
+                                                }}>
+                                                    Editar
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={secondaryButtonClassName}
+                                                    disabled={togglingUserId === user.id}
+                                                    onClick={() => void onToggleUserStatus(user)}
+                                                >
+                                                    {togglingUserId === user.id ? (
+                                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                    ) : (
+                                                        <Power className="h-3.5 w-3.5" />
+                                                    )}
+                                                    {user.status === 'active' ? 'Desativar' : 'Ativar'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-rose-400 transition hover:bg-rose-500/20 hover:text-rose-300"
+                                                    onClick={() => void onDeleteUser(user)}
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                    Excluir
+                                                </button>
+                                            </>)}
                                         </div>
                                     </td>
                                 </tr>
@@ -2208,77 +2361,262 @@ export function AjustesClient({
             <div className="py-6">{renderActiveTab()}</div>
 
             {inviteOpen ? (
-                <DialogContainer
-                    title="Convidar Usuário"
-                    description="Novo acesso para equipe comercial e administrativa."
-                    onClose={() => setInviteOpen(false)}
-                >
-                    <form className="grid gap-4" onSubmit={inviteForm.handleSubmit(onInviteUser)}>
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <input className={fieldClassName} placeholder="Nome completo" {...inviteForm.register('name')} />
-                            <input className={fieldClassName} placeholder="E-mail" type="email" {...inviteForm.register('email')} />
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[color:var(--orion-surface)] shadow-[var(--orion-shadow-dialog)] max-h-[90vh] overflow-y-auto">
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#C9A55C]/20 to-[#8B6914]/10 border border-[#C9A55C]/20">
+                                    <User className="h-5 w-5 text-[#C9A55C]" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-semibold text-[color:var(--orion-text)]" style={{ fontFamily: 'var(--font-orion-serif)' }}>Convidar Usuário</h2>
+                                    <p className="text-xs text-[color:var(--orion-text-secondary)]">Novo acesso para equipe comercial e administrativa.</p>
+                                </div>
+                            </div>
+                            <button type="button" onClick={() => { setInviteOpen(false); inviteForm.reset(); }} className="rounded-lg border border-white/10 p-2 text-[color:var(--orion-text-secondary)] hover:text-[color:var(--orion-text)] transition">✕</button>
                         </div>
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <select aria-label="Função do usuário" {...inviteForm.register('role')} className={fieldClassName}>
-                                <option value="ADMIN">ADMIN</option>
-                                <option value="ATENDENTE">ATENDENTE</option>
-                            </select>
-                            <input
-                                className={fieldClassName}
-                                placeholder="WhatsApp pessoal"
-                                {...inviteForm.register('personal_whatsapp', {
-                                    onChange: (event) => {
-                                        event.target.value = maskPhone(event.target.value);
-                                    },
-                                })}
-                            />
-                        </div>
-                        <input className={fieldClassName} placeholder="Comissão (%)" type="number" min="0" max="100" step="0.01" {...inviteForm.register('commission_rate')} />
-                        <div className="flex justify-end">
-                            <button type="submit" className={primaryButtonClassName} disabled={savingInvite}>
-                                {savingInvite ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Users2 className="h-3.5 w-3.5" />}
-                                Convidar
-                            </button>
-                        </div>
-                    </form>
-                </DialogContainer>
+                        <form className="px-6 py-5 space-y-6" onSubmit={inviteForm.handleSubmit(onInviteUser)}>
+                            {/* Section: Dados Pessoais */}
+                            <div>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <User className="h-4 w-4 text-[#C9A55C]" />
+                                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">Dados Pessoais</span>
+                                    <div className="flex-1 h-px bg-white/5" />
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <div>
+                                        <label className="mb-1.5 block text-[11px] font-medium text-[color:var(--orion-text-secondary)]">Nome completo</label>
+                                        <input className={fieldClassName} placeholder="Ex: João Oliveira" {...inviteForm.register('name')} />
+                                    </div>
+                                    <div>
+                                        <label className="mb-1.5 block text-[11px] font-medium text-[color:var(--orion-text-secondary)]">E-mail</label>
+                                        <input className={fieldClassName} placeholder="email@empresa.com" type="email" {...inviteForm.register('email')} />
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Password fields */}
+                            <div>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Lock className="h-4 w-4 text-[#C9A55C]" />
+                                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">Senha de Acesso</span>
+                                    <div className="flex-1 h-px bg-white/5" />
+                                    <span className="text-[10px] text-[color:var(--orion-text-muted)]">(opcional — gerada automaticamente se vazio)</span>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <div className="relative">
+                                        <label className="mb-1.5 block text-[11px] font-medium text-[color:var(--orion-text-secondary)]">Senha</label>
+                                        <input className={fieldClassName} placeholder="••••••••" type={showInvitePassword ? 'text' : 'password'} {...inviteForm.register('password')} />
+                                        <button type="button" className="absolute right-3 top-[34px] text-[color:var(--orion-text-muted)] hover:text-[color:var(--orion-text)]" onClick={() => setShowInvitePassword(!showInvitePassword)}>
+                                            {showInvitePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
+                                    </div>
+                                    <div className="relative">
+                                        <label className="mb-1.5 block text-[11px] font-medium text-[color:var(--orion-text-secondary)]">Confirmar senha</label>
+                                        <input className={fieldClassName} placeholder="••••••••" type={showInvitePasswordConfirm ? 'text' : 'password'} {...inviteForm.register('password_confirm')} />
+                                        <button type="button" className="absolute right-3 top-[34px] text-[color:var(--orion-text-muted)] hover:text-[color:var(--orion-text)]" onClick={() => setShowInvitePasswordConfirm(!showInvitePasswordConfirm)}>
+                                            {showInvitePasswordConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Role, WhatsApp, Commission */}
+                            <div className="grid gap-4 md:grid-cols-3">
+                                <div>
+                                    <label className="mb-1.5 block text-[11px] font-medium text-[color:var(--orion-text-secondary)]">Função</label>
+                                    <select
+                                        aria-label="Função do usuário"
+                                        {...inviteForm.register('role', {
+                                            onChange: (e) => {
+                                                const role = e.target.value as UserRoleKey;
+                                                setInvitePerms({...DEFAULT_PERMS_BY_ROLE[role], ...Object.fromEntries(pipelinesForPerms.map(p => [`pipeline_${p.id}`, DEFAULT_PERMS_BY_ROLE[role]?.leads ?? false]))});
+                                            },
+                                        })}
+                                        className={fieldClassName}
+                                    >
+                                        {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                                            <option key={value} value={value}>{label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-[11px] font-medium text-[color:var(--orion-text-secondary)]">WhatsApp</label>
+                                    <input className={fieldClassName} placeholder="(99) 99999-9999" {...inviteForm.register('personal_whatsapp', { onChange: (e) => { e.target.value = maskPhone(e.target.value); } })} />
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-[11px] font-medium text-[color:var(--orion-text-secondary)]">Comissão (%)</label>
+                                    <input className={fieldClassName} placeholder="0" type="number" min="0" max="100" step="0.01" {...inviteForm.register('commission_rate')} />
+                                </div>
+                            </div>
+                            {/* Permissions Section */}
+                            <div>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Shield className="h-4 w-4 text-[#C9A55C]" />
+                                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">Permissões por Módulo</span>
+                                    <div className="flex-1 h-px bg-white/5" />
+                                    <span className="text-[10px] rounded-full px-2.5 py-0.5 font-medium" style={{ background: `${ROLE_COLORS[inviteForm.watch('role') as UserRoleKey] ?? '#C9A55C'}20`, color: ROLE_COLORS[inviteForm.watch('role') as UserRoleKey] ?? '#C9A55C' }}>
+                                        {ROLE_LABELS[inviteForm.watch('role') as UserRoleKey] ?? inviteForm.watch('role')}
+                                    </span>
+                                </div>
+                                <div className="grid gap-2 md:grid-cols-2">
+                                    {[...FIXED_PERMISSION_MODULES, ...pipelinesForPerms.map(p => ({ key: `pipeline_${p.id}`, label: p.name, icon: '🔀' }))].map(mod => (
+                                        <label key={mod.key} className="flex items-center gap-3 rounded-xl border border-white/5 bg-[#0D0D0F] px-4 py-3 cursor-pointer hover:border-white/10 transition">
+                                            <span className="text-base">{mod.icon}</span>
+                                            <span className="flex-1 text-sm text-[color:var(--orion-text)]">{mod.label}</span>
+                                            <div
+                                                className={cn('relative h-5 w-9 rounded-full transition-colors cursor-pointer', invitePerms[mod.key] ? 'bg-[#C9A55C]' : 'bg-white/10')}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    setInvitePerms(prev => ({ ...prev, [mod.key]: !prev[mod.key] }));
+                                                }}
+                                            >
+                                                <div className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform', invitePerms[mod.key] ? 'translate-x-4' : 'translate-x-0.5')} />
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                            {/* Footer */}
+                            <div className="flex items-center justify-end gap-3 pt-2 border-t border-white/5">
+                                <button type="button" className={secondaryButtonClassName} onClick={() => { setInviteOpen(false); inviteForm.reset(); }}>Cancelar</button>
+                                <button type="submit" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#C9A55C]/30 bg-gradient-to-r from-[#C9A55C] to-[#8B6914] px-6 text-[12px] font-bold uppercase tracking-[0.14em] text-[#0A0A0C] transition hover:brightness-110 disabled:opacity-60" disabled={savingInvite}>
+                                    {savingInvite ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users2 className="h-4 w-4" />}
+                                    Convidar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             ) : null}
 
             {editingUser ? (
-                <DialogContainer
-                    title="Editar Usuário"
-                    description={`Ajuste de permissões e dados de ${editingUser.name}.`}
-                    onClose={() => setEditingUser(null)}
-                >
-                    <form className="grid gap-4" onSubmit={editForm.handleSubmit(onSaveUserEdit)}>
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <input className={fieldClassName} placeholder="Nome completo" {...editForm.register('name')} />
-                            <input className={fieldClassName} placeholder="E-mail" type="email" {...editForm.register('email')} />
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[color:var(--orion-surface)] shadow-[var(--orion-shadow-dialog)] max-h-[90vh] overflow-y-auto">
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#6366F1]/20 to-[#4338CA]/10 border border-[#6366F1]/20">
+                                    <User className="h-5 w-5 text-[#6366F1]" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-semibold text-[color:var(--orion-text)]" style={{ fontFamily: 'var(--font-orion-serif)' }}>Editar Usuário</h2>
+                                    <p className="text-xs text-[color:var(--orion-text-secondary)]">Ajuste de permissões e dados de {editingUser.name}.</p>
+                                </div>
+                            </div>
+                            <button type="button" onClick={() => setEditingUser(null)} className="rounded-lg border border-white/10 p-2 text-[color:var(--orion-text-secondary)] hover:text-[color:var(--orion-text)] transition">✕</button>
                         </div>
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <select aria-label="Função do usuário" {...editForm.register('role')} className={fieldClassName}>
-                                <option value="ADMIN">ADMIN</option>
-                                <option value="ATENDENTE">ATENDENTE</option>
-                            </select>
-                            <input
-                                className={fieldClassName}
-                                placeholder="WhatsApp pessoal"
-                                {...editForm.register('personal_whatsapp', {
-                                    onChange: (event) => {
-                                        event.target.value = maskPhone(event.target.value);
-                                    },
-                                })}
-                            />
-                        </div>
-                        <input className={fieldClassName} placeholder="Comissão (%)" type="number" min="0" max="100" step="0.01" {...editForm.register('commission_rate')} />
-                        <div className="flex justify-end">
-                            <button type="submit" className={primaryButtonClassName} disabled={savingEdit}>
-                                {savingEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                                Salvar alterações
-                            </button>
-                        </div>
-                    </form>
-                </DialogContainer>
+                        <form className="px-6 py-5 space-y-6" onSubmit={editForm.handleSubmit(onSaveUserEdit)}>
+                            {/* Dados Pessoais */}
+                            <div>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <User className="h-4 w-4 text-[#C9A55C]" />
+                                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">Dados Pessoais</span>
+                                    <div className="flex-1 h-px bg-white/5" />
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <div>
+                                        <label className="mb-1.5 block text-[11px] font-medium text-[color:var(--orion-text-secondary)]">Nome completo</label>
+                                        <input className={fieldClassName} placeholder="Nome completo" {...editForm.register('name')} />
+                                    </div>
+                                    <div>
+                                        <label className="mb-1.5 block text-[11px] font-medium text-[color:var(--orion-text-secondary)]">E-mail</label>
+                                        <input className={fieldClassName} placeholder="E-mail" type="email" {...editForm.register('email')} />
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Role, WhatsApp, Commission */}
+                            <div className="grid gap-4 md:grid-cols-3">
+                                <div>
+                                    <label className="mb-1.5 block text-[11px] font-medium text-[color:var(--orion-text-secondary)]">Função</label>
+                                    <select
+                                        aria-label="Função do usuário"
+                                        {...editForm.register('role', {
+                                            onChange: (e) => {
+                                                const role = e.target.value as UserRoleKey;
+                                                setEditPerms({...DEFAULT_PERMS_BY_ROLE[role], ...Object.fromEntries(pipelinesForPerms.map(p => [`pipeline_${p.id}`, DEFAULT_PERMS_BY_ROLE[role]?.leads ?? false]))});
+                                            },
+                                        })}
+                                        className={fieldClassName}
+                                    >
+                                        {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                                            <option key={value} value={value}>{label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-[11px] font-medium text-[color:var(--orion-text-secondary)]">WhatsApp</label>
+                                    <input className={fieldClassName} placeholder="(99) 99999-9999" {...editForm.register('personal_whatsapp', { onChange: (e) => { e.target.value = maskPhone(e.target.value); } })} />
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-[11px] font-medium text-[color:var(--orion-text-secondary)]">Comissão (%)</label>
+                                    <input className={fieldClassName} placeholder="0" type="number" min="0" max="100" step="0.01" {...editForm.register('commission_rate')} />
+                                </div>
+                            </div>
+                            {/* Permissions */}
+                            <div>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Shield className="h-4 w-4 text-[#C9A55C]" />
+                                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">Permissões por Módulo</span>
+                                    <div className="flex-1 h-px bg-white/5" />
+                                    <span className="text-[10px] rounded-full px-2.5 py-0.5 font-medium" style={{ background: `${ROLE_COLORS[editForm.watch('role') as UserRoleKey] ?? '#6366F1'}20`, color: ROLE_COLORS[editForm.watch('role') as UserRoleKey] ?? '#6366F1' }}>
+                                        {ROLE_LABELS[editForm.watch('role') as UserRoleKey] ?? editForm.watch('role')}
+                                    </span>
+                                </div>
+                                <div className="grid gap-2 md:grid-cols-2">
+                                    {[...FIXED_PERMISSION_MODULES, ...pipelinesForPerms.map(p => ({ key: `pipeline_${p.id}`, label: p.name, icon: '🔀' }))].map(mod => (
+                                        <label key={mod.key} className="flex items-center gap-3 rounded-xl border border-white/5 bg-[#0D0D0F] px-4 py-3 cursor-pointer hover:border-white/10 transition">
+                                            <span className="text-base">{mod.icon}</span>
+                                            <span className="flex-1 text-sm text-[color:var(--orion-text)]">{mod.label}</span>
+                                            <div
+                                                className={cn('relative h-5 w-9 rounded-full transition-colors cursor-pointer', editPerms[mod.key] ? 'bg-[#C9A55C]' : 'bg-white/10')}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    setEditPerms(prev => ({ ...prev, [mod.key]: !prev[mod.key] }));
+                                                }}
+                                            >
+                                                <div className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform', editPerms[mod.key] ? 'translate-x-4' : 'translate-x-0.5')} />
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                            {/* Status bar */}
+                            <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-[#0D0D0F] px-4 py-3">
+                                <span className="text-sm text-[color:var(--orion-text-secondary)]">Status da conta</span>
+                                <div className="flex-1" />
+                                <span className={cn('text-xs font-medium', editingUser.status === 'active' ? 'text-emerald-400' : 'text-rose-400')}>
+                                    {editingUser.status === 'active' ? 'Ativo' : 'Inativo'}
+                                </span>
+                                <div
+                                    className={cn('relative h-5 w-9 rounded-full transition-colors cursor-pointer', editingUser.status === 'active' ? 'bg-emerald-500' : 'bg-white/10')}
+                                    onClick={async () => {
+                                        if (!editingUser) return;
+                                        setTogglingUserId(editingUser.id);
+                                        try {
+                                            const res = await fetch(`/api/internal/users/${editingUser.id}/toggle-status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' } });
+                                            if (res.ok) {
+                                                const updated = await res.json() as AdminUser;
+                                                setEditingUser(updated);
+                                                await refreshUsers(false);
+                                            }
+                                        } catch { /* ignore */ }
+                                        setTogglingUserId(null);
+                                    }}
+                                >
+                                    <div className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform', editingUser.status === 'active' ? 'translate-x-4' : 'translate-x-0.5')} />
+                                </div>
+                            </div>
+                            {/* Footer */}
+                            <div className="flex items-center justify-end gap-3 pt-2 border-t border-white/5">
+                                <button type="button" className={secondaryButtonClassName} onClick={() => setEditingUser(null)}>Cancelar</button>
+                                <button type="submit" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#C9A55C]/30 bg-gradient-to-r from-[#C9A55C] to-[#8B6914] px-6 text-[12px] font-bold uppercase tracking-[0.14em] text-[#0A0A0C] transition hover:brightness-110 disabled:opacity-60" disabled={savingEdit}>
+                                    {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                    Salvar alterações
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             ) : null}
 
             <div className="fixed bottom-28 right-6 z-[60] space-y-2">

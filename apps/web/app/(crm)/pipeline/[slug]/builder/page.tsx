@@ -81,7 +81,7 @@ export default async function PipelineBuilderPage({
 }) {
     const session = requireSession();
 
-    if (session.user.role !== 'ADMIN') {
+    if (session.user.role !== 'ROOT') {
         redirect(`/pipeline/${params.slug}`);
     }
 

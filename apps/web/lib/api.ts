@@ -337,6 +337,10 @@ export interface DashboardPayload {
         label: string;
         created_at: string;
     }>;
+    topProducts?: Array<{
+        name: string;
+        total_sold: number;
+    }>;
 }
 
 export interface AssistantChatResponse {

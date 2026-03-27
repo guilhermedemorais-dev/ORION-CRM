@@ -15,7 +15,7 @@ const router = Router();
 router.get(
     '/:customerId/deliveries',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE', 'PRODUCAO', 'DESIGNER_3D']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE', 'PRODUCAO']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { customerId } = req.params as { customerId: string };
@@ -73,7 +73,7 @@ const createDeliverySchema = z.object({
 router.post(
     '/',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const parsed = createDeliverySchema.safeParse(req.body);
@@ -224,7 +224,7 @@ router.post(
 router.get(
     '/:id/tracking',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE', 'PRODUCAO']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE', 'PRODUCAO']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { id } = req.params as { id: string };
@@ -291,7 +291,7 @@ router.get(
 router.patch(
     '/:id',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE', 'PRODUCAO']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE', 'PRODUCAO']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { id } = req.params as { id: string };
@@ -317,7 +317,7 @@ router.patch(
 router.patch(
     '/:id/status',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE', 'PRODUCAO']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE', 'PRODUCAO']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { id } = req.params as { id: string };
@@ -341,7 +341,7 @@ router.patch(
 router.delete(
     '/:id',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { id } = req.params as { id: string };

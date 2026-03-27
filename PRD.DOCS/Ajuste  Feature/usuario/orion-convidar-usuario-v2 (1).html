@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORION CRM — Convidar Usuário (Mockup v2)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', sans-serif; background: #0A0A0B; color: #E4E2DC;
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+
+.modal {
+  background: #111113; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px; width: 100%; max-width: 720px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(200,169,122,0.06);
+  overflow: hidden;
+  animation: modalIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-head {
+  padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex; align-items: flex-start; justify-content: space-between;
+}
+.modal-head-text h2 {
+  font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600;
+  color: #E8E4DE; margin-bottom: 4px;
+}
+.modal-head-text p { font-size: 12px; color: #555; }
+.modal-close {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+  color: #666; font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.modal-close:hover { background: rgba(255,255,255,0.08); color: #999; }
+
+.modal-body {
+  padding: 24px; display: flex; flex-direction: column; gap: 16px;
+  max-height: 85vh; overflow-y: auto;
+}
+.modal-body::-webkit-scrollbar { width: 4px; }
+.modal-body::-webkit-scrollbar-track { background: transparent; }
+.modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+.modal-footer {
+  padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.05);
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+}
+
+.form-section {
+  font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: #444; font-weight: 600; padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  display: flex; align-items: center; gap: 8px;
+}
+.form-section-icon {
+  width: 16px; height: 16px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+}
+.form-section-icon svg { width: 9px; height: 9px; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+
+.form-label {
+  font-size: 10px; font-weight: 500; color: #666;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.form-label .req { color: #C8A97A; }
+
+.form-input {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px; padding: 10px 12px; font-size: 13px;
+  color: #E4E2DC; font-family: 'Inter', sans-serif;
+  outline: none; transition: all 0.15s; width: 100%;
+}
+.form-input:focus {
+  border-color: rgba(200,169,122,0.4);
+  box-shadow: 0 0 0 3px rgba(200,169,122,0.08);
+}
+.form-input::placeholder { color: #333; }
+
+.form-select {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px; padding: 10px 12px; font-size: 13px;
+  color: #E4E2DC; font-family: 'Inter', sans-serif;
+  outline: none; transition: all 0.15s; cursor: pointer; width: 100%;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.form-select:focus {
+  border-color: rgba(200,169,122,0.4);
+  box-shadow: 0 0 0 3px rgba(200,169,122,0.08);
+}
+
+.input-wrap { position: relative; }
+.input-wrap .form-input { padding-right: 38px; }
+.input-toggle {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: #444; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 2px; transition: color 0.15s;
+}
+.input-toggle:hover { color: #888; }
+
+.role-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; padding: 4px 10px; border-radius: 5px;
+}
+.role-admin { background: rgba(200,169,122,0.15); color: #C8A97A; }
+.role-atendente { background: rgba(52,211,153,0.12); color: #34D399; }
+.role-producao { background: rgba(251,191,36,0.12); color: #FBBF24; }
+.role-financeiro { background: rgba(96,165,250,0.12); color: #60A5FA; }
+
+.perm-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  border: 1px solid rgba(255,255,255,0.06); border-radius: 10px;
+  overflow: hidden;
+}
+.perm-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.015);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.15s;
+}
+.perm-item:nth-child(odd) { border-right: 1px solid rgba(255,255,255,0.04); }
+.perm-item:nth-last-child(-n+2) { border-bottom: none; }
+.perm-item:hover { background: rgba(255,255,255,0.03); }
+
+.perm-item-info { display: flex; align-items: center; gap: 8px; }
+.perm-item-icon {
+  width: 24px; height: 24px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.perm-item-icon svg { width: 12px; height: 12px; }
+.perm-item-name { font-size: 12px; color: #999; font-weight: 500; }
+.perm-item-name.active { color: #C8C6C0; }
+.perm-item-level { font-size: 9px; color: #444; letter-spacing: 0.05em; margin-top: 1px; }
+.perm-item-level.total { color: rgba(200,169,122,0.6); }
+.perm-item-level.own { color: rgba(52,211,153,0.6); }
+.perm-item-level.read { color: rgba(96,165,250,0.5); }
+
+.toggle {
+  width: 36px; height: 20px; border-radius: 10px;
+  background: rgba(255,255,255,0.08); cursor: pointer;
+  position: relative; transition: background 0.2s; flex-shrink: 0;
+}
+.toggle.on { background: rgba(200,169,122,0.35); }
+.toggle::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #444; transition: all 0.2s;
+}
+.toggle.on::after { left: 18px; background: #C8A97A; }
+
+.btn {
+  padding: 9px 20px; border-radius: 8px; font-size: 12px;
+  font-weight: 600; font-family: 'Inter', sans-serif;
+  cursor: pointer; transition: all 0.15s; border: none;
+  display: inline-flex; align-items: center; gap: 6px;
+  letter-spacing: 0.04em;
+}
+.btn-ghost {
+  background: rgba(255,255,255,0.04); color: #888;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.btn-ghost:hover { background: rgba(255,255,255,0.08); color: #aaa; }
+.btn-primary {
+  background: linear-gradient(135deg, #B89A6A, #C8A97A);
+  color: #0A0A0B; font-weight: 700;
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, #C8A97A, #D4B98A);
+  box-shadow: 0 4px 16px rgba(200,169,122,0.2);
+}
+.btn-primary svg { width: 14px; height: 14px; }
+
+.form-hint { font-size: 10px; color: #333; margin-top: -2px; }
+
+.status-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-radius: 8px;
+  background: rgba(52,211,153,0.05); border: 1px solid rgba(52,211,153,0.1);
+}
+.status-bar.inactive {
+  background: rgba(248,113,113,0.05); border-color: rgba(248,113,113,0.1);
+}
+.status-bar-left { display: flex; align-items: center; gap: 8px; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: #34D399; }
+.status-dot.inactive { background: #F87171; }
+.status-label { font-size: 12px; font-weight: 500; color: #999; }
+.status-label b { color: #34D399; font-weight: 600; }
+.status-bar.inactive .status-label b { color: #F87171; }
+</style>
+</head>
+<body>
+
+<div class="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-head-text">
+        <h2>Convidar Usuário</h2>
+        <p>Novo acesso para equipe comercial e administrativa.</p>
+      </div>
+      <button class="modal-close">✕</button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="form-section">
+        <div class="form-section-icon" style="background:rgba(200,169,122,0.1)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        Dados Pessoais
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nome completo <span class="req">*</span></label>
+          <input class="form-input" type="text" placeholder="Ex: Maria Silva">
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-mail <span class="req">*</span></label>
+          <input class="form-input" type="email" placeholder="maria@orinjoias.com.br">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Senha temporária <span class="req">*</span></label>
+          <div class="input-wrap">
+            <input class="form-input" type="password" id="p1" placeholder="Mín. 8 caracteres" value="Orin@2026!">
+            <button class="input-toggle" onclick="togglePass('p1',this)" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirmar senha <span class="req">*</span></label>
+          <div class="input-wrap">
+            <input class="form-input" type="password" id="p2" placeholder="Repetir senha" value="Orin@2026!">
+            <button class="input-toggle" onclick="togglePass('p2',this)" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="form-hint">Usuário deverá alterar a senha no primeiro login.</div>
+
+      <div class="form-row-3">
+        <div class="form-group">
+          <label class="form-label">Perfil (Role) <span class="req">*</span></label>
+          <select class="form-select" id="role-select" onchange="updatePerms()">
+            <option value="ATENDENTE">Atendente</option>
+            <option value="PRODUCAO">Produção</option>
+            <option value="FINANCEIRO">Financeiro</option>
+            <option value="ADMIN">Administrador</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">WhatsApp pessoal</label>
+          <input class="form-input" type="tel" placeholder="+55 21 99999-9999">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Comissão (%)</label>
+          <input class="form-input" type="number" placeholder="0.00" value="5.00" min="0" max="100" step="0.5">
+        </div>
+      </div>
+
+      <!-- PERMISSÕES -->
+      <div class="form-section" style="margin-top:4px">
+        <div class="form-section-icon" style="background:rgba(129,140,248,0.1)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#818CF8" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        Permissões por Módulo
+        <span id="role-badge" class="role-badge role-atendente" style="margin-left:auto">Atendente</span>
+      </div>
+
+      <div class="perm-grid" id="perm-grid"></div>
+      <div class="form-hint">Permissões pré-configuradas pelo perfil. Alterne para personalizar.</div>
+
+      <!-- STATUS -->
+      <div class="status-bar" id="status-bar">
+        <div class="status-bar-left">
+          <div class="status-dot" id="status-dot"></div>
+          <div class="status-label">Status: <b id="status-text">Ativo</b></div>
+        </div>
+        <div class="toggle on" id="status-toggle" onclick="toggleStatus()"></div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost">Cancelar</button>
+      <button class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        Convidar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PERMS = {
+  ADMIN: {
+    'Leads & Pipeline': {on:true,level:'Total'},'Clientes': {on:true,level:'Total'},'Pedidos': {on:true,level:'Total'},
+    'Produção': {on:true,level:'Total'},'PDV': {on:true,level:'Total'},'Estoque': {on:true,level:'Total'},
+    'Financeiro': {on:true,level:'Total'},'Analytics': {on:true,level:'Total'},'Usuários': {on:true,level:'Total'},
+    'Assistente IA': {on:true,level:'Escopo total'},
+  },
+  ATENDENTE: {
+    'Leads & Pipeline': {on:true,level:'Próprios'},'Clientes': {on:true,level:'Atribuídos'},'Pedidos': {on:true,level:'Criar/Ver próprios'},
+    'Produção': {on:false,level:'—'},'PDV': {on:true,level:'Próprio'},'Estoque': {on:true,level:'Leitura'},
+    'Financeiro': {on:false,level:'—'},'Analytics': {on:true,level:'Próprios'},'Usuários': {on:false,level:'—'},
+    'Assistente IA': {on:true,level:'Escopo próprio'},
+  },
+  PRODUCAO: {
+    'Leads & Pipeline': {on:false,level:'—'},'Clientes': {on:false,level:'—'},'Pedidos': {on:true,level:'Ver atribuídos'},
+    'Produção': {on:true,level:'Próprios'},'PDV': {on:false,level:'—'},'Estoque': {on:true,level:'Leitura'},
+    'Financeiro': {on:false,level:'—'},'Analytics': {on:false,level:'—'},'Usuários': {on:false,level:'—'},
+    'Assistente IA': {on:true,level:'Escopo produção'},
+  },
+  FINANCEIRO: {
+    'Leads & Pipeline': {on:false,level:'—'},'Clientes': {on:true,level:'Leitura'},'Pedidos': {on:true,level:'Leitura'},
+    'Produção': {on:false,level:'—'},'PDV': {on:true,level:'Leitura'},'Estoque': {on:true,level:'Leitura'},
+    'Financeiro': {on:true,level:'Total'},'Analytics': {on:true,level:'Total'},'Usuários': {on:false,level:'—'},
+    'Assistente IA': {on:true,level:'Escopo financeiro'},
+  },
+};
+
+const ICONS = {
+  'Leads & Pipeline':  {c:'#34D399',b:'rgba(52,211,153,0.1)',i:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'},
+  'Clientes':          {c:'#C8A97A',b:'rgba(200,169,122,0.1)',i:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>'},
+  'Pedidos':           {c:'#C084FC',b:'rgba(192,132,252,0.1)',i:'<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>'},
+  'Produção':          {c:'#FBBF24',b:'rgba(251,191,36,0.1)',i:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4"/>'},
+  'PDV':               {c:'#F87171',b:'rgba(248,113,113,0.1)',i:'<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>'},
+  'Estoque':           {c:'#60A5FA',b:'rgba(96,165,250,0.1)',i:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>'},
+  'Financeiro':        {c:'#34D399',b:'rgba(52,211,153,0.1)',i:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'},
+  'Analytics':         {c:'#818CF8',b:'rgba(129,140,248,0.1)',i:'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>'},
+  'Usuários':          {c:'#C8A97A',b:'rgba(200,169,122,0.1)',i:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'},
+  'Assistente IA':     {c:'#C084FC',b:'rgba(192,132,252,0.1)',i:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'},
+};
+
+const RC = {ADMIN:'role-admin',ATENDENTE:'role-atendente',PRODUCAO:'role-producao',FINANCEIRO:'role-financeiro'};
+const RL = {ADMIN:'Administrador',ATENDENTE:'Atendente',PRODUCAO:'Produção',FINANCEIRO:'Financeiro'};
+
+function updatePerms() {
+  const role = document.getElementById('role-select').value;
+  const perms = PERMS[role];
+  const grid = document.getElementById('perm-grid');
+  const badge = document.getElementById('role-badge');
+  badge.className = `role-badge ${RC[role]}`;
+  badge.textContent = RL[role];
+  grid.innerHTML = '';
+  Object.entries(perms).forEach(([mod, p]) => {
+    const m = ICONS[mod];
+    const lc = p.level === 'Total' ? 'total' : p.level.includes('Leitura') ? 'read' : p.on ? 'own' : '';
+    const d = document.createElement('div');
+    d.className = 'perm-item';
+    d.innerHTML = `
+      <div class="perm-item-info">
+        <div class="perm-item-icon" style="background:${p.on?m.b:'rgba(255,255,255,0.02)'}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="${p.on?m.c:'#333'}" stroke-width="1.5">${m.i}</svg>
+        </div>
+        <div>
+          <div class="perm-item-name ${p.on?'active':''}">${mod}</div>
+          <div class="perm-item-level ${lc}">${p.level}</div>
+        </div>
+      </div>
+      <div class="toggle ${p.on?'on':''}" data-mod="${mod}" onclick="togglePerm(this)"></div>`;
+    grid.appendChild(d);
+  });
+}
+
+function togglePerm(el) {
+  el.classList.toggle('on');
+  const on = el.classList.contains('on');
+  const item = el.closest('.perm-item');
+  const icon = item.querySelector('.perm-item-icon');
+  const name = item.querySelector('.perm-item-name');
+  const m = ICONS[el.dataset.mod];
+  icon.style.background = on ? m.b : 'rgba(255,255,255,0.02)';
+  icon.querySelector('svg').setAttribute('stroke', on ? m.c : '#333');
+  name.classList.toggle('active', on);
+}
+
+function toggleStatus() {
+  const bar = document.getElementById('status-bar');
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-text');
+  const tog = document.getElementById('status-toggle');
+  const active = tog.classList.contains('on');
+  tog.classList.toggle('on');
+  bar.classList.toggle('inactive');
+  dot.classList.toggle('inactive');
+  txt.textContent = active ? 'Inativo' : 'Ativo';
+}
+
+function togglePass(id, btn) {
+  const inp = document.getElementById(id);
+  const isP = inp.type === 'password';
+  inp.type = isP ? 'text' : 'password';
+  btn.style.color = isP ? '#C8A97A' : '#444';
+}
+
+updatePerms();
+</script>
+</body>
+</html>

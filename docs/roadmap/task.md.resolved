@@ -130,6 +130,91 @@ Principais arquivos:
 - `apps/web/components/layout/Topbar.tsx` (integração Cmd+K)
 - `docker-compose.yml` (NODE_ENV=production)
 
+### Refatoração do Dashboard — Layout Animado + Widgets Funcionais (27 de março de 2026)
+Status: concluída
+
+API/Backend:
+- [x] `dashboard.routes.ts` — endpoint `GET /api/internal/dashboard` com queries agregadas por role:
+  - `getAdminDashboard()`: leads hoje, pedidos abertos, produção atrasada, receita do mês, alertas de estoque, atividade recente
+  - `getAtendenteDashboard()`: leads do dia, pedidos do vendedor, metas/conversão
+  - `getProducaoDashboard()`: fila de produção, itens atrasados, concluídos
+  - `getFinanceiroDashboard()`: receita, despesas, inadimplência, fluxo de caixa
+- [x] API retorna payload tipado `DashboardPayload` com `role`, `kpis`, `activity`, `topProducts`
+
+Frontend/UI:
+- [x] `page.tsx` — Server Component que busca dados reais via `apiRequest<DashboardPayload>`
+- [x] `CustomDashboardView.tsx` — componente client completo (510 linhas) com:
+  - Header com saudação "Bom dia/Boa tarde/Boa noite" + data formatada
+  - 4 KPI cards animados (Faturamento Mensal, Novos Leads, Pedidos em Aberto, Ticket Médio)
+  - Animação de contagem numérica com easing cúbico
+  - Seção "Ação Imediata" — cards com ícones SVG e links para módulos
+  - Seção "Operações & Comercial" — mini gráfico de barras e heatmap semanal
+  - Seção "Ranking de Produtos" com barras de progresso
+  - Seção "Inteligência & Análise" — cards com links para Analytics, Financeiro, Automações
+  - IntersectionObserver para animações de entrada com stagger
+  - Botões com `Link` do Next.js para navegação real (pipeline, inbox, financeiro, analytics, etc.)
+- [x] `DashboardTemplate.css` — design system completo com:
+  - Tema escuro (#0A0A0B) com painéis glassmorphism (rgba borders)
+  - Classes `.panel`, `.panel-head`, `.anim-in`, `.visible`
+  - Grids responsivos `.grid-2`, `.grid-3`, `.grid-4`
+  - Micro-animações de hover (scale, glow, translateY)
+  - KPI cards com gradientes e bordas animadas
+  - Tipografia Playfair Display + Inter
+
+Principais arquivos:
+- `apps/api/src/routes/dashboard.routes.ts`
+- `apps/web/app/(crm)/dashboard/page.tsx`
+- `apps/web/app/(crm)/dashboard/components/CustomDashboardView.tsx`
+- `apps/web/app/(crm)/dashboard/components/DashboardTemplate.css`
+- `apps/web/lib/api.ts` (tipo `DashboardPayload`)
+
+### Refatoração User Management — RBAC Expandido + Exclusão (27 de março de 2026)
+Status: concluída
+
+Banco:
+- [x] Migration `038_user_roles_expansion.sql`
+  - Adição de `ROOT`, `GERENTE`, `VENDEDOR` ao enum `user_role`
+
+API/Backend:
+- [x] `entities.ts` — tipo `UserRole` expandido para `ROOT | ADMIN | GERENTE | VENDEDOR | PRODUCAO`
+- [x] `rbac.ts` — middleware `requireRole` agora concede bypass total ao role `ROOT`
+- [x] `users.routes.ts` — Zod schemas `inviteUserSchema` e `updateUserSchema` expandidos para os 5 roles
+- [x] `users.routes.ts` — campos opcionais `password` e `password_confirm` no invite com `.refine()` de igualdade
+- [x] `users.routes.ts` — permissão de rotas expandida para incluir `GERENTE`
+- [x] `users.routes.ts` — novo endpoint `GET /api/internal/users/pipelines-for-perms` (retorna pipelines ativos para grid de permissões)
+- [x] `users.routes.ts` — novo endpoint `DELETE /api/internal/users/:id` com:
+  - Prevenção de auto-exclusão
+  - Audit log registrando nome, email e role do usuário excluído
+  - Validação de existência via `AppError.notFound()`
+
+Frontend/UI:
+- [x] `ajustes-types.ts` — tipo `AdminUser.role` expandido para todos os 5 roles
+- [x] `AjustesClient.tsx` — modal "Convidar Usuário" redesenhado conforme mockup v2:
+  - Header com Playfair Display
+  - Layout em seções: Dados Pessoais → Senha de Acesso → Função/WhatsApp/Comissão → Permissões
+  - Campos de senha com toggle eye/eye-off
+  - Select com 5 roles (Root, Admin, Gerente, Vendedor, Produção)
+- [x] `AjustesClient.tsx` — modal "Editar Usuário" redesenhado conforme mockup v2:
+  - Mesma estrutura do convite + barra de status (Ativo/Inativo) inline
+  - Pré-população de permissões por role
+- [x] `AjustesClient.tsx` — grid de permissões com 10 módulos fixos + pipelines dinâmicos
+  - Fetch de pipelines via `/api/internal/users/pipelines-for-perms`
+  - Toggles animados por módulo
+  - Permissões default por role (`DEFAULT_PERMS_BY_ROLE`)
+- [x] `AjustesClient.tsx` — botão "Excluir" na tabela de usuários:
+  - Ícone Trash2 vermelho
+  - Confirmação via `window.confirm()` antes de excluir
+  - Toast de sucesso/erro
+  - Refresh automático da lista
+
+Principais arquivos:
+- `apps/api/src/db/migrations/038_user_roles_expansion.sql`
+- `apps/api/src/types/entities.ts`
+- `apps/api/src/middleware/rbac.ts`
+- `apps/api/src/routes/users.routes.ts`
+- `apps/web/lib/ajustes-types.ts`
+- `apps/web/components/modules/settings/AjustesClient.tsx`
+
 ### Base original do sistema
 - [x] Bloco 1: fundação backend
   - API Express + TypeScript

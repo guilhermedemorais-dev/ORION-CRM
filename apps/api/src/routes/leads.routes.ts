@@ -1389,7 +1389,7 @@ router.get(
 router.post(
     '/:id/won',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const leadId = req.params['id'] as string;
@@ -1412,7 +1412,7 @@ router.post(
 router.post(
     '/:id/lost',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const leadId = req.params['id'] as string;

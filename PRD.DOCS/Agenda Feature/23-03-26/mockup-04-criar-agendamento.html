@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORION CRM — Mockup: Modal Criar Agendamento</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+:root {
+    --brand-gold: #C8A97A; --brand-gold-dark: #A8895A;
+    --surface-sidebar: #0F0F0F; --surface-card: #1A1A1A; --surface-overlay: #141414;
+    --canvas: #111111; --canvas-border: #2A2A2A;
+    --text-primary: #E8E6E3; --text-secondary: #9CA3AF; --text-muted: #6B7280;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: Inter, system-ui, sans-serif; background: rgba(0,0,0,0.6); color: var(--text-primary); min-height:100vh; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(2px); }
+
+/* ===== MODAL — shadcn Dialog pattern ===== */
+.modal { width:520px; max-height:85vh; background:var(--surface-card); border:1px solid var(--canvas-border); border-radius:12px; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
+.modal-header { padding:18px 24px; border-bottom:1px solid var(--canvas-border); display:flex; align-items:center; justify-content:space-between; }
+.modal-header h2 { font-size:16px; font-weight:600; }
+.modal-close { width:28px; height:28px; border-radius:6px; border:1px solid var(--canvas-border); background:transparent; color:var(--text-muted); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; }
+.modal-close:hover { border-color:var(--brand-gold-dark); color:var(--text-primary); }
+.modal-body { padding:20px 24px; }
+.modal-footer { padding:16px 24px; border-top:1px solid var(--canvas-border); display:flex; justify-content:flex-end; gap:10px; }
+
+/* Form fields */
+.form-group { margin-bottom:16px; }
+.form-label { font-size:12px; font-weight:500; color:var(--text-secondary); margin-bottom:6px; display:block; }
+.form-input { width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--canvas-border); background:var(--canvas); color:var(--text-primary); font-size:13px; font-family:inherit; outline:none; transition:border-color 0.15s; }
+.form-input:focus { border-color:var(--brand-gold-dark); }
+.form-input::placeholder { color:var(--text-muted); }
+.form-input:disabled { opacity:0.5; cursor:not-allowed; }
+.form-select { width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--canvas-border); background:var(--canvas); color:var(--text-primary); font-size:13px; font-family:inherit; outline:none; appearance:none; cursor:pointer; }
+.form-textarea { width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--canvas-border); background:var(--canvas); color:var(--text-primary); font-size:13px; font-family:inherit; outline:none; resize:vertical; min-height:80px; }
+.form-textarea:focus { border-color:var(--brand-gold-dark); }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-hint { font-size:11px; color:#10B981; margin-top:4px; }
+.form-hint.warn { color:#FB923C; }
+
+/* Radio group (type selector) */
+.radio-group { display:flex; gap:8px; flex-wrap:wrap; }
+.radio-option { display:none; }
+.radio-label { padding:6px 14px; border-radius:999px; border:1px solid var(--canvas-border); font-size:12px; color:var(--text-secondary); cursor:pointer; transition:all 0.15s; }
+.radio-label:hover { border-color:var(--brand-gold-dark); color:var(--text-primary); }
+.radio-option:checked + .radio-label { background:rgba(200,169,122,0.1); border-color:var(--brand-gold); color:var(--brand-gold); }
+
+/* Search autocomplete dropdown */
+.autocomplete-dropdown { margin-top:4px; background:var(--surface-overlay); border:1px solid var(--canvas-border); border-radius:8px; overflow:hidden; }
+.autocomplete-item { padding:8px 12px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--canvas-border); }
+.autocomplete-item:last-child { border-bottom:none; }
+.autocomplete-item:hover { background:rgba(200,169,122,0.06); }
+.autocomplete-item.selected { background:rgba(200,169,122,0.1); }
+.autocomplete-name { color:var(--text-primary); font-weight:500; }
+.autocomplete-phone { color:var(--text-muted); font-size:11px; }
+.autocomplete-badge { font-size:10px; padding:2px 8px; border-radius:10px; }
+.autocomplete-badge.lead { background:rgba(245,158,11,0.12); color:#F59E0B; }
+.autocomplete-badge.client { background:rgba(16,185,129,0.12); color:#10B981; }
+
+/* Buttons */
+.btn { padding:8px 18px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; border:1px solid var(--canvas-border); background:var(--surface-overlay); color:var(--text-secondary); transition:all 0.15s; }
+.btn:hover { border-color:var(--brand-gold-dark); color:var(--text-primary); }
+.btn.primary { background:var(--brand-gold); color:var(--surface-sidebar); border-color:var(--brand-gold); font-weight:600; }
+.btn.primary:hover { background:var(--brand-gold-dark); }
+</style>
+</head>
+<body>
+
+<div class="modal">
+    <div class="modal-header">
+        <h2>Novo Agendamento</h2>
+        <button class="modal-close">✕</button>
+    </div>
+
+    <div class="modal-body">
+        <!-- Type selector -->
+        <div class="form-group">
+            <label class="form-label">Tipo de agendamento</label>
+            <div class="radio-group">
+                <input type="radio" name="type" id="t1" class="radio-option" checked>
+                <label for="t1" class="radio-label">💍 Visita</label>
+                <input type="radio" name="type" id="t2" class="radio-option">
+                <label for="t2" class="radio-label">💬 Consulta</label>
+                <input type="radio" name="type" id="t3" class="radio-option">
+                <label for="t3" class="radio-label">🔄 Retorno</label>
+                <input type="radio" name="type" id="t4" class="radio-option">
+                <label for="t4" class="radio-label">📦 Entrega</label>
+                <input type="radio" name="type" id="t5" class="radio-option">
+                <label for="t5" class="radio-label">Outro</label>
+            </div>
+        </div>
+
+        <!-- Client search with autocomplete -->
+        <div class="form-group">
+            <label class="form-label">Cliente ou Lead</label>
+            <input type="text" class="form-input" placeholder="Buscar por nome ou WhatsApp..." value="Maria">
+            <!-- Autocomplete dropdown (visible when typing) -->
+            <div class="autocomplete-dropdown">
+                <div class="autocomplete-item selected">
+                    <div>
+                        <span class="autocomplete-name">Maria Silva</span>
+                        <span class="autocomplete-phone"> · +55 22 99999-9999</span>
+                    </div>
+                    <span class="autocomplete-badge lead">Lead</span>
+                </div>
+                <div class="autocomplete-item">
+                    <div>
+                        <span class="autocomplete-name">Maria Fernanda Rocha</span>
+                        <span class="autocomplete-phone"> · +55 11 98888-7777</span>
+                    </div>
+                    <span class="autocomplete-badge client">Cliente</span>
+                </div>
+            </div>
+            <div class="form-hint">✓ Lead selecionado: Maria Silva</div>
+        </div>
+
+        <!-- Date + Start time -->
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Data</label>
+                <input type="text" class="form-input" value="27/03/2026 (Quinta-feira)">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Horário de início</label>
+                <select class="form-select">
+                    <option>09:00</option>
+                    <option>10:00</option>
+                    <option>11:00</option>
+                    <option>12:00</option>
+                    <option>13:00</option>
+                    <option selected>14:00</option>
+                    <option>15:00</option>
+                    <option>16:00</option>
+                    <option>17:00</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- End time (auto) + Attendant -->
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Término (automático)</label>
+                <input type="text" class="form-input" value="14:45" disabled>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Atendente</label>
+                <select class="form-select">
+                    <option selected>Ana Santos</option>
+                    <option>Guilherme (Admin)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Conflict warning (hidden by default, shown when conflict) -->
+        <!--
+        <div class="form-group" style="margin-bottom:0;">
+            <div class="form-hint warn">⚠️ Conflito com "Visita — João P." (14:00 – 14:45). Escolha outro horário.</div>
+        </div>
+        -->
+
+        <!-- Sunday warning (hidden by default) -->
+        <!--
+        <div class="form-group" style="margin-bottom:0;">
+            <div class="form-hint warn">⚠️ Domingo: a loja está fechada. Escolha outro dia.</div>
+        </div>
+        -->
+
+        <!-- Notes -->
+        <div class="form-group">
+            <label class="form-label">Observações</label>
+            <textarea class="form-textarea" placeholder="Detalhes sobre o atendimento...">Interessada em anel de noivado, ouro 18k. Já tem referência de modelo do Instagram.</textarea>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn">Cancelar</button>
+        <button class="btn primary">✓ Agendar</button>
+    </div>
+</div>
+
+</body>
+</html>

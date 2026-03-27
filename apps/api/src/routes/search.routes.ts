@@ -23,7 +23,7 @@ interface SearchResult {
 router.get(
     '/',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     rateLimit({ windowMs: 60 * 1000, max: 30, name: 'search-global' }),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {

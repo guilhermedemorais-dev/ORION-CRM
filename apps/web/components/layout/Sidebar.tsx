@@ -1,10 +1,16 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { logoutAction } from '@/app/(crm)/actions';
 import {
     BarChart3,
+    CalendarDays,
     Circle,
     DollarSign,
     Gem,
     LayoutDashboard,
+    LogOut,
     MessageCircle,
     Monitor,
     Package,
@@ -31,6 +37,7 @@ const navGroups = [
     {
         label: 'Operação',
         items: [
+            { icon: CalendarDays, label: 'Agenda', href: '/agenda' },
             { icon: ShoppingBag, label: 'Pedidos', href: '/pedidos' },
             { icon: Gem, label: 'Produção', href: '/producao' },
             { icon: Package, label: 'Estoque', href: '/estoque' },
@@ -69,6 +76,9 @@ export function Sidebar({
     userName: string;
     userRole: string;
 }) {
+    const pathname = usePathname();
+    const isActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+
     const visibleGroups = navGroups.map((group) => ({
         ...group,
         items: group.items.filter((item) => {
@@ -110,7 +120,7 @@ export function Sidebar({
                                     <Link
                                         key={item.href}
                                         href={item.href}
-                                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-white/5 hover:text-white"
+                                        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${isActive(item.href) ? 'bg-white/10 text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}
                                     >
                                         <Icon className="h-4 w-4 text-brand-gold" />
                                         <span>{item.label}</span>
@@ -146,7 +156,7 @@ export function Sidebar({
                                             <Icon className="h-4 w-4 shrink-0 text-brand-gold" />
                                             <span className="truncate">{pipeline.name}</span>
                                         </Link>
-                                        {userRole === 'ADMIN' ? (
+                                        {userRole === 'ROOT' ? (
                                             <Link
                                                 href={`/pipeline/${pipeline.slug}/builder`}
                                                 className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/10 text-gray-400 transition hover:text-white"
@@ -164,7 +174,7 @@ export function Sidebar({
                                 </div>
                             );
                         })}
-                        {userRole === 'ADMIN' ? (
+                        {userRole === 'ROOT' ? (
                             <Link
                                 href="/pipeline/novo/builder"
                                 className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-white/5 hover:text-white"
@@ -191,7 +201,7 @@ export function Sidebar({
                                     <Link
                                         key={item.href}
                                         href={item.href}
-                                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-white/5 hover:text-white"
+                                        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${isActive(item.href) ? 'bg-white/10 text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}
                                     >
                                         <Icon className="h-4 w-4 text-brand-gold" />
                                         <span>{item.label}</span>
@@ -204,8 +214,21 @@ export function Sidebar({
             </nav>
 
             <div className="border-t border-white/5 px-5 py-4">
-                <p className="text-sm font-medium text-white">{userName}</p>
-                <p className="text-xs uppercase tracking-[0.2em] text-gray-500">{userRole}</p>
+                <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-white">{userName}</p>
+                        <p className="mt-0.5 truncate text-[11px] uppercase tracking-[0.2em] text-gray-500">{userRole}</p>
+                    </div>
+                    <form action={logoutAction}>
+                        <button
+                            type="submit"
+                            title="Sair do sistema"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 outline-none transition hover:bg-white/10 hover:text-white"
+                        >
+                            <LogOut className="h-4 w-4" />
+                        </button>
+                    </form>
+                </div>
             </div>
         </aside>
     );

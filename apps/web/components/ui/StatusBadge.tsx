@@ -18,6 +18,10 @@ const STATUS_CONFIG = {
     ENVIADO: { label: 'Enviado', color: 'border-cyan-500/20 bg-cyan-500/10 text-cyan-300' },
     RETIRADO: { label: 'Retirado', color: 'border-lime-500/20 bg-lime-500/10 text-lime-300' },
     CANCELADO: { label: 'Cancelado', color: 'border-rose-500/20 bg-rose-500/10 text-rose-300' },
+    AGENDADO: { label: 'Agendado', color: 'border-blue-500/20 bg-blue-500/10 text-blue-300' },
+    CONFIRMADO_CLIENTE: { label: 'Confirmado', color: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' },
+    NAO_COMPARECEU: { label: 'Não compareceu', color: 'border-rose-500/20 bg-rose-500/10 text-rose-300' },
+    CONCLUIDO: { label: 'Concluído', color: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' },
     AGUARDANDO_APROVACAO_DESIGN: { label: 'Aguard. aprovação', color: 'border-fuchsia-500/20 bg-fuchsia-500/10 text-fuchsia-300' },
     APROVADO: { label: 'Aprovado', color: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' },
     EM_PRODUCAO: { label: 'Em produção', color: 'border-indigo-500/20 bg-indigo-500/10 text-indigo-300' },
@@ -29,8 +33,10 @@ const STATUS_CONFIG = {
     REPROVADA: { label: 'Reprovada', color: 'border-rose-500/20 bg-rose-500/10 text-rose-300' },
 } as const;
 
-export function StatusBadge({ status }: { status: keyof typeof STATUS_CONFIG }) {
-    const config = STATUS_CONFIG[status];
+const FALLBACK_CONFIG = { label: 'Desconhecido', color: 'border-white/10 bg-white/5 text-gray-400' };
+
+export function StatusBadge({ status }: { status: string }) {
+    const config = (STATUS_CONFIG as Record<string, { label: string; color: string }>)[status] ?? FALLBACK_CONFIG;
 
     return (
         <span className={cn('inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]', config.color)}>

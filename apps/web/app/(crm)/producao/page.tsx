@@ -41,7 +41,7 @@ export default async function ProductionPage({
                 title="Produção"
                 description="Painel de execução por etapa, com atraso visível e avanço operacional sem sair do CRM."
                 actions={
-                    <form method="get">
+                    <form method="get" className="flex items-center gap-2">
                         <select
                             name="status"
                             defaultValue={searchParams?.status ?? ''}
@@ -54,6 +54,7 @@ export default async function ProductionPage({
                             <option value="CONCLUIDA">Concluída</option>
                             <option value="REPROVADA">Reprovada</option>
                         </select>
+                        <Button type="submit">Filtrar</Button>
                     </form>
                 }
             />

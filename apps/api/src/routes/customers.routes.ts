@@ -358,7 +358,7 @@ router.post(
 router.get(
     '/:id/full',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const result = await query<CustomerRow & {
@@ -429,7 +429,7 @@ const patchCustomerSchema = z.object({
 router.patch(
     '/:id',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const parsed = patchCustomerSchema.safeParse(req.body);
@@ -465,7 +465,7 @@ router.patch(
 router.get(
     '/:id/stats',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const id = req.params['id'] as string;
@@ -503,7 +503,7 @@ router.get(
 router.get(
     '/:id/history',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const id = req.params['id'] as string;
@@ -551,7 +551,7 @@ router.get(
 router.get(
     '/:id/feedback',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             // Stub — tabela de feedback pode não existir ainda
@@ -563,7 +563,7 @@ router.get(
 router.post(
     '/:id/feedback',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             // Stub — retornar 201 até tabela de feedback ser criada
@@ -595,7 +595,7 @@ fs.mkdir(uploadDir, { recursive: true }).catch(() => {});
 router.get(
     '/:id/proposals/attachments',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const id = req.params['id'] as string;
@@ -617,7 +617,7 @@ router.get(
 router.post(
     '/:id/proposals/attachments',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     upload.single('file'),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
@@ -669,7 +669,7 @@ router.post(
 router.delete(
     '/:id/proposals/attachments/:attachmentId',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { id, attachmentId } = req.params;

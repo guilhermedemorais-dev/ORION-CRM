@@ -15,6 +15,7 @@ import ClientOSTab from './tabs/ClientOSTab';
 import ClientEntregaTab from './tabs/ClientEntregaTab';
 import ClientHistoricoTab from './tabs/ClientHistoricoTab';
 import { QuickChatPanel } from './QuickChatPanel';
+import { LeadAppointmentsTab } from '@/app/(crm)/agenda/components/LeadAppointmentsTab';
 
 interface Props {
   customerId: string;
@@ -172,6 +173,11 @@ export default function ClientPanelShell({ customerId, initialCustomer }: Props)
                 customerId={customerId}
                 onUpdate={handleCustomerUpdate}
               />
+            )}
+            {activeTab === 'agenda' && (
+              <div className="max-w-4xl mx-auto py-2">
+                <LeadAppointmentsTab leadId={lead?.id ?? null} />
+              </div>
             )}
             {activeTab === 'atendimento' && (
               <ClientAtendimentoTab

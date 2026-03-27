@@ -45,7 +45,7 @@ export default async function AjustesPage({
         ? requestedTab as AjustesTab
         : 'empresa';
 
-    if (session.user.role !== 'ADMIN') {
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'ROOT') {
         redirect('/dashboard');
     }
 
@@ -71,6 +71,7 @@ export default async function AjustesPage({
             initialSettings={settings}
             initialUsers={users}
             currentUserId={session.user.id}
+            currentUserRole={session.user.role}
         />
     );
 }

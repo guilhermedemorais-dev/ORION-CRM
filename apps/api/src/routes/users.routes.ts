@@ -3,7 +3,7 @@ import { Router } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
-import { query } from '../db/pool.js';
+import { getClient, query } from '../db/pool.js';
 import { AppError } from '../lib/errors.js';
 import { authenticate } from '../middleware/auth.js';
 import { createAuditLog } from '../middleware/audit.js';
@@ -20,15 +20,20 @@ const listUsersSchema = z.object({
 const inviteUserSchema = z.object({
     name: z.string().trim().min(2).max(255),
     email: z.string().trim().email().max(255).transform((value) => value.toLowerCase()),
-    role: z.enum(['ADMIN', 'ATENDENTE']),
+    role: z.enum(['ROOT', 'ADMIN', 'GERENTE', 'VENDEDOR', 'ATENDENTE', 'PRODUCAO', 'FINANCEIRO']),
     personal_whatsapp: z.string().trim().min(8).max(25).nullable().optional(),
     commission_rate: z.coerce.number().min(0).max(100).default(0),
-});
+    password: z.string().min(6).max(128).optional(),
+    password_confirm: z.string().min(6).max(128).optional(),
+}).refine((data) => {
+    if (data.password && data.password !== data.password_confirm) return false;
+    return true;
+}, { message: 'As senhas não coincidem.', path: ['password_confirm'] });
 
 const updateUserSchema = z.object({
     name: z.string().trim().min(2).max(255).optional(),
     email: z.string().trim().email().max(255).transform((value) => value.toLowerCase()).optional(),
-    role: z.enum(['ADMIN', 'ATENDENTE']).optional(),
+    role: z.enum(['ROOT', 'ADMIN', 'GERENTE', 'VENDEDOR', 'ATENDENTE', 'PRODUCAO', 'FINANCEIRO']).optional(),
     personal_whatsapp: z.string().trim().min(8).max(25).nullable().optional(),
     commission_rate: z.coerce.number().min(0).max(100).optional(),
 });
@@ -72,7 +77,7 @@ function generateTemporaryPassword(): string {
 router.get(
     '/',
     authenticate,
-    requireRole(['ADMIN']),
+    requireRole(['ADMIN', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const parsed = listUsersSchema.safeParse(req.query);
@@ -126,7 +131,7 @@ router.get(
 router.post(
     '/invite',
     authenticate,
-    requireRole(['ADMIN']),
+    requireRole(['ADMIN', 'GERENTE']),
     rateLimit({ windowMs: 60 * 1000, max: 20, name: 'users-invite' }),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
@@ -149,8 +154,8 @@ router.post(
                 return;
             }
 
-            const temporaryPassword = generateTemporaryPassword();
-            const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+            const finalPassword = parsed.data.password || generateTemporaryPassword();
+            const passwordHash = await bcrypt.hash(finalPassword, 10);
 
             const insertResult = await query<UserListRow>(
                 `INSERT INTO users (name, email, password_hash, role, status, commission_rate, personal_whatsapp)
@@ -195,7 +200,7 @@ router.post(
 
             res.status(201).json({
                 user: mapUser(createdUser),
-                temporary_password: temporaryPassword,
+                temporary_password: parsed.data.password ? undefined : finalPassword,
             });
         } catch (err) {
             next(err);
@@ -206,7 +211,7 @@ router.post(
 router.patch(
     '/:id',
     authenticate,
-    requireRole(['ADMIN']),
+    requireRole(['ADMIN', 'GERENTE']),
     rateLimit({ windowMs: 60 * 1000, max: 40, name: 'users-update' }),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
@@ -321,7 +326,7 @@ router.patch(
 router.patch(
     '/:id/toggle-status',
     authenticate,
-    requireRole(['ADMIN']),
+    requireRole(['ADMIN', 'GERENTE']),
     rateLimit({ windowMs: 60 * 1000, max: 40, name: 'users-toggle-status' }),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
@@ -409,6 +414,102 @@ router.patch(
             }
 
             res.json(mapUser(updatedUser));
+        } catch (err) {
+            next(err);
+        }
+    }
+);
+
+// Pipelines list for permissions grid in user invite/edit modal
+router.get(
+    '/pipelines-for-perms',
+    authenticate,
+    requireRole(['ADMIN', 'GERENTE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const result = await query<{ id: string; name: string; icon: string }>(
+                `SELECT id, name, icon FROM pipelines WHERE is_active = true ORDER BY is_default DESC, name ASC`
+            );
+            res.json({ data: result.rows });
+        } catch (err) {
+            next(err);
+        }
+    }
+);
+// Delete user
+router.delete(
+    '/:id',
+    authenticate,
+    requireRole(['ADMIN', 'GERENTE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const userId = req.params['id'];
+
+            // Prevent self-deletion
+            if (req.user && req.user.id === userId) {
+                throw AppError.badRequest('Você não pode excluir sua própria conta.');
+            }
+
+            const existing = await query<UserListRow>(
+                `SELECT id, name, email, role, status, commission_rate, personal_whatsapp, created_at, updated_at, last_login_at
+                 FROM users WHERE id = $1`,
+                [userId]
+            );
+
+            if (existing.rows.length === 0) {
+                throw AppError.notFound('Usuário não encontrado.');
+            }
+
+            const deletedUser = existing.rows[0]!;
+
+            const client = await getClient();
+            try {
+                await client.query('BEGIN');
+
+                // NULL out all nullable FK columns pointing to this user
+                await client.query(`UPDATE leads              SET assigned_to        = NULL WHERE assigned_to        = $1`, [userId]);
+                await client.query(`UPDATE customers          SET assigned_to        = NULL WHERE assigned_to        = $1`, [userId]);
+                await client.query(`UPDATE conversations      SET assigned_to        = NULL WHERE assigned_to        = $1`, [userId]);
+                await client.query(`UPDATE production_orders  SET assigned_to        = NULL WHERE assigned_to        = $1`, [userId]);
+                await client.query(`UPDATE lead_tasks         SET assigned_to        = NULL WHERE assigned_to        = $1`, [userId]);
+                await client.query(`UPDATE lead_timeline      SET created_by         = NULL WHERE created_by         = $1`, [userId]);
+                await client.query(`UPDATE pipelines          SET created_by         = NULL WHERE created_by         = $1`, [userId]);
+                await client.query(`UPDATE financial_entries  SET commission_user_id = NULL WHERE commission_user_id = $1`, [userId]);
+                await client.query(`UPDATE attendance_blocks  SET designer_id        = NULL WHERE designer_id        = $1`, [userId]);
+                await client.query(`UPDATE attendance_blocks  SET jeweler_id         = NULL WHERE jeweler_id         = $1`, [userId]);
+                await client.query(`UPDATE fiscal_documents   SET requested_by       = NULL WHERE requested_by       = $1`, [userId]);
+                await client.query(`UPDATE audit_logs         SET user_id            = NULL WHERE user_id            = $1`, [userId]);
+
+                await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+
+                await client.query('COMMIT');
+            } catch (err: unknown) {
+                await client.query('ROLLBACK').catch(() => undefined);
+                client.release();
+                const pgErr = err as { code?: string };
+                if (pgErr?.code === '23503') {
+                    throw AppError.conflict(
+                        'USER_HAS_LINKED_RECORDS',
+                        'Não é possível excluir este usuário pois ele possui pedidos ou lançamentos financeiros vinculados. Desative-o em vez de excluir.'
+                    );
+                }
+                throw err;
+            }
+            client.release();
+
+            if (req.user) {
+                await createAuditLog({
+                    userId: req.user.id,
+                    action: 'DELETE',
+                    entityType: 'users',
+                    entityId: userId as string,
+                    oldValue: { name: deletedUser.name, email: deletedUser.email, role: deletedUser.role },
+                    newValue: null,
+                    req,
+                });
+            }
+
+            res.status(204).end();
         } catch (err) {
             next(err);
         }

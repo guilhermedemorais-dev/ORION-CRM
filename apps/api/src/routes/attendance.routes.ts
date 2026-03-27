@@ -31,7 +31,7 @@ type PipelineStatus = typeof PIPELINE_STATUSES[number];
 router.get(
     '/:customerId/blocks',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE', 'PRODUCAO', 'DESIGNER_3D']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE', 'PRODUCAO']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { customerId } = req.params as { customerId: string };
@@ -111,7 +111,7 @@ const createBlockSchema = z.object({
 router.post(
     '/:customerId/blocks',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { customerId } = req.params as { customerId: string };
@@ -312,8 +312,8 @@ async function patchBlock(req: Request, res: Response, next: NextFunction): Prom
     } catch (err) { next(err); }
 }
 
-router.patch('/:id', authenticate, requireRole(['ADMIN', 'ATENDENTE', 'MESTRE', 'PRODUCAO', 'DESIGNER_3D']), patchBlock);
-router.patch('/blocks/:id', authenticate, requireRole(['ADMIN', 'ATENDENTE', 'MESTRE', 'PRODUCAO', 'DESIGNER_3D']), patchBlock);
+router.patch('/:id', authenticate, requireRole(['ADMIN', 'ATENDENTE', 'GERENTE', 'PRODUCAO']), patchBlock);
+router.patch('/blocks/:id', authenticate, requireRole(['ADMIN', 'ATENDENTE', 'GERENTE', 'PRODUCAO']), patchBlock);
 
 // ── DELETE /api/v1/blocks/:id (soft delete) ───────────────────────────────────
 async function deleteBlock(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -325,7 +325,7 @@ async function deleteBlock(req: Request, res: Response, next: NextFunction): Pro
     } catch (err) { next(err); }
 }
 
-router.delete('/:id', authenticate, requireRole(['ADMIN', 'MESTRE']), deleteBlock);
-router.delete('/blocks/:id', authenticate, requireRole(['ADMIN', 'MESTRE']), deleteBlock);
+router.delete('/:id', authenticate, requireRole(['ADMIN', 'GERENTE']), deleteBlock);
+router.delete('/blocks/:id', authenticate, requireRole(['ADMIN', 'GERENTE']), deleteBlock);
 
 export default router;

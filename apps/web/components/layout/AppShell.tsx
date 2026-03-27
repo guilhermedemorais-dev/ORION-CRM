@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { AssistantDock } from '@/components/layout/AssistantDock';
+import { MainWrapper } from '@/components/layout/MainWrapper';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import type { PipelineRecord } from '@/lib/api';
@@ -31,7 +32,7 @@ export function AppShell({
             />
             <div className="ml-64 flex min-h-screen min-w-0 flex-1 flex-col">
                 <Topbar userName={user.name} />
-                <main className="flex-1 overflow-y-auto overflow-x-hidden p-6">{children}</main>
+                <MainWrapper>{children}</MainWrapper>
             </div>
             <AssistantDock userRole={user.role} />
         </div>

@@ -5,48 +5,48 @@ import type { UserRole } from '../types/entities.js';
 // ─── Matriz de permissões ─────────────────────────────────────────────────────
 const PERMISSIONS: Record<string, UserRole[]> = {
     // Painel do Cliente
-    'client.view':              ['MESTRE', 'ADMIN', 'ATENDENTE'],
-    'client.edit':              ['MESTRE', 'ADMIN', 'ATENDENTE'],
-    'client.delete':            ['MESTRE', 'ADMIN'],
+    'client.view':              ['GERENTE', 'ADMIN', 'ATENDENTE'],
+    'client.edit':              ['GERENTE', 'ADMIN', 'ATENDENTE'],
+    'client.delete':            ['GERENTE', 'ADMIN'],
 
     // Atendimento
-    'attendance.view':          ['MESTRE', 'ADMIN', 'ATENDENTE'],
-    'attendance.create':        ['MESTRE', 'ADMIN', 'ATENDENTE'],
-    'attendance.edit':          ['MESTRE', 'ADMIN', 'ATENDENTE'],
-    'attendance.delete':        ['MESTRE', 'ADMIN'],
+    'attendance.view':          ['GERENTE', 'ADMIN', 'ATENDENTE'],
+    'attendance.create':        ['GERENTE', 'ADMIN', 'ATENDENTE'],
+    'attendance.edit':          ['GERENTE', 'ADMIN', 'ATENDENTE'],
+    'attendance.delete':        ['GERENTE', 'ADMIN'],
 
     // IA 3D
-    'ai_render.create':         ['MESTRE', 'ADMIN', 'ATENDENTE'],
-    'ai_render.approve':        ['MESTRE', 'ADMIN', 'ATENDENTE'],
+    'ai_render.create':         ['GERENTE', 'ADMIN', 'ATENDENTE'],
+    'ai_render.approve':        ['GERENTE', 'ADMIN', 'ATENDENTE'],
 
     // Proposta
-    'proposal.view':            ['MESTRE', 'ADMIN', 'ATENDENTE'],
-    'proposal.create':          ['MESTRE', 'ADMIN', 'ATENDENTE'],
+    'proposal.view':            ['GERENTE', 'ADMIN', 'ATENDENTE'],
+    'proposal.create':          ['GERENTE', 'ADMIN', 'ATENDENTE'],
 
     // Pedidos
-    'order.view':               ['MESTRE', 'ADMIN', 'ATENDENTE', 'PRODUCAO', 'DESIGNER_3D'],
-    'order.create':             ['MESTRE', 'ADMIN', 'ATENDENTE'],
-    'order.edit':               ['MESTRE', 'ADMIN'],
+    'order.view':               ['GERENTE', 'ADMIN', 'ATENDENTE', 'PRODUCAO'],
+    'order.create':             ['GERENTE', 'ADMIN', 'ATENDENTE'],
+    'order.edit':               ['GERENTE', 'ADMIN'],
 
     // OS
-    'so.view':                  ['MESTRE', 'ADMIN', 'ATENDENTE', 'PRODUCAO', 'DESIGNER_3D'],
-    'so.create':                ['MESTRE', 'ADMIN', 'ATENDENTE'],
-    'so.edit_step':             ['MESTRE', 'ADMIN', 'PRODUCAO', 'DESIGNER_3D'],
-    'so.upload_3d':             ['MESTRE', 'ADMIN', 'DESIGNER_3D'],
-    'so.delete':                ['MESTRE', 'ADMIN'],
+    'so.view':                  ['GERENTE', 'ADMIN', 'ATENDENTE', 'PRODUCAO'],
+    'so.create':                ['GERENTE', 'ADMIN', 'ATENDENTE'],
+    'so.edit_step':             ['GERENTE', 'ADMIN', 'PRODUCAO'],
+    'so.upload_3d':             ['GERENTE', 'ADMIN', 'PRODUCAO'],
+    'so.delete':                ['GERENTE', 'ADMIN'],
 
     // Entrega
-    'delivery.view':            ['MESTRE', 'ADMIN', 'ATENDENTE', 'PRODUCAO', 'DESIGNER_3D'],
-    'delivery.update_status':   ['MESTRE', 'ADMIN', 'ATENDENTE', 'PRODUCAO'],
+    'delivery.view':            ['GERENTE', 'ADMIN', 'ATENDENTE', 'PRODUCAO'],
+    'delivery.update_status':   ['GERENTE', 'ADMIN', 'ATENDENTE', 'PRODUCAO'],
 
     // Financeiro / NF-e
-    'nfe.emit':                 ['MESTRE', 'ADMIN'],
-    'financial.view':           ['MESTRE', 'ADMIN'],
+    'nfe.emit':                 ['GERENTE', 'ADMIN'],
+    'financial.view':           ['GERENTE', 'ADMIN', 'FINANCEIRO'],
 
     // Admin-only
-    'settings.view':            ['MESTRE'],
-    'pipeline.configure':       ['MESTRE'],
-    'users.manage':             ['MESTRE', 'ADMIN'],
+    'settings.view':            ['GERENTE', 'ADMIN'],
+    'pipeline.configure':       ['GERENTE', 'ADMIN'],
+    'users.manage':             ['GERENTE', 'ADMIN'],
 };
 
 // ─── Lógica com override personalizado ───────────────────────────────────────

@@ -180,7 +180,7 @@ export default function AttendancePopup({ customerId, block, onClose, onSaved, o
 
   const [recording, setRecording] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recRef = useRef<any>(null);
+  const recRef = useRef<{ stop(): void } | null>(null);
 
   // @ mention
   const [mentionOpen, setMentionOpen]   = useState(false);
@@ -222,19 +222,25 @@ export default function AttendancePopup({ customerId, block, onClose, onSaved, o
 
   function toggleRecording() {
     if (recording) { recRef.current?.stop(); setRecording(false); return; }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const w = window as any;
+    interface SpeechRecognitionResult { readonly 0: { readonly transcript: string }; }
+    interface SpeechRecognitionResultList extends Iterable<SpeechRecognitionResult> { readonly length: number; }
+    interface SpeechRecognitionEvt { readonly results: SpeechRecognitionResultList; }
+    interface SpeechRecognitionInstance {
+      lang: string; continuous: boolean; interimResults: boolean;
+      onresult: ((event: SpeechRecognitionEvt) => void) | null;
+      onend: (() => void) | null;
+      start(): void; stop(): void;
+    }
+    type SpeechRecognitionCtor = new () => SpeechRecognitionInstance;
+    const w = window as Window & { SpeechRecognition?: SpeechRecognitionCtor; webkitSpeechRecognition?: SpeechRecognitionCtor; };
     const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     if (!SR) { alert('SpeechRecognition não suportado neste navegador.'); return; }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rec = new SR() as any;
+    const rec = new SR();
     rec.lang = 'pt-BR';
     rec.continuous = true;
     rec.interimResults = false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    rec.onresult = (event: any) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const text = Array.from(event.results as any[]).map((r: any) => r[0].transcript).join(' ');
+    rec.onresult = (event: SpeechRecognitionEvt) => {
+      const text = Array.from(event.results).map((r) => r[0].transcript).join(' ');
       if (editorRef.current) editorRef.current.innerHTML += ' ' + text;
     };
     rec.onend = () => setRecording(false);

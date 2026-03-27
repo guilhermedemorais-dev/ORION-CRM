@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORION CRM — Mockup: Aba Agenda no Perfil do Lead</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+:root {
+    --brand-gold: #C8A97A; --brand-gold-light: #E8D5B0; --brand-gold-dark: #A8895A;
+    --surface-sidebar: #0F0F0F; --surface-card: #1A1A1A; --surface-overlay: #141414;
+    --canvas: #111111; --canvas-card: #1A1A1A; --canvas-border: #2A2A2A;
+    --text-primary: #E8E6E3; --text-secondary: #9CA3AF; --text-muted: #6B7280;
+    --type-visita: #C8A97A; --type-consulta: #3B82F6; --type-retorno: #10B981;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: Inter, system-ui, sans-serif; background: var(--canvas); color: var(--text-primary); }
+
+/* Sidebar */
+.sidebar { position:fixed; top:0; left:0; bottom:0; width:256px; background:var(--surface-sidebar); border-right:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; color:white; z-index:40; }
+.sidebar-brand { padding:20px; border-bottom:1px solid rgba(255,255,255,0.05); }
+.sidebar-brand-label { font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:#6B7280; }
+.sidebar-brand-name { margin-top:8px; font-family:'Playfair Display',serif; font-size:20px; font-weight:600; color:var(--brand-gold); }
+.sidebar-nav { flex:1; padding:20px 16px; }
+.sidebar-group { margin-bottom:24px; }
+.sidebar-group-label { font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:#6B7280; padding:0 12px; margin-bottom:12px; }
+.sidebar-item { display:flex; align-items:center; gap:12px; padding:8px 12px; border-radius:8px; font-size:14px; color:#D1D5DB; cursor:pointer; margin-bottom:2px; }
+.sidebar-item:hover { background:rgba(255,255,255,0.05); color:white; }
+.sidebar-icon { width:16px; height:16px; color:var(--brand-gold); opacity:0.7; flex-shrink:0; }
+.sidebar-item.active .sidebar-icon { opacity:1; }
+.sidebar-item.active { background:rgba(200,169,122,0.1); color:var(--brand-gold); }
+.sidebar-footer { padding:16px 20px; border-top:1px solid rgba(255,255,255,0.05); }
+.sidebar-footer-name { font-size:14px; font-weight:500; }
+.sidebar-footer-role { font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:#6B7280; }
+
+/* Topbar */
+.topbar { position:sticky; top:0; z-index:10; height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 24px; background:var(--surface-card); border-bottom:1px solid var(--canvas-border); }
+.topbar-label { font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:#6B7280; }
+.topbar-right { display:flex; align-items:center; gap:12px; }
+.topbar-search { display:flex; align-items:center; gap:8px; padding:6px 12px; border-radius:8px; border:1px solid var(--canvas-border); font-size:13px; color:#6B7280; }
+.topbar-user { background:var(--brand-gold); color:var(--surface-sidebar); padding:4px 12px; border-radius:999px; font-size:11px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; }
+
+/* Main */
+.main { margin-left:256px; min-height:100vh; display:flex; flex-direction:column; }
+
+/* Breadcrumb bar */
+.breadcrumb-bar { padding:12px 24px; font-size:13px; color:var(--text-secondary); border-bottom:1px solid var(--canvas-border); background:var(--surface-overlay); }
+.breadcrumb-bar a { color:var(--text-muted); text-decoration:none; }
+.breadcrumb-bar a:hover { color:var(--brand-gold); }
+.breadcrumb-bar strong { color:var(--text-primary); }
+
+/* Stage pills row */
+.stage-row { padding:12px 24px; display:flex; gap:8px; border-bottom:1px solid var(--canvas-border); background:var(--surface-overlay); }
+.stage-pill { padding:4px 14px; border-radius:999px; font-size:11px; font-weight:500; border:1px solid var(--canvas-border); color:var(--text-muted); }
+.stage-pill.active { border-color:var(--brand-gold); color:var(--brand-gold); background:rgba(200,169,122,0.08); }
+
+/* Ganhou/Perdeu buttons */
+.topbar-actions { display:flex; gap:8px; }
+.btn-ganhou { padding:6px 16px; border-radius:6px; border:1px solid #10B981; background:rgba(16,185,129,0.08); color:#10B981; font-size:12px; font-weight:500; cursor:pointer; }
+.btn-perdeu { padding:6px 16px; border-radius:6px; border:1px solid #EF4444; background:rgba(239,68,68,0.08); color:#EF4444; font-size:12px; font-weight:500; cursor:pointer; }
+
+/* ===== 3-COLUMN PROFILE LAYOUT (matches print 1 exactly) ===== */
+.profile-layout { display:grid; grid-template-columns:230px 1fr 310px; flex:1; overflow:hidden; }
+
+/* Left panel */
+.profile-left { background:var(--surface-card); border-right:1px solid var(--canvas-border); padding:24px 16px; overflow-y:auto; }
+.avatar { width:48px; height:48px; border-radius:50%; background:rgba(200,169,122,0.15); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; color:var(--brand-gold); margin-bottom:12px; }
+.profile-name { font-size:16px; font-weight:600; margin-bottom:2px; }
+.profile-since { font-size:11px; color:var(--text-muted); margin-bottom:12px; }
+.wa-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:500; background:rgba(16,185,129,0.12); color:#10B981; margin-bottom:16px; }
+.stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:20px; }
+.stat-box { background:var(--canvas); border:1px solid var(--canvas-border); border-radius:8px; padding:10px; }
+.stat-val { font-size:16px; font-weight:700; }
+.stat-val.gold { color:var(--brand-gold); }
+.stat-val.green { color:#10B981; }
+.stat-val.red { color:#EF4444; }
+.stat-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; margin-top:2px; }
+.info-section { margin-bottom:16px; }
+.info-section-title { font-size:10px; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; }
+.info-row { display:flex; justify-content:space-between; margin-bottom:6px; }
+.info-key { font-size:12px; color:var(--text-muted); }
+.info-val { font-size:12px; color:var(--text-primary); font-weight:500; }
+
+/* Center panel */
+.profile-center { display:flex; flex-direction:column; overflow:hidden; }
+.tabs { display:flex; border-bottom:1px solid var(--canvas-border); background:var(--surface-card); padding:0 24px; }
+.tab { padding:12px 16px; font-size:13px; font-weight:500; color:var(--text-muted); cursor:pointer; border-bottom:2px solid transparent; transition:all 0.15s; }
+.tab:hover { color:var(--text-secondary); }
+.tab.active { color:var(--brand-gold); border-bottom-color:var(--brand-gold); }
+.tab-content { flex:1; overflow-y:auto; padding:24px; }
+
+/* Right panel */
+.profile-right { background:var(--surface-card); border-left:1px solid var(--canvas-border); padding:20px 16px; overflow-y:auto; }
+.right-section { margin-bottom:20px; }
+.right-section-title { font-size:10px; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; }
+.right-name { font-size:14px; font-weight:600; margin-bottom:2px; }
+.right-phone { font-size:12px; color:var(--text-secondary); }
+.right-inbox { font-size:12px; color:var(--text-secondary); }
+.action-btn { display:flex; align-items:center; justify-content:center; width:100%; padding:8px; border-radius:6px; border:1px solid var(--canvas-border); background:var(--surface-overlay); color:var(--text-secondary); font-size:12px; font-weight:500; cursor:pointer; margin-bottom:6px; transition:all 0.15s; }
+.action-btn:hover { border-color:var(--brand-gold-dark); color:var(--text-primary); }
+.action-btn.green { color:#10B981; border-color:rgba(16,185,129,0.3); }
+.action-btn.gold { color:var(--brand-gold); border-color:rgba(200,169,122,0.3); }
+.action-btn.rose { color:#EC4899; border-color:rgba(236,72,153,0.3); }
+.financial-row { display:flex; justify-content:space-between; margin-bottom:6px; }
+.financial-key { font-size:12px; color:var(--text-muted); }
+.financial-val { font-size:12px; color:var(--text-primary); font-weight:500; }
+
+/* ===== AGENDA TAB CONTENT — matches print 2 approved ===== */
+.section-header { font-size:10px; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; color:var(--text-muted); margin-bottom:12px; }
+
+/* Next appointment card */
+.apt-card { background:var(--surface-card); border:1px solid var(--canvas-border); border-radius:12px; padding:20px; margin-bottom:20px; }
+.apt-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.apt-date { font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px; }
+.apt-badge { padding:3px 10px; border-radius:999px; font-size:11px; font-weight:500; }
+.apt-badge.blue { background:rgba(59,130,246,0.12); color:#3B82F6; }
+.apt-badge.green { background:rgba(16,185,129,0.12); color:#10B981; }
+.apt-badge.red { background:rgba(239,68,68,0.12); color:#EF4444; }
+.apt-meta { display:flex; gap:16px; margin-bottom:14px; font-size:12px; color:var(--text-secondary); }
+.apt-meta-item { display:flex; align-items:center; gap:4px; }
+
+/* AI Context Card — from print 2 (approved design) */
+.ai-card { background:var(--canvas); border:1px solid rgba(200,169,122,0.15); border-radius:10px; padding:14px 16px; margin-bottom:14px; }
+.ai-title { font-size:11px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--brand-gold); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+.ai-row { display:flex; align-items:baseline; gap:8px; margin-bottom:6px; font-size:12px; }
+.ai-icon { flex-shrink:0; width:16px; text-align:center; }
+.ai-key { color:var(--text-secondary); min-width:75px; }
+.ai-val { color:var(--text-primary); font-weight:500; }
+.ai-val.urgent { color:#FB923C; }
+
+.obs-line { font-size:13px; color:var(--text-secondary); line-height:1.7; margin-bottom:14px; }
+.obs-line strong { color:var(--text-primary); font-weight:500; }
+
+.btn-row { display:flex; gap:8px; }
+.btn { padding:6px 14px; border-radius:6px; font-size:12px; font-weight:500; cursor:pointer; border:1px solid var(--canvas-border); background:var(--surface-overlay); color:var(--text-secondary); }
+.btn:hover { border-color:var(--brand-gold-dark); color:var(--text-primary); }
+.btn.primary { background:var(--brand-gold); color:var(--surface-sidebar); border-color:var(--brand-gold); }
+.btn.danger { color:#EF4444; border-color:rgba(239,68,68,0.3); }
+
+/* History items */
+.history-item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:8px; background:var(--surface-card); border:1px solid var(--canvas-border); margin-bottom:6px; }
+.history-left { display:flex; align-items:center; gap:10px; }
+.history-date { font-size:12px; font-family:'Courier New',monospace; color:var(--text-secondary); min-width:100px; }
+.history-type { font-size:12px; color:var(--text-primary); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+    <div class="sidebar-brand"><div class="sidebar-brand-label">ORIN CRM</div><div class="sidebar-brand-name">Minha Joalheria</div></div>
+    <nav class="sidebar-nav">
+        <div class="sidebar-group">
+            <div class="sidebar-item"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Dashboard</div>
+            <div class="sidebar-item"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Inbox</div>
+            <div class="sidebar-item"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Clientes</div>
+        </div>
+        <div class="sidebar-group">
+            <div class="sidebar-group-label">Pipeline</div>
+            <div class="sidebar-item active"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Leads</div>
+            <div class="sidebar-item"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg> Pedidos</div>
+            <div class="sidebar-item"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"/></svg> Produção</div>
+        </div>
+        <div class="sidebar-group">
+            <div class="sidebar-group-label">Operação</div>
+            <div class="sidebar-item"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg> Pedidos</div>
+            <div class="sidebar-item"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9z"/></svg> Produção</div>
+            <div class="sidebar-item"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/></svg> Estoque</div>
+            <div class="sidebar-item "><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Agenda</div>
+            <div class="sidebar-item"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Financeiro</div>
+            <div class="sidebar-item"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> PDV</div>
+        </div>
+        <div class="sidebar-group">
+            <div class="sidebar-group-label">Sistema</div>
+            <div class="sidebar-item"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Automações</div>
+            <div class="sidebar-item"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Analytics</div>
+            <div class="sidebar-item"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9"/></svg> Ajustes</div>
+        </div>
+    </nav>
+    <div class="sidebar-footer"><div class="sidebar-footer-name">Guilherme</div><div class="sidebar-footer-role">Administrador</div></div>
+</aside>
+
+
+<div class="main">
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <div><div class="topbar-label">Painel operacional</div></div>
+        <div class="topbar-right">
+            <div class="topbar-search">🔍 Busca global <span style="opacity:0.5; margin-left:8px;">⌘ K</span></div>
+            <div style="display:flex; gap:8px; font-size:14px;">❓ 🔔</div>
+            <div class="topbar-user">ADMINISTRADOR</div>
+        </div>
+    </div>
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb-bar">
+        ← <a href="#">Pipeline Leads</a> / <a href="#">Clientes</a> / <strong>Maria Silva</strong>
+        <span style="float:right; display:flex; gap:8px;">
+            <button class="btn-ganhou" style="float:right;">✓ Ganhou</button>
+            <button class="btn-perdeu" style="float:right;">✗ Perdeu</button>
+        </span>
+    </div>
+
+    <!-- Stage pills -->
+    <div class="stage-row">
+        <span class="stage-pill">● Novo</span>
+        <span class="stage-pill active">● Qualificado</span>
+        <span class="stage-pill">● Proposta Enviada</span>
+        <span class="stage-pill">● Negociação</span>
+        <span class="stage-pill">● Convertido</span>
+        <span class="stage-pill">● Perdido</span>
+    </div>
+
+    <!-- 3-column layout -->
+    <div class="profile-layout">
+        <!-- LEFT PANEL -->
+        <div class="profile-left">
+            <div class="avatar">M</div>
+            <div class="profile-name">Maria Silva</div>
+            <div class="profile-since">Cliente desde mar. de 2026</div>
+            <div class="wa-badge">● WhatsApp</div>
+
+            <div class="stats-grid">
+                <div class="stat-box"><div class="stat-val gold">R$ 0,00</div><div class="stat-label">LTV Total</div></div>
+                <div class="stat-box"><div class="stat-val">0</div><div class="stat-label">Compras</div></div>
+                <div class="stat-box"><div class="stat-val">1</div><div class="stat-label">Agendamentos</div></div>
+                <div class="stat-box"><div class="stat-val green">0d</div><div class="stat-label">Próx. visita</div></div>
+            </div>
+
+            <div class="info-section">
+                <div class="info-section-title">Informações</div>
+                <div class="info-row"><span class="info-key">Origem</span><span class="info-val">WHATSAPP</span></div>
+                <div class="info-row"><span class="info-key">Valor est.</span><span class="info-val">~R$ 5.000</span></div>
+                <div class="info-row"><span class="info-key">Criado</span><span class="info-val">mar. de 2026</span></div>
+            </div>
+
+            <div class="info-section">
+                <div class="info-section-title">Responsável</div>
+                <div style="font-size:13px;">Ana Santos</div>
+            </div>
+
+            <div class="info-section">
+                <div class="info-section-title">Tags</div>
+                <div style="font-size:12px; color:var(--text-muted);">Nenhuma tag <span style="color:var(--brand-gold); cursor:pointer;">+</span></div>
+            </div>
+        </div>
+
+        <!-- CENTER PANEL -->
+        <div class="profile-center">
+            <!-- Tabs — Agenda is FIRST -->
+            <div class="tabs">
+                <div class="tab active">Agenda</div>
+                <div class="tab">Ficha</div>
+                <div class="tab">Atendimento</div>
+                <div class="tab">Proposta</div>
+                <div class="tab">Pedidos</div>
+                <div class="tab">OS</div>
+                <div class="tab">Entrega</div>
+                <div class="tab">Histórico</div>
+            </div>
+
+            <div class="tab-content">
+                <!-- Section: Next Appointment -->
+                <div class="section-header">Próximo Agendamento</div>
+
+                <div class="apt-card">
+                    <div class="apt-header">
+                        <div class="apt-date">📅 Qui, 27/03 às 14:00</div>
+                        <span class="apt-badge blue">● Agendado</span>
+                    </div>
+                    <div class="apt-meta">
+                        <div class="apt-meta-item">⏱ 45 min</div>
+                        <div class="apt-meta-item">💍 Visita Presencial</div>
+                        <div class="apt-meta-item">👤 Ana Santos</div>
+                    </div>
+
+                    <!-- AI Context Card (print 2 design — approved) -->
+                    <div class="ai-card">
+                        <div class="ai-title">✨ Contexto coletado pela IA</div>
+                        <div class="ai-row"><span class="ai-icon">💍</span><span class="ai-key">Interesse</span><span class="ai-val">Anel de noivado</span></div>
+                        <div class="ai-row"><span class="ai-icon">✨</span><span class="ai-key">Material</span><span class="ai-val">Ouro 18k</span></div>
+                        <div class="ai-row"><span class="ai-icon">💒</span><span class="ai-key">Ocasião</span><span class="ai-val">Pedido de casamento</span></div>
+                        <div class="ai-row"><span class="ai-icon">💰</span><span class="ai-key">Orçamento</span><span class="ai-val">~R$ 5.000</span></div>
+                        <div class="ai-row"><span class="ai-icon">⚡</span><span class="ai-key">Urgência</span><span class="ai-val urgent">Alta (casamento em 2 meses)</span></div>
+                    </div>
+
+                    <div class="obs-line"><strong>Obs:</strong> Cliente muito interessada, já tem referência de modelo. Viu peças no Instagram antes de agendar.</div>
+
+                    <div class="btn-row">
+                        <button class="btn primary">✓ Confirmar chegada</button>
+                        <button class="btn">Reagendar</button>
+                        <button class="btn danger">Cancelar</button>
+                    </div>
+                </div>
+
+                <!-- Section: History -->
+                <div class="section-header" style="margin-top:24px;">Histórico de Agendamentos</div>
+
+                <div class="history-item">
+                    <div class="history-left">
+                        <div class="history-date">15/03 · 10:00</div>
+                        <div class="history-type">Consulta Online</div>
+                    </div>
+                    <span class="apt-badge green">✓ Concluído</span>
+                </div>
+                <div class="history-item">
+                    <div class="history-left">
+                        <div class="history-date">02/03 · 14:00</div>
+                        <div class="history-type">Visita Presencial</div>
+                    </div>
+                    <span class="apt-badge red">✗ Cancelado</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div class="profile-right">
+            <div class="right-section">
+                <div class="right-section-title">Contato</div>
+                <div class="right-name">Maria Silva</div>
+                <div class="right-phone">+5522999999999</div>
+            </div>
+
+            <div class="right-section">
+                <div class="right-section-title">Inbox</div>
+                <div class="right-inbox">Última msg: há 2 horas</div>
+            </div>
+
+            <div class="right-section">
+                <div class="right-section-title">Ações Rápidas</div>
+                <button class="action-btn green">💬 Abrir WhatsApp</button>
+                <button class="action-btn">📄 Gerar Proposta</button>
+                <button class="action-btn rose">🔧 Nova OS</button>
+                <button class="action-btn gold">📅 Novo Agendamento</button>
+            </div>
+
+            <div class="right-section">
+                <div class="right-section-title">Resumo Financeiro</div>
+                <div class="financial-row"><span class="financial-key">LTV</span><span class="financial-val" style="color:var(--brand-gold);">R$ 0,00</span></div>
+                <div class="financial-row"><span class="financial-key">Em aberto</span><span class="financial-val">—</span></div>
+                <div class="financial-row"><span class="financial-key">Ticket médio</span><span class="financial-val">—</span></div>
+                <div class="financial-row"><span class="financial-key">NF-e emitidas</span><span class="financial-val">—</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

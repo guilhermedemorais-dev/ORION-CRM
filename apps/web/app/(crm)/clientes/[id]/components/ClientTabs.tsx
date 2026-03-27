@@ -2,6 +2,7 @@
 
 export type TabKey =
   | 'ficha'
+  | 'agenda'
   | 'atendimento'
   | 'proposta'
   | 'pedidos'
@@ -22,6 +23,7 @@ interface Props {
 }
 
 const TABS: Tab[] = [
+  { key: 'agenda', label: 'Agenda' },
   { key: 'ficha', label: 'Ficha' },
   { key: 'atendimento', label: 'Atendimento' },
   { key: 'proposta', label: 'Proposta' },

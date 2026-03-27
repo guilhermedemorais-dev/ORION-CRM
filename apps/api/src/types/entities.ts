@@ -5,7 +5,7 @@
 
 // ---- Enums ----
 
-export type UserRole = 'ADMIN' | 'ATENDENTE' | 'PRODUCAO' | 'FINANCEIRO' | 'MESTRE' | 'DESIGNER_3D';
+export type UserRole = 'ROOT' | 'ADMIN' | 'GERENTE' | 'VENDEDOR' | 'ATENDENTE' | 'PRODUCAO' | 'FINANCEIRO';
 export type UserStatus = 'active' | 'inactive';
 
 export type LeadStage = 'NOVO' | 'QUALIFICADO' | 'PROPOSTA_ENVIADA' | 'NEGOCIACAO' | 'CONVERTIDO' | 'PERDIDO';

@@ -26,7 +26,7 @@ const createRenderSchema = z.object({
 router.post(
     '/:block_id/render',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { block_id } = req.params as { block_id: string };
@@ -75,7 +75,7 @@ router.post(
 router.get(
     '/:id',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE', 'DESIGNER_3D']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE', 'PRODUCAO']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const result = await query(`SELECT * FROM ai_renders WHERE id = $1`, [req.params['id']]);
@@ -89,7 +89,7 @@ router.get(
 router.patch(
     '/:id/approve',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { id } = req.params as { id: string };
@@ -107,7 +107,7 @@ router.patch(
 router.patch(
     '/:id/adjust',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { id } = req.params as { id: string };

@@ -7,10 +7,9 @@ import { rateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
 
-type DashboardRole = 'ADMIN' | 'ATENDENTE' | 'PRODUCAO' | 'FINANCEIRO';
 
 async function getAdminDashboard() {
-    const [leadsToday, openOrders, overdueProduction, monthRevenue, stockAlerts, activity] = await Promise.all([
+    const [leadsToday, openOrders, overdueProduction, monthRevenue, stockAlerts, activity, topProducts] = await Promise.all([
         query<{ total: string }>(
             `SELECT COUNT(*)::text AS total
              FROM leads
@@ -56,6 +55,17 @@ async function getAdminDashboard() {
              ORDER BY created_at DESC
              LIMIT 8`
         ),
+        query<{ name: string; total_sold: string }>(
+            `SELECT p.name, COUNT(oi.id)::text AS total_sold
+             FROM order_items oi
+             JOIN products p ON p.id = oi.product_id
+             JOIN orders o ON o.id = oi.order_id
+             WHERE o.status NOT IN ('CANCELADO')
+               AND date_trunc('month', o.created_at) = date_trunc('month', CURRENT_DATE)
+             GROUP BY p.id, p.name
+             ORDER BY COUNT(oi.id) DESC
+             LIMIT 5`
+        ),
     ]);
 
     return {
@@ -75,6 +85,10 @@ async function getAdminDashboard() {
             kind: entry.kind,
             label: entry.label,
             created_at: entry.created_at,
+        })),
+        topProducts: topProducts.rows.map((p) => ({
+            name: p.name,
+            total_sold: Number(p.total_sold),
         })),
     };
 }
@@ -216,16 +230,18 @@ router.get(
             }
 
             let payload: unknown;
-            const role = req.user.role as DashboardRole;
+            const role = req.user.role;
 
-            if (role === 'ADMIN') {
+            if (role === 'ADMIN' || role === 'ROOT' || role === 'GERENTE') {
                 payload = await getAdminDashboard();
-            } else if (role === 'ATENDENTE') {
+            } else if (role === 'ATENDENTE' || role === 'VENDEDOR') {
                 payload = await getAtendenteDashboard(req.user.id);
             } else if (role === 'PRODUCAO') {
                 payload = await getProducaoDashboard(req.user.id);
-            } else {
+            } else if (role === 'FINANCEIRO') {
                 payload = await getFinanceiroDashboard();
+            } else {
+                payload = await getAdminDashboard();
             }
 
             res.json(payload);

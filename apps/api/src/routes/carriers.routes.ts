@@ -46,7 +46,7 @@ router.get(
 router.get(
     '/active',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const result = await query(

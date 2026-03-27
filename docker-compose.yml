@@ -82,6 +82,10 @@ services:
       NODE_OPTIONS: "--dns-result-order=ipv4first"
       NODE_ENV: ${NODE_ENV:-production}
       ORION_API_URL: http://api:4000/api/v1
+    extra_hosts:
+      - "api:host-gateway"
+    ports:
+      - "3000:3000"
     depends_on:
       api:
         condition: service_started

@@ -20,7 +20,7 @@ function generateOSNumber(): string {
 router.get(
     '/:customerId/service-orders',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE', 'PRODUCAO', 'DESIGNER_3D']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE', 'PRODUCAO']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { customerId } = req.params as { customerId: string };
@@ -83,7 +83,7 @@ const createSOSchema = z.object({
 router.post(
     '/',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'MESTRE']),
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const parsed = createSOSchema.safeParse(req.body);
@@ -132,7 +132,7 @@ router.post(
 router.patch(
     '/:id',
     authenticate,
-    requireRole(['ADMIN', 'MESTRE']),
+    requireRole(['ADMIN', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { id } = req.params as { id: string };
@@ -167,7 +167,7 @@ const STEPS = ['design', '3d_modeling', 'material', 'casting', 'setting', 'polis
 router.patch(
     '/:id/step',
     authenticate,
-    requireRole(['ADMIN', 'MESTRE', 'PRODUCAO', 'DESIGNER_3D']),
+    requireRole(['ADMIN', 'GERENTE', 'PRODUCAO']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const { id } = req.params as { id: string };

@@ -23,7 +23,7 @@ export interface AdminUser {
     id: string;
     name: string;
     email: string;
-    role: 'ADMIN' | 'ATENDENTE' | 'PRODUCAO' | 'FINANCEIRO';
+    role: 'ROOT' | 'ADMIN' | 'GERENTE' | 'VENDEDOR' | 'PRODUCAO' | 'FINANCEIRO' | 'ATENDENTE';
     status: 'active' | 'inactive';
     commission_rate: number;
     personal_whatsapp: string | null;

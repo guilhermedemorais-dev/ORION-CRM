@@ -21,6 +21,7 @@ import {
     Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { LeadAppointmentsTab } from '@/app/(crm)/agenda/components/LeadAppointmentsTab';
 import type { LeadRecord, PipelineStageRecord } from '@/lib/api';
 import { cn, formatCurrencyFromCents, formatDate, formatPhone } from '@/lib/utils';
 
@@ -64,7 +65,7 @@ interface CustomFieldRecord {
 
 type TimelineTab = 'ALL' | 'EMAIL' | 'NOTES' | 'ACTIVITIES' | 'WHATSAPP';
 type CommunicationTab = 'EMAIL' | 'WHATSAPP';
-type CenterTab = 'NOTES' | 'COMMS' | 'TIMELINE';
+type CenterTab = 'AGENDA' | 'NOTES' | 'COMMS' | 'TIMELINE';
 
 const SOURCE_LABEL: Record<LeadRecord['source'], string> = {
     WHATSAPP: 'WhatsApp',
@@ -160,7 +161,7 @@ export function LeadDetailClient({
     customFields,
 }: LeadDetailClientProps) {
     const [lead, setLead] = useState(initialLead);
-    const [activeCenterTab, setActiveCenterTab] = useState<CenterTab>('NOTES');
+    const [activeCenterTab, setActiveCenterTab] = useState<CenterTab>('AGENDA');
     const [activeTimelineTab, setActiveTimelineTab] = useState<TimelineTab>('ALL');
     const [activeCommunicationTab, setActiveCommunicationTab] = useState<CommunicationTab>('WHATSAPP');
     const [noteDraft, setNoteDraft] = useState(initialLead.quick_note ?? '');
@@ -514,12 +515,23 @@ export function LeadDetailClient({
                 <div className="flex flex-1 flex-col overflow-hidden border-r border-white/5 bg-[#080809]">
                     
                     {/* CENTER TABS */}
-                    <div className="flex h-[42px] shrink-0 border-b border-white/5 px-[18px]">
+                    <div className="flex h-[42px] shrink-0 overflow-x-auto border-b border-white/5 px-[18px] [&::-webkit-scrollbar]:hidden">
+                        <button
+                            type="button"
+                            onClick={() => setActiveCenterTab('AGENDA')}
+                            className={cn(
+                                'flex h-[42px] shrink-0 items-center gap-1.5 border-b-2 px-3.5 text-[11px] font-semibold transition-colors uppercase tracking-[0.4px]',
+                                activeCenterTab === 'AGENDA' ? 'border-[#BFA06A] text-[#D4B87E]' : 'border-transparent text-[#777] hover:text-[#A09A94]'
+                            )}
+                        >
+                            <CalendarDays className="h-3.5 w-3.5" strokeWidth={2} />
+                            Agenda
+                        </button>
                         <button
                             type="button"
                             onClick={() => setActiveCenterTab('NOTES')}
                             className={cn(
-                                'flex h-[42px] items-center gap-1.5 border-b-2 px-3.5 text-[11px] font-semibold transition-colors uppercase tracking-[0.4px]',
+                                'flex h-[42px] shrink-0 items-center gap-1.5 border-b-2 px-3.5 text-[11px] font-semibold transition-colors uppercase tracking-[0.4px]',
                                 activeCenterTab === 'NOTES' ? 'border-[#BFA06A] text-[#D4B87E]' : 'border-transparent text-[#777] hover:text-[#A09A94]'
                             )}
                         >
@@ -533,7 +545,7 @@ export function LeadDetailClient({
                             type="button"
                             onClick={() => setActiveCenterTab('COMMS')}
                             className={cn(
-                                'flex h-[42px] items-center gap-1.5 border-b-2 px-3.5 text-[11px] font-semibold transition-colors uppercase tracking-[0.4px]',
+                                'flex h-[42px] shrink-0 items-center gap-1.5 border-b-2 px-3.5 text-[11px] font-semibold transition-colors uppercase tracking-[0.4px]',
                                 activeCenterTab === 'COMMS' ? 'border-[#BFA06A] text-[#D4B87E]' : 'border-transparent text-[#777] hover:text-[#A09A94]'
                             )}
                         >
@@ -544,7 +556,7 @@ export function LeadDetailClient({
                             type="button"
                             onClick={() => setActiveCenterTab('TIMELINE')}
                             className={cn(
-                                'flex h-[42px] items-center gap-1.5 border-b-2 px-3.5 text-[11px] font-semibold transition-colors uppercase tracking-[0.4px]',
+                                'flex h-[42px] shrink-0 items-center gap-1.5 border-b-2 px-3.5 text-[11px] font-semibold transition-colors uppercase tracking-[0.4px]',
                                 activeCenterTab === 'TIMELINE' ? 'border-[#BFA06A] text-[#D4B87E]' : 'border-transparent text-[#777] hover:text-[#A09A94]'
                             )}
                         >
@@ -584,6 +596,13 @@ export function LeadDetailClient({
                                 </div>
                             </div>
                         </div>
+
+                        {/* SECTION: AGENDA */}
+                        {activeCenterTab === 'AGENDA' && (
+                            <div className="pt-2">
+                                <LeadAppointmentsTab leadId={lead.id} />
+                            </div>
+                        )}
 
                         {/* SECTION: NOTES & ACTIVITIES */}
                         {activeCenterTab === 'NOTES' && (

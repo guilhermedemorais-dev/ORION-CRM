@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #0A0A0B; color: #E4E2DC; font-size: 13px; padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; }
+
+.grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+
+.panel {
+  background: #111113; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;
+}
+.panel-head {
+  padding: 13px 16px; border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+.panel-title { font-size: 9px; letter-spacing:.18em; text-transform:uppercase; color:#555; font-weight:500; }
+.panel-action { font-size:10px; color:#C8A97A; cursor:pointer; }
+.panel-action:hover { text-decoration:underline; }
+.panel-body { padding:14px 16px; flex:1; display:flex; flex-direction:column; }
+
+/* ── Section Headers ── */
+.section-divider {
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 0 2px;
+  margin-top: 6px;
+}
+.section-divider-icon {
+  width: 20px; height: 20px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.section-divider-icon svg { width: 11px; height: 11px; }
+.section-divider-label {
+  font-size: 9px; letter-spacing:.18em; text-transform:uppercase; color:#444; font-weight:600;
+}
+.section-divider-line { flex: 1; height: 1px; background: rgba(255,255,255,0.04); }
+.section-divider-count {
+  font-size: 9px; color: #333; letter-spacing: .1em;
+}
+
+/* ── KPI cards ── */
+.kpi-card {
+  background:#111113; border:1px solid rgba(255,255,255,0.06);
+  border-radius:12px; padding:18px; position:relative; overflow:hidden; cursor:pointer; transition:border-color .2s;
+}
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(200,169,122,0.4),transparent); }
+.kpi-card:hover { border-color:rgba(200,169,122,0.2); }
+.kpi-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px; }
+.kpi-label { font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:#555; font-weight:500; }
+.kpi-icon { width:28px; height:28px; background:rgba(200,169,122,0.1); border-radius:7px; display:flex; align-items:center; justify-content:center; }
+.kpi-icon svg { width:13px; height:13px; }
+.kpi-value { font-family:'Playfair Display',serif; font-size:30px; font-weight:600; color:#E8E4DE; line-height:1; margin-bottom:4px; }
+.kpi-sub { font-size:10px; color:#444; }
+.kpi-sub b { color:#999; font-weight:500; }
+.kpi-sub.danger { color:#F87171; }
+.spark { display:block; margin:8px 0; }
+.kpi-footer { display:flex; align-items:center; gap:6px; }
+.delta { display:inline-flex; align-items:center; gap:3px; font-size:10px; font-weight:600; padding:2px 7px; border-radius:5px; }
+.delta.up   { color:#34D399; background:rgba(52,211,153,0.12); }
+.delta.down { color:#F87171; background:rgba(248,113,113,0.12); }
+.delta.neu  { color:#888;    background:rgba(255,255,255,0.05); }
+.delta-sub  { font-size:10px; color:#555; }
+
+/* ── Funnel ── */
+.funnel-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; }
+.funnel-row:last-child { border-bottom:none; }
+.funnel-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.funnel-label { font-size:11px; color:#888; width:90px; flex-shrink:0; }
+.funnel-bar-bg { flex:1; height:2px; background:rgba(255,255,255,0.06); border-radius:1px; }
+.funnel-bar { height:2px; border-radius:1px; }
+.funnel-count { font-family:'Playfair Display',serif; font-size:16px; font-weight:500; color:#C8A97A; min-width:16px; text-align:right; }
+.funnel-count.warn { color:#F87171; }
+
+/* ── Chart ── */
+.chart-labels { display:flex; justify-content:space-between; margin-top:6px; font-size:9px; color:#333; }
+.chart-stats { display:flex; gap:20px; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); }
+.cs-label { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:#444; margin-bottom:3px; }
+.cs-val { font-family:'Playfair Display',serif; font-size:15px; font-weight:500; color:#C8A97A; }
+.cs-val.green { color:#34D399; }
+
+/* ── Alertas ── */
+.alert-block { padding:10px 12px; border-radius:8px; border-left:3px solid var(--ac); background:var(--abg); margin-bottom:8px; cursor:pointer; }
+.alert-block:last-child { margin-bottom:0; }
+.alert-kind { font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--ac); font-weight:600; margin-bottom:3px; }
+.alert-val { font-size:13px; font-weight:600; color:#E4E2DC; }
+.alert-sub { font-size:10px; color:#555; margin-top:1px; }
+.section-label { font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:#444; margin-bottom:8px; }
+
+/* ── Feed ── */
+.feed-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; }
+.feed-row:last-child { border-bottom:none; }
+.feed-badge { font-size:8px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:2px 7px; border-radius:4px; min-width:56px; text-align:center; flex-shrink:0; }
+.feed-name { font-size:12px; color:#bbb; width:130px; flex-shrink:0; font-weight:500; }
+.feed-meta { flex:1; font-size:11px; color:#555; }
+.feed-time { font-size:10px; color:#444; white-space:nowrap; }
+
+/* ── Clientes ── */
+.cliente-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.cliente-row:last-child { border-bottom:none; }
+.cliente-rank { font-size:11px; color:#444; width:14px; }
+.cliente-avatar { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; }
+.cliente-info { flex:1; }
+.cliente-info b { font-size:12px; font-weight:500; color:#C8C6C0; display:block; }
+.cliente-info span { font-size:10px; color:#555; }
+.cliente-val { font-family:'Playfair Display',serif; font-size:14px; }
+.pay-row { margin-bottom:10px; }
+.pay-row:last-child { margin-bottom:0; }
+.pay-label-row { display:flex; justify-content:space-between; margin-bottom:4px; }
+.pay-lbl { font-size:10px; color:#666; }
+.pay-pct { font-size:10px; font-weight:500; color:#999; }
+.pay-bg { height:3px; background:rgba(255,255,255,0.06); border-radius:2px; }
+.pay-fill { height:3px; border-radius:2px; }
+
+/* ── Calendário ── */
+.cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.cal-month { font-family:'Playfair Display',serif; font-size:15px; font-weight:500; color:#C8A97A; }
+.cal-nav { display:flex; gap:6px; }
+.cal-nav-btn { width:22px; height:22px; border-radius:5px; background:rgba(255,255,255,0.05); border:none; color:#666; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; }
+.cal-nav-btn:hover { background:rgba(200,169,122,0.1); color:#C8A97A; }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:10px; }
+.cal-dow { text-align:center; font-size:9px; letter-spacing:.1em; color:#444; padding:4px 0; }
+.cal-day { text-align:center; font-size:11px; color:#666; padding:5px 2px; border-radius:5px; cursor:pointer; transition:all .15s; position:relative; }
+.cal-day:hover { background:rgba(255,255,255,0.05); color:#ccc; }
+.cal-day.today { background:rgba(200,169,122,0.15); color:#C8A97A; font-weight:600; }
+.cal-day.has-event::after { content:''; position:absolute; bottom:2px; left:50%; transform:translateX(-50%); width:3px; height:3px; background:#C8A97A; border-radius:50%; }
+.cal-day.other-month { color:#2a2a2a; }
+.cal-event-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.cal-event-row:last-child { border-bottom:none; }
+.cal-event-time { font-size:10px; color:#555; min-width:36px; }
+.cal-event-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.cal-event-name { font-size:12px; font-weight:500; color:#C8C6C0; flex:1; }
+.cal-event-sub { font-size:10px; color:#555; }
+
+/* ── Meta ── */
+.meta-hero { display:flex; align-items:flex-end; gap:10px; margin-bottom:12px; }
+.meta-value { font-family:'Playfair Display',serif; font-size:32px; font-weight:600; color:#E8E4DE; line-height:1; }
+.meta-pct { font-family:'Playfair Display',serif; font-size:18px; color:#C8A97A; margin-bottom:3px; }
+.meta-bar-wrap { height:8px; background:rgba(255,255,255,0.06); border-radius:4px; margin-bottom:10px; overflow:hidden; }
+.meta-bar-fill { height:8px; border-radius:4px; background:linear-gradient(90deg,#A8895A,#C8A97A); }
+.meta-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.meta-stat { background:rgba(255,255,255,0.03); border-radius:8px; padding:10px; }
+.meta-stat-label { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:#444; margin-bottom:4px; }
+.meta-stat-val { font-family:'Playfair Display',serif; font-size:16px; font-weight:500; color:#C8A97A; }
+.meta-proj { margin-top:10px; padding:8px 12px; background:rgba(52,211,153,0.07); border-radius:8px; border:1px solid rgba(52,211,153,0.15); display:flex; align-items:center; justify-content:space-between; }
+.meta-proj-label { font-size:10px; color:#555; }
+.meta-proj-val { font-family:'Playfair Display',serif; font-size:16px; color:#34D399; }
+
+/* ── Prontos ── */
+.pronto-row { display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.pronto-row:last-child { border-bottom:none; }
+.pronto-icon { width:28px; height:28px; border-radius:7px; background:rgba(52,211,153,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.pronto-icon svg { width:13px; height:13px; }
+.pronto-info { flex:1; }
+.pronto-id { font-size:11px; font-weight:600; color:#C8C6C0; margin-bottom:2px; }
+.pronto-cliente { font-size:11px; color:#666; }
+.pronto-right { text-align:right; }
+.pronto-val { font-family:'Playfair Display',serif; font-size:13px; color:#C8A97A; }
+.pronto-dias { font-size:10px; color:#555; margin-top:1px; }
+.pronto-dias.urgent { color:#F87171; }
+.pronto-footer { margin-top:10px; padding:8px 12px; background:rgba(52,211,153,0.06); border-radius:8px; border:1px solid rgba(52,211,153,0.12); display:flex; justify-content:space-between; align-items:center; }
+.pronto-footer-label { font-size:10px; color:#555; }
+.pronto-footer-val { font-family:'Playfair Display',serif; font-size:16px; color:#34D399; }
+
+/* ── Aniversariantes ── */
+.aniv-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.aniv-row:last-child { border-bottom:none; }
+.aniv-avatar { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+.aniv-info { flex:1; }
+.aniv-name { font-size:12px; font-weight:500; color:#C8C6C0; }
+.aniv-sub { font-size:10px; color:#555; margin-top:1px; }
+.aniv-badge { font-size:9px; font-weight:600; padding:3px 8px; border-radius:5px; white-space:nowrap; flex-shrink:0; }
+.aniv-badge.hoje  { background:rgba(200,169,122,0.15); color:#C8A97A; }
+.aniv-badge.amanha { background:rgba(96,165,250,0.12); color:#60A5FA; }
+.aniv-badge.semana { background:rgba(255,255,255,0.05); color:#666; }
+.aniv-cta { margin-top:10px; display:flex; gap:6px; }
+.aniv-btn { flex:1; padding:7px; border-radius:7px; background:rgba(200,169,122,0.1); border:1px solid rgba(200,169,122,0.2); color:#C8A97A; font-size:11px; font-weight:500; cursor:pointer; text-align:center; transition:background .15s; }
+.aniv-btn:hover { background:rgba(200,169,122,0.18); }
+
+/* ── Leads por origem ── */
+.origem-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.origem-row:last-child { margin-bottom:0; }
+.origem-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+.origem-label { flex:1; font-size:11px; color:#888; }
+.origem-bar-bg { width:90px; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; }
+.origem-bar { height:4px; border-radius:2px; }
+.origem-count { font-family:'Playfair Display',serif; font-size:15px; font-weight:500; min-width:24px; text-align:right; }
+.origem-pct { font-size:10px; color:#444; min-width:30px; text-align:right; }
+
+/* ── Heatmap ── */
+.heatmap-wrap { display:flex; gap:10px; }
+.heatmap-days { display:flex; flex-direction:column; gap:3px; padding-top:18px; }
+.heatmap-day-label { font-size:9px; color:#444; text-align:right; line-height:18px; }
+.heatmap-main { flex:1; }
+.heatmap-hours { display:flex; gap:3px; margin-bottom:3px; }
+.hm-hour { flex:1; font-size:8px; color:#333; text-align:center; }
+.heatmap-grid { display:flex; flex-direction:column; gap:3px; }
+.hm-row { display:flex; gap:3px; }
+.hm-cell { flex:1; height:18px; border-radius:3px; cursor:pointer; transition:opacity .15s; }
+.hm-cell:hover { opacity:.7; }
+.hm-legend { display:flex; align-items:center; gap:6px; margin-top:10px; }
+.hm-legend-label { font-size:9px; color:#444; }
+.hm-legend-bar { display:flex; gap:2px; }
+.hm-legend-swatch { width:14px; height:8px; border-radius:2px; }
+
+/* ── Rank produtos ── */
+.rank-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.rank-row:last-child { border-bottom:none; }
+.rank-num { font-family:'Playfair Display',serif; font-size:14px; color:#333; width:16px; }
+.rank-bar-wrap { flex:1; }
+.rank-name { font-size:12px; font-weight:500; color:#C8C6C0; margin-bottom:4px; }
+.rank-bar-bg { height:3px; background:rgba(255,255,255,0.05); border-radius:2px; }
+.rank-bar { height:3px; border-radius:2px; background:#C8A97A; }
+.rank-right { text-align:right; flex-shrink:0; }
+.rank-qty { font-size:10px; color:#555; }
+.rank-val { font-family:'Playfair Display',serif; font-size:13px; color:#C8A97A; }
+
+/* ── Tempo produção ── */
+.tempo-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.tempo-row:last-child { border-bottom:none; }
+.tempo-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.tempo-label { font-size:11px; color:#888; width:80px; flex-shrink:0; }
+.tempo-bar-bg { flex:1; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden; }
+.tempo-bar { height:4px; border-radius:2px; }
+.tempo-days { font-size:11px; font-weight:500; color:#C8C6C0; min-width:48px; text-align:right; }
+.tempo-days.ok   { color:#34D399; }
+.tempo-days.warn { color:#FBBF24; }
+.tempo-days.bad  { color:#F87171; }
+.tempo-avg { margin-top:12px; padding:10px 12px; background:rgba(255,255,255,0.03); border-radius:8px; display:flex; justify-content:space-between; align-items:center; }
+.tempo-avg-label { font-size:10px; color:#555; }
+.tempo-avg-val { font-family:'Playfair Display',serif; font-size:18px; color:#C8A97A; }
+
+/* ═══════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════ */
+
+/* 1. Entrance — fade + slide up on scroll */
+.anim-in {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.anim-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Section dividers get a different entrance */
+.section-divider.anim-in {
+  opacity: 0;
+  transform: translateY(0) scaleX(0.7);
+  transform-origin: left center;
+  transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.section-divider.anim-in.visible {
+  opacity: 1;
+  transform: translateY(0) scaleX(1);
+}
+
+/* 2. Hover glow + elevation on panels & KPI cards */
+.panel {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.25s ease,
+              box-shadow 0.25s ease;
+}
+.panel:hover {
+  transform: translateY(-2px);
+  border-color: rgba(200,169,122,0.15);
+  box-shadow: 0 4px 24px rgba(200,169,122,0.06), 0 1px 4px rgba(0,0,0,0.3);
+}
+.kpi-card {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.25s ease,
+              box-shadow 0.25s ease;
+}
+.kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(200,169,122,0.2);
+  box-shadow: 0 6px 28px rgba(200,169,122,0.08), 0 2px 6px rgba(0,0,0,0.3);
+}
+
+/* 3. Sparkline draw animation */
+.spark-line {
+  stroke-dasharray: var(--spark-len, 300);
+  stroke-dashoffset: var(--spark-len, 300);
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.spark-line.drawn { stroke-dashoffset: 0; }
+
+.spark-area {
+  opacity: 0;
+  transition: opacity 0.8s ease 0.4s;
+}
+.spark-area.drawn { opacity: 1; }
+
+/* Main chart line */
+.chart-line {
+  stroke-dasharray: var(--chart-len, 800);
+  stroke-dashoffset: var(--chart-len, 800);
+  transition: stroke-dashoffset 1.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.chart-line.drawn { stroke-dashoffset: 0; }
+
+.chart-area {
+  opacity: 0;
+  transition: opacity 1s ease 0.5s;
+}
+.chart-area.drawn { opacity: 1; }
+
+.chart-dot {
+  opacity: 0;
+  transform-origin: center;
+  transition: opacity 0.3s ease 1.4s;
+}
+.chart-dot.drawn { opacity: 1; }
+
+/* Progress bars animate width */
+.bar-animate {
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Meta bar animation */
+.meta-bar-fill {
+  transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.3s;
+}
+
+/* Donut ring animation */
+.donut-ring {
+  stroke-dashoffset: 301.6 !important;
+  transition: stroke-dashoffset 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.donut-ring.drawn {
+  stroke-dashoffset: var(--target-offset) !important;
+}
+
+/* Heatmap cells fade in */
+.hm-cell {
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.hm-cell.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+.hm-cell.visible:hover { opacity: 0.7; transform: scale(1); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     1. VISÃO GERAL — KPIs
+═══════════════════════════════════════════ -->
+<div class="grid-4">
+  <div class="kpi-card">
+    <div class="kpi-top"><div class="kpi-label">Faturamento do Mês</div><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div></div>
+    <div class="kpi-value" style="font-size:24px">R$ 47.380</div>
+    <svg class="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(200,169,122,0.08)" points="0,34 0,30 25,26 50,28 75,20 100,22 125,14 150,11 175,8 200,6 200,34"/><polyline fill="none" stroke="rgba(200,169,122,0.55)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0,30 25,26 50,28 75,20 100,22 125,14 150,11 175,8 200,6"/></svg>
+    <div class="kpi-footer"><span class="delta up">↑ 18%</span><span class="delta-sub">vs mês anterior</span></div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-top"><div class="kpi-label">PDV — Vendas Hoje</div><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" stroke-width="1.5"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div></div>
+    <div class="kpi-value">7</div>
+    <div class="kpi-sub">Ticket médio <b>R$ 1.240</b></div>
+    <svg class="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(200,169,122,0.08)" points="0,34 0,32 25,26 50,28 75,22 100,18 125,24 150,14 175,10 200,16 200,34"/><polyline fill="none" stroke="rgba(200,169,122,0.55)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0,32 25,26 50,28 75,22 100,18 125,24 150,14 175,10 200,16"/></svg>
+    <div class="kpi-footer"><span class="delta up">↑ +3</span><span class="delta-sub">vs ontem</span></div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-top"><div class="kpi-label">Leads — Pipeline</div><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div></div>
+    <div class="kpi-value">24</div>
+    <div class="kpi-sub">Novos hoje <b style="color:#C8A97A">+3</b></div>
+    <svg class="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(200,169,122,0.08)" points="0,34 0,34 25,28 50,22 75,26 100,18 125,16 150,20 175,12 200,10 200,34"/><polyline fill="none" stroke="rgba(200,169,122,0.55)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0,34 25,28 50,22 75,26 100,18 125,16 150,20 175,12 200,10"/></svg>
+    <div class="kpi-footer"><span class="delta up">↑ 12%</span><span class="delta-sub">conversão 34%</span></div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-top"><div class="kpi-label">Pedidos em Aberto</div><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div></div>
+    <div class="kpi-value">12</div>
+    <div class="kpi-sub danger">3 com prazo vencido</div>
+    <svg class="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(248,113,113,0.07)" points="0,34 0,20 25,18 50,24 75,16 100,20 125,14 150,18 175,16 200,14 200,34"/><polyline fill="none" stroke="rgba(248,113,113,0.45)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="0,20 25,18 50,24 75,16 100,20 125,14 150,18 175,16 200,14"/></svg>
+    <div class="kpi-footer"><span class="delta neu">→ estável</span><span class="delta-sub">R$ 28.400 em aberto</span></div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     2. FINANCEIRO — Receita, Meta, Pagamentos
+═══════════════════════════════════════════ -->
+<div class="section-divider">
+  <div class="section-divider-icon" style="background:rgba(200,169,122,0.1)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+  </div>
+  <span class="section-divider-label">Financeiro</span>
+  <div class="section-divider-line"></div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:12px">
+  <!-- Faturamento Chart -->
+  <div class="panel">
+    <div class="panel-head"><span class="panel-title">Faturamento — Últimos 30 Dias</span><span class="panel-action">Exportar</span></div>
+    <div class="panel-body" style="position:relative;gap:10px">
+      <div id="chart-wrap" style="position:relative;flex:1;min-height:200px;cursor:crosshair">
+        <canvas id="faturamento-chart" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas>
+        <!-- Tooltip -->
+        <div id="chart-tooltip" style="display:none;position:absolute;top:0;left:0;pointer-events:none;z-index:10">
+          <div style="background:#1a1a1e;border:1px solid rgba(200,169,122,0.25);border-radius:8px;padding:8px 12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);min-width:120px">
+            <div id="tt-date" style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#555;margin-bottom:4px"></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+              <div style="width:6px;height:6px;border-radius:50%;background:#C8A97A"></div>
+              <span id="tt-val" style="font-family:'Playfair Display',serif;font-size:15px;font-weight:500;color:#C8A97A"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div style="width:6px;height:2px;border-radius:1px;background:#555"></div>
+              <span id="tt-prev" style="font-size:11px;color:#555"></span>
+            </div>
+            <div id="tt-delta" style="font-size:10px;margin-top:4px;font-weight:600"></div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-stats">
+        <div><div class="cs-label">Maior Dia</div><div class="cs-val">R$ 4.280</div></div>
+        <div><div class="cs-label">Média Diária</div><div class="cs-val">R$ 1.579</div></div>
+        <div><div class="cs-label">Meta do Mês</div><div class="cs-val green">94%</div></div>
+        <div style="margin-left:auto"><div class="cs-label">Projeção</div><div class="cs-val">R$ 51.200</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meta + Pagamentos stacked -->
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div class="panel" style="flex:1">
+      <div class="panel-head"><span class="panel-title">Meta do Mês</span><span class="panel-action">Ajustar</span></div>
+      <div class="panel-body">
+        <div class="meta-hero"><div class="meta-value">R$ 47.380</div><div class="meta-pct">94%</div></div>
+        <div style="font-size:10px;color:#444;margin-bottom:8px">de R$ 50.000 — faltam R$ 2.620</div>
+        <div class="meta-bar-wrap"><div class="meta-bar-fill" style="width:94%"></div></div>
+        <div class="meta-stats">
+          <div class="meta-stat"><div class="meta-stat-label">Dias úteis</div><div class="meta-stat-val">3 restam</div></div>
+          <div class="meta-stat"><div class="meta-stat-label">Diário p/ bater</div><div class="meta-stat-val">R$ 873</div></div>
+          <div class="meta-stat"><div class="meta-stat-label">Melhor dia</div><div class="meta-stat-val">R$ 4.280</div></div>
+        </div>
+        <div class="meta-proj"><div class="meta-proj-label">Projeção de fechamento</div><div class="meta-proj-val">R$ 51.200 ↑</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span class="panel-title">Formas de Pagamento</span></div>
+      <div class="panel-body" style="gap:0;justify-content:space-around">
+        <div class="pay-row"><div class="pay-label-row"><span class="pay-lbl">Cartão de crédito</span><span class="pay-pct">52%</span></div><div class="pay-bg"><div class="pay-fill" style="width:52%;background:#C8A97A"></div></div></div>
+        <div class="pay-row"><div class="pay-label-row"><span class="pay-lbl">PIX</span><span class="pay-pct">31%</span></div><div class="pay-bg"><div class="pay-fill" style="width:31%;background:#60A5FA"></div></div></div>
+        <div class="pay-row"><div class="pay-label-row"><span class="pay-lbl">Débito</span><span class="pay-pct">17%</span></div><div class="pay-bg"><div class="pay-fill" style="width:17%;background:#555"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     3. AÇÃO IMEDIATA — Alertas, Agenda, Prontos
+═══════════════════════════════════════════ -->
+<div class="section-divider">
+  <div class="section-divider-icon" style="background:rgba(248,113,113,0.1)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+  </div>
+  <span class="section-divider-label">Ação Imediata</span>
+  <div class="section-divider-line"></div>
+  <span class="section-divider-count">3 alertas · 3 prontos</span>
+</div>
+
+<div class="grid-3">
+  <!-- Alertas -->
+  <div class="panel">
+    <div class="panel-head"><span class="panel-title">Alertas — Requer Atenção</span></div>
+    <div class="panel-body" style="gap:0">
+      <div class="alert-block" style="--ac:#F87171;--abg:rgba(248,113,113,0.08)"><div class="alert-kind">Estoque Crítico</div><div class="alert-val">Ouro 18k — 3g restantes</div><div class="alert-sub">Mínimo: 10g</div></div>
+      <div class="alert-block" style="--ac:#F87171;--abg:rgba(248,113,113,0.08)"><div class="alert-kind">Estoque Crítico</div><div class="alert-val">Prata 925 — 8g restantes</div><div class="alert-sub">Mínimo: 20g</div></div>
+      <div class="alert-block" style="--ac:#FBBF24;--abg:rgba(251,191,36,0.08)"><div class="alert-kind">Produção Atrasada</div><div class="alert-val">Pedido #PED-0042</div><div class="alert-sub">2 dias de atraso</div></div>
+    </div>
+  </div>
+
+  <!-- Agenda -->
+  <div class="panel">
+    <div class="panel-head"><span class="panel-title">Agenda</span><span class="panel-action">Ver completo →</span></div>
+    <div class="panel-body">
+      <div class="cal-header">
+        <div class="cal-month">Março 2026</div>
+        <div class="cal-nav"><button class="cal-nav-btn">‹</button><button class="cal-nav-btn">›</button></div>
+      </div>
+      <div class="cal-grid">
+        <div class="cal-dow">D</div><div class="cal-dow">S</div><div class="cal-dow">T</div><div class="cal-dow">Q</div><div class="cal-dow">Q</div><div class="cal-dow">S</div><div class="cal-dow">S</div>
+        <div class="cal-day other-month">23</div><div class="cal-day other-month">24</div><div class="cal-day other-month">25</div><div class="cal-day other-month">26</div><div class="cal-day other-month">27</div><div class="cal-day other-month">28</div><div class="cal-day">1</div>
+        <div class="cal-day">2</div><div class="cal-day has-event">3</div><div class="cal-day">4</div><div class="cal-day has-event">5</div><div class="cal-day">6</div><div class="cal-day has-event">7</div><div class="cal-day">8</div>
+        <div class="cal-day">9</div><div class="cal-day has-event">10</div><div class="cal-day">11</div><div class="cal-day">12</div><div class="cal-day has-event">13</div><div class="cal-day">14</div><div class="cal-day">15</div>
+        <div class="cal-day has-event">16</div><div class="cal-day">17</div><div class="cal-day has-event">18</div><div class="cal-day">19</div><div class="cal-day">20</div><div class="cal-day has-event">21</div><div class="cal-day">22</div>
+        <div class="cal-day">23</div><div class="cal-day">24</div><div class="cal-day">25</div><div class="cal-day">26</div><div class="cal-day today">27</div><div class="cal-day has-event">28</div><div class="cal-day">29</div>
+        <div class="cal-day">30</div><div class="cal-day has-event">31</div>
+      </div>
+      <div class="section-label">Hoje — 27 Mar</div>
+      <div class="cal-event-row"><div class="cal-event-time">10:00</div><div class="cal-event-dot" style="background:#C8A97A"></div><div class="cal-event-name">Ana Lima</div><div class="cal-event-sub">Anel noivado</div></div>
+      <div class="cal-event-row"><div class="cal-event-time">14:00</div><div class="cal-event-dot" style="background:#60A5FA"></div><div class="cal-event-name">Carlos Mendes</div><div class="cal-event-sub">Entrega pulseira</div></div>
+      <div class="cal-event-row"><div class="cal-event-time">16:30</div><div class="cal-event-dot" style="background:#555"></div><div class="cal-event-name">Revisão orçamento</div><div class="cal-event-sub">#PED-0051</div></div>
+    </div>
+  </div>
+
+  <!-- Prontos para Retirada -->
+  <div class="panel">
+    <div class="panel-head"><span class="panel-title">Prontos — Aguardando Retirada</span><span class="panel-action">Ver todos</span></div>
+    <div class="panel-body">
+      <div class="pronto-row"><div class="pronto-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="pronto-info"><div class="pronto-id">#PED-0041</div><div class="pronto-cliente">Ana Carolina — Anel solitário</div></div><div class="pronto-right"><div class="pronto-val">R$ 4.200</div><div class="pronto-dias urgent">3 dias aguardando</div></div></div>
+      <div class="pronto-row"><div class="pronto-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="pronto-info"><div class="pronto-id">#PED-0039</div><div class="pronto-cliente">Roberto Lima — Brincos</div></div><div class="pronto-right"><div class="pronto-val">R$ 1.200</div><div class="pronto-dias">1 dia aguardando</div></div></div>
+      <div class="pronto-row"><div class="pronto-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="pronto-info"><div class="pronto-id">#PED-0044</div><div class="pronto-cliente">Julia Siqueira — Aliança</div></div><div class="pronto-right"><div class="pronto-val">R$ 3.800</div><div class="pronto-dias">Hoje</div></div></div>
+      <div class="pronto-footer"><div class="pronto-footer-label">Total retido</div><div class="pronto-footer-val">R$ 9.200</div></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     4. OPERAÇÕES — Pipeline, Etapas, Tempos
+═══════════════════════════════════════════ -->
+<div class="section-divider">
+  <div class="section-divider-icon" style="background:rgba(129,140,248,0.1)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#818CF8" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </div>
+  <span class="section-divider-label">Operações</span>
+  <div class="section-divider-line"></div>
+  <span class="section-divider-count">12 pedidos ativos</span>
+</div>
+
+<div class="grid-2">
+  <!-- Produção por Etapa -->
+  <div class="panel">
+    <div class="panel-head"><span class="panel-title">Produção por Etapa</span><span class="panel-action">Ver tudo →</span></div>
+    <div class="panel-body" style="justify-content:space-around">
+      <div class="funnel-row"><div class="funnel-dot" style="background:#818CF8"></div><div class="funnel-label">Designer 3D</div><div class="funnel-bar-bg"><div class="funnel-bar" style="width:80%;background:#818CF8"></div></div><div class="funnel-count">4</div></div>
+      <div class="funnel-row"><div class="funnel-dot" style="background:#FBBF24"></div><div class="funnel-label">Fabricação</div><div class="funnel-bar-bg"><div class="funnel-bar" style="width:50%;background:#FBBF24"></div></div><div class="funnel-count">2</div></div>
+      <div class="funnel-row"><div class="funnel-dot" style="background:#C8A97A"></div><div class="funnel-label">Acabamento</div><div class="funnel-bar-bg"><div class="funnel-bar" style="width:50%;background:#C8A97A"></div></div><div class="funnel-count warn">2</div></div>
+      <div class="funnel-row"><div class="funnel-dot" style="background:#34D399"></div><div class="funnel-label">Entrega</div><div class="funnel-bar-bg"><div class="funnel-bar" style="width:25%;background:#34D399"></div></div><div class="funnel-count">1</div></div>
+      <div class="funnel-row"><div class="funnel-dot" style="background:#60A5FA"></div><div class="funnel-label">Atendimento</div><div class="funnel-bar-bg"><div class="funnel-bar" style="width:60%;background:#60A5FA"></div></div><div class="funnel-count">3</div></div>
+    </div>
+  </div>
+
+  <!-- Tempo Médio por Etapa -->
+  <div class="panel">
+    <div class="panel-head"><span class="panel-title">Tempo Médio por Etapa</span></div>
+    <div class="panel-body" style="gap:0">
+      <div class="tempo-row"><div class="tempo-dot" style="background:#818CF8"></div><div class="tempo-label">Designer 3D</div><div class="tempo-bar-bg"><div class="tempo-bar" style="width:37%;background:#818CF8"></div></div><div class="tempo-days ok">1,5 dias</div></div>
+      <div class="tempo-row"><div class="tempo-dot" style="background:#FBBF24"></div><div class="tempo-label">Fundição</div><div class="tempo-bar-bg"><div class="tempo-bar" style="width:80%;background:#FBBF24"></div></div><div class="tempo-days warn">3,2 dias</div></div>
+      <div class="tempo-row"><div class="tempo-dot" style="background:#C8A97A"></div><div class="tempo-label">Cravação</div><div class="tempo-bar-bg"><div class="tempo-bar" style="width:60%;background:#C8A97A"></div></div><div class="tempo-days warn">2,4 dias</div></div>
+      <div class="tempo-row"><div class="tempo-dot" style="background:#F87171"></div><div class="tempo-label">Acabamento</div><div class="tempo-bar-bg"><div class="tempo-bar" style="width:100%;background:#F87171"></div></div><div class="tempo-days bad">4,1 dias</div></div>
+      <div class="tempo-row"><div class="tempo-dot" style="background:#34D399"></div><div class="tempo-label">Polimento</div><div class="tempo-bar-bg"><div class="tempo-bar" style="width:20%;background:#34D399"></div></div><div class="tempo-days ok">0,8 dias</div></div>
+      <div class="tempo-avg"><div class="tempo-avg-label">Ciclo completo médio</div><div class="tempo-avg-val">12 dias</div></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     5. COMERCIAL — Feed, Clientes, Aniversariantes
+═══════════════════════════════════════════ -->
+<div class="section-divider">
+  <div class="section-divider-icon" style="background:rgba(52,211,153,0.1)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+  </div>
+  <span class="section-divider-label">Comercial</span>
+  <div class="section-divider-line"></div>
+  <span class="section-divider-count">24 leads · 87 contatos</span>
+</div>
+
+<div class="grid-3">
+  <!-- Atividade Recente -->
+  <div class="panel">
+    <div class="panel-head"><span class="panel-title">Atividade Recente</span><span class="panel-action">Ver histórico →</span></div>
+    <div class="panel-body" style="gap:0">
+      <div class="feed-row"><span class="feed-badge" style="background:rgba(200,169,122,0.15);color:#C8A97A">Lead</span><div class="feed-name">Mariana Costa</div><div class="feed-meta">Anel solitário — R$ 3.800</div><div class="feed-time">há 12 min</div></div>
+      <div class="feed-row"><span class="feed-badge" style="background:rgba(200,169,122,0.15);color:#C8A97A">Pedido</span><div class="feed-name">Pedro Alves</div><div class="feed-meta">Aliança — Aprovado</div><div class="feed-time">há 34 min</div></div>
+      <div class="feed-row"><span class="feed-badge" style="background:rgba(52,211,153,0.15);color:#34D399">WhatsApp</span><div class="feed-name">Juliana Ramos</div><div class="feed-meta">Orçamento solicitado</div><div class="feed-time">há 1h</div></div>
+      <div class="feed-row"><span class="feed-badge" style="background:rgba(251,191,36,0.15);color:#FBBF24">Produção</span><div class="feed-name">#PED-0038</div><div class="feed-meta">Entrou em fabricação</div><div class="feed-time">há 2h</div></div>
+      <div class="feed-row"><span class="feed-badge" style="background:rgba(200,169,122,0.15);color:#C8A97A">Lead</span><div class="feed-name">Roberto Lima</div><div class="feed-meta">Brinco personalizado — R$ 1.200</div><div class="feed-time">há 3h</div></div>
+      <div class="feed-row"><span class="feed-badge" style="background:rgba(96,165,250,0.15);color:#60A5FA">PDV</span><div class="feed-name">Venda balcão</div><div class="feed-meta">Colar prata — R$ 890</div><div class="feed-time">há 3h</div></div>
+      <div class="feed-row"><span class="feed-badge" style="background:rgba(248,113,113,0.15);color:#F87171">Estoque</span><div class="feed-name">Alerta gerado</div><div class="feed-meta">Ouro 18k abaixo do mínimo</div><div class="feed-time">há 4h</div></div>
+    </div>
+  </div>
+
+  <!-- Top Clientes -->
+  <div class="panel">
+    <div class="panel-head"><span class="panel-title">Top Clientes — Mês</span><span class="panel-action">Ver todos</span></div>
+    <div class="panel-body" style="gap:0">
+      <div class="cliente-row"><div class="cliente-rank">1</div><div class="cliente-avatar" style="background:rgba(200,169,122,0.15);color:#C8A97A;border:1px solid rgba(200,169,122,0.2)">AC</div><div class="cliente-info"><b>Ana Carolina</b><span>3 pedidos</span></div><div class="cliente-val" style="color:#C8A97A">R$ 8.400</div></div>
+      <div class="cliente-row"><div class="cliente-rank">2</div><div class="cliente-avatar" style="background:rgba(96,165,250,0.12);color:#60A5FA;border:1px solid rgba(96,165,250,0.2)">PM</div><div class="cliente-info"><b>Pedro Monteiro</b><span>2 pedidos</span></div><div class="cliente-val" style="color:#888">R$ 5.200</div></div>
+      <div class="cliente-row"><div class="cliente-rank">3</div><div class="cliente-avatar" style="background:rgba(251,191,36,0.12);color:#FBBF24;border:1px solid rgba(251,191,36,0.2)">JS</div><div class="cliente-info"><b>Julia Siqueira</b><span>1 pedido</span></div><div class="cliente-val" style="color:#888">R$ 3.800</div></div>
+    </div>
+  </div>
+
+  <!-- Aniversariantes -->
+  <div class="panel">
+    <div class="panel-head"><span class="panel-title">Aniversariantes da Semana</span><span class="panel-action">Ver todos</span></div>
+    <div class="panel-body" style="gap:0">
+      <div class="aniv-row"><div class="aniv-avatar" style="background:rgba(200,169,122,0.15);color:#C8A97A;border:1px solid rgba(200,169,122,0.2)">AC</div><div class="aniv-info"><div class="aniv-name">Ana Carolina</div><div class="aniv-sub">27 Mar · cliente há 3 anos</div></div><span class="aniv-badge hoje">Hoje 🎂</span></div>
+      <div class="aniv-row"><div class="aniv-avatar" style="background:rgba(96,165,250,0.12);color:#60A5FA;border:1px solid rgba(96,165,250,0.2)">MR</div><div class="aniv-info"><div class="aniv-name">Mariana Ramos</div><div class="aniv-sub">28 Mar · 2 pedidos no histórico</div></div><span class="aniv-badge amanha">Amanhã</span></div>
+      <div class="aniv-row"><div class="aniv-avatar" style="background:rgba(192,132,252,0.12);color:#C084FC;border:1px solid rgba(192,132,252,0.2)">JS</div><div class="aniv-info"><div class="aniv-name">João Silveira</div><div class="aniv-sub">31 Mar · cliente VIP</div></div><span class="aniv-badge semana">Sex</span></div>
+      <div class="aniv-cta">
+        <div class="aniv-btn">✉ Enviar parabéns</div>
+        <div class="aniv-btn">💬 Mandar WhatsApp</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     6. ANALYTICS — Heatmap, Origens, Produtos
+═══════════════════════════════════════════ -->
+<div class="section-divider">
+  <div class="section-divider-icon" style="background:rgba(96,165,250,0.1)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+  </div>
+  <span class="section-divider-label">Analytics</span>
+  <div class="section-divider-line"></div>
+</div>
+
+<div class="grid-2">
+  <!-- Heatmap -->
+  <div class="panel">
+    <div class="panel-head"><span class="panel-title">Mapa de Calor — Vendas por Dia × Horário</span></div>
+    <div class="panel-body">
+      <div class="heatmap-wrap">
+        <div class="heatmap-days">
+          <div class="heatmap-day-label">Dom</div><div class="heatmap-day-label">Seg</div><div class="heatmap-day-label">Ter</div>
+          <div class="heatmap-day-label">Qua</div><div class="heatmap-day-label">Qui</div><div class="heatmap-day-label">Sex</div><div class="heatmap-day-label">Sáb</div>
+        </div>
+        <div class="heatmap-main">
+          <div class="heatmap-hours">
+            <div class="hm-hour">9h</div><div class="hm-hour">10h</div><div class="hm-hour">11h</div><div class="hm-hour">12h</div>
+            <div class="hm-hour">13h</div><div class="hm-hour">14h</div><div class="hm-hour">15h</div><div class="hm-hour">16h</div>
+            <div class="hm-hour">17h</div><div class="hm-hour">18h</div><div class="hm-hour">19h</div><div class="hm-hour">20h</div>
+          </div>
+          <div class="heatmap-grid" id="hm"></div>
+        </div>
+      </div>
+      <div class="hm-legend">
+        <div class="hm-legend-label">Menos</div>
+        <div class="hm-legend-bar">
+          <div class="hm-legend-swatch" style="background:rgba(200,169,122,0.08)"></div>
+          <div class="hm-legend-swatch" style="background:rgba(200,169,122,0.25)"></div>
+          <div class="hm-legend-swatch" style="background:rgba(200,169,122,0.45)"></div>
+          <div class="hm-legend-swatch" style="background:rgba(200,169,122,0.65)"></div>
+          <div class="hm-legend-swatch" style="background:rgba(200,169,122,0.9)"></div>
+        </div>
+        <div class="hm-legend-label">Mais vendas</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leads por Origem -->
+  <div class="panel">
+    <div class="panel-head"><span class="panel-title">Leads por Origem</span></div>
+    <div class="panel-body" style="justify-content:center">
+      <div style="display:flex;align-items:center;gap:24px">
+        <svg width="130" height="130" viewBox="0 0 130 130" style="flex-shrink:0">
+          <circle cx="65" cy="65" r="48" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="18"/>
+          <circle cx="65" cy="65" r="48" fill="none" stroke="#34D399" stroke-width="18" stroke-dasharray="126.7 301.6" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 65 65)"/>
+          <circle cx="65" cy="65" r="48" fill="none" stroke="#C084FC" stroke-width="18" stroke-dasharray="84.5 343.8" stroke-dashoffset="-126.7" stroke-linecap="round" transform="rotate(-90 65 65)"/>
+          <circle cx="65" cy="65" r="48" fill="none" stroke="#C8A97A" stroke-width="18" stroke-dasharray="54.3 374" stroke-dashoffset="-211.2" stroke-linecap="round" transform="rotate(-90 65 65)"/>
+          <circle cx="65" cy="65" r="48" fill="none" stroke="#60A5FA" stroke-width="18" stroke-dasharray="21.1 407.2" stroke-dashoffset="-265.5" stroke-linecap="round" transform="rotate(-90 65 65)"/>
+          <circle cx="65" cy="65" r="48" fill="none" stroke="#333" stroke-width="18" stroke-dasharray="15.1 413.2" stroke-dashoffset="-286.6" stroke-linecap="round" transform="rotate(-90 65 65)"/>
+          <text x="65" y="60" text-anchor="middle" font-family="Playfair Display" font-size="20" font-weight="600" fill="#E8E4DE">87</text>
+          <text x="65" y="76" text-anchor="middle" font-family="Inter" font-size="9" fill="#555" letter-spacing="1">TOTAL</text>
+        </svg>
+        <div style="flex:1">
+          <div class="origem-row"><div class="origem-dot" style="background:#34D399"></div><div class="origem-label">WhatsApp</div><div class="origem-bar-bg"><div class="origem-bar" style="width:100%;background:#34D399"></div></div><div class="origem-count" style="color:#34D399">36</div><div class="origem-pct">42%</div></div>
+          <div class="origem-row"><div class="origem-dot" style="background:#C084FC"></div><div class="origem-label">Instagram</div><div class="origem-bar-bg"><div class="origem-bar" style="width:67%;background:#C084FC"></div></div><div class="origem-count" style="color:#C084FC">24</div><div class="origem-pct">28%</div></div>
+          <div class="origem-row"><div class="origem-dot" style="background:#C8A97A"></div><div class="origem-label">Indicação</div><div class="origem-bar-bg"><div class="origem-bar" style="width:43%;background:#C8A97A"></div></div><div class="origem-count" style="color:#C8A97A">16</div><div class="origem-pct">18%</div></div>
+          <div class="origem-row"><div class="origem-dot" style="background:#60A5FA"></div><div class="origem-label">Site</div><div class="origem-bar-bg"><div class="origem-bar" style="width:17%;background:#60A5FA"></div></div><div class="origem-count" style="color:#60A5FA">6</div><div class="origem-pct">7%</div></div>
+          <div class="origem-row"><div class="origem-dot" style="background:#444"></div><div class="origem-label">Outros</div><div class="origem-bar-bg"><div class="origem-bar" style="width:12%;background:#444"></div></div><div class="origem-count" style="color:#666">5</div><div class="origem-pct">5%</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Produtos Mais Vendidos (full width for breathing room) -->
+<div class="panel">
+  <div class="panel-head"><span class="panel-title">Produtos Mais Vendidos</span><span class="panel-action">Ver catálogo</span></div>
+  <div class="panel-body">
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px">
+      <div style="text-align:center;padding:12px 8px;background:rgba(255,255,255,0.02);border-radius:10px;border:1px solid rgba(255,255,255,0.04)">
+        <div style="font-family:'Playfair Display',serif;font-size:22px;color:#C8A97A;margin-bottom:2px">1º</div>
+        <div style="font-size:12px;font-weight:500;color:#C8C6C0;margin-bottom:6px">Anel Solitário Ouro 18k</div>
+        <div style="font-family:'Playfair Display',serif;font-size:16px;color:#C8A97A">R$ 18.400</div>
+        <div style="font-size:10px;color:#555;margin-top:2px">12 unid.</div>
+      </div>
+      <div style="text-align:center;padding:12px 8px;background:rgba(255,255,255,0.02);border-radius:10px;border:1px solid rgba(255,255,255,0.04)">
+        <div style="font-family:'Playfair Display',serif;font-size:22px;color:#888;margin-bottom:2px">2º</div>
+        <div style="font-size:12px;font-weight:500;color:#C8C6C0;margin-bottom:6px">Aliança Personalizada</div>
+        <div style="font-family:'Playfair Display',serif;font-size:16px;color:#C8A97A">R$ 13.200</div>
+        <div style="font-size:10px;color:#555;margin-top:2px">8 unid.</div>
+      </div>
+      <div style="text-align:center;padding:12px 8px;background:rgba(255,255,255,0.02);border-radius:10px;border:1px solid rgba(255,255,255,0.04)">
+        <div style="font-family:'Playfair Display',serif;font-size:22px;color:#888;margin-bottom:2px">3º</div>
+        <div style="font-size:12px;font-weight:500;color:#C8C6C0;margin-bottom:6px">Brinco Gota Prata 925</div>
+        <div style="font-family:'Playfair Display',serif;font-size:16px;color:#C8A97A">R$ 7.200</div>
+        <div style="font-size:10px;color:#555;margin-top:2px">18 unid.</div>
+      </div>
+      <div style="text-align:center;padding:12px 8px;background:rgba(255,255,255,0.02);border-radius:10px;border:1px solid rgba(255,255,255,0.04)">
+        <div style="font-family:'Playfair Display',serif;font-size:22px;color:#888;margin-bottom:2px">4º</div>
+        <div style="font-size:12px;font-weight:500;color:#C8C6C0;margin-bottom:6px">Colar Veneziana Ouro</div>
+        <div style="font-family:'Playfair Display',serif;font-size:16px;color:#C8A97A">R$ 5.600</div>
+        <div style="font-size:10px;color:#555;margin-top:2px">7 unid.</div>
+      </div>
+      <div style="text-align:center;padding:12px 8px;background:rgba(255,255,255,0.02);border-radius:10px;border:1px solid rgba(255,255,255,0.04)">
+        <div style="font-family:'Playfair Display',serif;font-size:22px;color:#888;margin-bottom:2px">5º</div>
+        <div style="font-size:12px;font-weight:500;color:#C8C6C0;margin-bottom:6px">Pulseira Elos Prata</div>
+        <div style="font-family:'Playfair Display',serif;font-size:16px;color:#C8A97A">R$ 2.980</div>
+        <div style="font-size:10px;color:#555;margin-top:2px">11 unid.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Heatmap generation ──
+const grid = document.getElementById('hm');
+const weights = [
+  [0,0,0,0,0,0,0,0,0,0,0,0],
+  [1,2,3,2,1,3,4,3,2,1,1,0],
+  [1,2,4,3,2,3,5,4,3,2,1,0],
+  [1,3,4,3,2,4,5,4,3,2,1,0],
+  [1,2,3,3,2,3,5,5,4,3,2,1],
+  [2,3,5,4,3,5,7,8,7,5,3,2],
+  [3,4,6,5,4,6,8,9,8,6,4,2],
+];
+for(let d=0;d<7;d++){
+  const row=document.createElement('div'); row.className='hm-row';
+  for(let h=0;h<12;h++){
+    const cell=document.createElement('div'); cell.className='hm-cell';
+    const v=weights[d][h];
+    cell.style.background=`rgba(200,169,122,${v===0?0.03:(v/9*0.9).toFixed(2)})`;
+    cell.title=`${['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d]} ${9+h}h — ${v} vendas`;
+    row.appendChild(cell);
+  }
+  grid.appendChild(row);
+}
+
+// ═══════════════════════════════════
+// INTERACTIVE FATURAMENTO CHART
+// ═══════════════════════════════════
+(function initChart() {
+  const canvas = document.getElementById('faturamento-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const wrap = document.getElementById('chart-wrap');
+  const tooltip = document.getElementById('chart-tooltip');
+
+  // Data — daily revenue (current month)
+  const current = [
+    820, 1340, 1680, 1420, 980, 1780, 2100, 1850, 1340, 920,
+    1560, 2240, 1980, 1640, 1180, 2380, 2680, 2450, 1860, 1340,
+    2120, 2960, 2580, 3200, 2680, 3480, 4280, 3640, 3120, 2480,
+  ];
+  // Previous month for comparison
+  const previous = [
+    680, 920, 1240, 1080, 760, 1320, 1580, 1440, 1020, 780,
+    1180, 1640, 1420, 1280, 940, 1720, 1980, 1860, 1480, 1080,
+    1640, 2120, 1940, 2380, 2040, 2680, 3120, 2760, 2440, 1880,
+  ];
+
+  const labels = current.map((_, i) => {
+    const d = i + 1;
+    return `${d} Mar`;
+  });
+
+  // Cumulative for area
+  const cumCurrent = [], cumPrevious = [];
+  current.reduce((acc, v, i) => { cumCurrent[i] = acc + v; return acc + v; }, 0);
+  previous.reduce((acc, v, i) => { cumPrevious[i] = acc + v; return acc + v; }, 0);
+
+  const maxVal = Math.ceil(Math.max(...cumCurrent) / 10000) * 10000;
+  const DPR = window.devicePixelRatio || 1;
+  let W, H, padL = 38, padR = 12, padT = 16, padB = 28;
+  let animProgress = 0;
+  let hoveredIdx = -1;
+
+  function resize() {
+    const rect = wrap.getBoundingClientRect();
+    W = rect.width;
+    H = rect.height;
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+
+  function x(i) { return padL + (i / (current.length - 1)) * (W - padL - padR); }
+  function y(val) { return padT + (1 - val / maxVal) * (H - padT - padB); }
+
+  // Smooth cubic bezier through points
+  function drawSmooth(points, close) {
+    if (points.length < 2) return;
+    ctx.moveTo(points[0][0], points[0][1]);
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[Math.max(i - 1, 0)];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[Math.min(i + 2, points.length - 1)];
+      const tension = 0.3;
+      const cp1x = p1[0] + (p2[0] - p0[0]) * tension;
+      const cp1y = p1[1] + (p2[1] - p0[1]) * tension;
+      const cp2x = p2[0] - (p3[0] - p1[0]) * tension;
+      const cp2y = p2[1] - (p3[1] - p1[1]) * tension;
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2[0], p2[1]);
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    const ease = 1 - Math.pow(1 - animProgress, 3);
+    const visibleCount = Math.floor(ease * current.length);
+    const frac = (ease * current.length) - visibleCount;
+
+    // Grid lines + Y labels
+    const gridSteps = [0, 10000, 20000, 30000, 40000, 50000];
+    gridSteps.forEach(val => {
+      if (val > maxVal) return;
+      const yy = y(val);
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+      ctx.lineWidth = 1;
+      ctx.moveTo(padL, yy);
+      ctx.lineTo(W - padR, yy);
+      ctx.stroke();
+      if (val > 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.13)';
+        ctx.font = '9px Inter';
+        ctx.textAlign = 'right';
+        ctx.fillText((val/1000)+'k', padL - 6, yy + 3);
+      }
+    });
+
+    // X labels
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = '9px Inter';
+    ctx.textAlign = 'center';
+    const xLabels = [0, 6, 13, 20, 26, 29];
+    const xLabelTexts = ['1 Mar', '7 Mar', '14 Mar', '21 Mar', '27 Mar', 'Hoje'];
+    xLabels.forEach((idx, li) => {
+      if (idx <= visibleCount) {
+        ctx.fillText(xLabelTexts[li], x(idx), H - 6);
+      }
+    });
+
+    // Meta line (dashed)
+    const metaY = y(50000);
+    ctx.beginPath();
+    ctx.setLineDash([3, 6]);
+    ctx.strokeStyle = 'rgba(52,211,153,0.12)';
+    ctx.lineWidth = 1;
+    ctx.moveTo(padL, metaY);
+    ctx.lineTo(W - padR, metaY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(52,211,153,0.2)';
+    ctx.font = '8px Inter';
+    ctx.textAlign = 'right';
+    ctx.fillText('META 50k', W - padR, metaY - 5);
+
+    if (visibleCount < 1) return;
+
+    // Previous month line (subtle dashed)
+    const prevPts = [];
+    for (let i = 0; i <= Math.min(visibleCount, cumPrevious.length - 1); i++) {
+      prevPts.push([x(i), y(cumPrevious[i])]);
+    }
+    if (prevPts.length > 1) {
+      ctx.beginPath();
+      ctx.setLineDash([3, 5]);
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      drawSmooth(prevPts);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Current month — area gradient
+    const curPts = [];
+    for (let i = 0; i <= Math.min(visibleCount, cumCurrent.length - 1); i++) {
+      curPts.push([x(i), y(cumCurrent[i])]);
+    }
+    // Partial next point
+    if (visibleCount < cumCurrent.length - 1 && frac > 0) {
+      const nx = x(visibleCount) + frac * (x(visibleCount + 1) - x(visibleCount));
+      const ny = y(cumCurrent[visibleCount]) + frac * (y(cumCurrent[visibleCount + 1]) - y(cumCurrent[visibleCount]));
+      curPts.push([nx, ny]);
+    }
+
+    if (curPts.length > 1) {
+      // Area fill with gradient
+      const grad = ctx.createLinearGradient(0, padT, 0, H - padB);
+      grad.addColorStop(0, 'rgba(200,169,122,0.18)');
+      grad.addColorStop(0.5, 'rgba(200,169,122,0.06)');
+      grad.addColorStop(1, 'rgba(200,169,122,0)');
+
+      ctx.beginPath();
+      drawSmooth(curPts);
+      const lastPt = curPts[curPts.length - 1];
+      ctx.lineTo(lastPt[0], H - padB);
+      ctx.lineTo(curPts[0][0], H - padB);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Glow line
+      ctx.beginPath();
+      drawSmooth(curPts);
+      ctx.strokeStyle = 'rgba(200,169,122,0.15)';
+      ctx.lineWidth = 6;
+      ctx.stroke();
+
+      // Main line
+      ctx.beginPath();
+      drawSmooth(curPts);
+      ctx.strokeStyle = '#C8A97A';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      // End dot with pulse
+      if (animProgress >= 1) {
+        ctx.beginPath();
+        ctx.arc(lastPt[0], lastPt[1], 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#C8A97A';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(lastPt[0], lastPt[1], 6, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(200,169,122,0.3)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    // Hover state
+    if (hoveredIdx >= 0 && hoveredIdx < cumCurrent.length && animProgress >= 1) {
+      const hx = x(hoveredIdx);
+      const hy = y(cumCurrent[hoveredIdx]);
+
+      // Vertical line
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(200,169,122,0.15)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 3]);
+      ctx.moveTo(hx, padT);
+      ctx.lineTo(hx, H - padB);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Horizontal reference
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(200,169,122,0.08)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 3]);
+      ctx.moveTo(padL, hy);
+      ctx.lineTo(hx, hy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Dot — current
+      ctx.beginPath();
+      ctx.arc(hx, hy, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#111113';
+      ctx.fill();
+      ctx.strokeStyle = '#C8A97A';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Dot — previous
+      if (hoveredIdx < cumPrevious.length) {
+        const pvy = y(cumPrevious[hoveredIdx]);
+        ctx.beginPath();
+        ctx.arc(hx, pvy, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#333';
+        ctx.fill();
+      }
+
+      // Y value label on axis
+      ctx.fillStyle = 'rgba(200,169,122,0.6)';
+      ctx.font = '9px Inter';
+      ctx.textAlign = 'right';
+      const valK = (cumCurrent[hoveredIdx] / 1000).toFixed(1) + 'k';
+      ctx.fillText(valK, padL - 6, hy + 3);
+    }
+  }
+
+  // Entrance animation
+  function animateIn() {
+    const duration = 1800;
+    const start = performance.now();
+    function tick(now) {
+      animProgress = Math.min((now - start) / duration, 1);
+      draw();
+      if (animProgress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // Hover handling
+  wrap.addEventListener('mousemove', (e) => {
+    if (animProgress < 1) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    // Find nearest data point
+    let closest = -1;
+    let minDist = Infinity;
+    for (let i = 0; i < current.length; i++) {
+      const dist = Math.abs(x(i) - mx);
+      if (dist < minDist) { minDist = dist; closest = i; }
+    }
+    hoveredIdx = closest;
+    draw();
+
+    // Update tooltip
+    if (closest >= 0) {
+      const ttDate = document.getElementById('tt-date');
+      const ttVal = document.getElementById('tt-val');
+      const ttPrev = document.getElementById('tt-prev');
+      const ttDelta = document.getElementById('tt-delta');
+
+      ttDate.textContent = labels[closest];
+      ttVal.textContent = 'R$ ' + cumCurrent[closest].toLocaleString('pt-BR');
+      ttPrev.textContent = 'R$ ' + cumPrevious[closest].toLocaleString('pt-BR');
+
+      const pctChange = ((cumCurrent[closest] - cumPrevious[closest]) / cumPrevious[closest] * 100).toFixed(0);
+      const isUp = pctChange > 0;
+      ttDelta.textContent = `${isUp ? '↑' : '↓'} ${Math.abs(pctChange)}% vs mês anterior`;
+      ttDelta.style.color = isUp ? '#34D399' : '#F87171';
+
+      tooltip.style.display = 'block';
+      const tx = x(closest);
+      const ty = y(cumCurrent[closest]);
+      // Position tooltip
+      let left = tx + 14;
+      if (left + 160 > W) left = tx - 160;
+      let top = ty - 40;
+      if (top < 0) top = ty + 14;
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
+    }
+  });
+
+  wrap.addEventListener('mouseleave', () => {
+    hoveredIdx = -1;
+    tooltip.style.display = 'none';
+    draw();
+  });
+
+  // Init — delay to let flex layout settle
+  requestAnimationFrame(() => {
+    resize();
+    draw();
+  });
+  window.addEventListener('resize', () => { resize(); draw(); });
+
+  // Trigger on scroll into view
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      animateIn();
+      obs.unobserve(entry.target);
+    });
+  }, { threshold: 0.3 });
+  obs.observe(wrap);
+})();
+
+// ═══════════════════════════════════
+// ANIMATION SYSTEM
+// ═══════════════════════════════════
+
+// 1. ENTRANCE — IntersectionObserver fade + slide
+(function initEntrance() {
+  // Tag animatable elements
+  const selectors = '.kpi-card, .panel, .section-divider, [style*="grid-template-columns"]';
+  document.querySelectorAll(selectors).forEach(el => {
+    // Only direct layout children, not nested panels
+    if (el.classList.contains('panel') && el.closest('[style*="flex-direction:column"]')) return;
+    el.classList.add('anim-in');
+  });
+
+  // Also add to the products grid cards
+  document.querySelectorAll('[style*="grid-template-columns:repeat(5"]').forEach(g => {
+    g.querySelectorAll('[style*="text-align:center"]').forEach(c => c.classList.add('anim-in'));
+  });
+
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        // Stagger children if it's a grid container
+        const el = entry.target;
+        if (el.style.gridTemplateColumns || el.classList.contains('grid-4') ||
+            el.classList.contains('grid-3') || el.classList.contains('grid-2')) {
+          const children = el.querySelectorAll('.anim-in');
+          children.forEach((child, i) => {
+            setTimeout(() => child.classList.add('visible'), i * 80);
+          });
+          el.classList.add('visible');
+        } else {
+          el.classList.add('visible');
+        }
+        obs.unobserve(el);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.anim-in').forEach(el => obs.observe(el));
+})();
+
+// 2. KPI COUNTER — animate numbers from 0
+(function initCounters() {
+  function parseValue(text) {
+    const clean = text.replace(/[^\d.,]/g, '');
+    const num = parseFloat(clean.replace('.', '').replace(',', '.'));
+    return isNaN(num) ? null : num;
+  }
+
+  function formatValue(num, template) {
+    // Detect if it's a currency value
+    if (template.includes('R$')) {
+      const formatted = Math.round(num).toLocaleString('pt-BR');
+      return `R$ ${formatted}`;
+    }
+    return Math.round(num).toString();
+  }
+
+  const kpiValues = document.querySelectorAll('.kpi-value');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      if (el.dataset.counted) return;
+      el.dataset.counted = '1';
+
+      const original = el.textContent.trim();
+      const target = parseValue(original);
+      if (target === null) return;
+
+      const duration = 1200;
+      const start = performance.now();
+
+      function tick(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        // Ease out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = target * eased;
+        el.textContent = formatValue(current, original);
+        if (progress < 1) requestAnimationFrame(tick);
+      }
+      // Small delay after entrance animation
+      setTimeout(() => requestAnimationFrame(tick), 300);
+      obs.unobserve(el);
+    });
+  }, { threshold: 0.5 });
+
+  kpiValues.forEach(el => obs.observe(el));
+
+  // Also animate meta value
+  document.querySelectorAll('.meta-value').forEach(el => obs.observe(el));
+})();
+
+// 3. SPARKLINES — draw animation
+(function initSparklines() {
+  // Tag sparkline SVG elements
+  document.querySelectorAll('.spark').forEach(svg => {
+    const poly = svg.querySelector('polyline');
+    const area = svg.querySelector('polygon');
+    if (poly) {
+      poly.classList.add('spark-line');
+      // Calculate approximate path length
+      const points = poly.getAttribute('points').split(/\s+/);
+      let len = 0;
+      for (let i = 1; i < points.length; i++) {
+        const [x1, y1] = points[i-1].split(',').map(Number);
+        const [x2, y2] = points[i].split(',').map(Number);
+        len += Math.sqrt((x2-x1)**2 + (y2-y1)**2);
+      }
+      poly.style.setProperty('--spark-len', Math.ceil(len));
+      poly.setAttribute('stroke-dasharray', Math.ceil(len));
+      poly.setAttribute('stroke-dashoffset', Math.ceil(len));
+    }
+    if (area) area.classList.add('spark-area');
+  });
+
+  // Observe and trigger sparkline draw
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const svg = entry.target;
+      setTimeout(() => {
+        svg.querySelectorAll('.spark-line').forEach(el => el.classList.add('drawn'));
+        svg.querySelectorAll('.spark-area').forEach(el => el.classList.add('drawn'));
+      }, 200);
+      obs.unobserve(svg);
+    });
+  }, { threshold: 0.3 });
+
+  document.querySelectorAll('.spark').forEach(svg => obs.observe(svg));
+})();
+
+// 4. PROGRESS BARS — animate width on scroll
+(function initBars() {
+  const barSelectors = '.funnel-bar, .tempo-bar, .rank-bar, .pay-fill, .origem-bar';
+  document.querySelectorAll(barSelectors).forEach(bar => {
+    bar.dataset.targetWidth = bar.style.width;
+    bar.style.width = '0%';
+    bar.classList.add('bar-animate');
+  });
+
+  // Meta bar
+  const metaBar = document.querySelector('.meta-bar-fill');
+  if (metaBar) {
+    metaBar.dataset.targetWidth = metaBar.style.width;
+    metaBar.style.width = '0%';
+  }
+
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      const bars = el.querySelectorAll('.bar-animate, .meta-bar-fill');
+      bars.forEach((bar, i) => {
+        setTimeout(() => {
+          bar.style.width = bar.dataset.targetWidth;
+        }, i * 60);
+      });
+      obs.unobserve(el);
+    });
+  }, { threshold: 0.2 });
+
+  document.querySelectorAll('.panel-body, .panel').forEach(p => obs.observe(p));
+})();
+
+// 5. HEATMAP — staggered cell reveal
+(function initHeatmap() {
+  const hmGrid = document.getElementById('hm');
+  if (!hmGrid) return;
+
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const cells = hmGrid.querySelectorAll('.hm-cell');
+      cells.forEach((cell, i) => {
+        const row = Math.floor(i / 12);
+        const col = i % 12;
+        const delay = (row * 25) + (col * 15);
+        setTimeout(() => cell.classList.add('visible'), delay);
+      });
+      obs.unobserve(hmGrid);
+    });
+  }, { threshold: 0.2 });
+
+  obs.observe(hmGrid);
+})();
+
+// 6. DONUT CHART — ring reveal
+(function initDonut() {
+  const donutSvg = document.querySelector('svg[viewBox="0 0 130 130"]');
+  if (!donutSvg) return;
+
+  const rings = donutSvg.querySelectorAll('circle[stroke-dasharray]');
+  rings.forEach(ring => {
+    if (ring.getAttribute('stroke') === 'rgba(255,255,255,0.04)') return;
+    const da = ring.getAttribute('stroke-dasharray');
+    const targetOffset = ring.getAttribute('stroke-dashoffset') || '0';
+    ring.style.setProperty('--target-offset', targetOffset);
+    ring.classList.add('donut-ring');
+  });
+
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const rings = entry.target.querySelectorAll('.donut-ring');
+      rings.forEach((ring, i) => {
+        setTimeout(() => ring.classList.add('drawn'), i * 120);
+      });
+      obs.unobserve(entry.target);
+    });
+  }, { threshold: 0.3 });
+
+  obs.observe(donutSvg);
+})();
+</script>
+</body>
+</html>

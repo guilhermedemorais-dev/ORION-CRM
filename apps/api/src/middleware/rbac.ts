@@ -9,6 +9,12 @@ export function requireRole(allowedRoles: UserRole[]) {
             return;
         }
 
+        // ROOT always has access to everything
+        if (req.user.role === 'ROOT') {
+            next();
+            return;
+        }
+
         if (!allowedRoles.includes(req.user.role)) {
             next(AppError.forbidden('Acesso não autorizado para o seu perfil.'));
             return;
