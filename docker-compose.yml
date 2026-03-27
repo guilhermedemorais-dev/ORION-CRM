@@ -91,9 +91,7 @@ services:
 
   # ---- NGINX (Internal Router) ----
   nginx:
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
+    image: nginx:alpine
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
@@ -103,6 +101,7 @@ services:
       - "traefik.http.services.orion-crm.loadbalancer.server.port=80"
       - "traefik.docker.network=traefik-proxy"
     volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - uploads_data:/app/uploads:ro
     depends_on:
       - api
