@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
+import bcrypt from 'bcrypt';
 
 // Resolve migrations path relative to this file's compiled location
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
@@ -73,9 +74,45 @@ async function migrate() {
         }
 
         console.log(`\n✅ ${applied} migration(s) applied. ${executedNames.size} previously applied.`);
+
+        // Auto-seed initial ROOT user if env vars are set and no users exist
+        await seedAdminUser(client);
     } finally {
         await client.end();
     }
+}
+
+async function seedAdminUser(client: pg.Client): Promise<void> {
+    const name = process.env['SEED_ADMIN_NAME'];
+    const email = process.env['SEED_ADMIN_EMAIL'];
+    const password = process.env['SEED_ADMIN_PASSWORD'];
+    const companyName = process.env['SEED_COMPANY_NAME'] ?? 'Orion';
+
+    if (!name || !email || !password) return;
+
+    const { rows } = await client.query<{ count: string }>('SELECT COUNT(*) as count FROM users');
+    if (parseInt(rows[0]!.count) > 0) {
+        console.log('  ✓ Admin seed skipped (users already exist)');
+        return;
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    await client.query(
+        `INSERT INTO users (name, email, password_hash, role, is_active)
+         VALUES ($1, $2, $3, 'ROOT', true)`,
+        [name, email, passwordHash]
+    );
+
+    await client.query(
+        `UPDATE settings SET
+            company_name = $1,
+            status = 'active',
+            provisioned_at = NOW()
+         WHERE id = (SELECT id FROM settings LIMIT 1)`,
+        [companyName]
+    );
+
+    console.log(`  ✅ Admin ROOT criado: ${email}`);
 }
 
 migrate().catch((err) => {
