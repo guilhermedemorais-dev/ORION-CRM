@@ -138,6 +138,6 @@ volumes:
 
 networks:
   app_network_v2:
-    external: true
+    driver: bridge
   traefik-proxy:
     external: true
