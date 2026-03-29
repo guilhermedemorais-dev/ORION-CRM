@@ -36,6 +36,7 @@ services:
 
   # ---- ORION API (Node.js + Express) ----
   api:
+    image: ghcr.io/guilhermedemorais-dev/orion-crm/api:latest
     build:
       context: ./apps/api
       dockerfile: Dockerfile
@@ -73,6 +74,7 @@ services:
 
   # ---- ORION Web (Next.js shell + CRM) ----
   web:
+    image: ghcr.io/guilhermedemorais-dev/orion-crm/web:latest
     build:
       context: ./apps/web
       dockerfile: Dockerfile
@@ -91,6 +93,7 @@ services:
 
   # ---- NGINX (Internal Router) ----
   nginx:
+    image: ghcr.io/guilhermedemorais-dev/orion-crm/nginx:latest
     build:
       context: ./nginx
       dockerfile: Dockerfile
