@@ -21,7 +21,6 @@ import {
     ShoppingBag,
     UserCheck,
     Users,
-    Zap,
 } from 'lucide-react';
 import type { PipelineRecord } from '@/lib/api';
 
@@ -48,7 +47,6 @@ const navGroups = [
     {
         label: 'Sistema',
         items: [
-            { icon: Zap, label: 'Automações', href: '/automacoes' },
             { icon: BarChart3, label: 'Analytics', href: '/analytics' },
             { icon: Store, label: 'Loja', href: '/settings/loja' },
             { icon: Settings, label: 'Ajustes', href: '/ajustes' },
@@ -83,7 +81,7 @@ export function Sidebar({
         ...group,
         items: group.items.filter((item) => {
             if (item.href === '/analytics' || item.href === '/settings/loja') {
-                return userRole === 'ADMIN';
+                return ['ROOT', 'ADMIN'].includes(userRole);
             }
 
             return true;
