@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { loginAction } from '@/app/(auth)/login/actions';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -18,6 +19,7 @@ function parseRetrySeconds(error: string): number | null {
 export function LoginForm({ error }: Props) {
     const retrySeconds = error ? parseRetrySeconds(error) : null;
     const [countdown, setCountdown] = useState<number | null>(retrySeconds);
+    const [showPassword, setShowPassword] = useState(false);
     const isRateLimited = countdown !== null && countdown > 0;
 
     useEffect(() => {
@@ -47,7 +49,17 @@ export function LoginForm({ error }: Props) {
                     <label className="mb-2 block text-xs font-medium uppercase tracking-[0.18em] text-gray-500" htmlFor="password">
                         Senha
                     </label>
-                    <Input id="password" name="password" type="password" placeholder="••••••••" required />
+                    <div className="relative">
+                        <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" required className="pr-10" />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(v => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                            tabIndex={-1}
+                        >
+                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                    </div>
                 </div>
 
                 {error ? (
