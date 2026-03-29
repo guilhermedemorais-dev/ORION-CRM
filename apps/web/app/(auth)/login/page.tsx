@@ -31,14 +31,14 @@ export default async function LoginPage({
                 </div>
 
                 <div className="grid gap-4">
-                    <Card className="border-white/10 bg-white/5 text-white shadow-none">
+                    <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-white shadow-none">
                         <p className="text-xs uppercase tracking-[0.18em] text-gray-400">Pipeline visual</p>
                         <p className="mt-3 text-sm text-gray-200">Leads e clientes organizados em um fluxo que o time entende de primeira.</p>
-                    </Card>
-                    <Card className="border-white/10 bg-white/5 text-white shadow-none">
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-white shadow-none">
                         <p className="text-xs uppercase tracking-[0.18em] text-gray-400">Identidade ORION</p>
                         <p className="mt-3 text-sm text-gray-200">Sidebar escura, acentos dourados e tipografia pensada para joalheria, não para dashboard genérico.</p>
-                    </Card>
+                    </div>
                 </div>
             </section>
         </main>
