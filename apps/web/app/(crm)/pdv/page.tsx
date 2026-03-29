@@ -7,7 +7,7 @@ import { PdvClient } from '@/components/modules/pdv/PdvClient';
 export default async function PdvPage() {
     const session = requireSession();
 
-    if (!['ADMIN', 'ATENDENTE'].includes(session.user.role)) {
+    if (!['ROOT', 'ADMIN', 'ATENDENTE'].includes(session.user.role)) {
         return (
             <EmptyState
                 title="Acesso restrito"

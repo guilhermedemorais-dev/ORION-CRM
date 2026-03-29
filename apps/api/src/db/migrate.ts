@@ -98,8 +98,8 @@ async function seedAdminUser(client: pg.Client): Promise<void> {
 
     const passwordHash = await bcrypt.hash(password, 12);
     await client.query(
-        `INSERT INTO users (name, email, password_hash, role, is_active)
-         VALUES ($1, $2, $3, 'ROOT', true)`,
+        `INSERT INTO users (name, email, password_hash, role, status)
+         VALUES ($1, $2, $3, 'ROOT', 'active')`,
         [name, email, passwordHash]
     );
 

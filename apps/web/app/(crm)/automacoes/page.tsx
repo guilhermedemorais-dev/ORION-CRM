@@ -67,7 +67,7 @@ export default async function AutomationsPage({
 }) {
     const session = requireSession();
 
-    if (session.user.role !== 'ADMIN') {
+    if (!['ROOT', 'ADMIN'].includes(session.user.role)) {
         redirect('/dashboard');
     }
 

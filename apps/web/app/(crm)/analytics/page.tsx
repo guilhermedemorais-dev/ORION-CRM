@@ -57,7 +57,7 @@ export default async function AnalyticsPage({
 }) {
     const session = requireSession();
 
-    if (session.user.role !== 'ADMIN') {
+    if (!['ROOT', 'ADMIN'].includes(session.user.role)) {
         return (
             <EmptyState
                 title="Acesso restrito"

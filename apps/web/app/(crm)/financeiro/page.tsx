@@ -25,7 +25,7 @@ export default async function FinancialPage({
 }) {
     const session = requireSession();
 
-    if (!['ADMIN', 'FINANCEIRO'].includes(session.user.role)) {
+    if (!['ROOT', 'ADMIN', 'FINANCEIRO'].includes(session.user.role)) {
         return (
             <EmptyState
                 title="Acesso restrito"
