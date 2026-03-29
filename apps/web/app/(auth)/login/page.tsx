@@ -1,7 +1,4 @@
-import { loginAction } from '@/app/(auth)/login/actions';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
+import { LoginForm } from '@/app/(auth)/login/LoginForm';
 import { fetchPublicSettings } from '@/lib/api';
 
 export default async function LoginPage({
@@ -23,32 +20,7 @@ export default async function LoginPage({
                         Entre com sua conta para acessar o pipeline, clientes e operação da joalheria.
                     </p>
 
-                    <Card className="mt-8">
-                        <form action={loginAction} className="space-y-4">
-                            <div>
-                                <label className="mb-2 block text-xs font-medium uppercase tracking-[0.18em] text-gray-500" htmlFor="email">
-                                    Email
-                                </label>
-                                <Input id="email" name="email" type="email" placeholder="voce@empresa.com" required />
-                            </div>
-                            <div>
-                                <label className="mb-2 block text-xs font-medium uppercase tracking-[0.18em] text-gray-500" htmlFor="password">
-                                    Senha
-                                </label>
-                                <Input id="password" name="password" type="password" placeholder="••••••••" required />
-                            </div>
-
-                            {searchParams?.error ? (
-                                <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                                    {searchParams.error}
-                                </div>
-                            ) : null}
-
-                            <Button className="w-full justify-center" type="submit">
-                                Entrar no CRM
-                            </Button>
-                        </form>
-                    </Card>
+                    <LoginForm error={searchParams?.error} />
                 </div>
             </section>
 
