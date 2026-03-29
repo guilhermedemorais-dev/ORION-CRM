@@ -8,7 +8,7 @@ import { apiRequest } from '@/lib/api';
 const createLeadSchema = z.object({
     whatsapp_number: z.string().regex(/^\+[1-9]\d{1,14}$/),
     name: z.string().trim().min(2).max(255),
-    source: z.enum(['WHATSAPP', 'BALCAO', 'INDICACAO', 'OUTRO']).default('WHATSAPP'),
+    source: z.enum(['WHATSAPP', 'BALCAO', 'INDICACAO', 'INSTAGRAM', 'OUTRO']).default('WHATSAPP'),
 });
 
 const updateStageSchema = z.object({

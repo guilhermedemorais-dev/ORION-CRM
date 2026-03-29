@@ -25,6 +25,7 @@ export default async function FinancialPage({
 }) {
     const session = requireSession();
 
+    // RBAC: ROOT, ADMIN and FINANCEIRO have full access to the financial module
     if (!['ROOT', 'ADMIN', 'FINANCEIRO'].includes(session.user.role)) {
         return (
             <EmptyState

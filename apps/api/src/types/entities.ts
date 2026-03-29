@@ -9,7 +9,7 @@ export type UserRole = 'ROOT' | 'ADMIN' | 'GERENTE' | 'VENDEDOR' | 'ATENDENTE' |
 export type UserStatus = 'active' | 'inactive';
 
 export type LeadStage = 'NOVO' | 'QUALIFICADO' | 'PROPOSTA_ENVIADA' | 'NEGOCIACAO' | 'CONVERTIDO' | 'PERDIDO';
-export type LeadSource = 'WHATSAPP' | 'BALCAO' | 'INDICACAO' | 'OUTRO';
+export type LeadSource = 'WHATSAPP' | 'BALCAO' | 'INDICACAO' | 'INSTAGRAM' | 'OUTRO';
 
 export type ConversationStatus = 'BOT' | 'AGUARDANDO_HUMANO' | 'EM_ATENDIMENTO' | 'ENCERRADA';
 export type InboxChannel = 'whatsapp' | 'instagram' | 'telegram' | 'tiktok' | 'messenger';

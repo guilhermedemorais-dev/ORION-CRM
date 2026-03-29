@@ -794,6 +794,7 @@ export function LeadsPipelineClient({
                                 <option value="WHATSAPP">WhatsApp</option>
                                 <option value="BALCAO">Balcão</option>
                                 <option value="INDICACAO">Indicação</option>
+                                <option value="INSTAGRAM">Instagram</option>
                                 <option value="OUTRO">Outro</option>
                             </select>
                             <button

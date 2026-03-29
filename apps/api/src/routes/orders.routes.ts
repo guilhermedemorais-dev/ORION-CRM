@@ -124,7 +124,7 @@ function assertCanAccessOrder(req: Request, assignedTo: string): void {
         throw AppError.unauthorized();
     }
 
-    if (req.user.role === 'ADMIN' || req.user.role === 'FINANCEIRO') {
+    if (req.user.role === 'ROOT' || req.user.role === 'ADMIN' || req.user.role === 'FINANCEIRO') {
         return;
     }
 
@@ -432,7 +432,7 @@ router.post(
                 return;
             }
 
-            if (!['ADMIN', 'ATENDENTE'].includes(assignee.role)) {
+            if (!['ROOT', 'ADMIN', 'ATENDENTE'].includes(assignee.role)) {
                 next(AppError.badRequest('Pedidos comerciais devem ficar atribuídos a um usuário comercial ativo.'));
                 return;
             }

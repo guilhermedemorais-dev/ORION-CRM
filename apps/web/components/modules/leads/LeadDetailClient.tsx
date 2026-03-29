@@ -71,6 +71,7 @@ const SOURCE_LABEL: Record<LeadRecord['source'], string> = {
     WHATSAPP: 'WhatsApp',
     BALCAO: 'Balcão',
     INDICACAO: 'Indicação',
+    INSTAGRAM: 'Instagram',
     OUTRO: 'Outro',
 };
 

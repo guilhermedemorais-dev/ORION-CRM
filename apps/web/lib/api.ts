@@ -37,7 +37,7 @@ export interface LeadRecord {
     custom_fields?: Record<string, unknown>;
     open_tasks_count?: number;
     last_task_at?: string | null;
-    source: 'WHATSAPP' | 'BALCAO' | 'INDICACAO' | 'OUTRO';
+    source: 'WHATSAPP' | 'BALCAO' | 'INDICACAO' | 'INSTAGRAM' | 'OUTRO';
     notes: string | null;
     converted_customer_id: string | null;
     last_interaction_at: string | null;

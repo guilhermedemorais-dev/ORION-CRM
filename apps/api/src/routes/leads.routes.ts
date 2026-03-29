@@ -16,7 +16,7 @@ import type { LeadSource, LeadStage } from '../types/entities.js';
 const router = Router();
 
 const leadStageSchema = z.enum(['NOVO', 'QUALIFICADO', 'PROPOSTA_ENVIADA', 'NEGOCIACAO', 'CONVERTIDO', 'PERDIDO']);
-const leadSourceSchema = z.enum(['WHATSAPP', 'BALCAO', 'INDICACAO', 'OUTRO']);
+const leadSourceSchema = z.enum(['WHATSAPP', 'BALCAO', 'INDICACAO', 'INSTAGRAM', 'OUTRO']);
 
 const listLeadsSchema = z.object({
     stage: leadStageSchema.optional(),
