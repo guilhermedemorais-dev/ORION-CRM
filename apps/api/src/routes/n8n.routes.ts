@@ -350,23 +350,44 @@ router.post(
                 ? `[bot] ${JSON.stringify(parsed.data.dados_coletados)}`
                 : null;
 
+            // Buscar pipeline 'leads' padrão e o stage_id correspondente
+            const pipelineResult = await query<{ pipeline_id: string; stage_id: string | null }>(
+                `SELECT p.id AS pipeline_id, ps.id AS stage_id
+                 FROM pipelines p
+                 LEFT JOIN pipeline_stages ps
+                   ON ps.pipeline_id = p.id
+                  AND UPPER(REPLACE(ps.name, ' ', '_')) = $2
+                 WHERE p.slug = 'leads'
+                 LIMIT 1`,
+                ['leads', mappedStage]
+            );
+
+            const pipelineId = pipelineResult.rows[0]?.pipeline_id ?? null;
+            const stageId = pipelineResult.rows[0]?.stage_id ?? null;
+
+            if (!pipelineId) {
+                next(AppError.internal('Pipeline padrão de leads não encontrada.'));
+                return;
+            }
+
             const result = await query<{ id: string; stage: string }>(
-                `INSERT INTO leads (whatsapp_number, stage, notes, last_interaction_at)
-                 VALUES ($1, $2::lead_stage, $3, NOW())
+                `INSERT INTO leads (whatsapp_number, stage, pipeline_id, stage_id, notes, last_interaction_at)
+                 VALUES ($1, $2::lead_stage, $3, $4, $5, NOW())
                  ON CONFLICT (whatsapp_number) DO UPDATE
                    SET stage = EXCLUDED.stage,
+                       stage_id = EXCLUDED.stage_id,
                        notes = CASE
-                         WHEN $3 IS NULL THEN leads.notes
-                         WHEN leads.notes IS NULL THEN $3
-                         ELSE leads.notes || E'\\n' || $3
+                         WHEN $5 IS NULL THEN leads.notes
+                         WHEN leads.notes IS NULL THEN $5
+                         ELSE leads.notes || E'\\n' || $5
                        END,
                        last_interaction_at = NOW(),
                        updated_at = NOW()
                  RETURNING id, stage`,
-                [number, mappedStage, notesAppend]
+                [number, mappedStage, pipelineId, stageId, notesAppend]
             );
 
-            logger.info({ whatsappNumber: number, stage: mappedStage }, 'n8n update-lead accepted');
+            logger.info({ whatsappNumber: number, stage: mappedStage, pipelineId, stageId }, 'n8n update-lead accepted');
 
             res.status(202).json({
                 accepted: true,
