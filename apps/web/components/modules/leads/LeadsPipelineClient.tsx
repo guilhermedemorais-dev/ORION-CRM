@@ -330,6 +330,7 @@ export function LeadsPipelineClient({
         const lead = data?.data as LeadRecord | undefined;
         if (lead) {
             setLeads((current) => [lead, ...current]);
+            setSelectedLeadId(lead.id);
         } else {
             await refreshFromApi();
         }
@@ -759,18 +760,18 @@ export function LeadsPipelineClient({
             </main>
 
             {showNewLeadForm ? (
-                <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/55 p-4">
-                    <div className="w-full max-w-lg rounded-2xl border border-[#E8E5E0] bg-white p-6 shadow-[0_32px_80px_rgba(0,0,0,0.28)]">
+                <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4">
+                    <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[color:var(--orion-surface)] p-6 shadow-[0_32px_80px_rgba(0,0,0,0.55)]">
                         <div className="flex items-start justify-between gap-4">
                             <div>
-                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#A8895A]">Pipeline</p>
-                                <h2 className="mt-1 font-editorial text-[22px] font-bold text-[#111827]">Novo lead</h2>
+                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-gold">Pipeline</p>
+                                <h2 className="mt-1 font-serif text-[22px] font-semibold text-[color:var(--orion-text)]">Novo lead</h2>
                             </div>
                             <button
                                 type="button"
                                 title="Fechar"
                                 onClick={() => setShowNewLeadForm(false)}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#E8E5E0] text-[#6B7280] transition hover:border-[#C8A97A] hover:text-[#A8895A]"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-[color:var(--orion-text-muted)] transition hover:border-brand-gold/40 hover:text-brand-gold"
                             >
                                 <X className="h-4 w-4" />
                             </button>
@@ -783,13 +784,13 @@ export function LeadsPipelineClient({
                             }}
                             className="mt-6 space-y-3"
                         >
-                            <Input name="name" placeholder="Nome do lead" required className="h-10 border-[#E8E5E0] bg-[#F8F7F5] text-[#111827]" />
-                            <Input name="whatsapp_number" placeholder="+5511999999999" required className="h-10 border-[#E8E5E0] bg-[#F8F7F5] text-[#111827]" />
+                            <Input name="name" placeholder="Nome do lead" required className="h-10 border-white/10 bg-[color:var(--orion-elevated)] text-[color:var(--orion-text)] placeholder:text-[color:var(--orion-text-disabled)]" />
+                            <Input name="whatsapp_number" placeholder="+5511999999999" required className="h-10 border-white/10 bg-[color:var(--orion-elevated)] text-[color:var(--orion-text)] placeholder:text-[color:var(--orion-text-disabled)]" />
                             <select
                                 name="source"
                                 title="Origem do lead"
                                 defaultValue="WHATSAPP"
-                                className="h-10 w-full rounded-md border border-[#E8E5E0] bg-[#F8F7F5] px-3 text-sm text-[#111827] outline-none"
+                                className="h-10 w-full rounded-md border border-white/10 bg-[color:var(--orion-elevated)] px-3 text-sm text-[color:var(--orion-text)] outline-none"
                             >
                                 <option value="WHATSAPP">WhatsApp</option>
                                 <option value="BALCAO">Balcão</option>
@@ -799,7 +800,7 @@ export function LeadsPipelineClient({
                             </select>
                             <button
                                 type="submit"
-                                className="inline-flex h-10 w-full items-center justify-center rounded-md bg-[#C8A97A] text-sm font-bold text-black transition hover:bg-[#E8D5B0]"
+                                className="inline-flex h-10 w-full items-center justify-center rounded-md bg-brand-gold text-sm font-bold text-black transition hover:bg-brand-gold/80"
                             >
                                 Criar lead
                             </button>

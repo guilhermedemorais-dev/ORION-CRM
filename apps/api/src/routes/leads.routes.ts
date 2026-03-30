@@ -214,7 +214,7 @@ function assertCanAccessAssignedRecord(req: Request, ownerId: string | null): vo
         throw AppError.unauthorized();
     }
 
-    if (req.user.role === 'ADMIN') {
+    if (req.user.role === 'ROOT' || req.user.role === 'ADMIN' || req.user.role === 'GERENTE') {
         return;
     }
 
