@@ -1,20 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     AlertCircle,
     Check,
     ChevronRight,
     ChevronDown,
+    Copy,
     FlaskConical,
+    Key,
     Loader2,
     Plus,
     Power,
     ReceiptText,
+    RefreshCw,
     ShieldCheck,
     Star,
     Trash2,
-
     X,
     Zap,
 } from 'lucide-react';
@@ -711,6 +713,143 @@ interface TabProps {
     onToast: (kind: 'success' | 'error', msg: string) => void;
 }
 
+// ─── Webhook Key Card ─────────────────────────────────────────────────────────
+
+function WebhookKeyCard({ onToast }: TabProps) {
+    const [hasKey, setHasKey] = useState(false);
+    const [maskedKey, setMaskedKey] = useState<string | null>(null);
+    const [plainKey, setPlainKey] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [regenerating, setRegenerating] = useState(false);
+    const [copied, setCopied] = useState(false);
+    const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const load = useCallback(async () => {
+        try {
+            const res = await fetch('/api/internal/settings/webhook-key');
+            if (!res.ok) throw new Error();
+            const data = await res.json() as { has_key: boolean; masked_key: string | null };
+            setHasKey(data.has_key);
+            setMaskedKey(data.masked_key);
+        } catch {
+            // silent
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => { void load(); }, [load]);
+
+    async function handleRegenerate() {
+        setRegenerating(true);
+        setPlainKey(null);
+        try {
+            const res = await fetch('/api/internal/settings/webhook-key/regenerate', { method: 'POST' });
+            if (!res.ok) throw new Error();
+            const data = await res.json() as { key: string };
+            setPlainKey(data.key);
+            setHasKey(true);
+            setMaskedKey(`${data.key.slice(0, 8)}${'•'.repeat(24)}`);
+            onToast('success', 'Chave gerada. Copie agora — ela não será exibida novamente.');
+        } catch {
+            onToast('error', 'Não foi possível gerar a chave.');
+        } finally {
+            setRegenerating(false);
+        }
+    }
+
+    function handleCopy(text: string) {
+        void navigator.clipboard.writeText(text);
+        setCopied(true);
+        if (copyTimeout.current) clearTimeout(copyTimeout.current);
+        copyTimeout.current = setTimeout(() => setCopied(false), 2000);
+    }
+
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const webhookBase = `${baseUrl}/api/v1/n8n`;
+
+    return (
+        <div style={{ background: 'rgba(200,169,122,0.05)', border: '1px solid rgba(200,169,122,0.18)', borderRadius: '12px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: 'rgba(200,169,122,0.12)', border: '1px solid rgba(200,169,122,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Key size={15} color="#C8A97A" />
+                </div>
+                <div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#F0EDE8' }}>Chave de Webhook do ORION</div>
+                    <div style={{ fontSize: '11px', color: '#7A7774', marginTop: '2px' }}>Use esta chave no header <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: '4px', fontSize: '10px' }}>Authorization: Bearer &lt;chave&gt;</code> para autenticar o n8n, Zapier ou qualquer automação.</div>
+                </div>
+            </div>
+
+            {/* Key display */}
+            {loading ? (
+                <div style={{ height: '36px', borderRadius: '7px', background: '#202026', animation: 'pulse 1.4s ease-in-out infinite' }} />
+            ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ flex: 1, padding: '8px 12px', background: '#111114', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', fontSize: '12px', fontFamily: 'monospace', color: plainKey ? '#C8A97A' : '#7A7774', letterSpacing: '0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {plainKey ?? maskedKey ?? 'Nenhuma chave gerada'}
+                    </div>
+                    {(plainKey ?? maskedKey) && (
+                        <button
+                            type="button"
+                            onClick={() => handleCopy(plainKey ?? maskedKey ?? '')}
+                            title="Copiar"
+                            style={{ height: '36px', width: '36px', background: copied ? 'rgba(86,197,150,0.12)' : 'rgba(255,255,255,0.05)', border: `1px solid ${copied ? 'rgba(86,197,150,0.25)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '7px', color: copied ? '#56C596' : '#9E9A94', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                        >
+                            {copied ? <Check size={14} /> : <Copy size={14} />}
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => void handleRegenerate()}
+                        disabled={regenerating}
+                        title={hasKey ? 'Revogar e gerar nova chave' : 'Gerar chave'}
+                        style={{ height: '36px', padding: '0 14px', background: 'rgba(200,169,122,0.10)', border: '1px solid rgba(200,169,122,0.22)', borderRadius: '7px', color: '#C8A97A', fontSize: '11px', fontWeight: 600, cursor: regenerating ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, opacity: regenerating ? 0.6 : 1 }}
+                    >
+                        {regenerating ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={13} />}
+                        {hasKey ? 'Revogar e gerar nova' : 'Gerar chave'}
+                    </button>
+                </div>
+            )}
+
+            {plainKey && (
+                <div style={{ padding: '10px 12px', background: 'rgba(255,193,7,0.07)', border: '1px solid rgba(255,193,7,0.2)', borderRadius: '7px', fontSize: '11px', color: '#F5C842' }}>
+                    Salve esta chave agora — ela não será exibida novamente após sair desta página.
+                </div>
+            )}
+
+            {/* Webhook base URL */}
+            <div style={{ paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontSize: '11px', color: '#7A7774', marginBottom: '6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>URL base dos webhooks</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ flex: 1, padding: '7px 12px', background: '#111114', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', fontSize: '11px', fontFamily: 'monospace', color: '#9E9A94', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {webhookBase}
+                    </div>
+                    <button type="button" onClick={() => handleCopy(webhookBase)} title="Copiar URL" style={{ height: '32px', width: '32px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#7A7774', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Copy size={12} />
+                    </button>
+                </div>
+                <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    {[
+                        ['POST', '/webhook/new-message', 'Receber mensagem'],
+                        ['POST', '/webhook/bot-reply', 'Registrar resposta do bot'],
+                        ['POST', '/webhook/update-lead', 'Atualizar lead'],
+                        ['POST', '/webhook/handoff', 'Passar para humano'],
+                        ['POST', '/webhook/order-status', 'Atualizar status do pedido'],
+                        ['GET',  '/webhook/conversation-status', 'Consultar conversa'],
+                    ].map(([method, path, label]) => (
+                        <div key={path} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
+                            <span style={{ width: '36px', textAlign: 'center', padding: '2px 0', background: method === 'GET' ? 'rgba(91,156,246,0.12)' : 'rgba(86,197,150,0.10)', border: `1px solid ${method === 'GET' ? 'rgba(91,156,246,0.2)' : 'rgba(86,197,150,0.2)'}`, borderRadius: '4px', color: method === 'GET' ? '#5B9CF6' : '#56C596', fontWeight: 700, flexShrink: 0 }}>{method}</span>
+                            <code style={{ color: '#9E9A94', fontFamily: 'monospace', fontSize: '11px' }}>{path}</code>
+                            <span style={{ color: '#5A5754' }}>—</span>
+                            <span style={{ color: '#7A7774' }}>{label}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export function IntegracoesTab({ onToast }: TabProps) {
     const [activeCategory, setActiveCategory] = useState<IntegrationCategory>('payment');
     const [providers, setProviders] = useState<IntegrationProvider[]>([]);
@@ -790,6 +929,9 @@ export function IntegracoesTab({ onToast }: TabProps) {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+            {/* Webhook Key */}
+            <WebhookKeyCard onToast={onToast} />
 
             {/* Category sub-tabs — underline style */}
             <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>

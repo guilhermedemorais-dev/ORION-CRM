@@ -46,20 +46,32 @@ const handoffSchema = z.object({
     resumo_ia: z.string().trim().max(4096).optional(),
 });
 
-function assertN8nAuthorized(req: Request): void {
-    const apiKey = env().N8N_API_KEY;
+async function assertN8nAuthorized(req: Request): Promise<void> {
+    const header = req.headers.authorization;
+    if (!header?.startsWith('Bearer ')) {
+        throw AppError.unauthorized('Token interno do n8n inválido.');
+    }
+    const provided = header.slice(7);
 
-    if (!apiKey) {
+    // Check DB key first (generated from UI)
+    const result = await query<{ internal_webhook_key: string | null }>(
+        'SELECT internal_webhook_key FROM settings LIMIT 1'
+    );
+    const dbKey = result.rows[0]?.internal_webhook_key;
+    if (dbKey && provided === dbKey) return;
+
+    // Fallback: env var (legacy / env-only deployments)
+    const envKey = env().N8N_API_KEY;
+    if (envKey && provided === envKey) return;
+
+    if (!dbKey && !envKey) {
         throw AppError.serviceUnavailable(
             'N8N_NOT_CONFIGURED',
-            'Integração n8n indisponível neste ambiente.'
+            'Nenhuma chave de webhook configurada. Gere uma chave em Ajustes → Integrações.'
         );
     }
 
-    const header = req.headers.authorization;
-    if (!header || header !== `Bearer ${apiKey}`) {
-        throw AppError.unauthorized('Token interno do n8n inválido.');
-    }
+    throw AppError.unauthorized('Token interno do n8n inválido.');
 }
 
 function normalizeWhatsapp(input: string): string {
@@ -92,7 +104,7 @@ router.post(
     '/webhook/new-message',
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
-            assertN8nAuthorized(req);
+            await assertN8nAuthorized(req);
 
             const parsed = newMessageSchema.safeParse(req.body);
             if (!parsed.success) {
@@ -142,7 +154,7 @@ router.post(
     '/webhook/order-status',
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
-            assertN8nAuthorized(req);
+            await assertN8nAuthorized(req);
 
             const parsed = orderStatusSchema.safeParse(req.body);
             if (!parsed.success) {
@@ -220,7 +232,7 @@ router.get(
     '/webhook/conversation-status',
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
-            assertN8nAuthorized(req);
+            await assertN8nAuthorized(req);
 
             const rawNumber = String(req.query['whatsapp_number'] ?? '').trim();
             if (!rawNumber) {
@@ -278,7 +290,7 @@ router.post(
     '/webhook/bot-reply',
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
-            assertN8nAuthorized(req);
+            await assertN8nAuthorized(req);
 
             const parsed = botReplySchema.safeParse(req.body);
             if (!parsed.success) {
@@ -324,7 +336,7 @@ router.post(
     '/webhook/update-lead',
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
-            assertN8nAuthorized(req);
+            await assertN8nAuthorized(req);
 
             const parsed = updateLeadSchema.safeParse(req.body);
             if (!parsed.success) {
@@ -371,7 +383,7 @@ router.post(
     '/webhook/handoff',
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
-            assertN8nAuthorized(req);
+            await assertN8nAuthorized(req);
 
             const parsed = handoffSchema.safeParse(req.body);
             if (!parsed.success) {

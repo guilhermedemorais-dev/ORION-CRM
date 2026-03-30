@@ -482,4 +482,54 @@ router.post(
     }
 );
 
+// ---- Webhook Key ----
+
+router.get(
+    '/webhook-key',
+    authenticate,
+    requireRole(['ADMIN', 'ROOT']),
+    async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const result = await query<{ internal_webhook_key: string | null }>(
+                'SELECT internal_webhook_key FROM settings LIMIT 1'
+            );
+            const key = result.rows[0]?.internal_webhook_key ?? null;
+            res.json({
+                has_key: key !== null,
+                masked_key: key ? `${key.slice(0, 8)}${'•'.repeat(24)}` : null,
+            });
+        } catch (err) {
+            next(err);
+        }
+    }
+);
+
+router.post(
+    '/webhook-key/regenerate',
+    authenticate,
+    requireRole(['ADMIN', 'ROOT']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const { randomBytes } = await import('node:crypto');
+            const newKey = `orion_${randomBytes(32).toString('hex')}`;
+            await query(
+                `UPDATE settings SET internal_webhook_key = $1 WHERE id = (SELECT id FROM settings LIMIT 1)`,
+                [newKey]
+            );
+            await createAuditLog({
+                userId: req.user!.id,
+                action: 'UPDATE',
+                entityType: 'settings',
+                entityId: 'webhook_key',
+                oldValue: null,
+                newValue: { action: 'regenerated' },
+                req,
+            });
+            res.json({ key: newKey });
+        } catch (err) {
+            next(err);
+        }
+    }
+);
+
 export default router;
