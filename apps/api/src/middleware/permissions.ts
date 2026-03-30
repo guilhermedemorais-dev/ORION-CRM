@@ -3,54 +3,62 @@ import { AppError } from '../lib/errors.js';
 import type { UserRole } from '../types/entities.js';
 
 // ─── Matriz de permissões ─────────────────────────────────────────────────────
+// ADMIN tem acesso total — listado explicitamente para fins de auditoria.
+// ROOT bypassa esta matriz (ver userCan abaixo).
 const PERMISSIONS: Record<string, UserRole[]> = {
     // Painel do Cliente
-    'client.view':              ['GERENTE', 'ADMIN', 'ATENDENTE'],
-    'client.edit':              ['GERENTE', 'ADMIN', 'ATENDENTE'],
-    'client.delete':            ['GERENTE', 'ADMIN'],
+    'client.view':              ['ADMIN', 'GERENTE', 'ATENDENTE'],
+    'client.edit':              ['ADMIN', 'GERENTE', 'ATENDENTE'],
+    'client.delete':            ['ADMIN', 'GERENTE'],
 
     // Atendimento
-    'attendance.view':          ['GERENTE', 'ADMIN', 'ATENDENTE'],
-    'attendance.create':        ['GERENTE', 'ADMIN', 'ATENDENTE'],
-    'attendance.edit':          ['GERENTE', 'ADMIN', 'ATENDENTE'],
-    'attendance.delete':        ['GERENTE', 'ADMIN'],
+    'attendance.view':          ['ADMIN', 'GERENTE', 'ATENDENTE'],
+    'attendance.create':        ['ADMIN', 'GERENTE', 'ATENDENTE'],
+    'attendance.edit':          ['ADMIN', 'GERENTE', 'ATENDENTE'],
+    'attendance.delete':        ['ADMIN', 'GERENTE'],
 
     // IA 3D
-    'ai_render.create':         ['GERENTE', 'ADMIN', 'ATENDENTE'],
-    'ai_render.approve':        ['GERENTE', 'ADMIN', 'ATENDENTE'],
+    'ai_render.create':         ['ADMIN', 'GERENTE', 'ATENDENTE'],
+    'ai_render.approve':        ['ADMIN', 'GERENTE', 'ATENDENTE'],
 
     // Proposta
-    'proposal.view':            ['GERENTE', 'ADMIN', 'ATENDENTE'],
-    'proposal.create':          ['GERENTE', 'ADMIN', 'ATENDENTE'],
+    'proposal.view':            ['ADMIN', 'GERENTE', 'ATENDENTE'],
+    'proposal.create':          ['ADMIN', 'GERENTE', 'ATENDENTE'],
 
     // Pedidos
-    'order.view':               ['GERENTE', 'ADMIN', 'ATENDENTE', 'PRODUCAO'],
-    'order.create':             ['GERENTE', 'ADMIN', 'ATENDENTE'],
-    'order.edit':               ['GERENTE', 'ADMIN'],
+    'order.view':               ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],
+    'order.create':             ['ADMIN', 'GERENTE', 'ATENDENTE'],
+    'order.edit':               ['ADMIN', 'GERENTE'],
+    'order.delete':             ['ADMIN'],
 
     // OS
-    'so.view':                  ['GERENTE', 'ADMIN', 'ATENDENTE', 'PRODUCAO'],
-    'so.create':                ['GERENTE', 'ADMIN', 'ATENDENTE'],
-    'so.edit_step':             ['GERENTE', 'ADMIN', 'PRODUCAO'],
-    'so.upload_3d':             ['GERENTE', 'ADMIN', 'PRODUCAO'],
-    'so.delete':                ['GERENTE', 'ADMIN'],
+    'so.view':                  ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],
+    'so.create':                ['ADMIN', 'GERENTE', 'ATENDENTE'],
+    'so.edit_step':             ['ADMIN', 'GERENTE', 'PRODUCAO'],
+    'so.upload_3d':             ['ADMIN', 'GERENTE', 'PRODUCAO'],
+    'so.delete':                ['ADMIN', 'GERENTE'],
 
     // Entrega
-    'delivery.view':            ['GERENTE', 'ADMIN', 'ATENDENTE', 'PRODUCAO'],
-    'delivery.update_status':   ['GERENTE', 'ADMIN', 'ATENDENTE', 'PRODUCAO'],
+    'delivery.view':            ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],
+    'delivery.update_status':   ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],
 
     // Financeiro / NF-e
-    'nfe.emit':                 ['GERENTE', 'ADMIN'],
-    'financial.view':           ['GERENTE', 'ADMIN', 'FINANCEIRO'],
+    'nfe.emit':                 ['ADMIN', 'GERENTE'],
+    'financial.view':           ['ADMIN', 'GERENTE', 'FINANCEIRO'],
+    'financial.manage':         ['ADMIN'],
 
-    // Admin-only
-    'settings.view':            ['GERENTE', 'ADMIN'],
-    'pipeline.configure':       ['GERENTE', 'ADMIN'],
-    'users.manage':             ['GERENTE', 'ADMIN'],
+    // Configurações e gestão
+    'settings.view':            ['ADMIN', 'GERENTE'],
+    'settings.manage':          ['ADMIN'],
+    'pipeline.configure':       ['ADMIN', 'GERENTE'],
+    'users.manage':             ['ADMIN'],
+    'integrations.manage':      ['ADMIN'],
+    'webhooks.manage':          ['ADMIN'],
 };
 
 // ─── Lógica com override personalizado ───────────────────────────────────────
 export function userCan(user: { role: UserRole; custom_permissions?: Record<string, boolean> }, permission: string): boolean {
+    if (user.role === 'ROOT') return true;
     if (user.custom_permissions?.[permission] !== undefined) {
         return user.custom_permissions[permission];
     }
@@ -59,7 +67,7 @@ export function userCan(user: { role: UserRole; custom_permissions?: Record<stri
 
 // ─── Middleware backend ───────────────────────────────────────────────────────
 export function requirePermission(permission: string) {
-    return (req: Request, res: Response, next: NextFunction): void => {
+    return (req: Request, _res: Response, next: NextFunction): void => {
         if (!req.user) {
             next(AppError.unauthorized());
             return;
