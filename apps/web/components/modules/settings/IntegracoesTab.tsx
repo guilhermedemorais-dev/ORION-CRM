@@ -13,7 +13,6 @@ import {
     Plus,
     Power,
     ReceiptText,
-    RefreshCw,
     ShieldCheck,
     Star,
     Trash2,
@@ -715,26 +714,40 @@ interface TabProps {
     onToast: (kind: 'success' | 'error', msg: string) => void;
 }
 
-// ─── Webhook Key Card ─────────────────────────────────────────────────────────
+// ─── Webhook Keys Section (multiple named keys) ─────────────────────────────
 
-function WebhookKeyCard({ onToast }: TabProps) {
-    const [hasKey, setHasKey] = useState(false);
-    const [maskedKey, setMaskedKey] = useState<string | null>(null);
-    const [plainKey, setPlainKey] = useState<string | null>(null);
+interface WebhookKey {
+    id: string;
+    name: string;
+    key_prefix: string;
+    created_at: string;
+    last_used_at: string | null;
+}
+
+function WebhookSection({ onToast }: TabProps) {
+    const [keys, setKeys] = useState<WebhookKey[]>([]);
     const [loading, setLoading] = useState(true);
-    const [regenerating, setRegenerating] = useState(false);
-    const [copied, setCopied] = useState(false);
+    const [error, setError] = useState(false);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [newKeyPlain, setNewKeyPlain] = useState<string | null>(null);
+    const [newKeyId, setNewKeyId] = useState<string | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
+    const [creating, setCreating] = useState(false);
+    const [newKeyName, setNewKeyName] = useState('');
+    const [copiedText, setCopiedText] = useState<string | null>(null);
     const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const load = useCallback(async () => {
+        setLoading(true);
+        setError(false);
         try {
-            const res = await fetch('/api/internal/settings/webhook-key');
+            const res = await fetch('/api/internal/settings/webhook-keys');
             if (!res.ok) throw new Error();
-            const data = await res.json() as { has_key: boolean; masked_key: string | null };
-            setHasKey(data.has_key);
-            setMaskedKey(data.masked_key);
+            const data = await res.json() as WebhookKey[];
+            setKeys(Array.isArray(data) ? data : []);
         } catch {
-            // silent
+            setError(true);
         } finally {
             setLoading(false);
         }
@@ -742,92 +755,240 @@ function WebhookKeyCard({ onToast }: TabProps) {
 
     useEffect(() => { void load(); }, [load]);
 
-    async function handleRegenerate() {
-        setRegenerating(true);
-        setPlainKey(null);
+    function handleCopy(text: string) {
+        void navigator.clipboard.writeText(text);
+        setCopiedText(text);
+        if (copyTimeout.current) clearTimeout(copyTimeout.current);
+        copyTimeout.current = setTimeout(() => setCopiedText(null), 2000);
+    }
+
+    async function handleCreate() {
+        if (!newKeyName.trim()) return;
+        setCreating(true);
         try {
-            const res = await fetch('/api/internal/settings/webhook-key/regenerate', { method: 'POST' });
+            const res = await fetch('/api/internal/settings/webhook-keys', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newKeyName.trim() }),
+            });
             if (!res.ok) throw new Error();
-            const data = await res.json() as { key: string };
-            setPlainKey(data.key);
-            setHasKey(true);
-            setMaskedKey(`${data.key.slice(0, 8)}${'•'.repeat(24)}`);
-            onToast('success', 'Chave gerada. Copie agora — ela não será exibida novamente.');
+            const data = await res.json() as WebhookKey & { key: string };
+            setKeys(prev => [{ id: data.id, name: data.name, key_prefix: data.key_prefix, created_at: data.created_at, last_used_at: data.last_used_at }, ...prev]);
+            setNewKeyPlain(data.key);
+            setNewKeyId(data.id);
+            setShowCreateModal(false);
+            setNewKeyName('');
+            onToast('success', 'Chave criada. Copie agora — ela não será exibida novamente.');
         } catch {
-            onToast('error', 'Não foi possível gerar a chave.');
+            onToast('error', 'Não foi possível criar a chave.');
         } finally {
-            setRegenerating(false);
+            setCreating(false);
         }
     }
 
-    function handleCopy(text: string) {
-        void navigator.clipboard.writeText(text);
-        setCopied(true);
-        if (copyTimeout.current) clearTimeout(copyTimeout.current);
-        copyTimeout.current = setTimeout(() => setCopied(false), 2000);
+    async function handleRevoke(id: string) {
+        setDeletingId(id);
+        try {
+            const res = await fetch(`/api/internal/settings/webhook-keys/${id}`, { method: 'DELETE' });
+            if (!res.ok && res.status !== 204) throw new Error();
+            setKeys(prev => prev.filter(k => k.id !== id));
+            if (newKeyId === id) {
+                setNewKeyPlain(null);
+                setNewKeyId(null);
+            }
+            onToast('success', 'Chave revogada.');
+        } catch {
+            onToast('error', 'Não foi possível revogar a chave.');
+        } finally {
+            setDeletingId(null);
+            setConfirmRevokeId(null);
+        }
     }
 
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
     const webhookBase = `${baseUrl}/api/v1/n8n`;
 
     return (
-        <div style={{ background: 'rgba(200,169,122,0.05)', border: '1px solid rgba(200,169,122,0.18)', borderRadius: '12px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: 'rgba(200,169,122,0.12)', border: '1px solid rgba(200,169,122,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Key size={15} color="#C8A97A" />
-                </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
                 <div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#F0EDE8' }}>Chave de Webhook do ORION</div>
-                    <div style={{ fontSize: '11px', color: '#7A7774', marginTop: '2px' }}>Use esta chave no header <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: '4px', fontSize: '10px' }}>Authorization: Bearer &lt;chave&gt;</code> para autenticar o n8n, Zapier ou qualquer automação.</div>
+                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#F0EDE8', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Key size={16} color="#C8A97A" /> Chaves de API
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#7A7774', marginTop: '4px' }}>
+                        Cada chave autentica n8n, Zapier ou qualquer automação externa via <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: '4px', fontSize: '10px' }}>Authorization: Bearer &lt;chave&gt;</code>
+                    </div>
                 </div>
+                <button
+                    type="button"
+                    onClick={() => { setShowCreateModal(true); setNewKeyName(''); }}
+                    style={{ height: '34px', padding: '0 14px', background: 'rgba(200,169,122,0.12)', border: '1px solid rgba(200,169,122,0.25)', borderRadius: '7px', color: '#C8A97A', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}
+                >
+                    <Plus size={13} /> Nova chave
+                </button>
             </div>
 
-            {/* Key display */}
-            {loading ? (
-                <div style={{ height: '36px', borderRadius: '7px', background: '#202026', animation: 'pulse 1.4s ease-in-out infinite' }} />
-            ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ flex: 1, padding: '8px 12px', background: '#111114', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', fontSize: '12px', fontFamily: 'monospace', color: plainKey ? '#C8A97A' : '#7A7774', letterSpacing: '0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {plainKey ?? maskedKey ?? 'Nenhuma chave gerada'}
+            {/* One-time reveal banner */}
+            {newKeyPlain && (
+                <div style={{ padding: '14px 16px', background: 'rgba(255,193,7,0.08)', border: '1px solid rgba(255,193,7,0.25)', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <AlertCircle size={14} color="#F5C842" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: '#F5C842' }}>Copie agora — esta chave não será exibida novamente</span>
                     </div>
-                    {(plainKey ?? maskedKey) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ flex: 1, padding: '8px 12px', background: '#111114', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', fontSize: '12px', fontFamily: 'monospace', color: '#C8A97A', letterSpacing: '0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                            {newKeyPlain}
+                        </div>
                         <button
                             type="button"
-                            onClick={() => handleCopy(plainKey ?? maskedKey ?? '')}
-                            title="Copiar"
-                            style={{ height: '36px', width: '36px', background: copied ? 'rgba(86,197,150,0.12)' : 'rgba(255,255,255,0.05)', border: `1px solid ${copied ? 'rgba(86,197,150,0.25)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '7px', color: copied ? '#56C596' : '#9E9A94', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            onClick={() => handleCopy(newKeyPlain)}
+                            style={{ height: '36px', width: '36px', background: copiedText === newKeyPlain ? 'rgba(86,197,150,0.12)' : 'rgba(255,255,255,0.05)', border: `1px solid ${copiedText === newKeyPlain ? 'rgba(86,197,150,0.25)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '7px', color: copiedText === newKeyPlain ? '#56C596' : '#9E9A94', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                         >
-                            {copied ? <Check size={14} /> : <Copy size={14} />}
+                            {copiedText === newKeyPlain ? <Check size={14} /> : <Copy size={14} />}
                         </button>
-                    )}
+                        <button
+                            type="button"
+                            onClick={() => { setNewKeyPlain(null); setNewKeyId(null); }}
+                            style={{ height: '36px', padding: '0 14px', background: 'rgba(255,193,7,0.10)', border: '1px solid rgba(255,193,7,0.22)', borderRadius: '7px', color: '#F5C842', fontSize: '11px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}
+                        >
+                            <Check size={13} /> Entendido
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Loading skeleton */}
+            {loading && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {[1, 2].map((i) => (
+                        <div key={i} style={{ height: '68px', borderRadius: '10px', background: '#202026', animation: 'pulse 1.4s ease-in-out infinite' }} />
+                    ))}
+                </div>
+            )}
+
+            {/* Error state */}
+            {!loading && error && (
+                <div style={{ padding: '16px', background: 'rgba(224,82,82,0.10)', border: '1px solid rgba(224,82,82,0.25)', borderRadius: '8px', textAlign: 'center' }}>
+                    <p style={{ color: '#E05252', fontSize: '13px', marginBottom: '8px' }}>Erro ao carregar chaves de API.</p>
                     <button
                         type="button"
-                        onClick={() => void handleRegenerate()}
-                        disabled={regenerating}
-                        title={hasKey ? 'Revogar e gerar nova chave' : 'Gerar chave'}
-                        style={{ height: '36px', padding: '0 14px', background: 'rgba(200,169,122,0.10)', border: '1px solid rgba(200,169,122,0.22)', borderRadius: '7px', color: '#C8A97A', fontSize: '11px', fontWeight: 600, cursor: regenerating ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, opacity: regenerating ? 0.6 : 1 }}
+                        onClick={() => void load()}
+                        style={{ height: '28px', padding: '0 14px', background: 'transparent', border: '1px solid rgba(224,82,82,0.25)', borderRadius: '6px', color: '#E05252', fontSize: '11px', cursor: 'pointer' }}
                     >
-                        {regenerating ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={13} />}
-                        {hasKey ? 'Revogar e gerar nova' : 'Gerar chave'}
+                        Tentar novamente
                     </button>
                 </div>
             )}
 
-            {plainKey && (
-                <div style={{ padding: '10px 12px', background: 'rgba(255,193,7,0.07)', border: '1px solid rgba(255,193,7,0.2)', borderRadius: '7px', fontSize: '11px', color: '#F5C842' }}>
-                    Salve esta chave agora — ela não será exibida novamente após sair desta página.
+            {/* Empty state */}
+            {!loading && !error && keys.length === 0 && (
+                <div style={{ border: '2px dashed rgba(255,255,255,0.07)', borderRadius: '10px', padding: '40px 20px', textAlign: 'center' }}>
+                    <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'rgba(200,169,122,0.08)', border: '1px solid rgba(200,169,122,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                        <Key size={20} color="#C8A97A" />
+                    </div>
+                    <p style={{ color: '#C8C4BE', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Nenhuma chave gerada</p>
+                    <p style={{ color: '#7A7774', fontSize: '12px', marginBottom: '14px' }}>
+                        Gere uma chave para conectar n8n, Zapier ou Make.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={() => { setShowCreateModal(true); setNewKeyName(''); }}
+                        style={{ height: '30px', padding: '0 16px', background: 'rgba(200,169,122,0.10)', border: '1px solid rgba(200,169,122,0.22)', borderRadius: '6px', color: '#C8A97A', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                        <Plus size={12} /> Gerar primeira chave
+                    </button>
                 </div>
             )}
 
-            {/* Webhook base URL */}
+            {/* Key list */}
+            {!loading && !error && keys.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {keys.map(k => {
+                        const isHighlighted = k.id === newKeyId;
+                        const isConfirming = confirmRevokeId === k.id;
+                        const isDeleting = deletingId === k.id;
+
+                        return (
+                            <div
+                                key={k.id}
+                                style={{
+                                    background: isHighlighted ? 'rgba(200,169,122,0.08)' : '#141417',
+                                    border: `1px solid ${isHighlighted ? 'rgba(200,169,122,0.25)' : 'rgba(255,255,255,0.07)'}`,
+                                    borderRadius: '10px',
+                                    padding: '14px 16px',
+                                    transition: 'border-color 0.3s',
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    {/* Left: icon + info */}
+                                    <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: 'rgba(200,169,122,0.12)', border: '1px solid rgba(200,169,122,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        <Key size={14} color="#C8A97A" />
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#F0EDE8' }}>{k.name}</span>
+                                            <code style={{ fontSize: '11px', fontFamily: 'monospace', color: '#7A7774', background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: '4px' }}>{k.key_prefix}</code>
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: '#5A5754', marginTop: '4px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                            <span>Criada em {new Date(k.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                                            <span>{k.last_used_at ? `Usado em ${new Date(k.last_used_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}` : 'Nunca usado'}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Right: delete button */}
+                                    {!isConfirming && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setConfirmRevokeId(k.id)}
+                                            disabled={isDeleting}
+                                            title="Revogar chave"
+                                            style={{ width: '34px', height: '34px', background: 'rgba(224,82,82,0.06)', border: '1px solid rgba(224,82,82,0.15)', borderRadius: '7px', color: '#E05252', cursor: isDeleting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: isDeleting ? 0.5 : 1 }}
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Inline revoke confirmation */}
+                                {isConfirming && (
+                                    <div style={{ marginTop: '10px', padding: '10px 12px', background: 'rgba(224,82,82,0.06)', border: '1px solid rgba(224,82,82,0.15)', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                                        <span style={{ fontSize: '11px', color: '#E05252' }}>Revogar esta chave? Automações que a usam deixarão de funcionar.</span>
+                                        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => void handleRevoke(k.id)}
+                                                disabled={isDeleting}
+                                                style={{ height: '28px', padding: '0 12px', background: 'rgba(224,82,82,0.15)', border: '1px solid rgba(224,82,82,0.30)', borderRadius: '6px', color: '#E05252', fontSize: '11px', fontWeight: 600, cursor: isDeleting ? 'not-allowed' : 'pointer', opacity: isDeleting ? 0.6 : 1 }}
+                                            >
+                                                {isDeleting ? 'Revogando...' : 'Confirmar revogação'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setConfirmRevokeId(null)}
+                                                style={{ height: '28px', padding: '0 12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '6px', color: '#C8C4BE', fontSize: '11px', cursor: 'pointer' }}
+                                            >
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* Webhook base URL + endpoint reference */}
             <div style={{ paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                 <div style={{ fontSize: '11px', color: '#7A7774', marginBottom: '6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>URL base dos webhooks</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ flex: 1, padding: '7px 12px', background: '#111114', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', fontSize: '11px', fontFamily: 'monospace', color: '#9E9A94', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ flex: 1, padding: '7px 12px', background: '#111114', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', fontSize: '11px', fontFamily: 'monospace', color: '#9E9A94', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                         {webhookBase}
                     </div>
-                    <button type="button" onClick={() => handleCopy(webhookBase)} title="Copiar URL" style={{ height: '32px', width: '32px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#7A7774', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Copy size={12} />
+                    <button type="button" onClick={() => handleCopy(webhookBase)} title="Copiar URL" style={{ height: '32px', width: '32px', background: copiedText === webhookBase ? 'rgba(86,197,150,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${copiedText === webhookBase ? 'rgba(86,197,150,0.25)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '6px', color: copiedText === webhookBase ? '#56C596' : '#7A7774', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {copiedText === webhookBase ? <Check size={12} /> : <Copy size={12} />}
                     </button>
                 </div>
                 <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
@@ -848,6 +1009,59 @@ function WebhookKeyCard({ onToast }: TabProps) {
                     ))}
                 </div>
             </div>
+
+            {/* Create key modal */}
+            {showCreateModal && (
+                <>
+                    <div onClick={() => setShowCreateModal(false)} style={{ position: 'fixed', inset: 0, zIndex: 149, background: 'rgba(0,0,0,0.5)' }} />
+                    <div style={{
+                        position: 'fixed', left: '50%', top: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '400px', maxWidth: '96vw',
+                        zIndex: 150,
+                        background: '#111114',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '14px',
+                        boxShadow: '0 24px 64px rgba(0,0,0,.7)',
+                        padding: '24px',
+                    }}>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#F0EDE8', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Key size={16} color="#C8A97A" /> Nova chave de API
+                        </div>
+                        <label style={{ display: 'block', fontSize: '12px', color: '#9E9A94', marginBottom: '6px', fontWeight: 500 }}>
+                            Nome da chave
+                        </label>
+                        <input
+                            type="text"
+                            value={newKeyName}
+                            onChange={e => setNewKeyName(e.target.value)}
+                            placeholder="Ex: n8n produção"
+                            maxLength={60}
+                            autoFocus
+                            onKeyDown={e => { if (e.key === 'Enter') void handleCreate(); }}
+                            style={{ width: '100%', height: '38px', padding: '0 12px', background: '#0A0A0C', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '7px', color: '#F0EDE8', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '18px' }}>
+                            <button
+                                type="button"
+                                onClick={() => setShowCreateModal(false)}
+                                style={{ height: '34px', padding: '0 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '7px', color: '#C8C4BE', fontSize: '12px', cursor: 'pointer' }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void handleCreate()}
+                                disabled={creating || !newKeyName.trim()}
+                                style={{ height: '34px', padding: '0 16px', background: 'rgba(200,169,122,0.15)', border: '1px solid rgba(200,169,122,0.30)', borderRadius: '7px', color: '#C8A97A', fontSize: '12px', fontWeight: 600, cursor: (creating || !newKeyName.trim()) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', opacity: (creating || !newKeyName.trim()) ? 0.5 : 1 }}
+                            >
+                                {creating ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Plus size={13} />}
+                                Gerar chave
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }
@@ -965,7 +1179,7 @@ export function IntegracoesTab({ onToast }: TabProps) {
             {activeCategory === 'fiscal' && <FiscalSection />}
 
             {/* API & Webhooks section */}
-            {activeCategory === 'webhook' && <WebhookKeyCard onToast={onToast} />}
+            {activeCategory === 'webhook' && <WebhookSection onToast={onToast} />}
 
             {/* Integration providers section (payment / automation / ai / erp) */}
             {activeCategory !== 'logistica' && activeCategory !== 'fiscal' && activeCategory !== 'webhook' && (

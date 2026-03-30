@@ -53,18 +53,28 @@ async function assertN8nAuthorized(req: Request): Promise<void> {
     }
     const provided = header.slice(7);
 
-    // Check DB key first (generated from UI)
-    const result = await query<{ internal_webhook_key: string | null }>(
+    // Check new webhook_keys table first
+    const keysResult = await query<{ key_value: string }>(
+        'SELECT key_value FROM webhook_keys WHERE revoked_at IS NULL'
+    );
+    if (keysResult.rows.some(r => r.key_value === provided)) {
+        // Update last_used_at asynchronously (fire-and-forget)
+        void query('UPDATE webhook_keys SET last_used_at = NOW() WHERE key_value = $1', [provided]);
+        return;
+    }
+
+    // Legacy: settings.internal_webhook_key (backward compat)
+    const settingsResult = await query<{ internal_webhook_key: string | null }>(
         'SELECT internal_webhook_key FROM settings LIMIT 1'
     );
-    const dbKey = result.rows[0]?.internal_webhook_key;
-    if (dbKey && provided === dbKey) return;
+    const legacyKey = settingsResult.rows[0]?.internal_webhook_key;
+    if (legacyKey && provided === legacyKey) return;
 
     // Fallback: env var (legacy / env-only deployments)
     const envKey = env().N8N_API_KEY;
     if (envKey && provided === envKey) return;
 
-    if (!dbKey && !envKey) {
+    if (keysResult.rows.length === 0 && !legacyKey && !envKey) {
         throw AppError.serviceUnavailable(
             'N8N_NOT_CONFIGURED',
             'Nenhuma chave de webhook configurada. Gere uma chave em Ajustes → Integrações.'

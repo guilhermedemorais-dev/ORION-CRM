@@ -482,22 +482,31 @@ router.post(
     }
 );
 
-// ---- Webhook Key ----
+// ---- Webhook Keys (multiple named keys) ----
+
+const createWebhookKeySchema = z.object({
+    name: z.string().trim().min(1, 'Nome obrigatório').max(60, 'Máximo 60 caracteres'),
+});
 
 router.get(
-    '/webhook-key',
+    '/webhook-keys',
     authenticate,
     requireRole(['ADMIN', 'ROOT']),
     async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
-            const result = await query<{ internal_webhook_key: string | null }>(
-                'SELECT internal_webhook_key FROM settings LIMIT 1'
+            const result = await query<{
+                id: string;
+                name: string;
+                key_prefix: string;
+                created_at: string;
+                last_used_at: string | null;
+            }>(
+                `SELECT id, name, key_prefix, created_at, last_used_at
+                 FROM webhook_keys
+                 WHERE revoked_at IS NULL
+                 ORDER BY created_at DESC`
             );
-            const key = result.rows[0]?.internal_webhook_key ?? null;
-            res.json({
-                has_key: key !== null,
-                masked_key: key ? `${key.slice(0, 8)}${'•'.repeat(24)}` : null,
-            });
+            res.json(result.rows);
         } catch (err) {
             next(err);
         }
@@ -505,27 +514,100 @@ router.get(
 );
 
 router.post(
-    '/webhook-key/regenerate',
+    '/webhook-keys',
+    authenticate,
+    requireRole(['ADMIN', 'ROOT']),
+    rateLimit({ windowMs: 60 * 1000, max: 10, name: 'webhook-keys-create' }),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const parsed = createWebhookKeySchema.safeParse(req.body);
+            if (!parsed.success) {
+                next(AppError.badRequest(
+                    'Verifique os campos informados.',
+                    parsed.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+                ));
+                return;
+            }
+
+            const { randomBytes } = await import('node:crypto');
+            const keyValue = `orion_${randomBytes(32).toString('hex')}`;
+            const keyPrefix = `${keyValue.slice(0, 14)}${'•'.repeat(16)}`;
+
+            const result = await query<{
+                id: string;
+                name: string;
+                key_prefix: string;
+                created_at: string;
+                last_used_at: string | null;
+            }>(
+                `INSERT INTO webhook_keys (name, key_value, key_prefix, created_by)
+                 VALUES ($1, $2, $3, $4)
+                 RETURNING id, name, key_prefix, created_at, last_used_at`,
+                [parsed.data.name, keyValue, keyPrefix, req.user!.id]
+            );
+
+            const created = result.rows[0]!;
+
+            await createAuditLog({
+                userId: req.user!.id,
+                action: 'CREATE',
+                entityType: 'webhook_key',
+                entityId: created.id,
+                oldValue: null,
+                newValue: { name: parsed.data.name },
+                req,
+            });
+
+            res.status(201).json({
+                id: created.id,
+                name: created.name,
+                key_prefix: created.key_prefix,
+                created_at: created.created_at,
+                last_used_at: created.last_used_at,
+                key: keyValue,
+            });
+        } catch (err) {
+            next(err);
+        }
+    }
+);
+
+router.delete(
+    '/webhook-keys/:id',
     authenticate,
     requireRole(['ADMIN', 'ROOT']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
-            const { randomBytes } = await import('node:crypto');
-            const newKey = `orion_${randomBytes(32).toString('hex')}`;
-            await query(
-                `UPDATE settings SET internal_webhook_key = $1 WHERE id = (SELECT id FROM settings LIMIT 1)`,
-                [newKey]
+            const keyId = req.params['id'];
+            if (!keyId) {
+                next(AppError.badRequest('ID da chave é obrigatório.'));
+                return;
+            }
+
+            const result = await query<{ id: string; name: string }>(
+                `UPDATE webhook_keys
+                 SET revoked_at = NOW()
+                 WHERE id = $1 AND revoked_at IS NULL
+                 RETURNING id, name`,
+                [keyId]
             );
+
+            if (result.rows.length === 0) {
+                next(AppError.notFound('Chave não encontrada ou já revogada.'));
+                return;
+            }
+
             await createAuditLog({
                 userId: req.user!.id,
-                action: 'UPDATE',
-                entityType: 'settings',
-                entityId: 'webhook_key',
-                oldValue: null,
-                newValue: { action: 'regenerated' },
+                action: 'DELETE',
+                entityType: 'webhook_key',
+                entityId: result.rows[0]!.id,
+                oldValue: { name: result.rows[0]!.name },
+                newValue: null,
                 req,
             });
-            res.json({ key: newKey });
+
+            res.status(204).send();
         } catch (err) {
             next(err);
         }
