@@ -366,17 +366,17 @@ router.post(
                  FROM pipelines p
                  LEFT JOIN pipeline_stages ps
                    ON ps.pipeline_id = p.id
-                  AND UPPER(REPLACE(ps.name, ' ', '_')) = $2
+                  AND UPPER(REPLACE(ps.name, ' ', '_')) = $1
                  WHERE p.slug = 'leads'
                  LIMIT 1`,
-                ['leads', mappedStage]
+                [mappedStage]
             );
 
             const pipelineId = pipelineResult.rows[0]?.pipeline_id ?? null;
             const stageId = pipelineResult.rows[0]?.stage_id ?? null;
 
             if (!pipelineId) {
-                next(AppError.internal('Pipeline padrão de leads não encontrada.'));
+                next(AppError.serviceUnavailable('PIPELINE_NOT_FOUND', 'Pipeline padrão de leads não encontrada.'));
                 return;
             }
 
