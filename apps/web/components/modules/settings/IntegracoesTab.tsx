@@ -24,7 +24,7 @@ import { LogisticaTab } from './LogisticaTab';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type IntegrationCategory = 'payment' | 'automation' | 'ai' | 'erp' | 'logistica' | 'fiscal';
+type IntegrationCategory = 'payment' | 'automation' | 'ai' | 'erp' | 'logistica' | 'fiscal' | 'webhook';
 
 type IntegrationType =
     | 'mercadopago' | 'stripe' | 'pagarme' | 'asaas' | 'iugu'
@@ -235,6 +235,7 @@ const CATEGORY_TYPES: Record<IntegrationCategory, IntegrationType[]> = {
     erp:        ['bling', 'tiny_erp', 'shopify', 'omie', 'generic_rest'],
     logistica:  [],
     fiscal:     [],
+    webhook:    [],
 };
 
 const CATEGORY_TABS: Array<{ id: IntegrationCategory; label: string }> = [
@@ -244,6 +245,7 @@ const CATEGORY_TABS: Array<{ id: IntegrationCategory; label: string }> = [
     { id: 'erp',        label: 'ERP & Outros' },
     { id: 'logistica',  label: 'Logística' },
     { id: 'fiscal',     label: 'Fiscal' },
+    { id: 'webhook',    label: 'API & Webhooks' },
 ];
 
 // ─── Shared input style ───────────────────────────────────────────────────────
@@ -930,9 +932,6 @@ export function IntegracoesTab({ onToast }: TabProps) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-            {/* Webhook Key */}
-            <WebhookKeyCard onToast={onToast} />
-
             {/* Category sub-tabs — underline style */}
             <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                 {CATEGORY_TABS.map(tab => (
@@ -965,8 +964,11 @@ export function IntegracoesTab({ onToast }: TabProps) {
             {/* Fiscal section */}
             {activeCategory === 'fiscal' && <FiscalSection />}
 
+            {/* API & Webhooks section */}
+            {activeCategory === 'webhook' && <WebhookKeyCard onToast={onToast} />}
+
             {/* Integration providers section (payment / automation / ai / erp) */}
-            {activeCategory !== 'logistica' && activeCategory !== 'fiscal' && (
+            {activeCategory !== 'logistica' && activeCategory !== 'fiscal' && activeCategory !== 'webhook' && (
                 <>
                     {/* Header */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
