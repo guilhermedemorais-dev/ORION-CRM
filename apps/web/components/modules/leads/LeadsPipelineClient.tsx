@@ -677,10 +677,10 @@ export function LeadsPipelineClient({
 
                                                         <div className="mb-2 flex items-start justify-between gap-2">
                                                             <div className="min-w-0">
-                                                                <p className="truncate text-[12px] font-semibold leading-[1.3] text-[color:var(--orion-text)]">
+                                                                <p className="truncate text-[12px] font-semibold leading-[1.3] text-white">
                                                                     {lead.name ?? 'Lead sem nome'}
                                                                 </p>
-                                                                <p className="mt-1 flex items-center gap-1 text-[10px] text-[color:var(--orion-text-muted)]">
+                                                                <p className="mt-1 flex items-center gap-1 text-[10px] text-[color:var(--orion-text-secondary)]">
                                                                     <MessageCircle className="h-3 w-3" />
                                                                     {lead.whatsapp_number ? 'WhatsApp' : 'Origem não informada'}
                                                                 </p>
@@ -731,7 +731,7 @@ export function LeadsPipelineClient({
                                                             <a
                                                                 href={`/leads/${lead.id}`}
                                                                 onClick={(event) => event.stopPropagation()}
-                                                                className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-md text-[color:var(--orion-text-muted)] transition hover:bg-white/10 hover:text-[color:var(--orion-text-secondary)]"
+                                                                className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-md border border-brand-gold/30 bg-brand-gold/10 text-brand-gold transition hover:bg-brand-gold/20"
                                                                 aria-label="Abrir lead"
                                                             >
                                                                 <Plus className="h-3.5 w-3.5" />
@@ -746,7 +746,7 @@ export function LeadsPipelineClient({
                                     <button
                                         type="button"
                                         onClick={() => setShowNewLeadForm(true)}
-                                        className="flex h-9 items-center justify-center gap-2 rounded-md border border-dashed border-[color:var(--orion-border-low)] text-[11px] font-semibold text-[color:var(--orion-text-disabled)] transition hover:border-[color:var(--orion-border-strong)] hover:bg-[color:var(--orion-hover)] hover:text-[color:var(--orion-text-secondary)]"
+                                        className="flex h-9 items-center justify-center gap-2 rounded-md border border-brand-gold/30 bg-brand-gold/10 text-[11px] font-semibold text-brand-gold transition hover:bg-brand-gold/20"
                                     >
                                         <Plus className="h-3.5 w-3.5" />
                                         Adicionar lead
