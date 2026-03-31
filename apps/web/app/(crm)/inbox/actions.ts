@@ -35,9 +35,9 @@ function buildConversationRedirect(conversationId: string, error?: string): stri
 export async function sendInboxMessageAction(formData: FormData) {
     const parsed = sendMessageSchema.safeParse({
         conversation_id: formData.get('conversation_id'),
-        text: formData.get('text'),
-        kind: formData.get('kind'),
-        quick_reply_id: formData.get('quick_reply_id'),
+        text: formData.get('text') ?? undefined,
+        kind: formData.get('kind') ?? undefined,
+        quick_reply_id: formData.get('quick_reply_id') ?? undefined,
     });
 
     if (!parsed.success) {

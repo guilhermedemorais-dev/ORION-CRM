@@ -94,7 +94,7 @@ function canSendMessageAsAttendant(
     currentUser: CurrentUser,
     conversation: Awaited<ReturnType<typeof getConversationById>>
 ): boolean {
-    if (currentUser.role === 'ADMIN') {
+    if (currentUser.role === 'ROOT' || currentUser.role === 'ADMIN') {
         return true;
     }
 
@@ -112,7 +112,7 @@ async function assignForReplyIfNeeded(
 ): Promise<void> {
     const currentUser = getCurrentUser(req);
 
-    if (currentUser.role === 'ADMIN') {
+    if (currentUser.role === 'ROOT' || currentUser.role === 'ADMIN') {
         return;
     }
 

@@ -85,7 +85,7 @@ export default async function InboxPage({
     const selectedConversationId = selectedThread?.conversation.id ?? conversationResponse.data[0]?.id ?? null;
 
     return (
-        <div className="min-h-[calc(100vh-7rem)]">
+        <div className="flex h-full flex-col">
             <InboxRealtimeBridge />
 
             {searchParams?.error ? (
@@ -94,7 +94,7 @@ export default async function InboxPage({
                 </div>
             ) : null}
 
-            <div className="grid min-h-[calc(100vh-10rem)] gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
+            <div className="grid flex-1 gap-5 overflow-hidden xl:grid-cols-[300px_minmax(0,1fr)]">
                 <ConversationList
                     conversations={conversationResponse.data}
                     channels={channelResponse.data}

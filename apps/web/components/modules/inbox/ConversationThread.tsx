@@ -219,9 +219,9 @@ export function ConversationThread({
 
     if (!hasMounted) {
         return (
-            <section className="min-h-[720px] rounded-[22px] border border-white/5 bg-[linear-gradient(180deg,#111114_0%,#0f0f12_100%)] shadow-card">
+            <section className="flex h-full flex-col rounded-[22px] border border-white/5 bg-[linear-gradient(180deg,#111114_0%,#0f0f12_100%)] shadow-card">
                 <div className="h-16 border-b border-white/5 bg-white/5" />
-                <div className="grid min-h-[654px] xl:grid-cols-[minmax(0,1fr)_248px]">
+                <div className="grid flex-1 xl:grid-cols-[minmax(0,1fr)_248px]">
                     <div className="p-4">
                         <div className="h-full rounded-2xl bg-white/5" />
                     </div>
@@ -238,9 +238,9 @@ export function ConversationThread({
     }
 
     return (
-        <section className="overflow-hidden rounded-[22px] border border-white/5 bg-[linear-gradient(180deg,#111114_0%,#0f0f12_100%)] shadow-card">
-            <div className="grid min-h-[720px] xl:grid-cols-[minmax(0,1fr)_248px]">
-                <div className="flex min-h-[720px] flex-col">
+        <section className="flex h-full flex-col overflow-hidden rounded-[22px] border border-white/5 bg-[linear-gradient(180deg,#111114_0%,#0f0f12_100%)] shadow-card">
+            <div className="grid flex-1 overflow-hidden xl:grid-cols-[minmax(0,1fr)_248px]">
+                <div className="flex h-full flex-col overflow-hidden">
                     <header className="flex h-[58px] items-center gap-3 border-b border-white/5 px-5">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#2a1f0e,#3d2e16)] text-[13px] font-bold text-brand-gold">
                             {getInitials(displayName)}
@@ -372,7 +372,7 @@ export function ConversationThread({
                     </div>
                 </div>
 
-                <aside className="border-t border-white/5 px-4 py-4 xl:border-l xl:border-t-0">
+                <aside className="overflow-y-auto border-t border-white/5 px-4 py-4 xl:border-l xl:border-t-0">
                     <div className="space-y-5">
                         <section>
                             <div className="mb-3 text-[9px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-text-muted)]">
