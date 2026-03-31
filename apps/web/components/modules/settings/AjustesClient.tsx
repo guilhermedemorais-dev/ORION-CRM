@@ -2391,7 +2391,7 @@ export function AjustesClient({
                                     </div>
                                     <div>
                                         <label className="mb-1.5 block text-[11px] font-medium text-[color:var(--orion-text-secondary)]">E-mail</label>
-                                        <input className={fieldClassName} placeholder="email@empresa.com" type="text" inputMode="email" {...inviteForm.register('email')} />
+                                        <input className={fieldClassName} placeholder="email@empresa.com" type="text" inputMode="email" autoComplete="off" {...inviteForm.register('email')} />
                                     </div>
                                 </div>
                             </div>
@@ -2520,7 +2520,7 @@ export function AjustesClient({
                                     </div>
                                     <div>
                                         <label className="mb-1.5 block text-[11px] font-medium text-[color:var(--orion-text-secondary)]">E-mail</label>
-                                        <input className={fieldClassName} placeholder="E-mail" type="text" inputMode="email" {...editForm.register('email')} />
+                                        <input className={fieldClassName} placeholder="E-mail" type="text" inputMode="email" autoComplete="off" {...editForm.register('email')} />
                                     </div>
                                 </div>
                             </div>

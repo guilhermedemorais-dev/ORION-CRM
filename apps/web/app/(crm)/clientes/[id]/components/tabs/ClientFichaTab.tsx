@@ -234,7 +234,7 @@ export default function ClientFichaTab({ customer, customerId, onUpdate }: Props
             <input style={inputStyle} value={form.whatsapp_number} onChange={handleChange('whatsapp_number')} placeholder="+55 11 99999-9999" />
           </FieldGroup>
           <FieldGroup label="E-mail">
-            <input style={inputStyle} type="text" inputMode="email" value={form.email} onChange={handleChange('email')} placeholder="email@exemplo.com" />
+            <input style={inputStyle} type="text" inputMode="email" autoComplete="off" value={form.email} onChange={handleChange('email')} placeholder="email@exemplo.com" />
           </FieldGroup>
           <FieldGroup label="Instagram">
             <input style={inputStyle} value={form.instagram} onChange={handleChange('instagram')} placeholder="@usuario" />
