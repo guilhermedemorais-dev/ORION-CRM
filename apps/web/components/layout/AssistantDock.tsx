@@ -279,10 +279,10 @@ export function AssistantDock({ userName, userRole }: AssistantDockProps) {
 
             {/* Floating Input Area */}
             {activeTab === 'chat' && (
-                <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[color:var(--orion-surface)] to-[color:var(--orion-surface)/0]">
+                <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[color:var(--orion-surface)] via-[color:var(--orion-surface)] to-[color:var(--orion-surface)/0] pt-12">
                     <form
                         onSubmit={handleSubmit}
-                        className="relative flex items-center overflow-hidden rounded-[20px] border border-[color:var(--orion-gold-border)] bg-[color:var(--orion-base)] shadow-[0_0_20px_rgba(212,175,55,0.05)] transition-all focus-within:border-brand-gold focus-within:shadow-[0_0_30px_rgba(212,175,55,0.1)]"
+                        className="relative flex flex-col overflow-hidden rounded-[24px] border border-[color:var(--orion-gold-border)] bg-[color:var(--orion-base)] shadow-[0_0_20px_rgba(212,175,55,0.05)] transition-all focus-within:border-brand-gold focus-within:shadow-[0_0_30px_rgba(212,175,55,0.1)]"
                     >
                         <textarea
                             ref={textareaRef}
@@ -294,20 +294,19 @@ export function AssistantDock({ userName, userRole }: AssistantDockProps) {
                                     handleSubmit(e as any);
                                 }
                             }}
-                            rows={1}
                             placeholder="Pergunte qualquer coisa..."
-                            className="flex-1 resize-none bg-transparent py-4 pl-5 pr-14 text-sm text-[color:var(--orion-text)] outline-none placeholder:text-gray-500"
-                            style={{ minHeight: '52px', maxHeight: '120px' }}
+                            className="w-full resize-none bg-transparent pt-5 pb-12 pl-6 pr-6 text-sm text-[color:var(--orion-text)] outline-none placeholder:text-gray-500"
+                            style={{ minHeight: '120px', maxHeight: '200px' }}
                         />
                         <button
                             type="button"
-                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-gray-400 hover:bg-white/10 hover:text-brand-gold transition"
+                            className="absolute right-3 bottom-3 rounded-full border border-white/10 p-2 text-gray-400 transition hover:bg-white/5 hover:border-brand-gold/50 hover:text-brand-gold"
                             title="Em breve: comando de voz"
                         >
-                            <Mic className="h-4 w-4" />
+                            <Mic className="h-[18px] w-[18px]" />
                         </button>
                     </form>
-                    <p className="mt-2 text-center text-[11px] text-gray-500">
+                    <p className="mt-3 text-center text-[11px] text-gray-500">
                         O ORION Assistant pode cometer erros. Confirme informações importantes.
                     </p>
                 </div>
