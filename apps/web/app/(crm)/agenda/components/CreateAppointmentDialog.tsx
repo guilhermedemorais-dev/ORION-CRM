@@ -7,22 +7,35 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { createAppointmentAction, notifyAppointmentAction } from "../actions";
-import { useTransition, useEffect, useState } from "react";
+import { useTransition, useEffect, useState, useMemo } from "react";
 
-const appointmentSchema = z.object({
+// Base schema fields shared by both modes
+const baseFields = {
     type: z.string().min(1, "Tipo é obrigatório"),
     pipeline_id: z.string().min(1, "Pipeline é obrigatório"),
     assigned_to_id: z.string().optional(),
-    contact_name: z.string().optional(),
-    contact_phone: z.string().optional(),
     lead_id: z.string().optional(),
     customer_id: z.string().optional(),
     date: z.string().min(1, "Data é obrigatória"),
     time: z.string().min(1, "Horário é obrigatório"),
     notes: z.string().optional(),
+};
+
+// Schema when contact fields are visible (no pre-filled entity) — ALL required
+const newContactSchema = z.object({
+    ...baseFields,
+    contact_name: z.string().min(2, "Nome do contato é obrigatório (mín. 2 caracteres)"),
+    contact_phone: z.string().min(10, "Número de WhatsApp é obrigatório (mín. 10 dígitos)"),
 });
 
-type AppointmentFormValues = z.infer<typeof appointmentSchema>;
+// Schema when entity is pre-filled (contact fields hidden)
+const prefilledSchema = z.object({
+    ...baseFields,
+    contact_name: z.string().optional(),
+    contact_phone: z.string().optional(),
+});
+
+type AppointmentFormValues = z.infer<typeof newContactSchema>;
 
 interface Pipeline {
     id: string;
@@ -70,6 +83,12 @@ export function CreateAppointmentDialog({
     // Whether we have a pre-filled entity (from client profile page)
     const hasPrefilledEntity = Boolean(prefilledLeadId || prefilledCustomerId);
 
+    // Pick the right schema: require contact fields when no entity is pre-filled
+    const activeSchema = useMemo(
+        () => hasPrefilledEntity ? prefilledSchema : newContactSchema,
+        [hasPrefilledEntity]
+    );
+
     // Fetch pipelines
     useEffect(() => {
         if (!isVisible) return;
@@ -104,8 +123,8 @@ export function CreateAppointmentDialog({
         }
     };
 
-    const { register, handleSubmit, formState: { errors }, watch } = useForm<AppointmentFormValues>({
-        resolver: zodResolver(appointmentSchema),
+    const { register, handleSubmit, formState: { errors } } = useForm<AppointmentFormValues>({
+        resolver: zodResolver(activeSchema),
         defaultValues: {
             type: "Visita Showroom",
             pipeline_id: "",

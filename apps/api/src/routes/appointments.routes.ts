@@ -34,7 +34,13 @@ const createAppointmentSchema = z.object({
     contact_name: z.string().max(255).optional().nullable(),
     contact_phone: z.string().max(80).optional().nullable(),
     source: z.string().max(50).default('CRM'),
-});
+}).refine(
+    (data) => !!data.lead_id || !!data.customer_id || (!!data.contact_name && !!data.contact_phone),
+    {
+        message: 'Nome e telefone do contato são obrigatórios quando não há lead/cliente vinculado.',
+        path: ['contact_phone'],
+    }
+);
 
 const updateStatusSchema = z.object({
     status: appointmentStatusSchema,
@@ -229,15 +235,13 @@ router.post('/', authenticate, async (req: Request, res: Response, next: NextFun
                 } else if (pipelineId) {
                     // Create a new lead in the specified pipeline
                     // Find default stage for the pipeline
-                    const stageResult = await client.query<{ id: string }>(
-                        `SELECT id FROM pipeline_stages WHERE pipeline_id = $1 ORDER BY position ASC LIMIT 1`,
+                    const stageResult = await client.query<{ id: string }>(                        `SELECT id FROM pipeline_stages WHERE pipeline_id = $1 ORDER BY position ASC LIMIT 1`,
                         [pipelineId]
                     );
                     const stageId = stageResult.rows[0]?.id || null;
 
-                    const newLead = await client.query<{ id: string }>(
-                        `INSERT INTO leads (whatsapp_number, name, source, pipeline_id, stage_id, assigned_to)
-                         VALUES ($1, $2, 'BALCAO', $3, $4, $5)
+                    const newLead = await client.query<{ id: string }>(                        `INSERT INTO leads (whatsapp_number, name, source, stage, pipeline_id, stage_id, assigned_to, last_interaction_at)
+                         VALUES ($1, $2, 'BALCAO', 'NOVO', $3, $4, $5, NOW())
                          RETURNING id`,
                         [phone, data.contact_name || null, pipelineId, stageId, req.user!.id]
                     );
@@ -245,10 +249,10 @@ router.post('/', authenticate, async (req: Request, res: Response, next: NextFun
 
                     // Create timeline event for lead creation
                     await client.query(
-                        `INSERT INTO lead_timeline (lead_id, event_type, description, created_by)
-                         VALUES ($1, 'LEAD_CREATED', 'Lead criado automaticamente pelo agendamento.', $2)`,
+                        `INSERT INTO lead_timeline (lead_id, type, title, body, created_by)
+                         VALUES ($1, 'LEAD_CREATED', 'Lead criado', 'Lead criado automaticamente pelo agendamento.', $2)`,
                         [resolvedLeadId, req.user!.id]
-                    ).catch(() => { /* timeline table may not exist yet, silently fail */ });
+                    ).catch(() => { /* timeline insert may fail on constraint, silently fail */ });
                 }
             }
 
@@ -288,10 +292,10 @@ router.post('/', authenticate, async (req: Request, res: Response, next: NextFun
             // Create timeline event on lead
             if (resolvedLeadId) {
                 await client.query(
-                    `INSERT INTO lead_timeline (lead_id, event_type, description, created_by)
-                     VALUES ($1, 'APPOINTMENT_CREATED', $2, $3)`,
+                    `INSERT INTO lead_timeline (lead_id, type, title, body, created_by)
+                     VALUES ($1, 'LEAD_CREATED', 'Agendamento criado', $2, $3)`,
                     [resolvedLeadId, `Agendamento "${data.type}" criado para ${new Date(data.starts_at).toLocaleDateString('pt-BR')}.`, req.user!.id]
-                ).catch(() => { /* silently fail if timeline table doesn't exist */ });
+                ).catch(() => { /* silently fail if constraint issue */ });
             }
 
             return { id: appointmentId, starts_at: startsAt };
