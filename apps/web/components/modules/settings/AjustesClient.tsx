@@ -1,4 +1,5 @@
 'use client';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 import { useEffect, useMemo, useState, useRef, type DragEvent } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -2326,15 +2327,7 @@ export function AjustesClient({
 
     return (
         <div className="orion-page">
-            <div className="flex items-center justify-between gap-4">
-                <h1
-                    className="text-[34px] font-semibold tracking-tight text-[color:var(--orion-text)]"
-                    style={{ fontFamily: 'var(--font-orion-serif)' }}
-                >
-                    Ajustes
-                </h1>
-                {headerAction}
-            </div>
+            <PageHeader title="Ajustes" actions={headerAction} />
 
             <div className="flex gap-1 overflow-x-auto border-b border-white/5">
                 {tabItems.map((tab) => {
