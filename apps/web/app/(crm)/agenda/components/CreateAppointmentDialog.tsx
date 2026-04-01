@@ -124,7 +124,8 @@ export function CreateAppointmentDialog({
     };
 
     const { register, handleSubmit, formState: { errors } } = useForm<AppointmentFormValues>({
-        resolver: zodResolver(activeSchema),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        resolver: zodResolver(activeSchema) as any,
         defaultValues: {
             type: "Visita Showroom",
             pipeline_id: "",
