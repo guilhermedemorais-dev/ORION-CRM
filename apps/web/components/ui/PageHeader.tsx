@@ -10,12 +10,8 @@ export function PageHeader({
     actions?: ReactNode;
 }) {
     return (
-        <div className="flex flex-col gap-4 border-b border-white/5 pb-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-                <p className="orion-section-label">ORIN CRM</p>
-                <h1 className="mt-2 font-serif text-3xl font-semibold text-[color:var(--orion-text)]">{title}</h1>
-                {description ? <p className="mt-2 max-w-3xl text-sm leading-7 text-[color:var(--orion-text-secondary)]">{description}</p> : null}
-            </div>
+        <div className="flex items-center justify-between px-6 py-3 -mx-6 -mt-4 mb-4 bg-gradient-to-r from-brand-gold/20 via-brand-gold/10 to-transparent border-b border-brand-gold/20">
+            <h1 className="text-lg font-semibold text-brand-gold tracking-wide">{title}</h1>
             {actions ? <div className="flex flex-wrap items-center gap-3">{actions}</div> : null}
         </div>
     );
