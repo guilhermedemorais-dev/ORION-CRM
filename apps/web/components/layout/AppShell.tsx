@@ -34,7 +34,7 @@ export function AppShell({
                 <Topbar userName={user.name} />
                 <MainWrapper>{children}</MainWrapper>
             </div>
-            <AssistantDock userRole={user.role} />
+            <AssistantDock userName={user.name} userRole={user.role} />
         </div>
     );
 }

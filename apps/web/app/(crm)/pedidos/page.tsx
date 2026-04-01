@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/Input';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { UnderConstruction } from '@/components/ui/UnderConstruction';
 import type {
     ApiListResponse,
     CustomerRecord,
@@ -312,6 +313,7 @@ export default async function OrdersPage({
                     )}
                 </div>
             </div>
+            <UnderConstruction />
         </div>
     );
 }

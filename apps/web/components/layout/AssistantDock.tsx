@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, Sparkles, X } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Loader2, Mic, Sparkles, X, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/Button';
 
 interface AssistantDockProps {
+    userName: string;
     userRole: string;
 }
 
@@ -43,27 +44,32 @@ function roleSummary(role: string): string {
     return 'escopo financeiro e cobranças';
 }
 
-export function AssistantDock({ userRole }: AssistantDockProps) {
+const QUICK_PROMPTS = [
+    'Resuma os pedidos atrasados',
+    'Mostre meu pipeline',
+    'Extraia relatórios do dia',
+    'Crie um rascunho de e-mail',
+];
+
+export function AssistantDock({ userName, userRole }: AssistantDockProps) {
     const [open, setOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'chat' | 'history'>('chat');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [input, setInput] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-    const [messages, setMessages] = useState<ChatMessage[]>([
-        createMessage(
-            'assistant',
-            `Assistente ativo no ${roleSummary(userRole)}. Pergunte sobre leads, pedidos, produção ou financeiro conforme sua permissão.`
-        ),
-    ]);
+    const bottomRef = useRef<HTMLDivElement | null>(null);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
 
     const canSend = input.trim().length > 0 && !isSubmitting;
-    const helperText = useMemo(
-        () => `Escopo atual: ${roleSummary(userRole)}.`,
-        [userRole]
-    );
 
+    // Listeners para abrir a sidebar (via botão na Topbar ou Cmd+K)
     useEffect(() => {
+        function handleToggle() {
+            setOpen((current) => !current);
+        }
+
         function handleKeydown(event: KeyboardEvent) {
-            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'j') {
                 event.preventDefault();
                 setOpen((current) => !current);
                 return;
@@ -74,27 +80,34 @@ export function AssistantDock({ userRole }: AssistantDockProps) {
             }
         }
 
+        window.addEventListener('toggle-ai-assistant', handleToggle);
         window.addEventListener('keydown', handleKeydown);
-        return () => window.removeEventListener('keydown', handleKeydown);
+        return () => {
+            window.removeEventListener('toggle-ai-assistant', handleToggle);
+            window.removeEventListener('keydown', handleKeydown);
+        };
     }, []);
 
+    // Focar no input quando abrir
     useEffect(() => {
-        if (open) {
+        if (open && activeTab === 'chat') {
             textareaRef.current?.focus();
         }
-    }, [open]);
+    }, [open, activeTab]);
 
-    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-
-        const message = input.trim();
-        if (!message || isSubmitting) {
-            return;
+    // Scroll para o fim da lista ao receber nova mensagem
+    useEffect(() => {
+        if (messages.length > 0) {
+            bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
+    }, [messages]);
+
+    async function sendQuery(query: string) {
+        if (!query || isSubmitting) return;
 
         setInput('');
         setIsSubmitting(true);
-        const nextHistory = [...messages, createMessage('user', message)];
+        const nextHistory = [...messages, createMessage('user', query)];
         setMessages(nextHistory);
 
         const payloadMessages = nextHistory
@@ -104,13 +117,8 @@ export function AssistantDock({ userRole }: AssistantDockProps) {
         try {
             const response = await fetch('/internal/assistant', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    message,
-                    messages: payloadMessages,
-                }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: query, messages: payloadMessages }),
             });
 
             if (response.status === 401) {
@@ -127,15 +135,8 @@ export function AssistantDock({ userRole }: AssistantDockProps) {
             const toolsUsed = Array.isArray(payload?.tools_used)
                 ? payload.tools_used.filter((item: unknown): item is string => typeof item === 'string')
                 : undefined;
-            const usage = payload?.usage && typeof payload.usage === 'object'
-                ? {
-                    inputTokens: typeof payload.usage.inputTokens === 'number' ? payload.usage.inputTokens : 0,
-                    outputTokens: typeof payload.usage.outputTokens === 'number' ? payload.usage.outputTokens : 0,
-                    latencyMs: typeof payload.usage.latencyMs === 'number' ? payload.usage.latencyMs : 0,
-                }
-                : undefined;
 
-            setMessages((current) => [...current, createMessage('assistant', content, toolsUsed, usage)].slice(-20));
+            setMessages((current) => [...current, createMessage('assistant', content, toolsUsed)].slice(-20));
         } catch {
             setMessages((current) => [
                 ...current,
@@ -146,84 +147,171 @@ export function AssistantDock({ userRole }: AssistantDockProps) {
         }
     }
 
+    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        sendQuery(input.trim());
+    }
+
     return (
-        <>
-            <button
-                type="button"
-                onClick={() => setOpen((current) => !current)}
-                className="fixed bottom-6 right-6 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full border border-brand-gold/30 bg-brand-gold text-[#0A0A0C] shadow-card transition hover:bg-brand-gold-light"
-                aria-label={open ? 'Fechar assistente' : 'Abrir assistente'}
-            >
-                {open ? <X className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
-            </button>
-
-            <aside
-                className={cn(
-                    'fixed bottom-24 right-6 z-40 flex w-[min(420px,calc(100vw-3rem))] flex-col rounded-2xl border border-white/10 bg-[color:var(--orion-surface)] shadow-2xl transition-all',
-                    open ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-4 opacity-0'
-                )}
-            >
-                <header className="border-b border-white/5 px-5 py-4">
-                    <div className="flex items-center justify-between gap-3">
-                        <div>
-                            <p className="text-sm font-semibold text-[color:var(--orion-text)]">Assistente ORION</p>
-                            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[color:var(--orion-text-secondary)]">{helperText}</p>
-                        </div>
-                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin text-[color:var(--orion-text-secondary)]" /> : null}
-                    </div>
-                </header>
-
-                <div className="max-h-[420px] min-h-[320px] space-y-3 overflow-y-auto px-5 py-4">
-                    {messages.map((message) => (
-                        <article
-                            key={message.id}
-                            className={cn(
-                                'rounded-2xl px-4 py-3 text-sm',
-                                message.role === 'assistant'
-                                    ? 'mr-8 border border-white/5 bg-[color:var(--orion-base)] text-[color:var(--orion-text)]'
-                                    : 'ml-8 bg-brand-gold text-[#0A0A0C]'
-                            )}
-                        >
-                            <p>{message.content}</p>
-                            {message.toolsUsed && message.toolsUsed.length > 0 ? (
-                                <p className="mt-2 text-[11px] uppercase tracking-[0.16em] opacity-70">
-                                    Tools: {message.toolsUsed.join(', ')}
-                                </p>
-                            ) : null}
-                            {message.usage ? (
-                                <p className="mt-1 text-[11px] uppercase tracking-[0.16em] opacity-60">
-                                    {message.usage.inputTokens} in · {message.usage.outputTokens} out · {message.usage.latencyMs}ms
-                                </p>
-                            ) : null}
-                        </article>
-                    ))}
-                    {isSubmitting ? (
-                        <article className="mr-8 rounded-2xl border border-white/5 bg-[color:var(--orion-base)] px-4 py-3 text-sm text-[color:var(--orion-text)]">
-                            <div className="space-y-2">
-                                <div className="h-3 w-32 animate-pulse rounded-full bg-white/10" />
-                                <div className="h-3 w-48 animate-pulse rounded-full bg-white/10" />
-                            </div>
-                        </article>
-                    ) : null}
+        <aside
+            className={cn(
+                'fixed bottom-0 right-0 top-0 z-50 flex w-full max-w-[420px] flex-col border-l border-white/5 bg-[color:var(--orion-surface)] shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)]',
+                open ? 'translate-x-0' : 'translate-x-full'
+            )}
+        >
+            {/* Header / Tabs */}
+            <header className="flex items-center justify-between border-b border-white/5 px-6 py-4">
+                <div className="flex items-center gap-1 rounded-full bg-white/5 p-1">
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('chat')}
+                        className={cn(
+                            'rounded-full px-4 py-1.5 text-sm font-medium transition',
+                            activeTab === 'chat'
+                                ? 'bg-white text-black'
+                                : 'text-[color:var(--orion-text-secondary)] hover:text-white'
+                        )}
+                    >
+                        Chat
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('history')}
+                        className={cn(
+                            'rounded-full px-4 py-1.5 text-sm font-medium transition',
+                            activeTab === 'history'
+                                ? 'bg-white text-black'
+                                : 'text-[color:var(--orion-text-secondary)] hover:text-white'
+                        )}
+                    >
+                        Histórico
+                    </button>
                 </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setOpen(false)}
+                        className="rounded-full p-2 text-gray-400 hover:bg-white/10 hover:text-white transition"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+            </header>
 
-                <form onSubmit={handleSubmit} className="border-t border-white/5 px-5 py-4">
-                    <textarea
-                        ref={textareaRef}
-                        value={input}
-                        onChange={(event) => setInput(event.target.value)}
-                        rows={3}
-                        placeholder="Pergunte algo dentro do seu escopo operacional."
-                        className="w-full rounded-xl border border-white/10 bg-[color:var(--orion-base)] px-3 py-3 text-sm text-[color:var(--orion-text)] outline-none transition placeholder:text-[color:var(--orion-text-muted)] focus:border-brand-gold/40 focus:ring-2 focus:ring-brand-gold/10"
-                    />
-                    <div className="mt-3 flex items-center justify-between gap-3">
-                        <p className="text-xs text-[color:var(--orion-text-secondary)]">Sem acesso fora das permissões do seu perfil.</p>
-                        <Button type="submit" disabled={!canSend}>
-                            {isSubmitting ? 'Consultando...' : 'Enviar'}
-                        </Button>
+            {/* Content Area */}
+            <div className="relative flex flex-1 flex-col overflow-y-auto px-6 pb-32 pt-6">
+                {activeTab === 'history' ? (
+                    <div className="flex flex-1 items-center justify-center text-center">
+                        <div>
+                            <p className="font-medium text-[color:var(--orion-text)]">Histórico indísponível</p>
+                            <p className="mt-1 text-sm text-[color:var(--orion-text-secondary)]">O histórico de conversas será habilitado na próxima atualização.</p>
+                        </div>
                     </div>
-                </form>
-            </aside>
-        </>
+                ) : messages.length === 0 ? (
+                    <div className="flex flex-col h-full mt-10">
+                        {/* Welcome State */}
+                        <div className="text-center mb-10">
+                            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center text-brand-gold">
+                                <Sparkles className="h-12 w-12" />
+                            </div>
+                            <h2 className="text-xl font-bold tracking-wide text-brand-gold">
+                                Olá {userName} 👋
+                            </h2>
+                            <p className="mt-2 text-[color:var(--orion-text-secondary)]">Como posso te ajudar hoje?</p>
+                        </div>
+
+                        {/* Quick Prompts */}
+                        <div className="mt-auto mb-4 space-y-2">
+                            {QUICK_PROMPTS.map((prompt) => (
+                                <button
+                                    key={prompt}
+                                    type="button"
+                                    onClick={() => sendQuery(prompt)}
+                                    className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 text-left text-sm text-[color:var(--orion-text-secondary)] transition hover:border-brand-gold/30 hover:bg-white/10 hover:text-[color:var(--orion-text)]"
+                                >
+                                    <span>{prompt}</span>
+                                    <ArrowUpRight className="h-4 w-4 opacity-50" />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-6">
+                        {messages.map((message) => (
+                            <div
+                                key={message.id}
+                                className={cn(
+                                    'flex w-full flex-col',
+                                    message.role === 'user' ? 'items-end' : 'items-start'
+                                )}
+                            >
+                                <div
+                                    className={cn(
+                                        'rounded-2xl px-5 py-3 text-[15px] leading-relaxed max-w-[85%]',
+                                        message.role === 'user'
+                                            ? 'bg-brand-gold text-black rounded-tr-sm'
+                                            : 'bg-white/5 border border-white/10 text-[color:var(--orion-text)] rounded-tl-sm'
+                                    )}
+                                >
+                                    {message.content}
+                                </div>
+                                {message.toolsUsed && message.toolsUsed.length > 0 && (
+                                    <p className="mt-2 text-[11px] uppercase tracking-[0.16em] text-brand-gold/60">
+                                        Tools: {message.toolsUsed.join(', ')}
+                                    </p>
+                                )}
+                            </div>
+                        ))}
+                        {isSubmitting && (
+                            <div className="flex items-start">
+                                <div className="rounded-2xl bg-white/5 border border-white/10 px-5 py-4 rounded-tl-sm w-[85%]">
+                                    <div className="space-y-2">
+                                        <div className="h-3 w-3/4 animate-pulse rounded-full bg-white/10" />
+                                        <div className="h-3 w-1/2 animate-pulse rounded-full bg-white/10" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        <div ref={bottomRef} />
+                    </div>
+                )}
+            </div>
+
+            {/* Floating Input Area */}
+            {activeTab === 'chat' && (
+                <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[color:var(--orion-surface)] to-[color:var(--orion-surface)/0]">
+                    <form
+                        onSubmit={handleSubmit}
+                        className="relative flex items-center overflow-hidden rounded-[20px] border border-[color:var(--orion-gold-border)] bg-[color:var(--orion-base)] shadow-[0_0_20px_rgba(212,175,55,0.05)] transition-all focus-within:border-brand-gold focus-within:shadow-[0_0_30px_rgba(212,175,55,0.1)]"
+                    >
+                        <textarea
+                            ref={textareaRef}
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSubmit(e as any);
+                                }
+                            }}
+                            rows={1}
+                            placeholder="Pergunte qualquer coisa..."
+                            className="flex-1 resize-none bg-transparent py-4 pl-5 pr-14 text-sm text-[color:var(--orion-text)] outline-none placeholder:text-gray-500"
+                            style={{ minHeight: '52px', maxHeight: '120px' }}
+                        />
+                        <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-gray-400 hover:bg-white/10 hover:text-brand-gold transition"
+                            title="Em breve: comando de voz"
+                        >
+                            <Mic className="h-4 w-4" />
+                        </button>
+                    </form>
+                    <p className="mt-2 text-center text-[11px] text-gray-500">
+                        O ORION Assistant pode cometer erros. Confirme informações importantes.
+                    </p>
+                </div>
+            )}
+        </aside>
     );
 }

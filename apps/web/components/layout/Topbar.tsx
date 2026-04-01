@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell, Command, Search, HelpCircle, LayoutGrid, Mic, Camera } from 'lucide-react';
+import { Bell, Search, HelpCircle, LayoutGrid, Sparkles } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { HelpPanel } from '@/components/help/HelpPanel';
 import { GlobalSearch } from '@/components/ui/GlobalSearch';
@@ -95,9 +95,17 @@ export function Topbar({ userName }: { userName: string }) {
                 >
                     <Bell className="h-4 w-4" />
                 </button>
-                <div className="rounded-full border border-[color:var(--orion-gold-border)] bg-[color:var(--orion-gold-bg)] px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-brand-gold hidden sm:block">
-                    {userName}
-                </div>
+                <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent('toggle-ai-assistant'))}
+                    className="hidden sm:flex items-center gap-2 rounded-full border-2 border-transparent bg-clip-padding px-5 py-2 text-sm font-semibold tracking-wide text-brand-gold transition hover:scale-105 active:scale-95"
+                    style={{
+                        background: 'linear-gradient(#111111, #111111) padding-box, linear-gradient(to right, #D4AF37, #F5D061, #C5A028) border-box',
+                    }}
+                >
+                    <Sparkles className="h-4 w-4" />
+                    Pergunte
+                </button>
             </div>
         </header>
         {helpOpen && <HelpPanel context={helpContext} onClose={() => setHelpOpen(false)} />}

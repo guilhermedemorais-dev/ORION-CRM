@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { UnderConstruction } from '@/components/ui/UnderConstruction';
 import type { ApiListResponse, ProductionOrderRecord } from '@/lib/api';
 import { apiRequest } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -206,6 +207,7 @@ export default async function ProductionPage({
                     )}
                 </div>
             </div>
+            <UnderConstruction />
         </div>
     );
 }
