@@ -4,8 +4,9 @@ import { AiContextCard } from "./AiContextCard";
 import { AppointmentPill } from "./AppointmentPill";
 import { AppointmentRecord } from "../types";
 import { Button } from "@/components/ui/Button";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getAppointmentsForEntityAction } from "../actions";
+import { CreateAppointmentDialog } from "./CreateAppointmentDialog";
 
 export function LeadAppointmentsTab({ 
     leadId,
@@ -16,18 +17,30 @@ export function LeadAppointmentsTab({
 }) {
     const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showDialog, setShowDialog] = useState(false);
 
-    useEffect(() => {
+    const loadAppointments = useCallback(() => {
         if (!leadId && !customerId) {
             setLoading(false);
             return;
         }
         
+        setLoading(true);
         getAppointmentsForEntityAction(leadId, customerId).then(data => {
             setAppointments(data);
             setLoading(false);
         }).catch(() => setLoading(false));
     }, [leadId, customerId]);
+
+    useEffect(() => {
+        loadAppointments();
+    }, [loadAppointments]);
+
+    const handleDialogClose = () => {
+        setShowDialog(false);
+        // Reload appointments after creating a new one
+        loadAppointments();
+    };
 
     if (loading) {
         return <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-brand-gold" /></div>;
@@ -50,7 +63,11 @@ export function LeadAppointmentsTab({
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-white">Próximo Agendamento</h3>
-                <Button variant="secondary" icon={<Plus className="w-3.5 h-3.5" />}>
+                <Button 
+                    variant="secondary" 
+                    icon={<Plus className="w-3.5 h-3.5" />}
+                    onClick={() => setShowDialog(true)}
+                >
                     Novo Agendamento
                 </Button>
             </div>
@@ -106,6 +123,14 @@ export function LeadAppointmentsTab({
                     )}
                 </div>
             </div>
+
+            {/* Create Appointment Dialog — controlled mode */}
+            <CreateAppointmentDialog 
+                open={showDialog}
+                onClose={handleDialogClose}
+                prefilledLeadId={leadId}
+                prefilledCustomerId={customerId}
+            />
         </div>
     );
 }

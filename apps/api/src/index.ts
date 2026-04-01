@@ -49,7 +49,9 @@ import carriersRoutes from './routes/carriers.routes.js';
 import whatsappProvidersRoutes from './routes/whatsapp-providers.routes.js';
 import searchRoutes from './routes/search.routes.js';
 import integrationProvidersRoutes from './routes/integration-providers.routes.js';
+import appointmentsRoutes from './routes/appointments.routes.js';
 import { initializeWhatsAppWebhookWorker, shutdownWhatsAppWebhookWorker } from './workers/whatsappWebhook.worker.js';
+import { initializeAppointmentReminderWorker, shutdownAppointmentReminderWorker } from './workers/appointmentReminder.worker.js';
 import { seedN8nSystemWorkflows } from './startup/seed-n8n-workflows.js';
 
 // ---- Bootstrap ----
@@ -135,6 +137,7 @@ app.use('/api/v1/settings/store', storeSettingsRoutes);
 app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/org', settingsRoutes);
 app.use('/api/v1/users', usersRoutes);
+app.use('/api/v1/appointments', appointmentsRoutes);
 app.use('/api/v1/webhooks/whatsapp', whatsappRoutes);
 app.use('/api/v1/whatsapp', whatsappAdminRoutes);
 
@@ -168,6 +171,7 @@ async function startServer(): Promise<void> {
     try {
         // await ensureSettingsSingleton(); // Temporarily disabled to prevent crash loops on fresh db
         initializeWhatsAppWebhookWorker();
+        initializeAppointmentReminderWorker();
         // await seedN8nSystemWorkflows(); // n8n runs in a separate isolated container
 
         server = app.listen(config.PORT, () => {
@@ -191,6 +195,7 @@ const shutdown = async (signal: string) => {
     if (server) {
         server.close(async () => {
             await shutdownWhatsAppWebhookWorker();
+            await shutdownAppointmentReminderWorker();
             await closePool();
             await closeRedis();
             logger.info('All connections closed.');
@@ -198,6 +203,7 @@ const shutdown = async (signal: string) => {
         });
     } else {
         await shutdownWhatsAppWebhookWorker();
+        await shutdownAppointmentReminderWorker();
         await closePool();
         await closeRedis();
         logger.info('All connections closed.');

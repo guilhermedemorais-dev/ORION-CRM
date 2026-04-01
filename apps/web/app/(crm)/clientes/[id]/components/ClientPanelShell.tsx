@@ -176,7 +176,7 @@ export default function ClientPanelShell({ customerId, initialCustomer }: Props)
             )}
             {activeTab === 'agenda' && (
               <div className="max-w-4xl mx-auto py-2">
-                <LeadAppointmentsTab leadId={lead?.id ?? null} />
+                <LeadAppointmentsTab leadId={lead?.id ?? null} customerId={customerId} />
               </div>
             )}
             {activeTab === 'atendimento' && (

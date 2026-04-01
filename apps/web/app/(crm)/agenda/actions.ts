@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 
 export async function createAppointmentAction(formData: FormData) {
-    const body = {
+    const body: Record<string, unknown> = {
         type:        formData.get('type') as string,
         starts_at:   formData.get('starts_at') as string,
         ends_at:     formData.get('ends_at') as string,
@@ -16,12 +16,23 @@ export async function createAppointmentAction(formData: FormData) {
         source:      'CRM',
     };
 
-    await apiRequest('/appointments', {
+    // Pipeline & contact fields
+    const pipelineId = formData.get('pipeline_id') as string | null;
+    const contactName = formData.get('contact_name') as string | null;
+    const contactPhone = formData.get('contact_phone') as string | null;
+
+    if (pipelineId) body.pipeline_id = pipelineId;
+    if (contactName) body.contact_name = contactName;
+    if (contactPhone) body.contact_phone = contactPhone;
+
+    const result = await apiRequest<{ id: string }>('/appointments', {
         method: 'POST',
         body: JSON.stringify(body),
     });
 
     revalidatePath('/agenda');
+
+    return result;
 }
 
 export async function updateAppointmentStatusAction(formData: FormData) {
@@ -43,7 +54,14 @@ export async function getAppointmentsForEntityAction(leadId?: string | null, cus
     if (leadId) params.append('lead_id', leadId);
     if (customerId) params.append('customer_id', customerId);
     
-    // we fetch them to list in the tab
     const res = await apiRequest<{ data: any[] }>(`/appointments?${params.toString()}`);
     return res.data || [];
+}
+
+export async function notifyAppointmentAction(id: string) {
+    const result = await apiRequest<{ sent: boolean; whatsapp_number?: string }>(`/appointments/${id}/notify`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+    });
+    return result;
 }
