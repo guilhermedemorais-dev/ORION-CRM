@@ -6,6 +6,7 @@ import { query } from '../db/pool.js';
 import { logger } from '../lib/logger.js';
 import { AppError } from '../lib/errors.js';
 import { appendInboundMessage, upsertConversationFromInbound } from '../services/inbox.service.js';
+import { enqueueAppointmentReminderJob } from '../workers/appointmentReminder.worker.js';
 
 const router = Router();
 
@@ -453,6 +454,307 @@ router.post(
             res.status(202).json({
                 accepted: true,
                 conversation_id: convResult.rows[0]?.id ?? null,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+// ── Ação 1: GET /webhook/lead-context ────────────────────────────────────────
+// Retorna lead + últimas 20 mensagens + próximo agendamento para eliminar
+// dependência do staticData do n8n como fonte de histórico.
+
+router.get(
+    '/webhook/lead-context',
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            await assertN8nAuthorized(req);
+
+            const rawNumber = String(req.query['whatsapp_number'] ?? '').trim();
+            if (!rawNumber) {
+                next(AppError.badRequest('whatsapp_number é obrigatório.'));
+                return;
+            }
+            const number = normalizeWhatsapp(rawNumber);
+
+            // Lead
+            const leadResult = await query<{
+                id: string;
+                stage: string;
+                notes: string | null;
+                name: string | null;
+                pipeline_id: string | null;
+                stage_id: string | null;
+                last_interaction_at: string | null;
+            }>(
+                `SELECT id, stage, notes, name, pipeline_id, stage_id, last_interaction_at
+                 FROM leads
+                 WHERE whatsapp_number = $1
+                 LIMIT 1`,
+                [number]
+            );
+            const lead = leadResult.rows[0] ?? null;
+
+            // Extrair dados_coletados do campo notes (armazenado como "[bot] {...}")
+            let dados_coletados: Record<string, unknown> | null = null;
+            if (lead?.notes) {
+                const matches = [...lead.notes.matchAll(/\[bot\]\s*(\{.*?\})/gs)];
+                if (matches.length > 0) {
+                    try {
+                        const lastMatchGroup = matches[matches.length - 1]?.[1];
+                        if (lastMatchGroup) {
+                            dados_coletados = JSON.parse(lastMatchGroup) as Record<string, unknown>;
+                        }
+                    } catch {
+                        // notes malformado — ignorar silenciosamente
+                    }
+                }
+            }
+
+            // Últimas 20 mensagens da conversa mais recente
+            const convResult = await query<{ id: string }>(
+                `SELECT id FROM conversations
+                 WHERE whatsapp_number = $1
+                 ORDER BY created_at DESC
+                 LIMIT 1`,
+                [number]
+            );
+            const conversationId = convResult.rows[0]?.id ?? null;
+
+            type MessageRow = {
+                id: string;
+                direction: string;
+                type: string;
+                content: string | null;
+                is_automated: boolean;
+                created_at: string;
+            };
+            const messages: MessageRow[] = [];
+            if (conversationId) {
+                const msgResult = await query<MessageRow>(
+                    `SELECT id, direction, type, content, is_automated, created_at
+                     FROM messages
+                     WHERE conversation_id = $1
+                     ORDER BY created_at DESC
+                     LIMIT 20`,
+                    [conversationId]
+                );
+                messages.push(...msgResult.rows.reverse());
+            }
+
+            // Próximo agendamento vinculado ao lead
+            type AppointmentRow = {
+                id: string;
+                type: string;
+                status: string;
+                starts_at: string;
+                ends_at: string;
+                notes: string | null;
+            };
+            let next_appointment: AppointmentRow | null = null;
+            if (lead?.id) {
+                const apptResult = await query<AppointmentRow>(
+                    `SELECT id, type, status, starts_at, ends_at, notes
+                     FROM appointments
+                     WHERE lead_id = $1
+                       AND status NOT IN ('CANCELADO', 'CONCLUIDO')
+                       AND starts_at > NOW()
+                     ORDER BY starts_at ASC
+                     LIMIT 1`,
+                    [lead.id]
+                );
+                next_appointment = apptResult.rows[0] ?? null;
+            }
+
+            res.json({
+                whatsapp_number: number,
+                lead: lead
+                    ? {
+                        id: lead.id,
+                        stage: lead.stage,
+                        name: lead.name,
+                        notes: lead.notes,
+                        dados_coletados,
+                        pipeline_id: lead.pipeline_id,
+                        stage_id: lead.stage_id,
+                        last_interaction_at: lead.last_interaction_at,
+                    }
+                    : null,
+                conversation_id: conversationId,
+                messages,
+                next_appointment,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+// ── Ação 2: GET /webhook/available-slots ─────────────────────────────────────
+// Substitui o stub GCal (node A2). Calcula horários livres com base nos
+// appointments já cadastrados no CRM para o dia solicitado.
+
+const availableSlotsQuerySchema = z.object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date deve ser YYYY-MM-DD'),
+    period: z.enum(['manha', 'tarde']).optional(),
+});
+
+router.get(
+    '/webhook/available-slots',
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            await assertN8nAuthorized(req);
+
+            const parsed = availableSlotsQuerySchema.safeParse(req.query);
+            if (!parsed.success) {
+                next(AppError.badRequest('Parâmetros inválidos: ' + parsed.error.issues[0]?.message));
+                return;
+            }
+            const { date, period } = parsed.data;
+
+            // Determinar horário de funcionamento pelo dia da semana (fuso SP)
+            const dayDate = new Date(`${date}T12:00:00-03:00`);
+            const dayOfWeek = dayDate.getDay(); // 0=dom … 6=sab
+
+            if (dayOfWeek === 0) {
+                res.json({ date, slots: [], message: 'Aos domingos estamos fechados.' });
+                return;
+            }
+
+            const openHour = 9;
+            const closeHour = dayOfWeek === 6 ? 13 : 18;
+
+            // Gerar todos os slots candidatos (45 min de duração, passo de 60 min)
+            const allSlots: string[] = [];
+            let minutesCursor = openHour * 60;
+            while (minutesCursor + 45 <= closeHour * 60) {
+                const h = Math.floor(minutesCursor / 60);
+                const m = minutesCursor % 60;
+                allSlots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+                minutesCursor += 60;
+            }
+
+            // Buscar appointments do dia que não estejam cancelados
+            type BusyRow = { starts_at: string; ends_at: string };
+            const busyResult = await query<BusyRow>(
+                `SELECT starts_at, ends_at
+                 FROM appointments
+                 WHERE starts_at >= $1::date
+                   AND starts_at <  $1::date + INTERVAL '1 day'
+                   AND status NOT IN ('CANCELADO')`,
+                [date]
+            );
+
+            // Filtrar slots conflitantes
+            const available = allSlots.filter(slot => {
+                const slotStart = new Date(`${date}T${slot}:00-03:00`);
+                const slotEnd = new Date(slotStart.getTime() + 45 * 60_000);
+                return !busyResult.rows.some(b => {
+                    const bStart = new Date(b.starts_at);
+                    const bEnd = new Date(b.ends_at);
+                    return slotStart < bEnd && slotEnd > bStart;
+                });
+            });
+
+            // Filtrar por período
+            const filtered = period === 'manha'
+                ? available.filter(s => parseInt(s.split(':')[0] ?? '0', 10) < 12)
+                : period === 'tarde'
+                    ? available.filter(s => parseInt(s.split(':')[0] ?? '0', 10) >= 12)
+                    : available;
+
+            res.json({ date, period: period ?? 'all', slots: filtered });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+// ── Ação 3: POST /webhook/create-appointment ──────────────────────────────────
+// Substitui o stub GCal (node A7). Cria o appointment, registra na
+// lead_timeline e enfileira o job de reminder 24h antes via BullMQ.
+
+const createAppointmentN8nSchema = z.object({
+    whatsapp_number: z.string().trim().min(1).max(80),
+    type: z.string().trim().min(1).max(50),
+    starts_at: z.string().min(1, 'starts_at obrigatório'),
+    ends_at: z.string().min(1, 'ends_at obrigatório'),
+    notes: z.string().trim().max(4000).optional().nullable(),
+    ai_context: z.record(z.unknown()).optional().nullable(),
+});
+
+router.post(
+    '/webhook/create-appointment',
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            await assertN8nAuthorized(req);
+
+            const parsed = createAppointmentN8nSchema.safeParse(req.body);
+            if (!parsed.success) {
+                next(AppError.badRequest('Payload inválido para create-appointment.'));
+                return;
+            }
+            const { whatsapp_number, type, starts_at, ends_at, notes, ai_context } = parsed.data;
+            const number = normalizeWhatsapp(whatsapp_number);
+
+            // Resolver lead_id pelo número
+            const leadResult = await query<{ id: string }>(
+                `SELECT id FROM leads WHERE whatsapp_number = $1 LIMIT 1`,
+                [number]
+            );
+            const leadId = leadResult.rows[0]?.id ?? null;
+
+            // Criar appointment
+            const apptResult = await query<{ id: string }>(
+                `INSERT INTO appointments (type, starts_at, ends_at, notes, lead_id, ai_context, source)
+                 VALUES ($1, $2::timestamptz, $3::timestamptz, $4, $5, $6, 'BOT')
+                 RETURNING id`,
+                [type, starts_at, ends_at, notes ?? null, leadId, ai_context ? JSON.stringify(ai_context) : null]
+            );
+            const appointmentId = apptResult.rows[0]?.id;
+            if (!appointmentId) {
+                next(AppError.internal('Falha ao criar agendamento.'));
+                return;
+            }
+
+            // Registrar na lead_timeline
+            if (leadId) {
+                const startsAtDate = new Date(starts_at);
+                const dateFmt = startsAtDate.toLocaleDateString('pt-BR', {
+                    day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Sao_Paulo',
+                });
+                const timeFmt = startsAtDate.toLocaleTimeString('pt-BR', {
+                    hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
+                });
+                await query(
+                    `INSERT INTO lead_timeline (lead_id, type, title, body, metadata)
+                     VALUES ($1, 'TASK_CREATED', $2, $3, $4)`,
+                    [
+                        leadId,
+                        `Agendamento criado pelo bot: ${type}`,
+                        `📅 ${dateFmt} às ${timeFmt}${notes ? ` — ${notes}` : ''}`,
+                        JSON.stringify({ appointment_id: appointmentId, source: 'bot', type }),
+                    ]
+                );
+            }
+
+            // Enfileirar reminder 24h antes (delayMs mínimo de 0 se já passou)
+            const startsAtMs = new Date(starts_at).getTime();
+            const reminderAt = startsAtMs - 24 * 60 * 60 * 1_000;
+            const delayMs = Math.max(0, reminderAt - Date.now());
+            await enqueueAppointmentReminderJob({ appointmentId, delayMs });
+
+            logger.info(
+                { appointmentId, leadId, whatsappNumber: number, delayMs },
+                'n8n create-appointment accepted'
+            );
+
+            res.status(201).json({
+                accepted: true,
+                appointment_id: appointmentId,
+                lead_id: leadId,
+                reminder_delay_ms: delayMs,
             });
         } catch (error) {
             next(error);
