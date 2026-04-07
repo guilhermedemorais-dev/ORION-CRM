@@ -7,7 +7,7 @@ import { formatCurrencyFromCents } from '@/lib/utils';
 import './DashboardTemplate.css';
 
 interface Props {
-  data: DashboardPayload;
+  data?: DashboardPayload;
 }
 
 /* ─── helpers ─── */
@@ -25,7 +25,7 @@ const HM_WEIGHTS = [
 ];
 const HM_DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
-export function CustomDashboardView({ data }: Props) {
+export function CustomDashboardView({ data }: Props = {}) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   /* ─── Valores visuais fixos para gráficos bonitinhos ─── */
@@ -85,6 +85,14 @@ export function CustomDashboardView({ data }: Props) {
   const productionByStage = productionByStageVisuais;
   const leads = leadsVisuais;
   const open = openVisuais;
+
+  /* ─── Atividade recente visual ─── */
+  const activityVisuais = [
+    { kind: 'lead', label: 'Novo lead: João Silva', created_at: new Date().toISOString() },
+    { kind: 'order', label: 'Pedido #0042 finalizado', created_at: new Date().toISOString() },
+    { kind: 'lead', label: 'Lead convertido: Maria Santos', created_at: new Date().toISOString() },
+    { kind: 'order', label: 'Pagamento confirmado', created_at: new Date().toISOString() },
+  ];
 
   /* ─── Animation system on mount ─── */
   useEffect(() => {
@@ -495,7 +503,7 @@ export function CustomDashboardView({ data }: Props) {
         <div className="panel anim-in">
           <div className="panel-head"><span className="panel-title">Atividade Recente</span><Link href="/leads" className="panel-action">Ver histórico →</Link></div>
           <div className="panel-body" style={{gap:0}}>
-            {data.activity.length > 0 ? data.activity.slice(0, 7).map((e, i) => (
+            {activityVisuais.length > 0 ? activityVisuais.slice(0, 7).map((e, i) => (
               <div className="feed-row" key={i}>
                 <span className="feed-badge" style={{background: e.kind === 'lead' ? 'rgba(200,169,122,0.15)' : 'rgba(52,211,153,0.15)', color: e.kind === 'lead' ? '#C8A97A' : '#34D399'}}>{e.kind === 'lead' ? 'Lead' : 'Pedido'}</span>
                 <div className="feed-name" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.label}</div>
