@@ -7,7 +7,7 @@ import { formatCurrencyFromCents } from '@/lib/utils';
 import './DashboardTemplate.css';
 
 interface Props {
-  data?: DashboardPayload;
+  data: DashboardPayload | null;
 }
 
 /* ─── helpers ─── */
@@ -25,37 +25,54 @@ const HM_WEIGHTS = [
 ];
 const HM_DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
-export function CustomDashboardView({ data }: Props = {}) {
+export function CustomDashboardView({ data }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
 
-  /* ─── Valores visuais fixos para gráficos bonitinhos ─── */
-  const pdvOrdersVisuais = 7;
-  const pdvTicketAvgVisuais = 1240;
-  const leadsVisuais = 24;
-  const openVisuais = 12;
-  const overdueVisuais = 0;
-  const stockAlertsVisuais = 3;
-  const readyOrdersVisuais = 3;
-  const totalLeadsVisuais = 87;
-  const readyOrdersTotalVisuais = 9200;
-  const topClientsVisuais = [
+  /* ─── Dados reais da API ou fallback visual ─── */
+  const hasRealData = data?.kpis && data.kpis.month_revenue_cents != null;
+
+  // KPIs - usa dados reais se disponíveis, senão fallback visual
+  const revenue = hasRealData ? (data.kpis.month_revenue_cents || 0) / 100 : 47840;
+  const pdvOrdersToday = hasRealData ? (data.kpis.pdv_orders_today || 0) : 7;
+  const pdvTicketAvg = hasRealData ? (data.kpis.pdv_ticket_avg_cents || 0) / 100 : 1240;
+  const overdueProduction = hasRealData ? (data.alerts?.overdue_production || 0) : 0;
+  const leadsToday = hasRealData ? (data.kpis.leads_today || 0) : 24;
+  const openOrders = hasRealData ? (data.kpis.open_orders || 0) : 12;
+
+  // Listas - usa dados reais se disponíveis, senão fallback visual
+  const readyOrders = (hasRealData && data.ready_orders && data.ready_orders.length > 0) ? data.ready_orders : [
+    { order_number: '#0042', client_name: 'Ana Carolina', total_cents: 840000, ready_days: 3 },
+    { order_number: '#0039', client_name: 'Pedro Monteiro', total_cents: 520000, ready_days: 1 },
+    { order_number: '#0035', client_name: 'Julia Siqueira', total_cents: 380000, ready_days: 0 },
+  ];
+
+  const stockAlerts = (hasRealData && data.stock_alerts_detail && data.stock_alerts_detail.length > 0) ? data.stock_alerts_detail : [
+    { product_name: 'Ouro 18k - 50cm', minimum_stock: 5 },
+    { product_name: 'Prata 925 - Argola', minimum_stock: 10 },
+    { product_name: 'Bolsa Veludo Premium', minimum_stock: 3 },
+  ];
+
+  const paymentMethods = (hasRealData && data.payment_methods && data.payment_methods.length > 0) ? data.payment_methods : [
+    { method: 'CREDIT_CARD', amount_cents: 0, percentage: 52 },
+    { method: 'PIX', amount_cents: 0, percentage: 31 },
+    { method: 'DEBIT_CARD', amount_cents: 0, percentage: 17 },
+  ];
+
+  const topClients = (hasRealData && data.top_clients && data.top_clients.length > 0) ? data.top_clients : [
     { client_name: 'Ana Carolina', order_count: 3, total_cents: 840000 },
     { client_name: 'Pedro Monteiro', order_count: 2, total_cents: 520000 },
     { client_name: 'Julia Siqueira', order_count: 1, total_cents: 380000 },
   ];
-  const leadsBySourceVisuais = [
+
+  const leadsBySource = (hasRealData && data.leads_by_source && data.leads_by_source.length > 0) ? data.leads_by_source : [
     { source: 'whatsapp', count: 36, percentage: 42 },
     { source: 'instagram', count: 24, percentage: 28 },
     { source: 'indicacao', count: 16, percentage: 18 },
     { source: 'site', count: 6, percentage: 7 },
     { source: 'outros', count: 5, percentage: 5 },
   ];
-  const paymentMethodsVisuais = [
-    { method: 'CREDIT_CARD', amount_cents: 0, percentage: 52 },
-    { method: 'PIX', amount_cents: 0, percentage: 31 },
-    { method: 'DEBIT_CARD', amount_cents: 0, percentage: 17 },
-  ];
-  const productionByStageVisuais = [
+
+  const productionByStage = (hasRealData && data.production_by_stage && data.production_by_stage.length > 0) ? data.production_by_stage : [
     { stage: 'PENDENTE', stage_label: 'Designer 3D', count: 4 },
     { stage: 'EM_ANDAMENTO', stage_label: 'Fabricação', count: 2 },
     { stage: 'PAUSADA', stage_label: 'Acabamento', count: 2 },
@@ -63,36 +80,16 @@ export function CustomDashboardView({ data }: Props = {}) {
     { stage: 'PENDENTE', stage_label: 'Atendimento', count: 3 },
   ];
 
-  /* ─── KPIs — apenas dados visuais, sem dados reais do banco ─── */
-  // Layout bonito com valores estáticos visuais
-  const revenue = 47840; // Faturamento visual
-  const pdvOrdersToday = pdvOrdersVisuais;
-  const pdvTicketAvg = pdvTicketAvgVisuais;
-  const overdueProduction = 0;
-  const readyOrders = [
-    { order_number: '#0042', client_name: 'Ana Carolina', total_cents: 840000, ready_days: 3 },
-    { order_number: '#0039', client_name: 'Pedro Monteiro', total_cents: 520000, ready_days: 1 },
-    { order_number: '#0035', client_name: 'Julia Siqueira', total_cents: 380000, ready_days: 0 },
-  ];
-  const stockAlerts = [
-    { product_name: 'Ouro 18k - 50cm', minimum_stock: 5 },
-    { product_name: 'Prata 925 - Argola', minimum_stock: 10 },
-    { product_name: 'Bolsa Veludo Premium', minimum_stock: 3 },
-  ];
-  const paymentMethods = paymentMethodsVisuais;
-  const topClients = topClientsVisuais;
-  const leadsBySource = leadsBySourceVisuais;
-  const productionByStage = productionByStageVisuais;
-  const leads = leadsVisuais;
-  const open = openVisuais;
-
-  /* ─── Atividade recente visual ─── */
-  const activityVisuais = [
+  const activity = (hasRealData && data.activity && data.activity.length > 0) ? data.activity : [
     { kind: 'lead', label: 'Novo lead: João Silva', created_at: new Date().toISOString() },
     { kind: 'order', label: 'Pedido #0042 finalizado', created_at: new Date().toISOString() },
     { kind: 'lead', label: 'Lead convertido: Maria Santos', created_at: new Date().toISOString() },
     { kind: 'order', label: 'Pagamento confirmado', created_at: new Date().toISOString() },
   ];
+
+  // Valores derivados
+  const totalLeads = leadsBySource.reduce((acc, s) => acc + s.count, 0) || 87;
+  const readyOrdersTotal = readyOrders.reduce((acc, o) => acc + o.total_cents, 0) / 100 || 9200;
 
   /* ─── Animation system on mount ─── */
   useEffect(() => {
@@ -244,13 +241,11 @@ export function CustomDashboardView({ data }: Props = {}) {
 
   /* ─── Render donut rings (calculado antes do return) ─── */
   const donutColors = ['#34D399', '#C084FC', '#C8A97A', '#60A5FA', '#333'];
-  const totalLeadsCalc = leadsBySourceVisuais.reduce((acc, s) => acc + s.count, 0) || 1;
+  const totalLeadsCalc = leadsBySource.reduce((acc, s) => acc + s.count, 0) || 1;
   const circumference = 2 * Math.PI * 48;
-  let cumulative = 0;
-  const donutRings = leadsBySourceVisuais.map((source, i) => {
-    const offset = cumulative;
+  const donutRings = leadsBySource.map((source, i) => {
+    const offset = leadsBySource.slice(0, i).reduce((acc, s) => acc + (s.count / totalLeadsCalc) * circumference, 0);
     const dashArray = (source.count / totalLeadsCalc) * circumference;
-    cumulative += dashArray;
     return (
       <circle key={i} className="donut-ring" cx="65" cy="65" r="48" fill="none" stroke={donutColors[i % donutColors.length]} strokeWidth="18" strokeDasharray={`${dashArray} ${circumference}`} strokeDashoffset={-offset} strokeLinecap="round" transform="rotate(-90 65 65)"/>
     );
@@ -279,7 +274,7 @@ export function CustomDashboardView({ data }: Props = {}) {
         {/* Leads */}
         <div className="kpi-card anim-in">
           <div className="kpi-top"><div className="kpi-label">Leads — Pipeline</div><div className="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" strokeWidth="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div></div>
-          <div className="kpi-value">{leadsVisuais}</div>
+          <div className="kpi-value">{leadsToday}</div>
           <div className="kpi-sub">Novos hoje <b style={{color:'#C8A97A'}}>+3</b></div>
           <svg className="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(200,169,122,0.08)" points="0,34 0,34 25,28 50,22 75,26 100,18 125,16 150,20 175,12 200,10 200,34"/><polyline fill="none" stroke="rgba(200,169,122,0.55)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points="0,34 25,28 50,22 75,26 100,18 125,16 150,20 175,12 200,10"/></svg>
           <div className="kpi-footer"><span className="delta up">↑ 12%</span><span className="delta-sub">conversão 34%</span></div>
@@ -287,7 +282,7 @@ export function CustomDashboardView({ data }: Props = {}) {
         {/* Pedidos */}
         <div className="kpi-card anim-in">
           <div className="kpi-top"><div className="kpi-label">Pedidos em Aberto</div><div className="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" strokeWidth="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div></div>
-          <div className="kpi-value">{open}</div>
+          <div className="kpi-value">{openOrders}</div>
           <div className="kpi-sub danger">{overdueProduction > 0 ? `${overdueProduction} com prazo vencido` : 'Nenhum atraso'}</div>
           <svg className="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(248,113,113,0.07)" points="0,34 0,20 25,18 50,24 75,16 100,20 125,14 150,18 175,16 200,14 200,34"/><polyline fill="none" stroke="rgba(248,113,113,0.45)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points="0,20 25,18 50,24 75,16 100,20 125,14 150,18 175,16 200,14"/></svg>
           <div className="kpi-footer"><span className="delta neu">→ estável</span><span className="delta-sub">{fmtBRL(revenue * 100)} em aberto</span></div>
@@ -345,7 +340,7 @@ export function CustomDashboardView({ data }: Props = {}) {
           <div className="panel anim-in">
             <div className="panel-head"><span className="panel-title">Formas de Pagamento</span></div>
             <div className="panel-body" style={{gap:0,justifyContent:'space-around'}}>
-              {paymentMethodsVisuais.map((pm, i) => (
+              {paymentMethods.map((pm, i) => (
                 <div key={i} className="pay-row">
                   <div className="pay-label-row">
                     <span className="pay-lbl">{pm.method === 'CREDIT_CARD' ? 'Cartão de crédito' : pm.method === 'DEBIT_CARD' ? 'Débito' : pm.method === 'PIX' ? 'PIX' : pm.method}</span>
@@ -366,7 +361,7 @@ export function CustomDashboardView({ data }: Props = {}) {
         <div className="section-divider-icon" style={{background:'rgba(248,113,113,0.1)'}}><svg viewBox="0 0 24 24" fill="none" stroke="#F87171" strokeWidth="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
         <span className="section-divider-label">Ação Imediata</span>
         <div className="section-divider-line"></div>
-        <span className="section-divider-count">{stockAlertsVisuais + (overdueVisuais > 0 ? 1 : 0)} alertas · {readyOrdersVisuais} prontos</span>
+        <span className="section-divider-count">{stockAlerts.length + (overdueProduction > 0 ? 1 : 0)} alertas · {readyOrders.length} prontos</span>
       </div>
 
       <div className="grid-3 anim-in">
@@ -421,31 +416,26 @@ export function CustomDashboardView({ data }: Props = {}) {
         <div className="panel anim-in">
           <div className="panel-head"><span className="panel-title">Prontos — Aguardando Retirada</span><Link href="/pedidos" className="panel-action">Ver todos</Link></div>
           <div className="panel-body">
-            {readyOrdersVisuais > 0 ? readyOrdersVisuais > 3 ? readyOrders.slice(0, 3).map((order, i) => (
-              <div key={i} className="pronto-row">
-                <div className="pronto-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
-                <div className="pronto-info"><div className="pronto-id">{order.order_number}</div><div className="pronto-cliente">{order.client_name}</div></div>
-                <div className="pronto-right">
-                  <div className="pronto-val">{fmtBRL(order.total_cents)}</div>
-                  <div className={`pronto-dias ${order.ready_days > 2 ? 'urgent' : ''}`}>{order.ready_days === 0 ? 'Hoje' : `${order.ready_days} dia(s) aguardando`}</div>
+            {readyOrders.length > 0 ? (
+              readyOrders.length > 3 ? readyOrders.slice(0, 3).map((order, i) => (
+                <div key={i} className="pronto-row">
+                  <div className="pronto-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                  <div className="pronto-info"><div className="pronto-id">{order.order_number}</div><div className="pronto-cliente">{order.client_name}</div></div>
+                  <div className="pronto-right">
+                    <div className="pronto-val">{fmtBRL(order.total_cents)}</div>
+                    <div className={`pronto-dias ${order.ready_days > 2 ? 'urgent' : ''}`}>{order.ready_days === 0 ? 'Hoje' : `${order.ready_days} dia(s) aguardando`}</div>
+                  </div>
                 </div>
-              </div>
-            )) : topClientsVisuais.slice(0, 3).map((_, i) => (
-              <div key={i} className="pronto-row">
-                <div className="pronto-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
-                <div className="pronto-info"><div className="pronto-id">#{String(i + 41).padStart(4, '0')}</div><div className="pronto-cliente">{topClientsVisuais[i].client_name}</div></div>
-                <div className="pronto-right">
-                  <div className="pronto-val">{fmtBRL(topClientsVisuais[i].total_cents)}</div>
-                  <div className={`pronto-dias ${i === 0 ? 'urgent' : ''}`}>{i === 0 ? '3 dias' : i === 1 ? '1 dia' : 'Hoje'}</div>
-                </div>
-              </div>
-            )) : (
+              )) : (
+                <div style={{textAlign:'center',padding:'20px',color:'#666'}}>Nenhum pedido pronto</div>
+              )
+            ) : (
               <div style={{textAlign:'center',padding:'20px',color:'#666'}}>Nenhum pedido pronto</div>
             )}
-            {readyOrdersVisuais > 0 && (
+            {readyOrders.length > 0 && (
               <div className="pronto-footer">
                 <div className="pronto-footer-label">Total retido</div>
-                <div className="pronto-footer-val">{fmtBRL(readyOrdersTotalVisuais * 100)}</div>
+                <div className="pronto-footer-val">{fmtBRL(readyOrdersTotal * 100)}</div>
               </div>
             )}
           </div>
@@ -457,7 +447,7 @@ export function CustomDashboardView({ data }: Props = {}) {
         <div className="section-divider-icon" style={{background:'rgba(129,140,248,0.1)'}}><svg viewBox="0 0 24 24" fill="none" stroke="#818CF8" strokeWidth="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
         <span className="section-divider-label">Operações</span>
         <div className="section-divider-line"></div>
-        <span className="section-divider-count">{openVisuais} pedidos ativos</span>
+        <span className="section-divider-count">{openOrders} pedidos ativos</span>
       </div>
 
       <div className="grid-2 anim-in">
@@ -465,11 +455,11 @@ export function CustomDashboardView({ data }: Props = {}) {
         <div className="panel anim-in">
           <div className="panel-head"><span className="panel-title">Produção por Etapa</span><Link href="/producao" className="panel-action">Ver tudo →</Link></div>
           <div className="panel-body" style={{justifyContent:'space-around'}}>
-            {productionByStageVisuais.map((stage, i) => (
+            {productionByStage.map((stage, i) => (
               <div key={i} className="funnel-row">
                 <div className="funnel-dot" style={{background: i === 0 ? '#818CF8' : i === 1 ? '#FBBF24' : i === 2 ? '#C8A97A' : i === 3 ? '#34D399' : '#60A5FA'}}></div>
                 <div className="funnel-label">{stage.stage_label}</div>
-                <div className="funnel-bar-bg"><div className="funnel-bar" style={{width: `${Math.min(100, (stage.count / (productionByStageVisuais[0]?.count || 1)) * 100)}%`, background: i === 0 ? '#818CF8' : i === 1 ? '#FBBF24' : i === 2 ? '#C8A97A' : i === 3 ? '#34D399' : '#60A5FA'}}></div></div>
+                <div className="funnel-bar-bg"><div className="funnel-bar" style={{width: `${Math.min(100, (stage.count / (productionByStage[0]?.count || 1)) * 100)}%`, background: i === 0 ? '#818CF8' : i === 1 ? '#FBBF24' : i === 2 ? '#C8A97A' : i === 3 ? '#34D399' : '#60A5FA'}}></div></div>
                 <div className={`funnel-count ${stage.stage === 'PAUSADA' ? 'warn' : ''}`}>{stage.count}</div>
               </div>
             ))}
@@ -495,7 +485,7 @@ export function CustomDashboardView({ data }: Props = {}) {
         <div className="section-divider-icon" style={{background:'rgba(52,211,153,0.1)'}}><svg viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
         <span className="section-divider-label">Comercial</span>
         <div className="section-divider-line"></div>
-        <span className="section-divider-count">{leadsVisuais} leads · {totalLeadsVisuais} contatos</span>
+        <span className="section-divider-count">{leadsToday} leads · {totalLeads} contatos</span>
       </div>
 
       <div className="grid-3 anim-in">
@@ -503,7 +493,7 @@ export function CustomDashboardView({ data }: Props = {}) {
         <div className="panel anim-in">
           <div className="panel-head"><span className="panel-title">Atividade Recente</span><Link href="/leads" className="panel-action">Ver histórico →</Link></div>
           <div className="panel-body" style={{gap:0}}>
-            {activityVisuais.length > 0 ? activityVisuais.slice(0, 7).map((e, i) => (
+            {activity.length > 0 ? activity.slice(0, 7).map((e, i) => (
               <div className="feed-row" key={i}>
                 <span className="feed-badge" style={{background: e.kind === 'lead' ? 'rgba(200,169,122,0.15)' : 'rgba(52,211,153,0.15)', color: e.kind === 'lead' ? '#C8A97A' : '#34D399'}}>{e.kind === 'lead' ? 'Lead' : 'Pedido'}</span>
                 <div className="feed-name" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.label}</div>
@@ -520,7 +510,7 @@ export function CustomDashboardView({ data }: Props = {}) {
         <div className="panel anim-in">
           <div className="panel-head"><span className="panel-title">Top Clientes — Mês</span><Link href="/clientes" className="panel-action">Ver todos</Link></div>
           <div className="panel-body" style={{gap:0}}>
-            {topClientsVisuais.map((client, i) => (
+            {topClients.map((client, i) => (
               <div key={i} className="cliente-row">
                 <div className="cliente-rank">{i + 1}</div>
                 <div className="cliente-avatar" style={{background:'rgba(200,169,122,0.15)',color:'#C8A97A',border:'1px solid rgba(200,169,122,0.2)'}}>
@@ -598,11 +588,11 @@ export function CustomDashboardView({ data }: Props = {}) {
               <svg className="donut-svg" width="130" height="130" viewBox="0 0 130 130" style={{flexShrink:0}}>
                 <circle cx="65" cy="65" r="48" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="18"/>
                 {donutRings}
-                <text x="65" y="60" textAnchor="middle" fontFamily="Playfair Display" fontSize="20" fontWeight="600" fill="#E8E4DE">{totalLeadsVisuais}</text>
+                <text x="65" y="60" textAnchor="middle" fontFamily="Playfair Display" fontSize="20" fontWeight="600" fill="#E8E4DE">{totalLeads}</text>
                 <text x="65" y="76" textAnchor="middle" fontFamily="Inter" fontSize="9" fill="#555" letterSpacing="1">TOTAL</text>
               </svg>
               <div style={{flex:1}}>
-                {leadsBySourceVisuais.map((source, i) => {
+                {leadsBySource.map((source, i) => {
                   const sourceLabel = source.source === 'whatsapp' ? 'WhatsApp' : source.source === 'instagram' ? 'Instagram' : source.source === 'indicacao' ? 'Indicação' : source.source === 'site' ? 'Site' : 'Outros';
                   const colors = ['#34D399', '#C084FC', '#C8A97A', '#60A5FA', '#333'];
                   return (
