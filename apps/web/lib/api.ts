@@ -330,8 +330,40 @@ export interface PdvSaleResponse {
 
 export interface DashboardPayload {
     role: 'ADMIN' | 'ATENDENTE' | 'PRODUCAO' | 'FINANCEIRO';
-    kpis: Record<string, number>;
-    alerts: Record<string, number>;
+    kpis: {
+        // Admin/General
+        leads_today?: number;
+        open_orders?: number;
+        overdue_production?: number;
+        month_revenue_cents?: number;
+        stock_alerts?: number;
+        // PDV
+        pdv_sales_today_cents?: number;
+        pdv_orders_today?: number;
+        pdv_ticket_avg_cents?: number;
+        // Atendente
+        my_leads?: number;
+        my_orders?: number;
+        waiting_inbox?: number;
+        estimated_commission_cents?: number;
+        // Produção
+        assigned_orders?: number;
+        overdue_orders?: number;
+        open_queue?: number;
+        steps_completed_today?: number;
+        // Financeiro
+        month_in_cents?: number;
+        month_out_cents?: number;
+        balance_cents?: number;
+        pending_payments?: number;
+    };
+    alerts: {
+        stock_alerts?: number;
+        overdue_production?: number;
+        waiting_inbox?: number;
+        pending_payments?: number;
+        ready_orders_value_cents?: number;
+    };
     activity: Array<{
         kind: string;
         label: string;
@@ -340,6 +372,42 @@ export interface DashboardPayload {
     topProducts?: Array<{
         name: string;
         total_sold: number;
+        revenue_cents?: number;
+    }>;
+    // Novos campos para o frontend
+    stock_alerts_detail?: Array<{
+        product_id: string;
+        product_name: string;
+        current_stock: number;
+        minimum_stock: number;
+    }>;
+    ready_orders?: Array<{
+        id: string;
+        order_number: string;
+        client_name: string;
+        total_cents: number;
+        ready_days: number;
+    }>;
+    production_by_stage?: Array<{
+        stage: string;
+        stage_label: string;
+        count: number;
+    }>;
+    top_clients?: Array<{
+        client_id: string;
+        client_name: string;
+        order_count: number;
+        total_cents: number;
+    }>;
+    leads_by_source?: Array<{
+        source: string;
+        count: number;
+        percentage: number;
+    }>;
+    payment_methods?: Array<{
+        method: string;
+        amount_cents: number;
+        percentage: number;
     }>;
 }
 

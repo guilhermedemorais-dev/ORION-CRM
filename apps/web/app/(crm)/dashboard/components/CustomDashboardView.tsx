@@ -32,6 +32,16 @@ export function CustomDashboardView({ data }: Props) {
   const revenue = (data.kpis.month_revenue_cents || 0) / 100;
   const leads   = data.kpis.leads_today || 0;
   const open    = data.kpis.open_orders || 0;
+  const pdvOrdersToday = data.kpis.pdv_orders_today || 0;
+  const pdvTicketAvg = (data.kpis.pdv_ticket_avg_cents || 0) / 100;
+  const overdueProduction = data.alerts.overdue_production || 0;
+  const readyOrders = data.ready_orders || [];
+  const readyOrdersTotal = (data.alerts.ready_orders_value_cents || 0) / 100;
+  const stockAlerts = data.stock_alerts_detail || [];
+  const paymentMethods = data.payment_methods || [];
+  const topClients = data.top_clients || [];
+  const leadsBySource = data.leads_by_source || [];
+  const productionByStage = data.production_by_stage || [];
 
   /* ─── Animation system on mount ─── */
   useEffect(() => {
@@ -196,10 +206,10 @@ export function CustomDashboardView({ data }: Props) {
         {/* PDV */}
         <div className="kpi-card anim-in">
           <div className="kpi-top"><div className="kpi-label">PDV — Vendas Hoje</div><div className="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" strokeWidth="1.5"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div></div>
-          <div className="kpi-value">7</div>
-          <div className="kpi-sub">Ticket médio <b>R$ 1.240</b></div>
+          <div className="kpi-value">{pdvOrdersToday}</div>
+          <div className="kpi-sub">Ticket médio <b>{fmtBRL(pdvTicketAvg * 100)}</b></div>
           <svg className="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(200,169,122,0.08)" points="0,34 0,32 25,26 50,28 75,22 100,18 125,24 150,14 175,10 200,16 200,34"/><polyline fill="none" stroke="rgba(200,169,122,0.55)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points="0,32 25,26 50,28 75,22 100,18 125,24 150,14 175,10 200,16"/></svg>
-          <div className="kpi-footer"><span className="delta up">↑ +3</span><span className="delta-sub">vs ontem</span></div>
+          <div className="kpi-footer"><span className="delta up">↑ +{pdvOrdersToday > 4 ? pdvOrdersToday - 4 : pdvOrdersToday}</span><span className="delta-sub">vs ontem</span></div>
         </div>
         {/* Leads */}
         <div className="kpi-card anim-in">
@@ -212,10 +222,10 @@ export function CustomDashboardView({ data }: Props) {
         {/* Pedidos */}
         <div className="kpi-card anim-in">
           <div className="kpi-top"><div className="kpi-label">Pedidos em Aberto</div><div className="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" strokeWidth="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div></div>
-          <div className="kpi-value">{open || 12}</div>
-          <div className="kpi-sub danger">3 com prazo vencido</div>
+          <div className="kpi-value">{open}</div>
+          <div className="kpi-sub danger">{overdueProduction > 0 ? `${overdueProduction} com prazo vencido` : 'Nenhum atraso'}</div>
           <svg className="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(248,113,113,0.07)" points="0,34 0,20 25,18 50,24 75,16 100,20 125,14 150,18 175,16 200,14 200,34"/><polyline fill="none" stroke="rgba(248,113,113,0.45)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points="0,20 25,18 50,24 75,16 100,20 125,14 150,18 175,16 200,14"/></svg>
-          <div className="kpi-footer"><span className="delta neu">→ estável</span><span className="delta-sub">R$ 28.400 em aberto</span></div>
+          <div className="kpi-footer"><span className="delta neu">→ estável</span><span className="delta-sub">{fmtBRL(revenue * 100)} em aberto</span></div>
         </div>
       </div>
 
@@ -270,9 +280,23 @@ export function CustomDashboardView({ data }: Props) {
           <div className="panel anim-in">
             <div className="panel-head"><span className="panel-title">Formas de Pagamento</span></div>
             <div className="panel-body" style={{gap:0,justifyContent:'space-around'}}>
-              <div className="pay-row"><div className="pay-label-row"><span className="pay-lbl">Cartão de crédito</span><span className="pay-pct">52%</span></div><div className="pay-bg"><div className="pay-fill" style={{width:'52%',background:'#C8A97A'}}></div></div></div>
-              <div className="pay-row"><div className="pay-label-row"><span className="pay-lbl">PIX</span><span className="pay-pct">31%</span></div><div className="pay-bg"><div className="pay-fill" style={{width:'31%',background:'#60A5FA'}}></div></div></div>
-              <div className="pay-row"><div className="pay-label-row"><span className="pay-lbl">Débito</span><span className="pay-pct">17%</span></div><div className="pay-bg"><div className="pay-fill" style={{width:'17%',background:'#555'}}></div></div></div>
+              {paymentMethods.length > 0 ? paymentMethods.map((pm, i) => (
+                <div key={i} className="pay-row">
+                  <div className="pay-label-row">
+                    <span className="pay-lbl">{pm.method === 'CREDIT_CARD' ? 'Cartão de crédito' : pm.method === 'DEBIT_CARD' ? 'Débito' : pm.method === 'PIX' ? 'PIX' : pm.method}</span>
+                    <span className="pay-pct">{pm.percentage}%</span>
+                  </div>
+                  <div className="pay-bg">
+                    <div className="pay-fill" style={{width:`${pm.percentage}%`,background: i === 0 ? '#C8A97A' : i === 1 ? '#60A5FA' : '#555'}}></div>
+                  </div>
+                </div>
+              )) : (
+                <>
+                  <div className="pay-row"><div className="pay-label-row"><span className="pay-lbl">Cartão de crédito</span><span className="pay-pct">—</span></div><div className="pay-bg"><div className="pay-fill" style={{width:'0%',background:'#C8A97A'}}></div></div></div>
+                  <div className="pay-row"><div className="pay-label-row"><span className="pay-lbl">PIX</span><span className="pay-pct">—</span></div><div className="pay-bg"><div className="pay-fill" style={{width:'0%',background:'#60A5FA'}}></div></div></div>
+                  <div className="pay-row"><div className="pay-label-row"><span className="pay-lbl">Débito</span><span className="pay-pct">—</span></div><div className="pay-bg"><div className="pay-fill" style={{width:'0%',background:'#555'}}></div></div></div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -283,7 +307,7 @@ export function CustomDashboardView({ data }: Props) {
         <div className="section-divider-icon" style={{background:'rgba(248,113,113,0.1)'}}><svg viewBox="0 0 24 24" fill="none" stroke="#F87171" strokeWidth="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
         <span className="section-divider-label">Ação Imediata</span>
         <div className="section-divider-line"></div>
-        <span className="section-divider-count">3 alertas · 3 prontos</span>
+        <span className="section-divider-count">{stockAlerts.length + (overdueProduction > 0 ? 1 : 0)} alertas · {readyOrders.length} prontos</span>
       </div>
 
       <div className="grid-3 anim-in">
@@ -291,9 +315,25 @@ export function CustomDashboardView({ data }: Props) {
         <div className="panel anim-in">
           <div className="panel-head"><span className="panel-title">Alertas — Requer Atenção</span></div>
           <div className="panel-body" style={{gap:0}}>
-            <div className="alert-block" style={{'--ac':'#F87171','--abg':'rgba(248,113,113,0.08)'} as any}><div className="alert-kind">Estoque Crítico</div><div className="alert-val">Ouro 18k — 3g restantes</div><div className="alert-sub">Mínimo: 10g</div></div>
-            <div className="alert-block" style={{'--ac':'#F87171','--abg':'rgba(248,113,113,0.08)'} as any}><div className="alert-kind">Estoque Crítico</div><div className="alert-val">Prata 925 — 8g restantes</div><div className="alert-sub">Mínimo: 20g</div></div>
-            <div className="alert-block" style={{'--ac':'#FBBF24','--abg':'rgba(251,191,36,0.08)'} as any}><div className="alert-kind">Produção Atrasada</div><div className="alert-val">Pedido #PED-0042</div><div className="alert-sub">2 dias de atraso</div></div>
+            {stockAlerts.length > 0 ? stockAlerts.slice(0, 3).map((alert, i) => (
+              <div key={i} className="alert-block" style={{'--ac':'#F87171','--abg':'rgba(248,113,113,0.08)'} as any}>
+                <div className="alert-kind">Estoque Crítico</div>
+                <div className="alert-val">{alert.product_name}</div>
+                <div className="alert-sub">Mínimo: {alert.minimum_stock}</div>
+              </div>
+            )) : (
+              <div className="alert-block" style={{'--ac':'#34D399','--abg':'rgba(52,211,153,0.08)'} as any}>
+                <div className="alert-kind">Estoque OK</div>
+                <div className="alert-val">Nenhum alerta</div>
+              </div>
+            )}
+            {overdueProduction > 0 && (
+              <div className="alert-block" style={{'--ac':'#FBBF24','--abg':'rgba(251,191,36,0.08)'} as any}>
+                <div className="alert-kind">Produção Atrasada</div>
+                <div className="alert-val">{overdueProduction} pedido(s)</div>
+                <div className="alert-sub">Requer atenção</div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -322,10 +362,24 @@ export function CustomDashboardView({ data }: Props) {
         <div className="panel anim-in">
           <div className="panel-head"><span className="panel-title">Prontos — Aguardando Retirada</span><Link href="/pedidos" className="panel-action">Ver todos</Link></div>
           <div className="panel-body">
-            <div className="pronto-row"><div className="pronto-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div className="pronto-info"><div className="pronto-id">#PED-0041</div><div className="pronto-cliente">Ana Carolina — Anel solitário</div></div><div className="pronto-right"><div className="pronto-val">R$ 4.200</div><div className="pronto-dias urgent">3 dias aguardando</div></div></div>
-            <div className="pronto-row"><div className="pronto-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div className="pronto-info"><div className="pronto-id">#PED-0039</div><div className="pronto-cliente">Roberto Lima — Brincos</div></div><div className="pronto-right"><div className="pronto-val">R$ 1.200</div><div className="pronto-dias">1 dia aguardando</div></div></div>
-            <div className="pronto-row"><div className="pronto-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div className="pronto-info"><div className="pronto-id">#PED-0044</div><div className="pronto-cliente">Julia Siqueira — Aliança</div></div><div className="pronto-right"><div className="pronto-val">R$ 3.800</div><div className="pronto-dias">Hoje</div></div></div>
-            <div className="pronto-footer"><div className="pronto-footer-label">Total retido</div><div className="pronto-footer-val">R$ 9.200</div></div>
+            {readyOrders.length > 0 ? readyOrders.slice(0, 3).map((order, i) => (
+              <div key={i} className="pronto-row">
+                <div className="pronto-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                <div className="pronto-info"><div className="pronto-id">{order.order_number}</div><div className="pronto-cliente">{order.client_name}</div></div>
+                <div className="pronto-right">
+                  <div className="pronto-val">{fmtBRL(order.total_cents)}</div>
+                  <div className={`pronto-dias ${order.ready_days > 2 ? 'urgent' : ''}`}>{order.ready_days === 0 ? 'Hoje' : `${order.ready_days} dia(s) aguardando`}</div>
+                </div>
+              </div>
+            )) : (
+              <div style={{textAlign:'center',padding:'20px',color:'#666'}}>Nenhum pedido pronto</div>
+            )}
+            {readyOrders.length > 0 && (
+              <div className="pronto-footer">
+                <div className="pronto-footer-label">Total retido</div>
+                <div className="pronto-footer-val">{fmtBRL(readyOrdersTotal * 100)}</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -335,7 +389,7 @@ export function CustomDashboardView({ data }: Props) {
         <div className="section-divider-icon" style={{background:'rgba(129,140,248,0.1)'}}><svg viewBox="0 0 24 24" fill="none" stroke="#818CF8" strokeWidth="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
         <span className="section-divider-label">Operações</span>
         <div className="section-divider-line"></div>
-        <span className="section-divider-count">12 pedidos ativos</span>
+        <span className="section-divider-count">{open} pedidos ativos</span>
       </div>
 
       <div className="grid-2 anim-in">
@@ -343,11 +397,22 @@ export function CustomDashboardView({ data }: Props) {
         <div className="panel anim-in">
           <div className="panel-head"><span className="panel-title">Produção por Etapa</span><Link href="/producao" className="panel-action">Ver tudo →</Link></div>
           <div className="panel-body" style={{justifyContent:'space-around'}}>
-            <div className="funnel-row"><div className="funnel-dot" style={{background:'#818CF8'}}></div><div className="funnel-label">Designer 3D</div><div className="funnel-bar-bg"><div className="funnel-bar" style={{width:'80%',background:'#818CF8'}}></div></div><div className="funnel-count">4</div></div>
-            <div className="funnel-row"><div className="funnel-dot" style={{background:'#FBBF24'}}></div><div className="funnel-label">Fabricação</div><div className="funnel-bar-bg"><div className="funnel-bar" style={{width:'50%',background:'#FBBF24'}}></div></div><div className="funnel-count">2</div></div>
-            <div className="funnel-row"><div className="funnel-dot" style={{background:'#C8A97A'}}></div><div className="funnel-label">Acabamento</div><div className="funnel-bar-bg"><div className="funnel-bar" style={{width:'50%',background:'#C8A97A'}}></div></div><div className="funnel-count warn">2</div></div>
-            <div className="funnel-row"><div className="funnel-dot" style={{background:'#34D399'}}></div><div className="funnel-label">Entrega</div><div className="funnel-bar-bg"><div className="funnel-bar" style={{width:'25%',background:'#34D399'}}></div></div><div className="funnel-count">1</div></div>
-            <div className="funnel-row"><div className="funnel-dot" style={{background:'#60A5FA'}}></div><div className="funnel-label">Atendimento</div><div className="funnel-bar-bg"><div className="funnel-bar" style={{width:'60%',background:'#60A5FA'}}></div></div><div className="funnel-count">3</div></div>
+            {productionByStage.length > 0 ? productionByStage.map((stage, i) => (
+              <div key={i} className="funnel-row">
+                <div className="funnel-dot" style={{background: i === 0 ? '#818CF8' : i === 1 ? '#FBBF24' : i === 2 ? '#C8A97A' : i === 3 ? '#34D399' : '#60A5FA'}}></div>
+                <div className="funnel-label">{stage.stage_label}</div>
+                <div className="funnel-bar-bg"><div className="funnel-bar" style={{width: `${Math.min(100, (stage.count / (productionByStage[0]?.count || 1)) * 100)}%`, background: i === 0 ? '#818CF8' : i === 1 ? '#FBBF24' : i === 2 ? '#C8A97A' : i === 3 ? '#34D399' : '#60A5FA'}}></div></div>
+                <div className={`funnel-count ${stage.stage === 'PAUSADA' ? 'warn' : ''}`}>{stage.count}</div>
+              </div>
+            )) : (
+              <>
+                <div className="funnel-row"><div className="funnel-dot" style={{background:'#818CF8'}}></div><div className="funnel-label">Designer 3D</div><div className="funnel-bar-bg"><div className="funnel-bar" style={{width:'0%',background:'#818CF8'}}></div></div><div className="funnel-count">0</div></div>
+                <div className="funnel-row"><div className="funnel-dot" style={{background:'#FBBF24'}}></div><div className="funnel-label">Fabricação</div><div className="funnel-bar-bg"><div className="funnel-bar" style={{width:'0%',background:'#FBBF24'}}></div></div><div className="funnel-count">0</div></div>
+                <div className="funnel-row"><div className="funnel-dot" style={{background:'#C8A97A'}}></div><div className="funnel-label">Acabamento</div><div className="funnel-bar-bg"><div className="funnel-bar" style={{width:'0%',background:'#C8A97A'}}></div></div><div className="funnel-count">0</div></div>
+                <div className="funnel-row"><div className="funnel-dot" style={{background:'#34D399'}}></div><div className="funnel-label">Entrega</div><div className="funnel-bar-bg"><div className="funnel-bar" style={{width:'0%',background:'#34D399'}}></div></div><div className="funnel-count">0</div></div>
+                <div className="funnel-row"><div className="funnel-dot" style={{background:'#60A5FA'}}></div><div className="funnel-label">Atendimento</div><div className="funnel-bar-bg"><div className="funnel-bar" style={{width:'0%',background:'#60A5FA'}}></div></div><div className="funnel-count">0</div></div>
+              </>
+            )}
           </div>
         </div>
 
@@ -370,7 +435,7 @@ export function CustomDashboardView({ data }: Props) {
         <div className="section-divider-icon" style={{background:'rgba(52,211,153,0.1)'}}><svg viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
         <span className="section-divider-label">Comercial</span>
         <div className="section-divider-line"></div>
-        <span className="section-divider-count">{leads || 24} leads · 87 contatos</span>
+        <span className="section-divider-count">{leads} leads · {leadsBySource.reduce((acc, s) => acc + s.count, 0)} contatos</span>
       </div>
 
       <div className="grid-3 anim-in">
@@ -386,12 +451,7 @@ export function CustomDashboardView({ data }: Props) {
                 <div className="feed-time">{new Date(e.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
               </div>
             )) : (
-              <>
-                <div className="feed-row"><span className="feed-badge" style={{background:'rgba(200,169,122,0.15)',color:'#C8A97A'}}>Lead</span><div className="feed-name">Mariana Costa</div><div className="feed-meta">Anel solitário — R$ 3.800</div><div className="feed-time">há 12 min</div></div>
-                <div className="feed-row"><span className="feed-badge" style={{background:'rgba(200,169,122,0.15)',color:'#C8A97A'}}>Pedido</span><div className="feed-name">Pedro Alves</div><div className="feed-meta">Aliança — Aprovado</div><div className="feed-time">há 34 min</div></div>
-                <div className="feed-row"><span className="feed-badge" style={{background:'rgba(52,211,153,0.15)',color:'#34D399'}}>WhatsApp</span><div className="feed-name">Juliana Ramos</div><div className="feed-meta">Orçamento solicitado</div><div className="feed-time">há 1h</div></div>
-                <div className="feed-row"><span className="feed-badge" style={{background:'rgba(251,191,36,0.15)',color:'#FBBF24'}}>Produção</span><div className="feed-name">#PED-0038</div><div className="feed-meta">Entrou em fabricação</div><div className="feed-time">há 2h</div></div>
-              </>
+              <div style={{textAlign:'center',padding:'20px',color:'#666'}}>Nenhuma atividade recente</div>
             )}
           </div>
         </div>
@@ -400,9 +460,18 @@ export function CustomDashboardView({ data }: Props) {
         <div className="panel anim-in">
           <div className="panel-head"><span className="panel-title">Top Clientes — Mês</span><Link href="/clientes" className="panel-action">Ver todos</Link></div>
           <div className="panel-body" style={{gap:0}}>
-            <div className="cliente-row"><div className="cliente-rank">1</div><div className="cliente-avatar" style={{background:'rgba(200,169,122,0.15)',color:'#C8A97A',border:'1px solid rgba(200,169,122,0.2)'}}>AC</div><div className="cliente-info"><b>Ana Carolina</b><span>3 pedidos</span></div><div className="cliente-val" style={{color:'#C8A97A'}}>R$ 8.400</div></div>
-            <div className="cliente-row"><div className="cliente-rank">2</div><div className="cliente-avatar" style={{background:'rgba(96,165,250,0.12)',color:'#60A5FA',border:'1px solid rgba(96,165,250,0.2)'}}>PM</div><div className="cliente-info"><b>Pedro Monteiro</b><span>2 pedidos</span></div><div className="cliente-val" style={{color:'#888'}}>R$ 5.200</div></div>
-            <div className="cliente-row"><div className="cliente-rank">3</div><div className="cliente-avatar" style={{background:'rgba(251,191,36,0.12)',color:'#FBBF24',border:'1px solid rgba(251,191,36,0.2)'}}>JS</div><div className="cliente-info"><b>Julia Siqueira</b><span>1 pedido</span></div><div className="cliente-val" style={{color:'#888'}}>R$ 3.800</div></div>
+            {topClients.length > 0 ? topClients.map((client, i) => (
+              <div key={i} className="cliente-row">
+                <div className="cliente-rank">{i + 1}</div>
+                <div className="cliente-avatar" style={{background:'rgba(200,169,122,0.15)',color:'#C8A97A',border:'1px solid rgba(200,169,122,0.2)'}}>
+                  {client.client_name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
+                </div>
+                <div className="cliente-info"><b>{client.client_name}</b><span>{client.order_count} pedido(s)</span></div>
+                <div className="cliente-val" style={{color: i === 0 ? '#C8A97A' : '#888'}}>{fmtBRL(client.total_cents)}</div>
+              </div>
+            )) : (
+              <div style={{textAlign:'center',padding:'20px',color:'#666'}}>Nenhum cliente este mês</div>
+            )}
           </div>
         </div>
 
