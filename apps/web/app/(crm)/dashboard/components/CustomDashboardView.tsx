@@ -28,55 +28,63 @@ const HM_DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 export function CustomDashboardView({ data }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
 
-  /* ─── KPIs from real data ─── */
-  const revenue = (data.kpis.month_revenue_cents || 0) / 100;
-  const pdvOrdersToday = data.kpis.pdv_orders_today || 0;
-  const pdvTicketAvg = (data.kpis.pdv_ticket_avg_cents || 0) / 100;
-  const overdueProduction = data.alerts.overdue_production || 0;
-  const readyOrders = data.ready_orders || [];
-  const stockAlerts = data.stock_alerts_detail || [];
-  const paymentMethods = data.payment_methods || [];
-  const topClients = data.top_clients || [];
-  const leadsBySource = data.leads_by_source || [];
-  const productionByStage = data.production_by_stage || [];
-  const leadsToday = data.kpis.leads_today || 0;
-  const openOrders = data.kpis.open_orders || 0;
-
-  /* ─── Fallbacks visuais para manter layout bonito ─── */
-  // Se não houver dados reais, usa valores visuais para não ficar vazio
-  const pdvOrdersVisuais = pdvOrdersToday || 7;
-  const pdvTicketAvgVisuais = pdvTicketAvg || 1240;
-  const leadsVisuais = leadsToday || 24;
-  const openVisuais = openOrders || 12;
-  const overdueVisuais = overdueProduction || 3;
-  const stockAlertsVisuais = stockAlerts.length || 3;
-  const readyOrdersVisuais = readyOrders.length || 3;
-  const totalLeadsVisuais = leadsBySource.reduce((acc, s) => acc + s.count, 0) || 87;
-  const readyOrdersTotalVisuais = (data.alerts.ready_orders_value_cents || 0) / 100 || 9200;
-  const topClientsVisuais = topClients.length > 0 ? topClients : [
+  /* ─── Valores visuais fixos para gráficos bonitinhos ─── */
+  const pdvOrdersVisuais = 7;
+  const pdvTicketAvgVisuais = 1240;
+  const leadsVisuais = 24;
+  const openVisuais = 12;
+  const overdueVisuais = 0;
+  const stockAlertsVisuais = 3;
+  const readyOrdersVisuais = 3;
+  const totalLeadsVisuais = 87;
+  const readyOrdersTotalVisuais = 9200;
+  const topClientsVisuais = [
     { client_name: 'Ana Carolina', order_count: 3, total_cents: 840000 },
     { client_name: 'Pedro Monteiro', order_count: 2, total_cents: 520000 },
     { client_name: 'Julia Siqueira', order_count: 1, total_cents: 380000 },
   ];
-  const leadsBySourceVisuais = leadsBySource.length > 0 ? leadsBySource : [
+  const leadsBySourceVisuais = [
     { source: 'whatsapp', count: 36, percentage: 42 },
     { source: 'instagram', count: 24, percentage: 28 },
     { source: 'indicacao', count: 16, percentage: 18 },
     { source: 'site', count: 6, percentage: 7 },
     { source: 'outros', count: 5, percentage: 5 },
   ];
-  const paymentMethodsVisuais = paymentMethods.length > 0 ? paymentMethods : [
+  const paymentMethodsVisuais = [
     { method: 'CREDIT_CARD', amount_cents: 0, percentage: 52 },
     { method: 'PIX', amount_cents: 0, percentage: 31 },
     { method: 'DEBIT_CARD', amount_cents: 0, percentage: 17 },
   ];
-  const productionByStageVisuais = productionByStage.length > 0 ? productionByStage : [
+  const productionByStageVisuais = [
     { stage: 'PENDENTE', stage_label: 'Designer 3D', count: 4 },
     { stage: 'EM_ANDAMENTO', stage_label: 'Fabricação', count: 2 },
     { stage: 'PAUSADA', stage_label: 'Acabamento', count: 2 },
     { stage: 'CONCLUIDA', stage_label: 'Entrega', count: 1 },
     { stage: 'PENDENTE', stage_label: 'Atendimento', count: 3 },
   ];
+
+  /* ─── KPIs — apenas dados visuais, sem dados reais do banco ─── */
+  // Layout bonito com valores estáticos visuais
+  const revenue = 47840; // Faturamento visual
+  const pdvOrdersToday = pdvOrdersVisuais;
+  const pdvTicketAvg = pdvTicketAvgVisuais;
+  const overdueProduction = 0;
+  const readyOrders = [
+    { order_number: '#0042', client_name: 'Ana Carolina', total_cents: 840000, ready_days: 3 },
+    { order_number: '#0039', client_name: 'Pedro Monteiro', total_cents: 520000, ready_days: 1 },
+    { order_number: '#0035', client_name: 'Julia Siqueira', total_cents: 380000, ready_days: 0 },
+  ];
+  const stockAlerts = [
+    { product_name: 'Ouro 18k - 50cm', minimum_stock: 5 },
+    { product_name: 'Prata 925 - Argola', minimum_stock: 10 },
+    { product_name: 'Bolsa Veludo Premium', minimum_stock: 3 },
+  ];
+  const paymentMethods = paymentMethodsVisuais;
+  const topClients = topClientsVisuais;
+  const leadsBySource = leadsBySourceVisuais;
+  const productionByStage = productionByStageVisuais;
+  const leads = leadsVisuais;
+  const open = openVisuais;
 
   /* ─── Animation system on mount ─── */
   useEffect(() => {
@@ -271,7 +279,7 @@ export function CustomDashboardView({ data }: Props) {
         {/* Pedidos */}
         <div className="kpi-card anim-in">
           <div className="kpi-top"><div className="kpi-label">Pedidos em Aberto</div><div className="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" strokeWidth="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div></div>
-          <div className="kpi-value">{openVisuais}</div>
+          <div className="kpi-value">{open}</div>
           <div className="kpi-sub danger">{overdueProduction > 0 ? `${overdueProduction} com prazo vencido` : 'Nenhum atraso'}</div>
           <svg className="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(248,113,113,0.07)" points="0,34 0,20 25,18 50,24 75,16 100,20 125,14 150,18 175,16 200,14 200,34"/><polyline fill="none" stroke="rgba(248,113,113,0.45)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points="0,20 25,18 50,24 75,16 100,20 125,14 150,18 175,16 200,14"/></svg>
           <div className="kpi-footer"><span className="delta neu">→ estável</span><span className="delta-sub">{fmtBRL(revenue * 100)} em aberto</span></div>
