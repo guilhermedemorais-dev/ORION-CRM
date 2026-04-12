@@ -61,10 +61,50 @@ export interface WhatsAppStatusPayload {
 export type AjustesTab =
     | 'empresa'
     | 'usuarios'
-    | 'whatsapp'
     | 'notificacoes'
     | 'seguranca'
-    | 'integracoes';
+    | 'integracoes'
+    | 'ia-copiloto';
+
+// ── IA Copiloto ───────────────────────────────────────────────────────────────
+
+export type AiSkillCategory = 'global' | 'atendimento' | 'vendas' | 'meta' | 'geral';
+
+export interface AiSkill {
+    id: string;
+    name: string;
+    description: string;
+    category: AiSkillCategory;
+    system_prompt: string;
+    is_global: boolean;
+    is_active: boolean;
+    sort_order: number;
+    created_by: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface AiCopilotConfig {
+    id: string;
+    is_enabled: boolean;
+    provider: 'qwen' | 'openai' | 'anthropic';
+    base_url: string;
+    has_api_key: boolean;
+    api_key_masked: string | null;
+    model: string;
+    temperature: number;
+    max_tokens: number;
+    system_prompt: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface GeneratedSkill {
+    name: string;
+    description: string;
+    category: AiSkillCategory;
+    system_prompt: string;
+}
 
 export type CarrierAdapterType = 'generic_rest' | 'jadlog' | 'correios' | 'loggi' | 'tnt' | 'rapiddo';
 

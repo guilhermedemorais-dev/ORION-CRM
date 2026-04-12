@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { WhatsAppTab } from './WhatsAppTab';
+
 import { IntegracoesTab } from './IntegracoesTab';
 import { HexColorPicker } from 'react-colorful';
 import { useForm } from 'react-hook-form';
@@ -159,7 +159,6 @@ const tabItems: Array<{
 }> = [
     { id: 'empresa', label: 'Empresa' },
     { id: 'usuarios', label: 'Usuários' },
-    { id: 'whatsapp', label: 'WhatsApp' },
     { id: 'notificacoes', label: 'Notificações' },
     { id: 'seguranca', label: 'Segurança' },
     { id: 'integracoes', label: 'Integrações' },
@@ -1313,36 +1312,6 @@ export function AjustesClient({
     }, []);
 
     useEffect(() => {
-        if (activeTab !== 'whatsapp') {
-            return;
-        }
-
-        if (!didLoadWhatsApp) {
-            void refreshWhatsAppStatus(true);
-            setDidLoadWhatsApp(true);
-        }
-
-        const intervalId = window.setInterval(() => {
-            void refreshWhatsAppStatus(false);
-        }, 10_000);
-
-        return () => window.clearInterval(intervalId);
-    }, [activeTab, didLoadWhatsApp]);
-
-    useEffect(() => {
-        if (activeTab !== 'whatsapp' || whatsAppStatus.status === 'CONNECTED') {
-            return;
-        }
-
-        void loadQrCode(false);
-        const intervalId = window.setInterval(() => {
-            void loadQrCode(false);
-        }, 30_000);
-
-        return () => window.clearInterval(intervalId);
-    }, [activeTab, whatsAppStatus.status]);
-
-    useEffect(() => {
         if (activeTab !== 'integracoes' || didLoadIntegrations) {
             return;
         }
@@ -1749,102 +1718,6 @@ export function AjustesClient({
                 </div>
             )}
         </SectionCard>
-    );
-
-    const renderWhatsAppTab = () => (
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-            <SectionCard
-                title="Instância Evolution API"
-                description="Status da instância operacional e ações de reconexão do número oficial."
-                action={
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className={cn('inline-flex rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em]', statusBadgeClass(whatsAppStatus.status))}>
-                            {statusLabel(whatsAppStatus.status)}
-                        </span>
-                        <button type="button" className={secondaryButtonClassName} onClick={() => void refreshWhatsAppStatus(false)}>
-                            <RefreshCw className="h-3.5 w-3.5" />
-                            Atualizar
-                        </button>
-                    </div>
-                }
-            >
-                {whatsAppLoading ? (
-                    <div className="space-y-3">
-                        <div className="h-10 animate-pulse rounded-xl bg-white/5" />
-                        <div className="h-32 animate-pulse rounded-xl bg-white/5" />
-                    </div>
-                ) : (
-                    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
-                        <div className="space-y-5">
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div className="rounded-[14px] border border-white/10 bg-[color:var(--orion-base)] p-4">
-                                    <FieldMeta label="Número conectado" />
-                                    <div className="mt-2 text-lg font-semibold text-[color:var(--orion-text)]">
-                                        {whatsAppStatus.connected_number ?? 'Não conectado'}
-                                    </div>
-                                </div>
-                                <div className="rounded-[14px] border border-white/10 bg-[color:var(--orion-base)] p-4">
-                                    <FieldMeta label="Última conexão" />
-                                    <div className="mt-2 text-lg font-semibold text-[color:var(--orion-text)]">
-                                        {whatsAppStatus.connected_at ? formatDate(whatsAppStatus.connected_at) : 'Sem registro'}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="rounded-[14px] border border-white/10 bg-[color:var(--orion-base)] p-4">
-                                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">
-                                    Passo a passo
-                                </div>
-                                <div className="mt-3 space-y-2 text-sm text-[color:var(--orion-text-secondary)]">
-                                    <p>1. Abra o WhatsApp no celular oficial da operação.</p>
-                                    <p>2. Entre em Dispositivos vinculados e escaneie o QR.</p>
-                                    <p>3. O status troca automaticamente para conectado.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="rounded-[14px] border border-white/10 bg-[color:var(--orion-base)] p-4">
-                            <div className="flex items-center justify-between gap-3">
-                                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">
-                                    QR Code
-                                </div>
-                                {whatsAppStatus.status !== 'CONNECTED' ? (
-                                    <button type="button" className={secondaryButtonClassName} onClick={() => void loadQrCode(true)} disabled={qrLoading}>
-                                        {qrLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
-                                        Gerar QR
-                                    </button>
-                                ) : null}
-                            </div>
-                            <div className="mt-4 flex min-h-[240px] items-center justify-center rounded-[14px] border border-dashed border-white/10 bg-[#0A0A0C] p-4">
-                                {whatsAppStatus.status === 'CONNECTED' ? (
-                                    <div className="text-center">
-                                        <Check className="mx-auto h-10 w-10 text-[color:var(--orion-green)]" />
-                                        <p className="mt-3 text-sm font-medium text-[color:var(--orion-text)]">Número conectado.</p>
-                                        <button type="button" className={cn(secondaryButtonClassName, 'mt-4')} onClick={onDisconnectWhatsApp}>
-                                            <Power className="h-3.5 w-3.5" />
-                                            Desconectar
-                                        </button>
-                                    </div>
-                                ) : qrCodeSrc ? (
-                                    <img src={qrCodeSrc} alt="QR Code WhatsApp" className="h-56 w-56 rounded-xl bg-white p-2" />
-                                ) : (
-                                    <p className="text-sm text-[color:var(--orion-text-secondary)]">QR Code ainda não carregado.</p>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </SectionCard>
-
-            <SectionCard
-                title="Handoff do Número"
-                description="Use este painel para trocar o aparelho ou iniciar nova autenticação."
-            >
-                <div className="rounded-[14px] border border-amber-500/20 bg-amber-500/10 p-4 text-sm leading-6 text-[color:var(--orion-amber)]">
-                    Para trocar o número, desconecte a instância atual e escaneie o novo QR Code. O histórico operacional continua no CRM.
-                </div>
-            </SectionCard>
-        </div>
     );
 
     const renderNotificationsTab = () => {
@@ -2306,7 +2179,6 @@ export function AjustesClient({
     const renderActiveTab = () => {
         if (activeTab === 'empresa') return renderCompanyTab();
         if (activeTab === 'usuarios') return renderUsersTab();
-        if (activeTab === 'whatsapp') return <WhatsAppTab onToast={addToast} />;
         if (activeTab === 'notificacoes') return renderNotificationsTab();
         if (activeTab === 'seguranca') return renderSecurityTab();
         if (activeTab === 'integracoes') return <IntegracoesTab onToast={addToast} />;

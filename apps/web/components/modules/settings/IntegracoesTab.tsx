@@ -20,10 +20,11 @@ import {
     Zap,
 } from 'lucide-react';
 import { LogisticaTab } from './LogisticaTab';
+import { WhatsAppTab } from './WhatsAppTab';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type IntegrationCategory = 'payment' | 'automation' | 'ai' | 'erp' | 'logistica' | 'fiscal' | 'webhook';
+type IntegrationCategory = 'payment' | 'automation' | 'ai' | 'erp' | 'logistica' | 'fiscal' | 'webhook' | 'whatsapp';
 
 type IntegrationType =
     | 'mercadopago' | 'stripe' | 'pagarme' | 'asaas' | 'iugu'
@@ -235,6 +236,7 @@ const CATEGORY_TYPES: Record<IntegrationCategory, IntegrationType[]> = {
     logistica:  [],
     fiscal:     [],
     webhook:    [],
+    whatsapp:   [],
 };
 
 const CATEGORY_TABS: Array<{ id: IntegrationCategory; label: string }> = [
@@ -245,6 +247,7 @@ const CATEGORY_TABS: Array<{ id: IntegrationCategory; label: string }> = [
     { id: 'logistica',  label: 'Logística' },
     { id: 'fiscal',     label: 'Fiscal' },
     { id: 'webhook',    label: 'API & Webhooks' },
+    { id: 'whatsapp',   label: 'WhatsApp' },
 ];
 
 // ─── Shared input style ───────────────────────────────────────────────────────
@@ -1172,6 +1175,9 @@ export function IntegracoesTab({ onToast }: TabProps) {
                 ))}
             </div>
 
+            {/* WhatsApp section */}
+            {activeCategory === 'whatsapp' && <WhatsAppTab onToast={onToast} />}
+
             {/* Logística section */}
             {activeCategory === 'logistica' && <LogisticaTab />}
 
@@ -1182,7 +1188,7 @@ export function IntegracoesTab({ onToast }: TabProps) {
             {activeCategory === 'webhook' && <WebhookSection onToast={onToast} />}
 
             {/* Integration providers section (payment / automation / ai / erp) */}
-            {activeCategory !== 'logistica' && activeCategory !== 'fiscal' && activeCategory !== 'webhook' && (
+            {activeCategory !== 'whatsapp' && activeCategory !== 'logistica' && activeCategory !== 'fiscal' && activeCategory !== 'webhook' && (
                 <>
                     {/* Header */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>

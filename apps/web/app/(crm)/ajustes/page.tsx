@@ -7,7 +7,6 @@ import type { AdminSettings, AdminUser, AdminUsersResponse, AjustesTab } from '@
 const validTabs = new Set<AjustesTab>([
     'empresa',
     'usuarios',
-    'whatsapp',
     'notificacoes',
     'seguranca',
     'integracoes',
