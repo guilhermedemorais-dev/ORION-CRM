@@ -10,6 +10,7 @@ const validTabs = new Set<AjustesTab>([
     'notificacoes',
     'seguranca',
     'integracoes',
+    'ia-copiloto',
 ]);
 
 const fallbackSettings: AdminSettings = {

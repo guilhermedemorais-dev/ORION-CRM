@@ -2,6 +2,7 @@ import { env } from '../config/env.js';
 import { query } from '../db/pool.js';
 import { AppError } from '../lib/errors.js';
 import type { UserRole } from '../types/entities.js';
+import { buildCopilotSystemPrompt, getCopilotApiKeyRaw } from './ai-copilot.service.js';
 
 type AssistantMessage = {
     role: 'user' | 'assistant';
@@ -520,7 +521,7 @@ async function getConversionRate(period: Period): Promise<{ converted: number; t
     };
 }
 
-function buildAssistantSystemPrompt(role: UserRole): string {
+function buildBaseSystemPrompt(role: UserRole): string {
     const currentDate = new Intl.DateTimeFormat('pt-BR', {
         weekday: 'long',
         day: 'numeric',
@@ -538,6 +539,15 @@ function buildAssistantSystemPrompt(role: UserRole): string {
         'Nunca invente números. Se não houver ferramenta ou acesso para responder, diga isso claramente.',
         'O RBAC é obrigatório: você só pode usar as ferramentas disponíveis ao role atual.',
     ].join(' ');
+}
+
+async function buildAssistantSystemPrompt(role: UserRole): Promise<string> {
+    const base = buildBaseSystemPrompt(role);
+    try {
+        return await buildCopilotSystemPrompt(base);
+    } catch {
+        return base;
+    }
 }
 
 const assistantTools: AssistantToolDefinition[] = [
@@ -934,6 +944,164 @@ async function callAnthropicMessagesApi(payload: {
     return response.json() as Promise<AnthropicMessagesResponse>;
 }
 
+// ── Qwen (OpenAI-compatible) runner ──────────────────────────────────────────
+
+interface QwenMessage {
+    role: 'system' | 'user' | 'assistant' | 'tool';
+    content: string | null;
+    tool_calls?: Array<{
+        id: string;
+        type: 'function';
+        function: { name: string; arguments: string };
+    }>;
+    tool_call_id?: string;
+}
+
+interface QwenResponse {
+    choices: Array<{
+        finish_reason: string;
+        message: {
+            role: string;
+            content: string | null;
+            tool_calls?: Array<{
+                id: string;
+                type: 'function';
+                function: { name: string; arguments: string };
+            }>;
+        };
+    }>;
+}
+
+async function callQwenApi(payload: {
+    baseUrl: string;
+    apiKey: string;
+    model: string;
+    maxTokens: number;
+    temperature: number;
+    messages: QwenMessage[];
+    tools: AssistantToolDefinition[];
+}): Promise<QwenResponse> {
+    const openAiTools = payload.tools.map((tool) => ({
+        type: 'function' as const,
+        function: {
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.inputSchema,
+        },
+    }));
+
+    const response = await fetch(`${payload.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${payload.apiKey}`,
+        },
+        body: JSON.stringify({
+            model: payload.model,
+            max_tokens: payload.maxTokens,
+            temperature: payload.temperature,
+            messages: payload.messages,
+            tools: openAiTools.length > 0 ? openAiTools : undefined,
+            tool_choice: openAiTools.length > 0 ? 'auto' : undefined,
+        }),
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Qwen API erro ${response.status}: ${errText.slice(0, 300)}`);
+    }
+
+    return response.json() as Promise<QwenResponse>;
+}
+
+async function runQwenAssistant(
+    context: AssistantContext,
+    history: AssistantMessage[],
+    message: string,
+    qwenConfig: { baseUrl: string; apiKey: string; model: string; maxTokens: number; temperature: number }
+): Promise<{ answer: string; tools_used: string[] }> {
+    const availableTools = getAvailableAssistantTools(context.role);
+    const availableToolMap = new Map(availableTools.map((tool) => [tool.name, tool]));
+    const toolsUsed: string[] = [];
+    const systemPrompt = await buildAssistantSystemPrompt(context.role);
+
+    const messages: QwenMessage[] = [
+        { role: 'system', content: systemPrompt },
+        ...history.map((entry) => ({ role: entry.role as 'user' | 'assistant', content: entry.content })),
+    ];
+
+    const lastMsg = messages[messages.length - 1];
+    if (!lastMsg || lastMsg.role !== 'user' || lastMsg.content !== message) {
+        messages.push({ role: 'user', content: message });
+    }
+
+    let lastTextResponse = '';
+
+    for (let index = 0; index < 3; index += 1) {
+        const response = await callQwenApi({
+            ...qwenConfig,
+            messages,
+            tools: availableTools,
+        });
+
+        const choice = response.choices[0];
+        if (!choice) break;
+
+        const { finish_reason, message: assistantMsg } = choice;
+        const textContent = assistantMsg.content?.trim() ?? '';
+
+        if (textContent) lastTextResponse = textContent;
+
+        if (finish_reason === 'stop' || !assistantMsg.tool_calls || assistantMsg.tool_calls.length === 0) {
+            return { answer: textContent || lastTextResponse || fallbackAnswer(context.role), tools_used: toolsUsed };
+        }
+
+        // Add assistant message with tool_calls to conversation
+        messages.push({
+            role: 'assistant',
+            content: assistantMsg.content,
+            tool_calls: assistantMsg.tool_calls,
+        });
+
+        // Execute tool calls
+        for (const toolCall of assistantMsg.tool_calls) {
+            const tool = availableToolMap.get(toolCall.function.name as AssistantToolName);
+
+            if (!tool) {
+                messages.push({
+                    role: 'tool',
+                    content: JSON.stringify({ error: 'Ferramenta não autorizada para este perfil.' }),
+                    tool_call_id: toolCall.id,
+                });
+                continue;
+            }
+
+            let toolInput: Record<string, unknown> = {};
+            try {
+                toolInput = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
+            } catch { /* keep empty */ }
+
+            try {
+                const result = await tool.execute(toolInput, { userId: context.userId, role: context.role });
+                if (!toolsUsed.includes(tool.name)) toolsUsed.push(tool.name);
+                messages.push({
+                    role: 'tool',
+                    content: JSON.stringify(result),
+                    tool_call_id: toolCall.id,
+                });
+            } catch (error) {
+                messages.push({
+                    role: 'tool',
+                    content: JSON.stringify({ error: error instanceof Error ? error.message : 'Erro ao executar ferramenta.' }),
+                    tool_call_id: toolCall.id,
+                });
+            }
+        }
+    }
+
+    return { answer: lastTextResponse || fallbackAnswer(context.role), tools_used: toolsUsed };
+}
+
 async function runAnthropicAssistant(context: AssistantContext, history: AssistantMessage[], message: string): Promise<{
     answer: string;
     tools_used: string[];
@@ -941,7 +1109,7 @@ async function runAnthropicAssistant(context: AssistantContext, history: Assista
     const availableTools = getAvailableAssistantTools(context.role);
     const availableToolMap = new Map(availableTools.map((tool) => [tool.name, tool]));
     const toolsUsed: string[] = [];
-    const systemPrompt = buildAssistantSystemPrompt(context.role);
+    const systemPrompt = await buildAssistantSystemPrompt(context.role);
     let conversation = buildAnthropicMessages(history, message);
     let lastTextResponse = '';
 
@@ -1082,7 +1250,26 @@ export async function runAssistant(context: AssistantContext): Promise<{
     };
 
     try {
-        if (env().ANTHROPIC_API_KEY) {
+        // Prioridade: Qwen configurado → Anthropic → fallback keyword
+        const qwenApiKey = await getCopilotApiKeyRaw().catch(() => null);
+        const copilotConfigResult = await query<{
+            is_enabled: boolean;
+            base_url: string;
+            model: string;
+            max_tokens: number;
+            temperature: number;
+        }>(`SELECT is_enabled, base_url, model, max_tokens, temperature FROM ai_copilot_config LIMIT 1`).catch(() => null);
+        const copilotConfig = copilotConfigResult?.rows[0];
+
+        if (qwenApiKey && copilotConfig?.is_enabled) {
+            result = await runQwenAssistant(context, history, message, {
+                baseUrl: copilotConfig.base_url,
+                apiKey: qwenApiKey,
+                model: copilotConfig.model,
+                maxTokens: Number(copilotConfig.max_tokens),
+                temperature: Number(copilotConfig.temperature),
+            });
+        } else if (env().ANTHROPIC_API_KEY) {
             result = await runAnthropicAssistant(context, history, message);
         } else {
             result = await runFallbackAssistant(context, message);

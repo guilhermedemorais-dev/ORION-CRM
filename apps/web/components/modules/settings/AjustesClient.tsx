@@ -27,6 +27,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 
 import { IntegracoesTab } from './IntegracoesTab';
+import { IACopilotoTab } from './IACopilotoTab';
 import { HexColorPicker } from 'react-colorful';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -162,6 +163,7 @@ const tabItems: Array<{
     { id: 'notificacoes', label: 'Notificações' },
     { id: 'seguranca', label: 'Segurança' },
     { id: 'integracoes', label: 'Integrações' },
+    { id: 'ia-copiloto', label: 'IA Copiloto' },
 ];
 
 type NotificationToggleKey =
@@ -2182,6 +2184,7 @@ export function AjustesClient({
         if (activeTab === 'notificacoes') return renderNotificationsTab();
         if (activeTab === 'seguranca') return renderSecurityTab();
         if (activeTab === 'integracoes') return <IntegracoesTab onToast={addToast} />;
+        if (activeTab === 'ia-copiloto') return <IACopilotoTab />;
         return null;
     };
 
