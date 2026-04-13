@@ -100,6 +100,9 @@ services:
     build:
       context: ./nginx
       dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.orion-crm.rule=Host(`crm.orinjoias.com`) || Host(`api.crm.orinjoias.com`) || Host(`local.orinjoias.com`)"

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import { env } from '../config/env.js';
-import { query } from '../db/pool.js';
+import { query, transaction } from '../db/pool.js';
 import { logger } from '../lib/logger.js';
 import { AppError } from '../lib/errors.js';
 import { appendInboundMessage, upsertConversationFromInbound } from '../services/inbox.service.js';
@@ -646,15 +646,16 @@ router.get(
                 [date]
             );
 
-            // Filtrar slots conflitantes
+            // Filtrar slots com mais de 1 appointment simultâneo (max 2 por slot)
             const available = allSlots.filter(slot => {
                 const slotStart = new Date(`${date}T${slot}:00-03:00`);
                 const slotEnd = new Date(slotStart.getTime() + 45 * 60_000);
-                return !busyResult.rows.some(b => {
+                const concurrent = busyResult.rows.filter(b => {
                     const bStart = new Date(b.starts_at);
                     const bEnd = new Date(b.ends_at);
                     return slotStart < bEnd && slotEnd > bStart;
-                });
+                }).length;
+                return concurrent < 2;
             });
 
             // Filtrar por período
@@ -664,7 +665,23 @@ router.get(
                     ? available.filter(s => parseInt(s.split(':')[0] ?? '0', 10) >= 12)
                     : available;
 
-            res.json({ date, period: period ?? 'all', slots: filtered });
+            const top3 = filtered.slice(0, 3);
+
+            const dayNames = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+            const day_name = dayNames[dayOfWeek] ?? '';
+            const [, mm, dd] = date.split('-');
+            const dayMonth = `${dd}/${mm}`;
+
+            let message: string;
+            if (top3.length === 0) {
+                message = `Poxa, não tenho horário disponível nesse dia 😔 Quer tentar outro dia?`;
+            } else {
+                const nums = ['1️⃣', '2️⃣', '3️⃣'];
+                const list = top3.map((s, i) => `${nums[i] ?? ''} ${s}`).join('\n');
+                message = `Na ${day_name} (${dayMonth}), tenho esses horários:\n\n${list}\n\nQual prefere?`;
+            }
+
+            res.json({ date, day_name, period: period ?? 'all', slots: top3, message });
         } catch (error) {
             next(error);
         }
@@ -698,52 +715,83 @@ router.post(
             const { whatsapp_number, type, starts_at, ends_at, notes, ai_context } = parsed.data;
             const number = normalizeWhatsapp(whatsapp_number);
 
-            // Resolver lead_id pelo número
-            const leadResult = await query<{ id: string }>(
-                `SELECT id FROM leads WHERE whatsapp_number = $1 LIMIT 1`,
-                [number]
-            );
-            const leadId = leadResult.rows[0]?.id ?? null;
-
-            // Criar appointment
-            const apptResult = await query<{ id: string }>(
-                `INSERT INTO appointments (type, starts_at, ends_at, notes, lead_id, ai_context, source)
-                 VALUES ($1, $2::timestamptz, $3::timestamptz, $4, $5, $6, 'BOT')
-                 RETURNING id`,
-                [type, starts_at, ends_at, notes ?? null, leadId, ai_context ? JSON.stringify(ai_context) : null]
-            );
-            const appointmentId = apptResult.rows[0]?.id;
-            if (!appointmentId) {
-                next(AppError.internal('Falha ao criar agendamento.'));
-                return;
-            }
-
-            // Registrar na lead_timeline
-            if (leadId) {
-                const startsAtDate = new Date(starts_at);
-                const dateFmt = startsAtDate.toLocaleDateString('pt-BR', {
-                    day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Sao_Paulo',
-                });
-                const timeFmt = startsAtDate.toLocaleTimeString('pt-BR', {
-                    hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
-                });
-                await query(
-                    `INSERT INTO lead_timeline (lead_id, type, title, body, metadata)
-                     VALUES ($1, 'TASK_CREATED', $2, $3, $4)`,
-                    [
-                        leadId,
-                        `Agendamento criado pelo bot: ${type}`,
-                        `📅 ${dateFmt} às ${timeFmt}${notes ? ` — ${notes}` : ''}`,
-                        JSON.stringify({ appointment_id: appointmentId, source: 'bot', type }),
-                    ]
+            const { appointmentId, leadId } = await transaction(async (client) => {
+                // Buscar pipeline 'leads' padrão e stage_id de QUALIFICADO
+                const pipelineResult = await client.query<{ pipeline_id: string; stage_id: string | null }>(
+                    `SELECT p.id AS pipeline_id, ps.id AS stage_id
+                     FROM pipelines p
+                     LEFT JOIN pipeline_stages ps
+                       ON ps.pipeline_id = p.id
+                      AND UPPER(REPLACE(ps.name, ' ', '_')) = 'QUALIFICADO'
+                     WHERE p.slug = 'leads'
+                     LIMIT 1`
                 );
-            }
+                const pipelineId = pipelineResult.rows[0]?.pipeline_id ?? null;
+                const stageIdQualificado = pipelineResult.rows[0]?.stage_id ?? null;
 
-            // Enfileirar reminder 24h antes (delayMs mínimo de 0 se já passou)
+                // Upsert lead — criar como NOVO se não existir
+                const leadUpsert = await client.query<{ id: string }>(
+                    `INSERT INTO leads (whatsapp_number, stage, pipeline_id, last_interaction_at)
+                     VALUES ($1, 'NOVO'::lead_stage, $2, NOW())
+                     ON CONFLICT (whatsapp_number) DO UPDATE
+                       SET last_interaction_at = NOW(), updated_at = NOW()
+                     RETURNING id`,
+                    [number, pipelineId]
+                );
+                const resolvedLeadId = leadUpsert.rows[0]?.id ?? null;
+
+                // Criar appointment
+                const apptResult = await client.query<{ id: string }>(
+                    `INSERT INTO appointments (type, status, source, starts_at, ends_at, notes, lead_id, pipeline_id, ai_context)
+                     VALUES ($1, 'AGENDADO', 'WHATSAPP_BOT', $2::timestamptz, $3::timestamptz, $4, $5, $6, $7)
+                     RETURNING id`,
+                    [type, starts_at, ends_at, notes ?? null, resolvedLeadId, pipelineId, ai_context ? JSON.stringify(ai_context) : null]
+                );
+                const resolvedApptId = apptResult.rows[0]?.id;
+                if (!resolvedApptId) throw AppError.internal('Falha ao criar agendamento.');
+
+                // Atualizar lead para QUALIFICADO
+                if (resolvedLeadId) {
+                    await client.query(
+                        `UPDATE leads
+                         SET stage = 'QUALIFICADO'::lead_stage,
+                             stage_id = $2,
+                             last_interaction_at = NOW(),
+                             updated_at = NOW()
+                         WHERE id = $1`,
+                        [resolvedLeadId, stageIdQualificado]
+                    );
+
+                    // Registrar na lead_timeline
+                    const startsAtDate = new Date(starts_at);
+                    const dateFmt = startsAtDate.toLocaleDateString('pt-BR', {
+                        day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Sao_Paulo',
+                    });
+                    const timeFmt = startsAtDate.toLocaleTimeString('pt-BR', {
+                        hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo',
+                    });
+                    await client.query(
+                        `INSERT INTO lead_timeline (lead_id, type, title, body)
+                         VALUES ($1, 'APPOINTMENT_CREATED', $2, $3)`,
+                        [
+                            resolvedLeadId,
+                            `Agendamento criado via bot`,
+                            `📅 ${dateFmt} às ${timeFmt}${notes ? ` — ${notes}` : ''}`,
+                        ]
+                    );
+                }
+
+                return { appointmentId: resolvedApptId, leadId: resolvedLeadId };
+            });
+
+            // Enfileirar reminder 24h antes (fora da transaction)
             const startsAtMs = new Date(starts_at).getTime();
             const reminderAt = startsAtMs - 24 * 60 * 60 * 1_000;
             const delayMs = Math.max(0, reminderAt - Date.now());
-            await enqueueAppointmentReminderJob({ appointmentId, delayMs });
+            const reminder_scheduled = delayMs > 0;
+            if (reminder_scheduled) {
+                await enqueueAppointmentReminderJob({ appointmentId, delayMs });
+            }
 
             logger.info(
                 { appointmentId, leadId, whatsappNumber: number, delayMs },
@@ -754,7 +802,8 @@ router.post(
                 accepted: true,
                 appointment_id: appointmentId,
                 lead_id: leadId,
-                reminder_delay_ms: delayMs,
+                starts_at,
+                reminder_scheduled,
             });
         } catch (error) {
             next(error);
