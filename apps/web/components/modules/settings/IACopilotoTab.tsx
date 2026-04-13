@@ -22,6 +22,10 @@ import {
     X,
     Check,
     Wand2,
+    Headphones,
+    TrendingUp,
+    Target,
+    Zap,
 } from 'lucide-react';
 import type { AiCopilotConfig, AiSkill, AiSkillCategory, GeneratedSkill } from '@/lib/ajustes-types';
 import { cn } from '@/lib/utils';
@@ -78,12 +82,47 @@ const CATEGORY_LABELS: Record<AiSkillCategory, string> = {
     geral: 'Geral',
 };
 
-const CATEGORY_COLORS: Record<AiSkillCategory, string> = {
-    global: 'bg-red-100 text-red-700 border-red-200',
-    atendimento: 'bg-blue-100 text-blue-700 border-blue-200',
-    vendas: 'bg-green-100 text-green-700 border-green-200',
-    meta: 'bg-purple-100 text-purple-700 border-purple-200',
-    geral: 'bg-gray-100 text-gray-700 border-gray-200',
+const CATEGORY_CONFIG: Record<AiSkillCategory, { icon: typeof Headphones; bg: string; text: string; border: string; gradient: string; iconBg: string }> = {
+    global: {
+        icon: Shield,
+        bg: 'bg-red-500/10',
+        text: 'text-red-400',
+        border: 'border-red-500/20',
+        gradient: 'from-red-500/5 to-transparent',
+        iconBg: 'bg-red-500/15',
+    },
+    atendimento: {
+        icon: Headphones,
+        bg: 'bg-blue-500/10',
+        text: 'text-blue-400',
+        border: 'border-blue-500/20',
+        gradient: 'from-blue-500/5 to-transparent',
+        iconBg: 'bg-blue-500/15',
+    },
+    vendas: {
+        icon: TrendingUp,
+        bg: 'bg-emerald-500/10',
+        text: 'text-emerald-400',
+        border: 'border-emerald-500/20',
+        gradient: 'from-emerald-500/5 to-transparent',
+        iconBg: 'bg-emerald-500/15',
+    },
+    meta: {
+        icon: Target,
+        bg: 'bg-purple-500/10',
+        text: 'text-purple-400',
+        border: 'border-purple-500/20',
+        gradient: 'from-purple-500/5 to-transparent',
+        iconBg: 'bg-purple-500/15',
+    },
+    geral: {
+        icon: Zap,
+        bg: 'bg-amber-500/10',
+        text: 'text-amber-400',
+        border: 'border-amber-500/20',
+        gradient: 'from-amber-500/5 to-transparent',
+        iconBg: 'bg-amber-500/15',
+    },
 };
 
 const QWEN_MODELS = ['qwen-plus', 'qwen-turbo', 'qwen-max', 'qwen-long'];
@@ -330,9 +369,9 @@ export function IACopilotoTab() {
     if (configLoading) {
         return (
             <div className="space-y-4 animate-pulse">
-                <div className="h-16 bg-gray-100 rounded-lg" />
-                <div className="h-48 bg-gray-100 rounded-lg" />
-                <div className="h-64 bg-gray-100 rounded-lg" />
+                <div className="h-16 bg-white/[0.06] rounded-lg" />
+                <div className="h-48 bg-white/[0.06] rounded-lg" />
+                <div className="h-64 bg-white/[0.06] rounded-lg" />
             </div>
         );
     }
@@ -340,14 +379,14 @@ export function IACopilotoTab() {
     return (
         <div className="space-y-6">
             {/* Header — Toggle global */}
-            <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl">
+            <div className="flex items-center justify-between p-4 bg-[#131316] border border-white/6 rounded-xl">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-[#C8A97A]/10">
-                        <Bot className="w-5 h-5 text-[#C8A97A]" />
+                    <div className="p-2 rounded-lg bg-[#BFA06A]/10">
+                        <Bot className="w-5 h-5 text-[#BFA06A]" />
                     </div>
                     <div>
-                        <p className="font-semibold text-gray-900">Copiloto IA</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="font-semibold text-[#F0EBE3]">Copiloto IA</p>
+                        <p className="text-sm text-[#A09A94]">
                             {config?.is_enabled ? 'Ativo — assistindo todos os usuários' : 'Desativado'}
                         </p>
                     </div>
@@ -360,32 +399,32 @@ export function IACopilotoTab() {
             </div>
 
             {/* Seção: Modelo */}
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="bg-[#131316] border border-white/6 rounded-xl overflow-hidden">
                 <button
                     type="button"
                     onClick={() => setConfigExpanded((v) => !v)}
-                    className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/[0.03] transition-colors"
                 >
                     <div className="flex items-center gap-2">
-                        <Brain className="w-4 h-4 text-gray-500" />
-                        <span className="font-medium text-gray-900">Configuração do Modelo</span>
+                        <Brain className="w-4 h-4 text-[#A09A94]" />
+                        <span className="font-medium text-[#F0EBE3]">Configuração do Modelo</span>
                         {config?.has_api_key && (
-                            <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 border border-green-200 rounded-full">
+                            <span className="px-2 py-0.5 text-xs bg-green-500/15 text-green-400 border border-green-500/20 rounded-full">
                                 API Key salva
                             </span>
                         )}
                     </div>
                     {configExpanded ? (
-                        <ChevronUp className="w-4 h-4 text-gray-400" />
+                        <ChevronUp className="w-4 h-4 text-[#4a4a54]" />
                     ) : (
-                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                        <ChevronDown className="w-4 h-4 text-[#4a4a54]" />
                     )}
                 </button>
 
                 {configExpanded && (
                     <form
                         onSubmit={configForm.handleSubmit((data) => void saveConfig(data))}
-                        className="px-5 pb-5 border-t border-gray-100 space-y-4 pt-4"
+                        className="px-5 pb-5 border-t border-white/4 space-y-4 pt-4"
                     >
                         {/* Provider */}
                         <div className="grid grid-cols-3 gap-3">
@@ -395,14 +434,14 @@ export function IACopilotoTab() {
                                     className={cn(
                                         'flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer text-sm transition-colors',
                                         providerValue === p
-                                            ? 'border-[#C8A97A] bg-[#C8A97A]/5 text-[#C8A97A] font-medium'
-                                            : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                                            ? 'border-[#BFA06A]/40 bg-[#BFA06A]/10 text-[#BFA06A] font-medium'
+                                            : 'border-white/6 text-[#A09A94] hover:bg-white/[0.03]'
                                     )}
                                 >
                                     <input type="radio" className="hidden" value={p} {...configForm.register('provider')} />
                                     <span className="text-xs font-bold capitalize">{p}</span>
                                     {p === 'qwen' && (
-                                        <span className="ml-auto text-xs text-green-600 font-semibold">Gratuito</span>
+                                        <span className="ml-auto text-xs text-green-400 font-semibold">Gratuito</span>
                                     )}
                                 </label>
                             ))}
@@ -410,36 +449,36 @@ export function IACopilotoTab() {
 
                         {/* Base URL */}
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Base URL</label>
+                            <label className="block text-xs font-medium text-[#A09A94] mb-1">Base URL</label>
                             <input
                                 {...configForm.register('base_url')}
-                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C8A97A]/30 font-mono"
+                                className="w-full px-3 py-2 text-sm bg-[#0F0F11] border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#BFA06A]/30 font-mono text-[#F0EBE3]"
                                 placeholder="https://..."
                             />
                             {configForm.formState.errors.base_url && (
-                                <p className="text-xs text-red-500 mt-1">{configForm.formState.errors.base_url.message}</p>
+                                <p className="text-xs text-red-400 mt-1">{configForm.formState.errors.base_url.message}</p>
                             )}
                         </div>
 
                         {/* API Key */}
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                            <label className="block text-xs font-medium text-[#A09A94] mb-1">
                                 API Key
                                 {config?.has_api_key && (
-                                    <span className="ml-2 text-gray-400 font-normal">(atual: {config.api_key_masked})</span>
+                                    <span className="ml-2 text-[#4a4a54] font-normal">(atual: {config.api_key_masked})</span>
                                 )}
                             </label>
                             <div className="relative">
                                 <input
                                     {...configForm.register('api_key')}
                                     type={showApiKey ? 'text' : 'password'}
-                                    className="w-full px-3 py-2 pr-10 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C8A97A]/30 font-mono"
+                                    className="w-full px-3 py-2 pr-10 text-sm bg-[#0F0F11] border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#BFA06A]/30 font-mono text-[#F0EBE3]"
                                     placeholder={config?.has_api_key ? 'Deixe vazio para manter a atual' : 'Cole a API Key aqui'}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowApiKey((v) => !v)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a4a54] hover:text-[#A09A94]"
                                 >
                                     {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -449,11 +488,11 @@ export function IACopilotoTab() {
                         {/* Model + Temperatura + MaxTokens */}
                         <div className="grid grid-cols-3 gap-3">
                             <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Modelo</label>
+                                <label className="block text-xs font-medium text-[#A09A94] mb-1">Modelo</label>
                                 {providerValue === 'qwen' ? (
                                     <select
                                         {...configForm.register('model')}
-                                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C8A97A]/30"
+                                        className="w-full px-3 py-2 text-sm bg-[#0F0F11] border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#BFA06A]/30 text-[#F0EBE3]"
                                     >
                                         {QWEN_MODELS.map((m) => (
                                             <option key={m} value={m}>{m}</option>
@@ -462,13 +501,13 @@ export function IACopilotoTab() {
                                 ) : (
                                     <input
                                         {...configForm.register('model')}
-                                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C8A97A]/30"
+                                        className="w-full px-3 py-2 text-sm bg-[#0F0F11] border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#BFA06A]/30 text-[#F0EBE3]"
                                         placeholder="gpt-4o, claude-sonnet..."
                                     />
                                 )}
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                <label className="block text-xs font-medium text-[#A09A94] mb-1">
                                     Temperatura ({temperatureValue})
                                 </label>
                                 <input
@@ -477,17 +516,17 @@ export function IACopilotoTab() {
                                     min={0}
                                     max={2}
                                     step={0.1}
-                                    className="w-full accent-[#C8A97A]"
+                                    className="w-full accent-[#BFA06A]"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Max Tokens</label>
+                                <label className="block text-xs font-medium text-[#A09A94] mb-1">Max Tokens</label>
                                 <input
                                     {...configForm.register('max_tokens')}
                                     type="number"
                                     min={1}
                                     max={8192}
-                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C8A97A]/30"
+                                    className="w-full px-3 py-2 text-sm bg-[#0F0F11] border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#BFA06A]/30 text-[#F0EBE3]"
                                 />
                             </div>
                         </div>
@@ -497,7 +536,7 @@ export function IACopilotoTab() {
                             <button
                                 type="button"
                                 onClick={() => setPromptExpanded((v) => !v)}
-                                className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 mb-2"
+                                className="flex items-center gap-1 text-xs text-[#A09A94] hover:text-[#F0EBE3] mb-2"
                             >
                                 {promptExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                 System Prompt base (opcional)
@@ -506,19 +545,19 @@ export function IACopilotoTab() {
                                 <textarea
                                     {...configForm.register('system_prompt')}
                                     rows={5}
-                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C8A97A]/30 font-mono resize-none"
+                                    className="w-full px-3 py-2 text-sm bg-[#0F0F11] border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#BFA06A]/30 font-mono resize-none text-[#F0EBE3]"
                                     placeholder="Instrução base do assistente. As skills ativas serão adicionadas automaticamente."
                                 />
                             )}
                         </div>
 
-                        {configError && <p className="text-xs text-red-500">{configError}</p>}
+                        {configError && <p className="text-xs text-red-400">{configError}</p>}
 
                         <div className="flex justify-end">
                             <button
                                 type="submit"
                                 disabled={configSaving}
-                                className="flex items-center gap-2 px-4 py-2 bg-[#C8A97A] text-white rounded-lg text-sm font-medium hover:bg-[#b8926a] disabled:opacity-60 transition-colors"
+                                className="flex items-center gap-2 px-4 py-2 bg-[#BFA06A] text-white rounded-lg text-sm font-medium hover:bg-[#D4B87E] disabled:opacity-60 transition-colors"
                             >
                                 {configSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                 Salvar configuração
@@ -529,20 +568,27 @@ export function IACopilotoTab() {
             </div>
 
             {/* Seção: Skills */}
-            <div className="bg-white border border-gray-200 rounded-xl">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                    <div className="flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-gray-500" />
-                        <span className="font-medium text-gray-900">Skills</span>
-                        <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">
-                            {skills.filter((s) => s.is_active).length} ativas
-                        </span>
+            <div className="bg-[#131316] border border-white/6 rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between px-6 py-5 border-b border-white/6">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-[#BFA06A]/10">
+                            <Sparkles className="w-5 h-5 text-[#BFA06A]" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="font-semibold text-[#F0EBE3]">Skills</span>
+                                <span className="px-2 py-0.5 text-xs bg-[#BFA06A]/15 text-[#BFA06A] border border-[#BFA06A]/20 rounded-full font-medium">
+                                    {skills.filter((s) => s.is_active).length} ativas
+                                </span>
+                            </div>
+                            <p className="text-xs text-[#A09A94] mt-0.5">Gerencie as habilidades do Copiloto IA</p>
+                        </div>
                     </div>
                     <div className="flex gap-2">
                         <button
                             type="button"
                             onClick={() => { setGenerateModalOpen(true); setGeneratedPreview(null); setGenerateInput(''); setGenerateError(null); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-[#C8A97A] text-[#C8A97A] rounded-lg hover:bg-[#C8A97A]/5 transition-colors font-medium"
+                            className="flex items-center gap-1.5 px-3 py-2 text-xs border border-[#BFA06A]/20 text-[#BFA06A] rounded-lg hover:bg-[#BFA06A]/10 transition-all duration-200 font-medium"
                         >
                             <Wand2 className="w-3.5 h-3.5" />
                             Gerar com IA
@@ -550,7 +596,7 @@ export function IACopilotoTab() {
                         <button
                             type="button"
                             onClick={openNewSkill}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[#C8A97A] text-white rounded-lg hover:bg-[#b8926a] transition-colors font-medium"
+                            className="flex items-center gap-1.5 px-3 py-2 text-xs bg-[#BFA06A] text-white rounded-lg hover:bg-[#D4B87E] transition-all duration-200 font-medium shadow-lg shadow-[#BFA06A]/20"
                         >
                             <Plus className="w-3.5 h-3.5" />
                             Nova skill
@@ -558,114 +604,175 @@ export function IACopilotoTab() {
                     </div>
                 </div>
 
-                <div className="divide-y divide-gray-50">
+                {/* Skills Grid */}
+                <div className="p-4">
                     {skillsLoading && (
-                        <div className="p-5 space-y-3 animate-pulse">
-                            {[1, 2, 3].map((i) => (
-                                <div key={i} className="h-14 bg-gray-100 rounded-lg" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {[1, 2, 3, 4].map((i) => (
+                                <div key={i} className="h-28 bg-white/[0.06] rounded-xl animate-pulse" />
                             ))}
                         </div>
                     )}
 
                     {!skillsLoading && skills.length === 0 && (
-                        <div className="p-8 text-center text-gray-400">
-                            <Brain className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                            <p className="text-sm">Nenhuma skill cadastrada.</p>
+                        <div className="py-12 text-center text-[#A09A94]">
+                            <div className="p-4 rounded-full bg-white/[0.04] w-16 h-16 mx-auto mb-3 flex items-center justify-center">
+                                <Brain className="w-8 h-8 opacity-40 text-[#4a4a54]" />
+                            </div>
+                            <p className="text-sm font-medium">Nenhuma skill cadastrada</p>
+                            <p className="text-xs text-[#4a4a54] mt-1">Crie uma skill para começar a usar o Copiloto IA</p>
                         </div>
                     )}
 
-                    {skills.map((skill) => (
-                        <div key={skill.id} className="flex items-start gap-3 px-5 py-4">
-                            <div className="mt-0.5">
-                                {skill.is_global ? (
-                                    <Shield className="w-4 h-4 text-red-500" />
-                                ) : (
-                                    <Globe className="w-4 h-4 text-gray-400" />
-                                )}
-                            </div>
+                    {!skillsLoading && skills.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {skills.map((skill) => {
+                                const catConfig = CATEGORY_CONFIG[skill.category];
+                                const CategoryIcon = catConfig.icon;
 
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="font-medium text-gray-900 text-sm">{skill.name}</span>
-                                    <span className={cn(
-                                        'px-1.5 py-0.5 text-xs border rounded-full',
-                                        CATEGORY_COLORS[skill.category]
-                                    )}>
-                                        {CATEGORY_LABELS[skill.category]}
-                                    </span>
-                                    {skill.is_global && (
-                                        <span className="px-1.5 py-0.5 text-xs bg-red-50 text-red-600 border border-red-200 rounded-full font-semibold">
-                                            Obrigatória
-                                        </span>
-                                    )}
-                                </div>
-                                <p className="text-xs text-gray-500 mt-0.5 truncate">{skill.description}</p>
-                            </div>
-
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                                <Switch
-                                    checked={skill.is_active}
-                                    onCheckedChange={(checked) => void toggleSkill(skill.id, checked)}
-                                    disabled={skill.is_global || togglingId === skill.id}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => openEditSkill(skill)}
-                                    className="p-1.5 text-gray-400 hover:text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
-                                    title="Editar"
-                                >
-                                    <Pencil className="w-3.5 h-3.5" />
-                                </button>
-                                {!skill.is_global && (
-                                    <>
-                                        {deleteConfirmId === skill.id ? (
-                                            <div className="flex gap-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => void deleteSkill(skill.id)}
-                                                    disabled={deletingId === skill.id}
-                                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                                                    title="Confirmar exclusão"
-                                                >
-                                                    {deletingId === skill.id
-                                                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                        : <Check className="w-3.5 h-3.5" />}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setDeleteConfirmId(null)}
-                                                    className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-md transition-colors"
-                                                >
-                                                    <X className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <button
-                                                type="button"
-                                                onClick={() => setDeleteConfirmId(skill.id)}
-                                                className="p-1.5 text-gray-400 hover:text-red-500 rounded-md hover:bg-red-50 transition-colors"
-                                                title="Excluir"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
+                                return (
+                                    <div
+                                        key={skill.id}
+                                        className={cn(
+                                            "group relative rounded-xl border transition-all duration-300 overflow-hidden",
+                                            skill.is_active
+                                                ? "border-white/8 bg-gradient-to-br from-white/[0.06] to-transparent hover:border-white/12 hover:shadow-lg hover:shadow-black/20"
+                                                : "border-white/4 bg-white/[0.02] opacity-60"
                                         )}
-                                    </>
-                                )}
-                            </div>
+                                    >
+                                        {/* Category accent bar */}
+                                        <div className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l-xl", catConfig.bg.replace('/10', '/30'))} />
+
+                                        <div className="p-4 pl-5">
+                                            {/* Header: Icon + Name + Badges */}
+                                            <div className="flex items-start gap-3 mb-2.5">
+                                                <div className={cn(
+                                                    "p-2 rounded-lg shrink-0",
+                                                    catConfig.iconBg
+                                                )}>
+                                                    <CategoryIcon className={cn("w-4 h-4", catConfig.text)} />
+                                                </div>
+
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className={cn(
+                                                            "font-semibold text-sm truncate",
+                                                            skill.is_active ? "text-[#F0EBE3]" : "text-[#4a4a54]"
+                                                        )}>
+                                                            {skill.name}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                                        <span className={cn(
+                                                            "px-2 py-0.5 text-xs border rounded-full font-medium",
+                                                            catConfig.bg,
+                                                            catConfig.text,
+                                                            catConfig.border
+                                                        )}>
+                                                            {CATEGORY_LABELS[skill.category]}
+                                                        </span>
+                                                        {skill.is_global && (
+                                                            <span className="px-2 py-0.5 text-xs bg-red-500/15 text-red-400 border border-red-500/20 rounded-full font-semibold flex items-center gap-1">
+                                                                <Shield className="w-3 h-3" />
+                                                                Obrigatória
+                                                            </span>
+                                                        )}
+                                                        <span className={cn(
+                                                            "px-2 py-0.5 text-xs rounded-full font-medium flex items-center gap-1",
+                                                            skill.is_active
+                                                                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
+                                                                : "bg-white/[0.04] text-[#4a4a54] border border-white/[0.06]"
+                                                        )}>
+                                                            <div className={cn(
+                                                                "w-1.5 h-1.5 rounded-full",
+                                                                skill.is_active ? "bg-emerald-400" : "bg-[#4a4a54]"
+                                                            )} />
+                                                            {skill.is_active ? "Ativa" : "Inativa"}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Description */}
+                                            <p className={cn(
+                                                "text-xs leading-relaxed line-clamp-2 mb-3",
+                                                skill.is_active ? "text-[#A09A94]" : "text-[#4a4a54]"
+                                            )}>
+                                                {skill.description}
+                                            </p>
+
+                                            {/* Actions bar */}
+                                            <div className="flex items-center justify-between pt-3 border-t border-white/4">
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openEditSkill(skill)}
+                                                        className="p-2 text-[#A09A94] hover:text-[#F0EBE3] hover:bg-white/[0.06] rounded-lg transition-all duration-200"
+                                                        title="Editar"
+                                                    >
+                                                        <Pencil className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    {!skill.is_global && (
+                                                        <>
+                                                            {deleteConfirmId === skill.id ? (
+                                                                <div className="flex gap-1">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => void deleteSkill(skill.id)}
+                                                                        disabled={deletingId === skill.id}
+                                                                        className="p-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                                                                        title="Confirmar exclusão"
+                                                                    >
+                                                                        {deletingId === skill.id
+                                                                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                            : <Check className="w-3.5 h-3.5" />}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setDeleteConfirmId(null)}
+                                                                        className="p-2 text-[#A09A94] hover:bg-white/[0.06] rounded-lg transition-colors"
+                                                                    >
+                                                                        <X className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setDeleteConfirmId(skill.id)}
+                                                                    className="p-2 text-[#A09A94] hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-200"
+                                                                    title="Excluir"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
+
+                                                <Switch
+                                                    checked={skill.is_active}
+                                                    onCheckedChange={(checked) => void toggleSkill(skill.id, checked)}
+                                                    disabled={skill.is_global || togglingId === skill.id}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    ))}
+                    )}
                 </div>
             </div>
 
             {/* Modal: Skill Editor */}
             {skillModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                            <h3 className="font-semibold text-gray-900">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                    <div className="bg-[#131316] border border-white/6 rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-white/4">
+                            <h3 className="font-semibold text-[#F0EBE3]">
                                 {editingSkill ? 'Editar Skill' : 'Nova Skill'}
                             </h3>
-                            <button type="button" onClick={closeSkillModal} className="text-gray-400 hover:text-gray-600">
+                            <button type="button" onClick={closeSkillModal} className="text-[#A09A94] hover:text-[#F0EBE3]">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
@@ -675,26 +782,26 @@ export function IACopilotoTab() {
                             className="p-5 space-y-4"
                         >
                             <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Nome *</label>
+                                <label className="block text-xs font-medium text-[#A09A94] mb-1">Nome *</label>
                                 <input
                                     {...skillForm.register('name')}
-                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C8A97A]/30"
+                                    className="w-full px-3 py-2 text-sm bg-[#0F0F11] border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#BFA06A]/30 text-[#F0EBE3]"
                                     placeholder="Ex: Consultor de Joias"
                                 />
                                 {skillForm.formState.errors.name && (
-                                    <p className="text-xs text-red-500 mt-1">{skillForm.formState.errors.name.message}</p>
+                                    <p className="text-xs text-red-400 mt-1">{skillForm.formState.errors.name.message}</p>
                                 )}
                             </div>
 
                             <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Descrição *</label>
+                                <label className="block text-xs font-medium text-[#A09A94] mb-1">Descrição *</label>
                                 <input
                                     {...skillForm.register('description')}
-                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C8A97A]/30"
+                                    className="w-full px-3 py-2 text-sm bg-[#0F0F11] border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#BFA06A]/30 text-[#F0EBE3]"
                                     placeholder="O que essa skill faz?"
                                 />
                                 {skillForm.formState.errors.description && (
-                                    <p className="text-xs text-red-500 mt-1">{skillForm.formState.errors.description.message}</p>
+                                    <p className="text-xs text-red-400 mt-1">{skillForm.formState.errors.description.message}</p>
                                 )}
                             </div>
 
@@ -738,20 +845,20 @@ export function IACopilotoTab() {
                                 )}
                             </div>
 
-                            {skillError && <p className="text-xs text-red-500">{skillError}</p>}
+                            {skillError && <p className="text-xs text-red-400">{skillError}</p>}
 
                             <div className="flex gap-2 justify-end pt-2">
                                 <button
                                     type="button"
                                     onClick={closeSkillModal}
-                                    className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50"
+                                    className="px-4 py-2 text-sm border border-white/10 rounded-lg text-[#A09A94] hover:bg-white/[0.03]"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={skillSaving}
-                                    className="flex items-center gap-2 px-4 py-2 bg-[#C8A97A] text-white rounded-lg text-sm font-medium hover:bg-[#b8926a] disabled:opacity-60"
+                                    className="flex items-center gap-2 px-4 py-2 bg-[#BFA06A] text-white rounded-lg text-sm font-medium hover:bg-[#D4B87E] disabled:opacity-60"
                                 >
                                     {skillSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                     {editingSkill ? 'Salvar alterações' : 'Criar skill'}
@@ -764,17 +871,17 @@ export function IACopilotoTab() {
 
             {/* Modal: Gerar com IA */}
             {generateModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                    <div className="bg-[#131316] border border-white/6 rounded-xl shadow-2xl w-full max-w-lg mx-4">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-white/4">
                             <div className="flex items-center gap-2">
-                                <Wand2 className="w-4 h-4 text-[#C8A97A]" />
-                                <h3 className="font-semibold text-gray-900">Gerar Skill com IA</h3>
+                                <Wand2 className="w-4 h-4 text-[#BFA06A]" />
+                                <h3 className="font-semibold text-[#F0EBE3]">Gerar Skill com IA</h3>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => { setGenerateModalOpen(false); setGeneratedPreview(null); setGenerateInput(''); }}
-                                className="text-gray-400 hover:text-gray-600"
+                                className="text-[#A09A94] hover:text-[#F0EBE3]"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -783,22 +890,22 @@ export function IACopilotoTab() {
                         <div className="p-5 space-y-4">
                             {!generatedPreview ? (
                                 <>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-sm text-[#A09A94]">
                                         Descreva o que você quer que o copiloto saiba fazer. A IA vai gerar a skill automaticamente.
                                     </p>
                                     <textarea
                                         value={generateInput}
                                         onChange={(e) => setGenerateInput(e.target.value)}
                                         rows={4}
-                                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C8A97A]/30 resize-none"
+                                        className="w-full px-3 py-2 text-sm bg-[#0F0F11] border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#BFA06A]/30 resize-none text-[#F0EBE3]"
                                         placeholder="Ex: Quero que a IA saiba explicar o processo de confecção de joias personalizadas e os prazos de cada etapa..."
                                     />
-                                    {generateError && <p className="text-xs text-red-500">{generateError}</p>}
+                                    {generateError && <p className="text-xs text-red-400">{generateError}</p>}
                                     <div className="flex gap-2 justify-end">
                                         <button
                                             type="button"
                                             onClick={() => { setGenerateModalOpen(false); setGenerateInput(''); }}
-                                            className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50"
+                                            className="px-4 py-2 text-sm border border-white/10 rounded-lg text-[#A09A94] hover:bg-white/[0.03]"
                                         >
                                             Cancelar
                                         </button>
@@ -806,7 +913,7 @@ export function IACopilotoTab() {
                                             type="button"
                                             onClick={() => void generateSkill()}
                                             disabled={generateInput.trim().length < 10 || generating}
-                                            className="flex items-center gap-2 px-4 py-2 bg-[#C8A97A] text-white rounded-lg text-sm font-medium hover:bg-[#b8926a] disabled:opacity-60"
+                                            className="flex items-center gap-2 px-4 py-2 bg-[#BFA06A] text-white rounded-lg text-sm font-medium hover:bg-[#D4B87E] disabled:opacity-60"
                                         >
                                             {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
                                             Gerar
@@ -815,25 +922,32 @@ export function IACopilotoTab() {
                                 </>
                             ) : (
                                 <>
-                                    <p className="text-sm text-green-700 font-medium">Skill gerada. Revise antes de salvar:</p>
+                                    <p className="text-sm text-green-400 font-medium">Skill gerada. Revise antes de salvar:</p>
                                     <div className="space-y-2 text-sm">
                                         <div>
-                                            <span className="font-medium text-gray-700">Nome: </span>
-                                            <span>{generatedPreview.name}</span>
+                                            <span className="font-medium text-[#A09A94]">Nome: </span>
+                                            <span className="text-[#F0EBE3]">{generatedPreview.name}</span>
                                         </div>
                                         <div>
-                                            <span className="font-medium text-gray-700">Descrição: </span>
-                                            <span className="text-gray-600">{generatedPreview.description}</span>
+                                            <span className="font-medium text-[#A09A94]">Descrição: </span>
+                                            <span className="text-[#A09A94]">{generatedPreview.description}</span>
                                         </div>
                                         <div>
-                                            <span className="font-medium text-gray-700">Categoria: </span>
-                                            <span className={cn('px-1.5 py-0.5 text-xs border rounded-full', CATEGORY_COLORS[generatedPreview.category])}>
+                                            <span className="font-medium text-[#A09A94]">Categoria: </span>
+                                            <span className={cn(
+                                                'px-1.5 py-0.5 text-xs border rounded-full',
+                                                generatedPreview.category === 'global' ? 'bg-red-500/15 text-red-400 border-red-500/20' :
+                                                generatedPreview.category === 'atendimento' ? 'bg-blue-500/15 text-blue-400 border-blue-500/20' :
+                                                generatedPreview.category === 'vendas' ? 'bg-green-500/15 text-green-400 border-green-500/20' :
+                                                generatedPreview.category === 'meta' ? 'bg-purple-500/15 text-purple-400 border-purple-500/20' :
+                                                'bg-white/[0.06] text-[#A09A94] border-white/[0.10]'
+                                            )}>
                                                 {CATEGORY_LABELS[generatedPreview.category]}
                                             </span>
                                         </div>
                                         <div>
-                                            <p className="font-medium text-gray-700 mb-1">System Prompt:</p>
-                                            <pre className="text-xs bg-gray-50 border border-gray-100 rounded-lg p-3 whitespace-pre-wrap font-mono max-h-48 overflow-y-auto">
+                                            <p className="font-medium text-[#A09A94] mb-1">System Prompt:</p>
+                                            <pre className="text-xs bg-[#0F0F11] border border-white/6 rounded-lg p-3 whitespace-pre-wrap font-mono max-h-48 overflow-y-auto text-[#F0EBE3]">
                                                 {generatedPreview.system_prompt}
                                             </pre>
                                         </div>
@@ -842,14 +956,14 @@ export function IACopilotoTab() {
                                         <button
                                             type="button"
                                             onClick={() => setGeneratedPreview(null)}
-                                            className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50"
+                                            className="px-4 py-2 text-sm border border-white/10 rounded-lg text-[#A09A94] hover:bg-white/[0.03]"
                                         >
                                             Gerar novamente
                                         </button>
                                         <button
                                             type="button"
                                             onClick={saveSkillFromPreview}
-                                            className="flex items-center gap-2 px-4 py-2 bg-[#C8A97A] text-white rounded-lg text-sm font-medium hover:bg-[#b8926a]"
+                                            className="flex items-center gap-2 px-4 py-2 bg-[#BFA06A] text-white rounded-lg text-sm font-medium hover:bg-[#D4B87E]"
                                         >
                                             <Check className="w-4 h-4" />
                                             Usar esta skill
