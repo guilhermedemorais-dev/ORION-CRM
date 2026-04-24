@@ -5,6 +5,7 @@ import { CalendarLegend } from "./components/CalendarLegend";
 import { AppointmentSheet } from "./components/AppointmentSheet";
 import { CreateAppointmentDialog } from "./components/CreateAppointmentDialog";
 import { apiRequest } from '@/lib/api';
+import { requireSession } from '@/lib/auth';
 import type { AppointmentRecord } from './types';
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,9 @@ export default async function AgendaPage({
 }: { 
     searchParams: { view?: string; date?: string; selected?: string; create?: string } 
 }) {
+    const session = requireSession();
+    const currentUserId = session.user.id;
+
     let currentDate = new Date();
     if (searchParams.date) {
         currentDate = new Date(searchParams.date + 'T12:00:00');
@@ -59,9 +63,15 @@ export default async function AgendaPage({
                 description="Gerencie seus agendamentos e horários para visitas e reuniões."
             />
 
+            {/* FIX: Legend moved from bottom to top, next to header for better discoverability */}
+            <div className="mt-4 mb-3 px-0">
+                <CalendarLegend />
+            </div>
+
             <div className={cn(
-                'mt-4 flex-1 overflow-hidden min-h-0',
-                hasSelection ? 'grid grid-cols-[1fr_400px]' : 'flex flex-col'
+                'flex-1 overflow-hidden min-h-0',
+                // FIX: Responsive grid — use min-width to prevent header compression on smaller desktops
+                hasSelection ? 'grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_400px]' : 'flex flex-col'
             )}>
                 <div className="flex flex-col overflow-hidden p-0">
                     <CalendarHeader currentDate={currentDate} view={view} />
@@ -72,7 +82,6 @@ export default async function AgendaPage({
                             selectedId={searchParams.selected ?? null}
                         />
                     </div>
-                    <CalendarLegend />
                 </div>
 
                 {hasSelection && selectedAppointment && (
@@ -83,7 +92,7 @@ export default async function AgendaPage({
                 )}
             </div>
 
-            {searchParams.create === 'true' && <CreateAppointmentDialog />}
+            {searchParams.create === 'true' && <CreateAppointmentDialog currentUserId={currentUserId} />}
         </div>
     );
 }

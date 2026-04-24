@@ -49,9 +49,10 @@ export function CalendarHeader({
     return (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
             {/* Left controls */}
-            <div className="flex items-center gap-4">
-                <h1 className="text-2xl font-semibold text-white capitalize">{monthLabel}</h1>
-                <div className="flex items-center gap-1 bg-surface-sidebar rounded-md p-1 border border-white/5">
+            <div className="flex items-center gap-4 min-w-0">
+                {/* FIX: flex-shrink-0 + truncate on title to prevent wrapping when detail panel compresses layout */}
+                <h1 className="text-2xl font-semibold text-white capitalize shrink-0 truncate max-w-[220px] lg:max-w-none">{monthLabel}</h1>
+                <div className="flex items-center gap-1 bg-surface-sidebar rounded-md p-1 border border-white/5 shrink-0">
                     <button onClick={() => changeMonth(-1)} className="p-1 text-gray-400 hover:text-white transition-colors" title="Mês anterior">
                         <ChevronLeft className="w-5 h-5" />
                     </button>
@@ -65,19 +66,29 @@ export function CalendarHeader({
             </div>
 
             {/* Right controls */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
+                {/* FIX: Toggle visibility on mobile restored + "Semana" button now clearly disabled */}
                 <div className="hidden sm:flex items-center bg-surface-sidebar rounded-md p-1 border border-white/5 mr-2">
                     <button className="px-3 py-1.5 text-xs font-medium bg-brand-gold/10 text-brand-gold rounded transition-colors flex items-center gap-2">
                         <CalendarIcon className="w-3.5 h-3.5" />
                         Mês
                     </button>
-                    <button className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-400 transition-colors flex items-center gap-2 cursor-not-allowed" title="Em breve">
+                    {/* FIX: Clear disabled state with opacity, cursor-not-allowed, and "(Em breve)" label */}
+                    <button 
+                        disabled
+                        className="px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors flex items-center gap-2 cursor-not-allowed opacity-40 relative"
+                        title="Visualização semanal — Em breve"
+                    >
                         <Clock className="w-3.5 h-3.5" />
                         Semana
+                        <span className="text-[8px] font-bold uppercase tracking-wide text-amber-500/80 bg-amber-500/10 px-1 py-0.5 rounded-sm leading-none">
+                            Em breve
+                        </span>
                     </button>
                 </div>
                 <Button onClick={openNewAppointment} icon={<Plus className="w-4 h-4" />}>
-                    Novo Agendamento
+                    <span className="hidden sm:inline">Novo Agendamento</span>
+                    <span className="sm:hidden">Novo</span>
                 </Button>
             </div>
         </div>

@@ -14,7 +14,7 @@ const routeLabels: Array<{ match: RegExp; label: string; section: string }> = [
     { match: /^\/analytics/, label: 'Analytics', section: 'Leitura executiva' },
     { match: /^\/ajustes/, label: 'Ajustes', section: 'Configuração do sistema' },
     { match: /^\/settings\/loja/, label: 'Loja', section: 'Operação e-commerce' },
-    { match: /^\/agenda/, label: 'Agenda', section: 'Gestão de horários' },
+    { match: /^\/agenda/, label: 'Agenda', section: 'Agenda' },
     { match: /^\/automacoes/, label: 'Automações', section: 'Workflows operativos' },
     { match: /^\/clientes/, label: 'Clientes', section: 'Base de contatos' },
     { match: /^\/dashboard/, label: 'Dashboard', section: 'Visão geral' },

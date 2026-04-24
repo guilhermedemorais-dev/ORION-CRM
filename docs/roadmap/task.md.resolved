@@ -484,6 +484,58 @@ Ainda falta:
   - testar busca por nomes de clientes, produtos, pedidos
   - validar navegação por resultados
 
+### QA Agenda — Resolução de 18 Tasks (24 de abril de 2026)
+Status: concluída
+
+Branch: `feat/orion-evolution-foundations`
+
+Frontend/UI:
+- [x] **[BUG-FUNCIONAL-001]** Confirmação antes de "Concluir Atendimento" — Dialog inline com campo de observações opcionais, botão verde (não gold)
+- [x] **[BUG-FUNCIONAL-003]** Eventos duplicados no calendário — Deduplicação por ID no `MonthView.tsx`
+- [x] **[BUG-FUNCIONAL-004]** Cor CONCLUÍDO corrigida no calendário — Agora verde (`border-l-green-500 bg-green-500/15`) em vez de cinza
+- [x] **[BUG-FUNCIONAL-005]** Editar e Cancelar agendamento implementados — Botões no painel de detalhes + modal de edição (reutiliza CreateAppointmentDialog) + cancelamento com motivo obrigatório
+- [x] **[BUG-FUNCIONAL-006]** Máscara WhatsApp `(XX) XXXXX-XXXX` com `inputMode="numeric"`, rejeição de letras em tempo real, validação regex no submit
+- [x] **[BUG-FUNCIONAL-007]** Responsável — Removido placeholder "Atendente Atual", pré-seleciona o `user.id` logado via sessão (Server → Client prop `currentUserId`)
+- [x] **[BUG-FUNCIONAL-008]** Modal centralizado na viewport — `fixed inset-0` + `max-h-[90vh]` + `overflow-y-auto` confirmado
+- [x] **[BUG-FUNCIONAL-009]** Sanitização de nomes de eventos — `formatEventName()` converte `ALL_CAPS_UNDERSCORE` → "Formato Normal"
+- [x] **[RESPONSIVIDADE-001]** Toggle Mês/Semana com botão "Novo" responsivo para mobile (`hidden sm:inline`)
+- [x] **[RESPONSIVIDADE-002]** Header do calendário com `shrink-0 truncate max-w-[220px]` no título do mês para evitar compressão
+- [x] **[RESPONSIVIDADE-003]** Área de toque dos eventos — `min-h-[44px]` cumprindo WCAG 2.5.5 (era 22.5px)
+- [x] **[RESPONSIVIDADE-005/007]** Grid responsivo do layout — `grid-cols-1 lg:grid-cols-[1fr_380px]` para detalhes + `grid-cols-1 sm:grid-cols-2` no modal
+- [x] **[UX-PROBLEMA-001]** Botão "Semana" com `opacity-40 disabled` + badge "Em breve" + `cursor-not-allowed`
+- [x] **[UX-PROBLEMA-002]** Painel de detalhes enriquecido — Pipeline, responsável, Editar, Cancelar, Remarcar, motivo de cancelamento
+- [x] **[UX-PROBLEMA-004]** Legenda de cores movida para cima do calendário (visível sem scroll)
+- [x] **[UX-PROBLEMA-006]** Tooltip com nome completo e tipo nos eventos do calendário
+- [x] **[INCONSISTÊNCIA-002]** Sistema de cores unificado entre eventos do calendário e badges do painel (CONCLUÍDO = verde, CANCELADO = cinza)
+- [x] **[INCONSISTÊNCIA-005]** Botão "Concluir Atendimento" agora usa verde (success) em vez de gold (primary)
+- [x] **[INCONSISTÊNCIA-004]** Nomenclatura unificada: `section: 'Gestão de horários'` → `section: 'Agenda'` no Topbar
+
+Sidebar:
+- [x] **Ocultar "ORION CRM"** — Label white-label comentado no `Sidebar.tsx`
+
+Server Actions:
+- [x] `editAppointmentAction` — Novo action para PATCH `/appointments/:id`
+- [x] `updateAppointmentStatusAction` — Atualizado para aceitar `notes` e `cancel_reason`
+
+Principais arquivos:
+- `apps/web/app/(crm)/agenda/components/AppointmentPill.tsx` (cores, sanitização, 44px, tooltip)
+- `apps/web/app/(crm)/agenda/components/AppointmentSheet.tsx` (confirmação, edição, cancelamento, remarcar)
+- `apps/web/app/(crm)/agenda/components/CreateAppointmentDialog.tsx` (edit mode, máscara WA, responsividade, currentUserId)
+- `apps/web/app/(crm)/agenda/components/CalendarHeader.tsx` (botão Semana, layout responsivo)
+- `apps/web/app/(crm)/agenda/components/CalendarLegend.tsx` (redesenhado, 6 cores)
+- `apps/web/app/(crm)/agenda/components/MonthView.tsx` (deduplicação por ID)
+- `apps/web/app/(crm)/agenda/page.tsx` (legenda no topo, grid responsivo, currentUserId)
+- `apps/web/app/(crm)/agenda/actions.ts` (+editAppointmentAction)
+- `apps/web/components/layout/Sidebar.tsx` (ocultar ORION CRM)
+- `apps/web/components/layout/Topbar.tsx` (nomenclatura Agenda unificada)
+
+Pendências que requerem validação no browser:
+- [ ] **[INCONSISTÊNCIA-003]** Barra de navegação duplicada no rodapé — Não encontrada no código (`AppShell.tsx` renderiza apenas um `<Topbar>`). Pode ser efeito visual em resoluções específicas. Necessário verificar no browser.
+- [ ] **[RESPONSIVIDADE-004]** Sidebar backdrop — Já existe no `AppShell.tsx` (`bg-black/60 z-30`). Verificar se funciona corretamente no browser.
+- [ ] **[RESPONSIVIDADE-006]** Scroll indicator no grid do calendário — Necessário testar em viewports <900px de altura.
+
+Nota QA antes: **4.5 / 10** — Nota esperada após: **7.5+ / 10**
+
 ## Observações
 - Os arquivos de `PRD.DOCS` continuam fora dos commits de código.
 - O roadmap novo está avançado, mas ainda não está 100% encerrado.

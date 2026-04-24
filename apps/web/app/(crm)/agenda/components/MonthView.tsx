@@ -93,9 +93,11 @@ export function MonthView({
                     const isCurrentMonth = date.getMonth() === currentDate.getMonth();
                     const isToday = dateStr === todayStr;
                     
-                    const dayAppointments = appointments.filter((app) => 
-                        app.starts_at && app.starts_at.startsWith(dateStr)
-                    ).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+                    // FIX: Deduplicate events by ID to prevent duplicate rendering
+                    const dayAppointments = appointments
+                        .filter((app) => app.starts_at && app.starts_at.startsWith(dateStr))
+                        .filter((app, idx, arr) => arr.findIndex(a => a.id === app.id) === idx)
+                        .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
                     
                     const visibleApps = dayAppointments.slice(0, 3);
                     const hiddenCount = dayAppointments.length - 3;

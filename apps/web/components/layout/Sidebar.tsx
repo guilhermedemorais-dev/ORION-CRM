@@ -101,7 +101,8 @@ export function Sidebar({
         >
             {/* Logo area */}
             <div className="px-5 py-5">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--orion-text-muted)]">ORION CRM</p>
+                {/* FIX: Hidden — prevents exposing platform name in white-label deployment */}
+                {/* <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--orion-text-muted)]">ORION CRM</p> */}
                 {logoUrl ? (
                     <img
                         src={logoUrl}
