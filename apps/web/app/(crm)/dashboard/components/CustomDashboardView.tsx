@@ -582,7 +582,7 @@ export function CustomDashboardView({ data }: Props) {
 
         {/* Prontos */}
         <div className="panel anim-in">
-          <div className="panel-head"><span className="panel-title">Prontos — Aguardando Retirada</span><Link href="/pedidos" className="panel-action">Ver todos</Link></div>
+          <div className="panel-head"><span className="panel-title">Prontos — Aguardando Retirada</span><Link href="/pedidos" className="panel-action">Ver todos →</Link></div>
           <div className="panel-body">
             {readyOrders.length > 0 ? (
               readyOrders.length > 3 ? readyOrders.slice(0, 3).map((order, i) => (
@@ -621,7 +621,7 @@ export function CustomDashboardView({ data }: Props) {
       <div className="grid-2 anim-in">
         {/* Produção por Etapa */}
         <div className="panel anim-in">
-          <div className="panel-head"><span className="panel-title">Produção por Etapa</span><Link href="/producao" className="panel-action">Ver tudo →</Link></div>
+          <div className="panel-head"><span className="panel-title">Produção por Etapa</span><Link href="/producao" className="panel-action">Ver todos →</Link></div>
           <div className="panel-body" style={{justifyContent:'space-around'}}>
             {productionByStage.map((stage, i) => (
               <div key={i} className="funnel-row">
@@ -659,7 +659,7 @@ export function CustomDashboardView({ data }: Props) {
       <div className="grid-3 anim-in">
         {/* Feed */}
         <div className="panel anim-in">
-          <div className="panel-head"><span className="panel-title">Atividade Recente</span><Link href="/leads" className="panel-action">Ver histórico →</Link></div>
+          <div className="panel-head"><span className="panel-title">Atividade Recente</span><Link href="/leads" className="panel-action">Ver todos →</Link></div>
           <div className="panel-body" style={{gap:0}}>
             {activity.length > 0 ? activity.slice(0, 7).map((e, i) => (
               <div className="feed-row" key={i}>
@@ -678,7 +678,7 @@ export function CustomDashboardView({ data }: Props) {
 
         {/* Top Clientes */}
         <div className="panel anim-in">
-          <div className="panel-head"><span className="panel-title">Top Clientes — Mês</span><Link href="/clientes" className="panel-action">Ver todos</Link></div>
+          <div className="panel-head"><span className="panel-title">Top Clientes — Mês</span><Link href="/clientes" className="panel-action">Ver todos →</Link></div>
           <div className="panel-body" style={{gap:0}}>
             {topClients.map((client, i) => (
               <div key={i} className="cliente-row">
@@ -695,7 +695,7 @@ export function CustomDashboardView({ data }: Props) {
 
         {/* Aniversariantes */}
         <div className="panel anim-in">
-          <div className="panel-head"><span className="panel-title">Aniversariantes da Semana</span><Link href="/clientes" className="panel-action">Ver todos</Link></div>
+          <div className="panel-head"><span className="panel-title">Aniversariantes da Semana</span><Link href="/clientes" className="panel-action">Ver todos →</Link></div>
           <div className="panel-body" style={{gap:0}}>
             <div className="aniv-row"><div className="aniv-avatar" style={{background:'rgba(200,169,122,0.15)',color:'#C8A97A',border:'1px solid rgba(200,169,122,0.2)'}}>AC</div><div className="aniv-info"><div className="aniv-name">Ana Carolina</div><div className="aniv-sub">27 Mar · cliente há 3 anos</div></div><span className="aniv-badge hoje">Hoje 🎂</span></div>
             <div className="aniv-row"><div className="aniv-avatar" style={{background:'rgba(96,165,250,0.12)',color:'#60A5FA',border:'1px solid rgba(96,165,250,0.2)'}}>MR</div><div className="aniv-info"><div className="aniv-name">Mariana Ramos</div><div className="aniv-sub">28 Mar · 2 pedidos no histórico</div></div><span className="aniv-badge amanha">Amanhã</span></div>
@@ -783,7 +783,7 @@ export function CustomDashboardView({ data }: Props) {
 
       {/* Top Produtos */}
       <div className="panel anim-in">
-        <div className="panel-head"><span className="panel-title">Produtos Mais Vendidos</span><Link href="/estoque" className="panel-action">Ver catálogo</Link></div>
+        <div className="panel-head"><span className="panel-title">Produtos Mais Vendidos</span><Link href="/estoque" className="panel-action">Ver todos →</Link></div>
         <div className="panel-body">
           <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:'16px'}}>
             <div className="product-card anim-in"><div className="product-rank" style={{color:'#C8A97A'}}>1º</div><div className="product-name">Anel Solitário Ouro 18k</div><div className="product-val">R$ 18.400</div><div className="product-qty">12 unid.</div></div>
