@@ -158,4 +158,3 @@ export const SYSTEM_WORKFLOWS: N8nWorkflow[] = [
         settings: {},
     },
 ];
-

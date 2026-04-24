@@ -44,6 +44,9 @@ async function getAdminDashboard() {
         
         // Formas de pagamento
         paymentMethods,
+
+        // Receita diária dos últimos 30 dias
+        revenueLast30Days,
     ] = await Promise.all([
         // Leads de hoje
         query<{ total: string }>(
@@ -180,17 +183,17 @@ async function getAdminDashboard() {
         // Top clientes do mês
         query<{ client_id: string; client_name: string; order_count: string; total_cents: string }>(
             `SELECT 
-                o.client_id,
+                c.id AS client_id,
                 COALESCE(c.name, 'Cliente') AS client_name,
-                COUNT(*)::text AS order_count,
-                COALESCE(SUM(o.total_cents), 0)::text AS total_cents
-             FROM orders o
-             LEFT JOIN clients c ON c.id = o.client_id
-             WHERE o.status NOT IN ('CANCELADO')
-               AND date_trunc('month', o.created_at) = date_trunc('month', CURRENT_DATE)
-               AND o.client_id IS NOT NULL
-             GROUP BY o.client_id, c.name
-             ORDER BY SUM(o.total_cents) DESC
+                COUNT(DISTINCT o.id)::text AS order_count,
+                COALESCE(SUM(fe.amount_cents), 0)::text AS total_cents
+             FROM financial_entries fe
+             JOIN orders o ON o.id = fe.order_id
+             JOIN clients c ON c.id = o.client_id
+             WHERE fe.type = 'ENTRADA'
+               AND date_trunc('month', fe.competence_date) = date_trunc('month', CURRENT_DATE)
+             GROUP BY c.id, c.name
+             ORDER BY SUM(fe.amount_cents) DESC
              LIMIT 5`
         ),
         
@@ -214,6 +217,19 @@ async function getAdminDashboard() {
                AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE)
              GROUP BY payment_method
              ORDER BY SUM(amount_cents) DESC`
+        ),
+
+        // Faturamento diário (últimos 30 dias) - mesma fonte do KPI mensal
+        query<{ bucket: string; total: string }>(
+            `SELECT
+                d::date::text AS bucket,
+                COALESCE(SUM(fe.amount_cents), 0)::text AS total
+             FROM generate_series(CURRENT_DATE - interval '29 day', CURRENT_DATE, interval '1 day') d
+             LEFT JOIN financial_entries fe
+               ON fe.type = 'ENTRADA'
+              AND fe.competence_date = d::date
+             GROUP BY d
+             ORDER BY d ASC`
         ),
     ]);
 
@@ -306,6 +322,10 @@ async function getAdminDashboard() {
         })),
         leads_by_source: leadsBySourceWithPct,
         payment_methods: paymentMethodsWithPct,
+        revenue_last_30_days: revenueLast30Days.rows.map((row) => ({
+            date: row.bucket,
+            amount_cents: Number(row.total),
+        })),
     };
 }
 

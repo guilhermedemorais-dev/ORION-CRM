@@ -25,6 +25,7 @@
   display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
 }
 .panel-title { font-size: 9px; letter-spacing:.18em; text-transform:uppercase; color:#555; font-weight:500; }
+/* TASK-017: padronizado "Ver todos →" */
 .panel-action { font-size:10px; color:#C8A97A; cursor:pointer; }
 .panel-action:hover { text-decoration:underline; }
 .panel-body { padding:14px 16px; flex:1; display:flex; flex-direction:column; }
@@ -64,13 +65,15 @@
 .kpi-sub { font-size:10px; color:#444; }
 .kpi-sub b { color:#999; font-weight:500; }
 .kpi-sub.danger { color:#F87171; }
+.kpi-sub.ok { color:#34D399; }
 .spark { display:block; margin:8px 0; }
 .kpi-footer { display:flex; align-items:center; gap:6px; }
 .delta { display:inline-flex; align-items:center; gap:3px; font-size:10px; font-weight:600; padding:2px 7px; border-radius:5px; }
 .delta.up   { color:#34D399; background:rgba(52,211,153,0.12); }
 .delta.down { color:#F87171; background:rgba(248,113,113,0.12); }
 .delta.neu  { color:#888;    background:rgba(255,255,255,0.05); }
-.delta-sub  { font-size:10px; color:#555; }
+/* TASK-014: ellipsis fix para delta-sub longo */
+.delta-sub  { font-size:10px; color:#555; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; }
 
 /* Funnel */
 .funnel-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; }
@@ -102,6 +105,7 @@
 .feed-row:last-child { border-bottom:none; }
 .feed-badge { font-size:8px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:2px 7px; border-radius:4px; min-width:56px; text-align:center; flex-shrink:0; }
 .feed-name { font-size:12px; color:#bbb; width:130px; flex-shrink:0; font-weight:500; }
+/* TASK-008: feed-meta com label contextual real */
 .feed-meta { flex:1; font-size:11px; color:#555; }
 .feed-time { font-size:10px; color:#444; white-space:nowrap; }
 
@@ -184,7 +188,8 @@
 .aniv-badge.amanha { background:rgba(96,165,250,0.12); color:#60A5FA; }
 .aniv-badge.semana { background:rgba(255,255,255,0.05); color:#666; }
 .aniv-cta { margin-top:10px; display:flex; gap:6px; }
-.aniv-btn { flex:1; padding:7px; border-radius:7px; background:rgba(200,169,122,0.1); border:1px solid rgba(200,169,122,0.2); color:#C8A97A; font-size:11px; font-weight:500; cursor:pointer; text-align:center; transition:background .15s; }
+/* TASK-018: flex para alinhar ícone Lucide + texto */
+.aniv-btn { flex:1; padding:7px; border-radius:7px; background:rgba(200,169,122,0.1); border:1px solid rgba(200,169,122,0.2); color:#C8A97A; font-size:11px; font-weight:500; cursor:pointer; text-align:center; transition:background .15s; display:inline-flex; align-items:center; justify-content:center; gap:5px; }
 .aniv-btn:hover { background:rgba(200,169,122,0.18); }
 
 /* Leads por origem */
@@ -195,7 +200,8 @@
 .origem-bar-bg { width:90px; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; }
 .origem-bar { height:4px; border-radius:2px; }
 .origem-count { font-family:'Playfair Display',serif; font-size:15px; font-weight:500; min-width:24px; text-align:right; }
-.origem-pct { font-size:10px; color:#444; min-width:30px; text-align:right; }
+/* TASK-019: cor melhorada para garantir visibilidade de todos os percentuais */
+.origem-pct { font-size:10px; color:#666; min-width:30px; text-align:right; }
 
 /* Heatmap */
 .heatmap-wrap { display:flex; gap:10px; }
@@ -238,6 +244,58 @@
 .product-name { font-size:12px; font-weight:500; color:#C8C6C0; margin-bottom:6px; }
 .product-val { font-family:'Playfair Display',serif; font-size:16px; color:#C8A97A; }
 .product-qty { font-size:10px; color:#555; margin-top:2px; }
+
+/* ─── TASK-016: Skeleton Loaders ─── */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.8; }
+}
+
+.skeleton {
+  background: rgba(255,255,255,0.07);
+  border-radius: 6px;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-kpi {
+  background: #111113;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-chart {
+  background: #111113;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-panel {
+  background: #111113;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skeleton-line { height: 10px; border-radius: 5px; }
+.skeleton-line.lg { height: 28px; border-radius: 8px; }
+.skeleton-line.xl { height: 40px; border-radius: 10px; }
+.skeleton-line.w-full { width: 100%; }
+.skeleton-line.w-3-4 { width: 75%; }
+.skeleton-line.w-half { width: 50%; }
+.skeleton-line.w-1-3 { width: 33%; }
 
 /* ANIMATIONS */
 .anim-in {
@@ -342,3 +400,128 @@
   transform: scale(1);
 }
 .hm-cell.visible:hover { opacity: 0.7; transform: scale(1); }
+
+/* TASK-020: Anchor navigation bar */
+.dash-anchor-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  overflow-x: auto;
+}
+.dash-anchor-link {
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #555;
+  padding: 5px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color .15s, background .15s;
+  white-space: nowrap;
+}
+.dash-anchor-link:hover {
+  color: #C8A97A;
+  background: rgba(200,169,122,0.08);
+}
+.dash-anchor-time {
+  font-size: 9px;
+  color: #333;
+  white-space: nowrap;
+  padding-left: 4px;
+}
+
+/* TASK-021: KPI card cursor upgrade for clickable state */
+.kpi-card[role="link"] { cursor: pointer; }
+.kpi-card[role="link"]:focus-visible { outline: 2px solid rgba(200,169,122,0.5); outline-offset: 2px; }
+
+/* ─────────────────────────────────────────────
+   TASK-001 RESPONSIVIDADE — Breakpoints Mobile/Tablet
+   ───────────────────────────────────────────── */
+
+/* Tablet: 1024px */
+@media (max-width: 1024px) {
+  .dashboard-root { padding: 16px 16px; gap: 12px; }
+
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .grid-2 { grid-template-columns: 1fr; }
+
+  /* Gráfico de faturamento em coluna única */
+  .dashboard-root [style*="grid-template-columns: 1fr 340px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Esconder colunas de tempo no heatmap */
+  .heatmap-hours { display: none; }
+  .hm-hour { display: none; }
+
+  /* Produtos: 3 colunas */
+  .dashboard-root [style*="grid-template-columns: repeat(5,1fr)"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  .kpi-value { font-size: 20px; }
+  .meta-value { font-size: 24px; }
+}
+
+/* Mobile: 640px */
+@media (max-width: 640px) {
+  .dashboard-root { padding: 12px 12px; gap: 10px; }
+
+  .grid-4 { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid-3 { grid-template-columns: 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+
+  .kpi-card { padding: 14px; }
+  .kpi-value { font-size: 18px; }
+  .kpi-icon { display: none; }
+
+  .dash-anchor-nav { gap: 2px; padding: 4px 6px; }
+  .dash-anchor-link { font-size: 8px; padding: 4px 7px; }
+  .dash-anchor-time { display: none; }
+
+  .panel-body { padding: 12px; }
+
+  /* Heatmap compacto mobile */
+  .heatmap-wrap { flex-direction: column; gap: 6px; }
+  .heatmap-days { flex-direction: row; padding-top: 0; gap: 3px; }
+  .heatmap-day-label { line-height: 1; flex: 1; text-align: center; font-size: 8px; }
+
+  /* Chart stats em 2 colunas */
+  .chart-stats { flex-wrap: wrap; gap: 10px; }
+  .chart-stats > div { min-width: 80px; }
+
+  /* Meta stats em coluna */
+  .meta-stats { grid-template-columns: 1fr 1fr; }
+
+  /* Produtos: 2 colunas */
+  .dashboard-root [style*="grid-template-columns: repeat(5,1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Cliente val menor */
+  .cliente-val { font-size: 12px; }
+
+  /* Feed row compacto */
+  .feed-name { width: 90px; }
+
+  /* Âncora sem tempo */
+  .dash-anchor-time { display: none; }
+}
+
+/* Faixa estreita (320px) */
+@media (max-width: 380px) {
+  .grid-4 { grid-template-columns: 1fr; }
+  .dashboard-root { padding: 10px 10px; }
+  .kpi-value { font-size: 16px; }
+}

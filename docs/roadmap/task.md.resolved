@@ -102,6 +102,48 @@
 
 ## Histórico Entregue
 
+### QA Dashboard — Resolução Completa de 22 Tasks (24 de abril de 2026)
+Status: concluída
+
+Branch: `fix-dashboard-qa-task-001-005`
+Commit: `daf93b6` `fix(dashboard): resolve all 22 QA tasks — responsiveness, data consistency, UX polish`
+
+Frontend/UI:
+- [x] TASK-001 — Responsividade: breakpoints mobile (640px), tablet (1024px), narrow (380px) em `DashboardTemplate.css`
+- [x] TASK-002 — Calendário dinâmico com `new Date()` em `useEffect` (evita hydration mismatch)
+- [x] TASK-003 — Gráfico de faturamento com série SVG + fallback "Nenhum dado para o período"
+- [x] TASK-004 — `suppressHydrationWarning` nos KPI values + `DashboardSkeleton` durante hydration
+- [x] TASK-005 — Top Clientes corrigido para centavos coerentes com faturamento (`total_cents`)
+- [x] TASK-006 — Botões de aniversariantes: modal de parabéns + WhatsApp wa.me com texto pré-preenchido
+- [x] TASK-007 — Painel de Notificações no Topbar: popover, `aria-haspopup`, `aria-expanded`, close on outside click
+- [x] TASK-008 — Atividade recente com `relativeTime()` + `activityLabel()` por tipo (lead/order/payment)
+- [x] TASK-009 — AI Assistant: badge "manutenção", `disabled`, tooltip, env var `NEXT_PUBLIC_ORION_AI_ENABLED`
+- [x] TASK-010 — Cor semântica: "Nenhum atraso" usa classe `.ok` (verde) ao invés de vermelho
+- [x] TASK-011 — Navegação do calendário funcional com `setCurrentMonth()` (‹ / ›)
+- [x] TASK-012 — Cards de estoque crítico clicáveis com `onClick → router.push('/estoque')` + "Ver no estoque →"
+- [x] TASK-013 — Label "Exportar" corrigido para "Ver detalhes →" no painel financeiro
+- [x] TASK-014 — Ellipsis fix no `.delta-sub` (overflow + text-overflow + max-width)
+- [x] TASK-015 — Etapas de produção canônicas (`PRODUCTION_STAGES_CANONICAL`) — mesmas em ambos os cards
+- [x] TASK-016 — Skeleton loaders para KPIs, gráfico, alertas e atividade + `loading.tsx` route
+- [x] TASK-017 — Links secundários padronizados "Ver todos →" em todo o dashboard
+- [x] TASK-018 — Ícones Lucide (`Mail`, `MessageCircle`) substituindo emojis nos botões de aniversário
+- [x] TASK-019 — Percentuais completos no gráfico "Leads por Origem" com `.origem-pct`
+- [x] TASK-020 — Navegação por âncoras (`.dash-anchor-nav`) sticky com backdrop blur
+- [x] TASK-021 — KPI cards clicáveis com `router.push()`, `role="link"`, `tabIndex={0}`, `title`
+- [x] TASK-022 — Auto-refresh 60s com `router.refresh()` + timestamp "Atualizado: HH:mm"
+
+Principais arquivos:
+- `apps/web/app/(crm)/dashboard/components/CustomDashboardView.tsx` (936 linhas, +175)
+- `apps/web/app/(crm)/dashboard/components/DashboardTemplate.css` (528 linhas, +189)
+- `apps/web/app/(crm)/dashboard/loading.tsx` (novo — skeleton route)
+- `apps/web/components/layout/Topbar.tsx` (202 linhas, +109)
+- `apps/web/components/ui/Button.tsx` (+29)
+- `apps/web/components/ui/Card.tsx` (+14)
+- `apps/web/components/ui/Input.tsx` (+8)
+- `apps/web/components/ui/KpiCard.tsx` (+37)
+
+Nota QA antes: **4.0 / 10** — Nota esperada após: **8.0+ / 10**
+
 ### Correções Críticas de QA (16 de março de 2026)
 Status: concluída
 
