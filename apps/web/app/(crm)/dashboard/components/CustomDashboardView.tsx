@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Mail, MessageCircle } from 'lucide-react';
 import type { DashboardPayload } from '@/lib/api';
 import { formatCurrencyFromCents } from '@/lib/utils';
 import './DashboardTemplate.css';
@@ -25,8 +27,46 @@ const HM_WEIGHTS = [
 ];
 const HM_DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
+const CAL_MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+function formatDateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function countBusinessDaysRemaining(date: Date): number {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const startDay = date.getDate() + 1;
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  let count = 0;
+  for (let day = startDay; day <= lastDay; day += 1) {
+    const dow = new Date(year, month, day).getDay();
+    if (dow !== 0 && dow !== 6) count += 1;
+  }
+  return count;
+}
+
 export function CustomDashboardView({ data }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const [currentMonth, setCurrentMonth] = useState<Date | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+  useEffect(() => {
+    setCurrentMonth(new Date());
+  }, []);
+
+  /* ─── TASK-022: Auto-refresh a cada 60 segundos ─── */
+  useEffect(() => {
+    const id = setInterval(() => {
+      router.refresh();
+      setLastUpdated(new Date());
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [router]);
 
   /* ─── Dados reais da API ou fallback visual ─── */
   const hasRealData = data?.kpis && data.kpis.month_revenue_cents != null;
@@ -41,9 +81,9 @@ export function CustomDashboardView({ data }: Props) {
 
   // Listas - usa dados reais se disponíveis, senão fallback visual
   const readyOrders = (hasRealData && data.ready_orders && data.ready_orders.length > 0) ? data.ready_orders : [
-    { order_number: '#0042', client_name: 'Ana Carolina', total_cents: 840000, ready_days: 3 },
-    { order_number: '#0039', client_name: 'Pedro Monteiro', total_cents: 520000, ready_days: 1 },
-    { order_number: '#0035', client_name: 'Julia Siqueira', total_cents: 380000, ready_days: 0 },
+    { order_number: '#0042', client_name: 'Ana Carolina', total_cents: 1984000, ready_days: 3 },
+    { order_number: '#0039', client_name: 'Pedro Monteiro', total_cents: 1630000, ready_days: 1 },
+    { order_number: '#0035', client_name: 'Julia Siqueira', total_cents: 1170000, ready_days: 0 },
   ];
 
   const stockAlerts = (hasRealData && data.stock_alerts_detail && data.stock_alerts_detail.length > 0) ? data.stock_alerts_detail : [
@@ -59,9 +99,9 @@ export function CustomDashboardView({ data }: Props) {
   ];
 
   const topClients = (hasRealData && data.top_clients && data.top_clients.length > 0) ? data.top_clients : [
-    { client_name: 'Ana Carolina', order_count: 3, total_cents: 840000 },
-    { client_name: 'Pedro Monteiro', order_count: 2, total_cents: 520000 },
-    { client_name: 'Julia Siqueira', order_count: 1, total_cents: 380000 },
+    { client_name: 'Ana Carolina', order_count: 3, total_cents: 1984000 },
+    { client_name: 'Pedro Monteiro', order_count: 2, total_cents: 1630000 },
+    { client_name: 'Julia Siqueira', order_count: 1, total_cents: 1170000 },
   ];
 
   const leadsBySource = (hasRealData && data.leads_by_source && data.leads_by_source.length > 0) ? data.leads_by_source : [
@@ -74,22 +114,105 @@ export function CustomDashboardView({ data }: Props) {
 
   const productionByStage = (hasRealData && data.production_by_stage && data.production_by_stage.length > 0) ? data.production_by_stage : [
     { stage: 'PENDENTE', stage_label: 'Designer 3D', count: 4 },
-    { stage: 'EM_ANDAMENTO', stage_label: 'Fabricação', count: 2 },
+    { stage: 'EM_ANDAMENTO', stage_label: 'Fundição', count: 3 },
+    { stage: 'EM_ANDAMENTO', stage_label: 'Cravação', count: 2 },
     { stage: 'PAUSADA', stage_label: 'Acabamento', count: 2 },
-    { stage: 'CONCLUIDA', stage_label: 'Entrega', count: 1 },
-    { stage: 'PENDENTE', stage_label: 'Atendimento', count: 3 },
+    { stage: 'CONCLUIDA', stage_label: 'Polimento', count: 1 },
   ];
 
   const activity = (hasRealData && data.activity && data.activity.length > 0) ? data.activity : [
-    { kind: 'lead', label: 'Novo lead: João Silva', created_at: new Date().toISOString() },
-    { kind: 'order', label: 'Pedido #0042 finalizado', created_at: new Date().toISOString() },
-    { kind: 'lead', label: 'Lead convertido: Maria Santos', created_at: new Date().toISOString() },
-    { kind: 'order', label: 'Pagamento confirmado', created_at: new Date().toISOString() },
+    { kind: 'lead', label: 'Novo lead: João Silva', created_at: '2026-04-23T09:10:00-03:00' },
+    { kind: 'order', label: 'Pedido #0042 finalizado', created_at: '2026-04-23T10:42:00-03:00' },
+    { kind: 'lead', label: 'Lead convertido: Maria Santos', created_at: '2026-04-23T14:25:00-03:00' },
+    { kind: 'order', label: 'Pagamento confirmado', created_at: '2026-04-23T16:31:00-03:00' },
   ];
 
   // Valores derivados
   const totalLeads = leadsBySource.reduce((acc, s) => acc + s.count, 0) || 87;
   const readyOrdersTotal = readyOrders.reduce((acc, o) => acc + o.total_cents, 0) / 100 || 9200;
+  const topClientsTotalCents = topClients.reduce((acc, c) => acc + c.total_cents, 0);
+  const monthDate = currentMonth ?? new Date('2026-01-01T12:00:00-03:00');
+  const businessDaysRemaining = countBusinessDaysRemaining(monthDate);
+  const todayLabel = monthDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', timeZone: 'America/Sao_Paulo' });
+
+  const chartSeries = useMemo(() => {
+    const fallback = [
+      680, 740, 710, 820, 900, 980, 870, 1040, 1120, 980, 1210, 1320, 1415, 1540, 1490,
+      1620, 1700, 1840, 1920, 2010, 2130, 2260, 2200, 2380, 2490, 2630, 2780, 2910, 3050, 3190,
+    ].map((amount, index) => {
+      const date = new Date(monthDate);
+      date.setDate(date.getDate() - (29 - index));
+      return { date: formatDateKey(date), amount_cents: amount * 100 };
+    });
+    if (!hasRealData) return fallback;
+    return data?.revenue_last_30_days ?? [];
+  }, [data?.revenue_last_30_days, hasRealData, monthDate]);
+
+  const hasChartData = chartSeries.length > 0 && chartSeries.some((point) => point.amount_cents > 0);
+
+  const chartStats = useMemo(() => {
+    if (!hasChartData) {
+      return {
+        linePath: '',
+        areaPath: '',
+        dotX: 0,
+        dotY: 0,
+        maxDay: 0,
+        avgDay: 0,
+      };
+    }
+
+    const width = 600;
+    const height = 180;
+    const topPad = 20;
+    const bottomPad = 10;
+    const values = chartSeries.map((point) => point.amount_cents / 100);
+    const max = Math.max(...values, 1);
+    const min = Math.min(...values, 0);
+    const range = Math.max(max - min, 1);
+    const stepX = chartSeries.length > 1 ? width / (chartSeries.length - 1) : width;
+    const points = values.map((value, index) => {
+      const x = Math.round(index * stepX);
+      const normalized = (value - min) / range;
+      const y = Math.round(height - bottomPad - normalized * (height - topPad - bottomPad));
+      return { x, y, value };
+    });
+    const linePath = points
+      .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x},${point.y}`)
+      .join(' ');
+    const areaPath = `${linePath} L${width},${height} L0,${height} Z`;
+    const last = points[points.length - 1] ?? { x: 0, y: 0 };
+    const avgDay = Math.round(values.reduce((acc, value) => acc + value, 0) / values.length);
+
+    return {
+      linePath,
+      areaPath,
+      dotX: last.x,
+      dotY: last.y,
+      maxDay: Math.round(max),
+      avgDay,
+    };
+  }, [chartSeries, hasChartData]);
+
+  const calendarCells = useMemo(() => {
+    if (!currentMonth) return [];
+    const firstOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+    const start = new Date(firstOfMonth);
+    start.setDate(firstOfMonth.getDate() - firstOfMonth.getDay());
+    const cells: Array<{ key: string; day: number; isCurrentMonth: boolean; isToday: boolean }> = [];
+    for (let i = 0; i < 42; i += 1) {
+      const cellDate = new Date(start);
+      cellDate.setDate(start.getDate() + i);
+      const isToday = formatDateKey(cellDate) === formatDateKey(new Date());
+      cells.push({
+        key: cellDate.toISOString(),
+        day: cellDate.getDate(),
+        isCurrentMonth: cellDate.getMonth() === currentMonth.getMonth(),
+        isToday,
+      });
+    }
+    return cells;
+  }, [currentMonth]);
 
   /* ─── Animation system on mount ─── */
   useEffect(() => {
@@ -254,43 +377,54 @@ export function CustomDashboardView({ data }: Props) {
   return (
     <div className="dashboard-root" ref={rootRef}>
 
+      {/* ══════════ TASK-020: NAVEGAÇÃO RÁPIDA POR ÂNCORAS ══════════ */}
+      <nav className="dash-anchor-nav">
+        <a href="#section-financeiro" className="dash-anchor-link">Financeiro</a>
+        <a href="#section-acao-imediata" className="dash-anchor-link">Ação Imediata</a>
+        <a href="#section-operacoes" className="dash-anchor-link">Operações</a>
+        <a href="#section-comercial" className="dash-anchor-link">Comercial</a>
+        <a href="#section-analytics" className="dash-anchor-link">Analytics</a>
+        <div style={{flex:1}}/>
+        <span className="dash-anchor-time">Atualizado: {lastUpdated.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</span>
+      </nav>
+
       {/* ══════════ 1. VISÃO GERAL — KPIs ══════════ */}
       <div className="grid-4 anim-in">
         {/* Faturamento */}
-        <div className="kpi-card anim-in">
+        <div className="kpi-card anim-in" onClick={() => router.push('/financeiro')} role="link" tabIndex={0} title="Ver Financeiro">
           <div className="kpi-top"><div className="kpi-label">Faturamento do Mês</div><div className="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" strokeWidth="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div></div>
-          <div className="kpi-value">{fmtBRL(revenue)}</div>
+          <div className="kpi-value" suppressHydrationWarning>{fmtBRL(revenue)}</div>
           <svg className="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(200,169,122,0.08)" points="0,34 0,30 25,26 50,28 75,20 100,22 125,14 150,11 175,8 200,6 200,34"/><polyline fill="none" stroke="rgba(200,169,122,0.55)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points="0,30 25,26 50,28 75,20 100,22 125,14 150,11 175,8 200,6"/></svg>
           <div className="kpi-footer"><span className="delta up">↑ 18%</span><span className="delta-sub">vs mês anterior</span></div>
         </div>
         {/* PDV */}
-        <div className="kpi-card anim-in">
+        <div className="kpi-card anim-in" onClick={() => router.push('/pdv')} role="link" tabIndex={0} title="Ver PDV">
           <div className="kpi-top"><div className="kpi-label">PDV — Vendas Hoje</div><div className="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" strokeWidth="1.5"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div></div>
-          <div className="kpi-value">{pdvOrdersToday}</div>
+          <div className="kpi-value" suppressHydrationWarning>{pdvOrdersToday}</div>
           <div className="kpi-sub">Ticket médio <b>{fmtBRL(pdvTicketAvg * 100)}</b></div>
           <svg className="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(200,169,122,0.08)" points="0,34 0,32 25,26 50,28 75,22 100,18 125,24 150,14 175,10 200,16 200,34"/><polyline fill="none" stroke="rgba(200,169,122,0.55)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points="0,32 25,26 50,28 75,22 100,18 125,24 150,14 175,10 200,16"/></svg>
           <div className="kpi-footer"><span className="delta up">↑ +{pdvOrdersToday > 4 ? pdvOrdersToday - 4 : pdvOrdersToday}</span><span className="delta-sub">vs ontem</span></div>
         </div>
         {/* Leads */}
-        <div className="kpi-card anim-in">
+        <div className="kpi-card anim-in" onClick={() => router.push('/pipeline/leads')} role="link" tabIndex={0} title="Ver Pipeline">
           <div className="kpi-top"><div className="kpi-label">Leads — Pipeline</div><div className="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" strokeWidth="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div></div>
-          <div className="kpi-value">{leadsToday}</div>
+          <div className="kpi-value" suppressHydrationWarning>{leadsToday}</div>
           <div className="kpi-sub">Novos hoje <b style={{color:'#C8A97A'}}>+3</b></div>
           <svg className="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(200,169,122,0.08)" points="0,34 0,34 25,28 50,22 75,26 100,18 125,16 150,20 175,12 200,10 200,34"/><polyline fill="none" stroke="rgba(200,169,122,0.55)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points="0,34 25,28 50,22 75,26 100,18 125,16 150,20 175,12 200,10"/></svg>
           <div className="kpi-footer"><span className="delta up">↑ 12%</span><span className="delta-sub">conversão 34%</span></div>
         </div>
         {/* Pedidos */}
-        <div className="kpi-card anim-in">
+        <div className="kpi-card anim-in" onClick={() => router.push('/pedidos')} role="link" tabIndex={0} title="Ver Pedidos">
           <div className="kpi-top"><div className="kpi-label">Pedidos em Aberto</div><div className="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" strokeWidth="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div></div>
-          <div className="kpi-value">{openOrders}</div>
-          <div className="kpi-sub danger">{overdueProduction > 0 ? `${overdueProduction} com prazo vencido` : 'Nenhum atraso'}</div>
+          <div className="kpi-value" suppressHydrationWarning>{openOrders}</div>
+          <div className={`kpi-sub ${overdueProduction > 0 ? 'danger' : 'ok'}`}>{overdueProduction > 0 ? `${overdueProduction} com prazo vencido` : 'Nenhum atraso'}</div>
           <svg className="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(248,113,113,0.07)" points="0,34 0,20 25,18 50,24 75,16 100,20 125,14 150,18 175,16 200,14 200,34"/><polyline fill="none" stroke="rgba(248,113,113,0.45)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points="0,20 25,18 50,24 75,16 100,20 125,14 150,18 175,16 200,14"/></svg>
-          <div className="kpi-footer"><span className="delta neu">→ estável</span><span className="delta-sub">{fmtBRL(revenue * 100)} em aberto</span></div>
+          <div className="kpi-footer"><span className="delta neu">→ estável</span><span className="delta-sub" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'120px'}}>{fmtBRL(revenue * 100)} em aberto</span></div>
         </div>
       </div>
 
       {/* ══════════ 2. FINANCEIRO ══════════ */}
-      <div className="section-divider anim-in">
+      <div id="section-financeiro" className="section-divider anim-in">
         <div className="section-divider-icon" style={{background:'rgba(200,169,122,0.1)'}}><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" strokeWidth="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
         <span className="section-divider-label">Financeiro</span>
         <div className="section-divider-line"></div>
@@ -299,22 +433,28 @@ export function CustomDashboardView({ data }: Props) {
       <div style={{display:'grid',gridTemplateColumns:'1fr 340px',gap:'12px'}} className="anim-in">
         {/* Chart */}
         <div className="panel anim-in">
-          <div className="panel-head"><span className="panel-title">Faturamento — Últimos 30 Dias</span><Link href="/financeiro" className="panel-action">Exportar</Link></div>
+          <div className="panel-head"><span className="panel-title">Faturamento — Últimos 30 Dias</span><Link href="/financeiro" className="panel-action">Ver detalhes →</Link></div>
           <div className="panel-body" style={{position:'relative',gap:'10px'}}>
             <div style={{position:'relative',flex:1,minHeight:'200px'}}>
-              <svg className="chart-svg" width="100%" height="100%" viewBox="0 0 600 180" preserveAspectRatio="none">
-                <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#C8A97A" stopOpacity={0.15}/><stop offset="100%" stopColor="#C8A97A" stopOpacity={0}/></linearGradient></defs>
-                <line x1="0" y1="45" x2="600" y2="45" stroke="rgba(255,255,255,0.03)" strokeWidth="1" strokeDasharray="4 4"/>
-                <line x1="0" y1="90" x2="600" y2="90" stroke="rgba(255,255,255,0.03)" strokeWidth="1" strokeDasharray="4 4"/>
-                <line x1="0" y1="135" x2="600" y2="135" stroke="rgba(255,255,255,0.03)" strokeWidth="1" strokeDasharray="4 4"/>
-                <path className="chart-area" d="M0,170 L50,150 L100,155 L150,130 L200,125 L250,95 L300,105 L350,75 L400,70 L450,40 L500,55 L550,25 L600,35 L600,180 L0,180 Z" fill="url(#cg)"/>
-                <path className="chart-line" d="M0,170 L50,150 L100,155 L150,130 L200,125 L250,95 L300,105 L350,75 L400,70 L450,40 L500,55 L550,25 L600,35" fill="none" stroke="#C8A97A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle className="chart-dot" cx="600" cy="35" r="4" fill="#111113" stroke="#C8A97A" strokeWidth="2"/>
-              </svg>
+              {hasChartData ? (
+                <svg className="chart-svg" width="100%" height="100%" viewBox="0 0 600 180" preserveAspectRatio="none">
+                  <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#C8A97A" stopOpacity={0.15}/><stop offset="100%" stopColor="#C8A97A" stopOpacity={0}/></linearGradient></defs>
+                  <line x1="0" y1="45" x2="600" y2="45" stroke="rgba(255,255,255,0.03)" strokeWidth="1" strokeDasharray="4 4"/>
+                  <line x1="0" y1="90" x2="600" y2="90" stroke="rgba(255,255,255,0.03)" strokeWidth="1" strokeDasharray="4 4"/>
+                  <line x1="0" y1="135" x2="600" y2="135" stroke="rgba(255,255,255,0.03)" strokeWidth="1" strokeDasharray="4 4"/>
+                  <path className="chart-area" d={chartStats.areaPath} fill="url(#cg)"/>
+                  <path className="chart-line" d={chartStats.linePath} fill="none" stroke="#C8A97A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle className="chart-dot" cx={chartStats.dotX} cy={chartStats.dotY} r="4" fill="#111113" stroke="#C8A97A" strokeWidth="2"/>
+                </svg>
+              ) : (
+                <div className="flex h-full min-h-[180px] items-center justify-center rounded-lg border border-dashed border-white/10 text-[11px] text-[#777]">
+                  Nenhum dado para o período
+                </div>
+              )}
             </div>
             <div className="chart-stats">
-              <div><div className="cs-label">Maior Dia</div><div className="cs-val">R$ 4.280</div></div>
-              <div><div className="cs-label">Média Diária</div><div className="cs-val">R$ 1.579</div></div>
+              <div><div className="cs-label">Maior Dia</div><div className="cs-val" suppressHydrationWarning>{fmtBRL(chartStats.maxDay)}</div></div>
+              <div><div className="cs-label">Média Diária</div><div className="cs-val" suppressHydrationWarning>{fmtBRL(chartStats.avgDay)}</div></div>
               <div><div className="cs-label">Meta do Mês</div><div className="cs-val green">94%</div></div>
               <div style={{marginLeft:'auto'}}><div className="cs-label">Projeção</div><div className="cs-val">R$ 51.200</div></div>
             </div>
@@ -326,11 +466,11 @@ export function CustomDashboardView({ data }: Props) {
           <div className="panel anim-in" style={{flex:1}}>
             <div className="panel-head"><span className="panel-title">Meta do Mês</span><Link href="/financeiro" className="panel-action">Ajustar</Link></div>
             <div className="panel-body">
-              <div className="meta-hero"><div className="meta-value">{fmtBRL(revenue)}</div><div className="meta-pct">94%</div></div>
+              <div className="meta-hero"><div className="meta-value" suppressHydrationWarning>{fmtBRL(revenue)}</div><div className="meta-pct">94%</div></div>
               <div style={{fontSize:'10px',color:'#444',marginBottom:'8px'}}>de R$ 50.000 — faltam R$ 2.620</div>
               <div className="meta-bar-wrap"><div className="meta-bar-fill" style={{width:'94%'}}></div></div>
               <div className="meta-stats">
-                <div className="meta-stat"><div className="meta-stat-label">Dias úteis</div><div className="meta-stat-val">3 restam</div></div>
+                <div className="meta-stat"><div className="meta-stat-label">Dias úteis</div><div className="meta-stat-val">{businessDaysRemaining} restam</div></div>
                 <div className="meta-stat"><div className="meta-stat-label">Diário p/ bater</div><div className="meta-stat-val">R$ 873</div></div>
                 <div className="meta-stat"><div className="meta-stat-label">Melhor dia</div><div className="meta-stat-val">R$ 4.280</div></div>
               </div>
@@ -357,7 +497,7 @@ export function CustomDashboardView({ data }: Props) {
       </div>
 
       {/* ══════════ 3. AÇÃO IMEDIATA ══════════ */}
-      <div className="section-divider anim-in">
+      <div id="section-acao-imediata" className="section-divider anim-in">
         <div className="section-divider-icon" style={{background:'rgba(248,113,113,0.1)'}}><svg viewBox="0 0 24 24" fill="none" stroke="#F87171" strokeWidth="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
         <span className="section-divider-label">Ação Imediata</span>
         <div className="section-divider-line"></div>
@@ -393,19 +533,47 @@ export function CustomDashboardView({ data }: Props) {
 
         {/* Agenda */}
         <div className="panel anim-in">
-          <div className="panel-head"><span className="panel-title">Agenda</span><Link href="/agenda" className="panel-action">Ver completo →</Link></div>
+          <div className="panel-head"><span className="panel-title">Agenda</span><Link href="/agenda" className="panel-action">Ver todos →</Link></div>
           <div className="panel-body">
-            <div className="cal-header"><div className="cal-month">Março 2026</div><div className="cal-nav"><button className="cal-nav-btn">‹</button><button className="cal-nav-btn">›</button></div></div>
+            <div className="cal-header">
+              <div className="cal-month">
+                {currentMonth ? `${CAL_MONTHS[currentMonth.getMonth()]} ${currentMonth.getFullYear()}` : 'Carregando...'}
+              </div>
+              <div className="cal-nav">
+                <button
+                  className="cal-nav-btn"
+                  onClick={() => setCurrentMonth((prev) => {
+                    const base = prev ?? new Date();
+                    return new Date(base.getFullYear(), base.getMonth() - 1, 1);
+                  })}
+                  aria-label="Mês anterior"
+                >
+                  ‹
+                </button>
+                <button
+                  className="cal-nav-btn"
+                  onClick={() => setCurrentMonth((prev) => {
+                    const base = prev ?? new Date();
+                    return new Date(base.getFullYear(), base.getMonth() + 1, 1);
+                  })}
+                  aria-label="Próximo mês"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
             <div className="cal-grid">
               <div className="cal-dow">D</div><div className="cal-dow">S</div><div className="cal-dow">T</div><div className="cal-dow">Q</div><div className="cal-dow">Q</div><div className="cal-dow">S</div><div className="cal-dow">S</div>
-              <div className="cal-day other-month">23</div><div className="cal-day other-month">24</div><div className="cal-day other-month">25</div><div className="cal-day other-month">26</div><div className="cal-day other-month">27</div><div className="cal-day other-month">28</div><div className="cal-day">1</div>
-              <div className="cal-day">2</div><div className="cal-day has-event">3</div><div className="cal-day">4</div><div className="cal-day has-event">5</div><div className="cal-day">6</div><div className="cal-day has-event">7</div><div className="cal-day">8</div>
-              <div className="cal-day">9</div><div className="cal-day has-event">10</div><div className="cal-day">11</div><div className="cal-day">12</div><div className="cal-day has-event">13</div><div className="cal-day">14</div><div className="cal-day">15</div>
-              <div className="cal-day has-event">16</div><div className="cal-day">17</div><div className="cal-day has-event">18</div><div className="cal-day">19</div><div className="cal-day">20</div><div className="cal-day has-event">21</div><div className="cal-day">22</div>
-              <div className="cal-day">23</div><div className="cal-day">24</div><div className="cal-day">25</div><div className="cal-day">26</div><div className="cal-day today">27</div><div className="cal-day has-event">28</div><div className="cal-day">29</div>
-              <div className="cal-day">30</div><div className="cal-day has-event">31</div>
+              {calendarCells.map((cell, index) => (
+                <div
+                  key={cell.key}
+                  className={`cal-day ${cell.isCurrentMonth ? '' : 'other-month'} ${cell.isToday ? 'today' : ''} ${index % 5 === 0 ? 'has-event' : ''}`}
+                >
+                  {cell.day}
+                </div>
+              ))}
             </div>
-            <div className="section-label">Hoje — 27 Mar</div>
+            <div className="section-label">Hoje — {todayLabel}</div>
             <div className="cal-event-row"><div className="cal-event-time">10:00</div><div className="cal-event-dot" style={{background:'#C8A97A'}}></div><div className="cal-event-name">Ana Lima</div><div className="cal-event-sub">Anel noivado</div></div>
             <div className="cal-event-row"><div className="cal-event-time">14:00</div><div className="cal-event-dot" style={{background:'#60A5FA'}}></div><div className="cal-event-name">Carlos Mendes</div><div className="cal-event-sub">Entrega pulseira</div></div>
             <div className="cal-event-row"><div className="cal-event-time">16:30</div><div className="cal-event-dot" style={{background:'#555'}}></div><div className="cal-event-name">Revisão orçamento</div><div className="cal-event-sub">#PED-0051</div></div>
@@ -443,7 +611,7 @@ export function CustomDashboardView({ data }: Props) {
       </div>
 
       {/* ══════════ 4. OPERAÇÕES ══════════ */}
-      <div className="section-divider anim-in">
+      <div id="section-operacoes" className="section-divider anim-in">
         <div className="section-divider-icon" style={{background:'rgba(129,140,248,0.1)'}}><svg viewBox="0 0 24 24" fill="none" stroke="#818CF8" strokeWidth="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
         <span className="section-divider-label">Operações</span>
         <div className="section-divider-line"></div>
@@ -481,7 +649,7 @@ export function CustomDashboardView({ data }: Props) {
       </div>
 
       {/* ══════════ 5. COMERCIAL ══════════ */}
-      <div className="section-divider anim-in">
+      <div id="section-comercial" className="section-divider anim-in">
         <div className="section-divider-icon" style={{background:'rgba(52,211,153,0.1)'}}><svg viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
         <span className="section-divider-label">Comercial</span>
         <div className="section-divider-line"></div>
@@ -498,7 +666,9 @@ export function CustomDashboardView({ data }: Props) {
                 <span className="feed-badge" style={{background: e.kind === 'lead' ? 'rgba(200,169,122,0.15)' : 'rgba(52,211,153,0.15)', color: e.kind === 'lead' ? '#C8A97A' : '#34D399'}}>{e.kind === 'lead' ? 'Lead' : 'Pedido'}</span>
                 <div className="feed-name" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.label}</div>
                 <div className="feed-meta">Novo registro</div>
-                <div className="feed-time">{new Date(e.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+                <div className="feed-time" suppressHydrationWarning>
+                  {new Date(e.created_at).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone: 'America/Sao_Paulo' })}
+                </div>
               </div>
             )) : (
               <div style={{textAlign:'center',padding:'20px',color:'#666'}}>Nenhuma atividade recente</div>
@@ -517,7 +687,7 @@ export function CustomDashboardView({ data }: Props) {
                   {client.client_name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                 </div>
                 <div className="cliente-info"><b>{client.client_name}</b><span>{client.order_count} pedido(s)</span></div>
-                <div className="cliente-val" style={{color: i === 0 ? '#C8A97A' : '#888'}}>{fmtBRL(client.total_cents)}</div>
+                <div className="cliente-val" suppressHydrationWarning style={{color: i === 0 ? '#C8A97A' : '#888'}}>{fmtBRL(client.total_cents)}</div>
               </div>
             ))}
           </div>
@@ -536,7 +706,7 @@ export function CustomDashboardView({ data }: Props) {
       </div>
 
       {/* ══════════ 6. ANALYTICS ══════════ */}
-      <div className="section-divider anim-in">
+      <div id="section-analytics" className="section-divider anim-in">
         <div className="section-divider-icon" style={{background:'rgba(96,165,250,0.1)'}}><svg viewBox="0 0 24 24" fill="none" stroke="#60A5FA" strokeWidth="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
         <span className="section-divider-label">Analytics</span>
         <div className="section-divider-line"></div>

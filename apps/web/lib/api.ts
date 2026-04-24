@@ -409,6 +409,10 @@ export interface DashboardPayload {
         amount_cents: number;
         percentage: number;
     }>;
+    revenue_last_30_days?: Array<{
+        date: string;
+        amount_cents: number;
+    }>;
 }
 
 export interface AssistantChatResponse {

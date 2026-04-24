@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { AssistantDock } from '@/components/layout/AssistantDock';
 import { MainWrapper } from '@/components/layout/MainWrapper';
@@ -21,17 +24,29 @@ export function AppShell({
         role: string;
     };
 }) {
+    const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
     return (
-        <div className="flex h-screen overflow-hidden bg-canvas">
+        <div className="flex h-screen overflow-hidden bg-[color:var(--orion-void)]" style={{ fontFamily: 'var(--font-orion-sans)' }}>
             <Sidebar
                 companyName={companyName}
                 logoUrl={logoUrl}
                 pipelines={pipelines}
                 userName={user.name}
                 userRole={user.role}
+                mobileOpen={mobileSidebarOpen}
+                onCloseMobile={() => setMobileSidebarOpen(false)}
             />
-            <div className="ml-64 flex min-h-screen min-w-0 flex-1 flex-col">
-                <Topbar userName={user.name} />
+            {mobileSidebarOpen ? (
+                <button
+                    type="button"
+                    aria-label="Fechar menu lateral"
+                    className="fixed inset-0 z-30 bg-black/60 lg:hidden"
+                    onClick={() => setMobileSidebarOpen(false)}
+                />
+            ) : null}
+            <div className="flex min-h-screen min-w-0 flex-1 flex-col bg-[color:var(--orion-void)] lg:ml-[220px]">
+                <Topbar userName={user.name} onMenuClick={() => setMobileSidebarOpen((prev) => !prev)} />
                 <MainWrapper>{children}</MainWrapper>
             </div>
             <AssistantDock userName={user.name} userRole={user.role} />

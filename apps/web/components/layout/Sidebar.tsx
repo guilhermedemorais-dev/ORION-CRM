@@ -67,12 +67,16 @@ export function Sidebar({
     pipelines,
     userName,
     userRole,
+    mobileOpen,
+    onCloseMobile,
 }: {
     companyName: string;
     logoUrl: string | null;
     pipelines: PipelineRecord[];
     userName: string;
     userRole: string;
+    mobileOpen: boolean;
+    onCloseMobile: () => void;
 }) {
     const pathname = usePathname();
     const isActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
@@ -89,9 +93,15 @@ export function Sidebar({
     })).filter((group) => group.items.length > 0);
 
     return (
-        <aside className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-white/5 bg-surface-sidebar text-white">
-            <div className="border-b border-white/5 px-5 py-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-gray-500">ORIN CRM</p>
+        <aside
+            className={`fixed inset-y-0 left-0 z-40 flex w-[220px] flex-col border-r border-[color:var(--orion-border-low)] bg-[color:var(--orion-nav)] text-white transition-transform duration-200 ease-out lg:translate-x-0 ${
+                mobileOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
+            style={{ fontFamily: 'var(--font-orion-sans)' }}
+        >
+            {/* Logo area */}
+            <div className="px-5 py-5">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--orion-text-muted)]">ORION CRM</p>
                 {logoUrl ? (
                     <img
                         src={logoUrl}
@@ -99,28 +109,35 @@ export function Sidebar({
                         className="mt-3 h-12 w-auto rounded bg-white/95 p-1"
                     />
                 ) : null}
-                <p className="mt-2 font-serif text-xl font-semibold text-brand-gold">{companyName}</p>
+                <p className="mt-2 font-serif text-lg font-semibold text-[color:var(--orion-gold)]">{companyName}</p>
             </div>
 
-            <nav className="flex-1 overflow-y-auto px-4 py-5">
+            {/* Navigation */}
+            <nav className="flex-1 overflow-y-auto px-0 py-5">
                 {visibleGroups.length > 0 ? (
                     <div key={visibleGroups[0].label ?? 'main'} className="mb-6">
                         {visibleGroups[0].label ? (
-                            <p className="mb-3 px-3 text-[11px] font-medium uppercase tracking-[0.2em] text-gray-500">
+                            <p className="mb-1 px-5 text-[9px] font-bold uppercase tracking-[0.15em] text-[color:var(--orion-text-disabled)]">
                                 {visibleGroups[0].label}
                             </p>
                         ) : null}
-                        <div className="space-y-1">
+                        <div className="space-y-[2px]">
                             {visibleGroups[0].items.map((item) => {
                                 const Icon = item.icon;
+                                const active = isActive(item.href);
 
                                 return (
                                     <Link
                                         key={item.href}
                                         href={item.href}
-                                        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${isActive(item.href) ? 'bg-white/10 text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}
+                                        onClick={onCloseMobile}
+                                        className={`mx-0 flex h-8 items-center gap-[10px] px-5 text-[12px] font-medium transition-colors duration-120 ${
+                                            active
+                                                ? 'border-l-[2px] border-[color:var(--orion-gold)] bg-[color:var(--orion-active)] font-semibold text-[color:var(--orion-text)]'
+                                                : 'border-l-[2px] border-transparent text-[color:var(--orion-text-secondary)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)]'
+                                        }`}
                                     >
-                                        <Icon className="h-4 w-4 text-brand-gold" />
+                                        <Icon className={`h-4 w-4 shrink-0 transition-opacity duration-120 ${active ? 'text-[color:var(--orion-gold)]' : 'opacity-50 text-[color:var(--orion-text-secondary)] group-hover:opacity-100'}`} />
                                         <span>{item.label}</span>
                                     </Link>
                                 );
@@ -129,43 +146,45 @@ export function Sidebar({
                     </div>
                 ) : null}
 
+                {/* Pipeline section */}
                 <div className="mb-6">
-                    <div className="mb-3 px-3 text-[11px] font-medium uppercase tracking-[0.2em] text-gray-500">
+                    <div className="mb-1 px-5 text-[9px] font-bold uppercase tracking-[0.15em] text-[color:var(--orion-text-disabled)]">
                         Pipeline
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-[2px] px-0">
                         {pipelines.map((pipeline) => {
                             const Icon = pipelineAccent(pipeline.icon);
+                            const pipelineActive = pipeline.is_active;
 
                             return (
                                 <div
                                     key={pipeline.id}
-                                    className={`rounded-lg border px-3 py-2 ${
-                                        pipeline.is_active
-                                            ? 'border-white/5 bg-transparent'
-                                            : 'border-white/10 bg-white/[0.03] opacity-80'
+                                    className={`mx-0 rounded-none px-5 py-2 ${
+                                        pipelineActive ? '' : 'opacity-80'
                                     }`}
                                 >
                                     <div className="flex items-center justify-between gap-2">
                                         <Link
                                             href={`/pipeline/${pipeline.slug}`}
-                                            className="flex min-w-0 items-center gap-3 text-sm text-gray-300 transition hover:text-white"
+                                            onClick={onCloseMobile}
+                                            className="flex min-w-0 items-center gap-3 text-[12px] font-medium text-[color:var(--orion-text-secondary)] transition-colors hover:text-[color:var(--orion-text)]"
                                         >
-                                            <Icon className="h-4 w-4 shrink-0 text-brand-gold" />
+                                            <Icon className="h-4 w-4 shrink-0 text-[color:var(--orion-gold)]" />
                                             <span className="truncate">{pipeline.name}</span>
                                         </Link>
                                         {userRole === 'ROOT' ? (
                                             <Link
                                                 href={`/pipeline/${pipeline.slug}/builder`}
-                                                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/10 text-gray-400 transition hover:text-white"
+                                                onClick={onCloseMobile}
+                                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[color:var(--orion-border-mid)] bg-white/5 text-[color:var(--orion-text-secondary)] transition-colors hover:border-[color:var(--orion-border-strong)] hover:text-[color:var(--orion-text)]"
                                                 aria-label={`Abrir builder do pipeline ${pipeline.name}`}
                                             >
                                                 <PencilLine className="h-3.5 w-3.5" />
                                             </Link>
                                         ) : null}
                                     </div>
-                                    {!pipeline.is_active ? (
-                                        <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-gray-500">
+                                    {!pipelineActive ? (
+                                        <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[color:var(--orion-text-muted)]">
                                             Inativo
                                         </p>
                                     ) : null}
@@ -175,33 +194,41 @@ export function Sidebar({
                         {userRole === 'ROOT' ? (
                             <Link
                                 href="/pipeline/novo/builder"
-                                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-white/5 hover:text-white"
+                                onClick={onCloseMobile}
+                                className="mx-0 flex h-8 items-center gap-[10px] px-5 text-[12px] font-medium text-[color:var(--orion-text-secondary)] transition-colors hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)]"
                             >
-                                <PlusCircle className="h-4 w-4 text-brand-gold" />
+                                <PlusCircle className="h-4 w-4 shrink-0 text-[color:var(--orion-gold)]" />
                                 <span>Novo pipeline</span>
                             </Link>
                         ) : null}
                     </div>
                 </div>
 
+                {/* Remaining groups */}
                 {visibleGroups.slice(1).map((group) => (
                     <div key={group.label ?? 'main'} className="mb-6 last:mb-0">
                         {group.label ? (
-                            <p className="mb-3 px-3 text-[11px] font-medium uppercase tracking-[0.2em] text-gray-500">
+                            <p className="mb-1 px-5 text-[9px] font-bold uppercase tracking-[0.15em] text-[color:var(--orion-text-disabled)]">
                                 {group.label}
                             </p>
                         ) : null}
-                        <div className="space-y-1">
+                        <div className="space-y-[2px]">
                             {group.items.map((item) => {
                                 const Icon = item.icon;
+                                const active = isActive(item.href);
 
                                 return (
                                     <Link
                                         key={item.href}
                                         href={item.href}
-                                        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${isActive(item.href) ? 'bg-white/10 text-white' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}
+                                        onClick={onCloseMobile}
+                                        className={`mx-0 flex h-8 items-center gap-[10px] px-5 text-[12px] font-medium transition-colors duration-120 ${
+                                            active
+                                                ? 'border-l-[2px] border-[color:var(--orion-gold)] bg-[color:var(--orion-active)] font-semibold text-[color:var(--orion-text)]'
+                                                : 'border-l-[2px] border-transparent text-[color:var(--orion-text-secondary)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)]'
+                                        }`}
                                     >
-                                        <Icon className="h-4 w-4 text-brand-gold" />
+                                        <Icon className={`h-4 w-4 shrink-0 transition-opacity duration-120 ${active ? 'text-[color:var(--orion-gold)]' : 'opacity-50 text-[color:var(--orion-text-secondary)]'}`} />
                                         <span>{item.label}</span>
                                     </Link>
                                 );
@@ -211,17 +238,18 @@ export function Sidebar({
                 ))}
             </nav>
 
-            <div className="border-t border-white/5 px-5 py-4">
+            {/* User footer */}
+            <div className="border-t border-[color:var(--orion-border-low)] px-5 py-4">
                 <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-white">{userName}</p>
-                        <p className="mt-0.5 truncate text-[11px] uppercase tracking-[0.2em] text-gray-500">{userRole}</p>
+                        <p className="truncate text-[12px] font-medium text-[color:var(--orion-text)]">{userName}</p>
+                        <p className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.2em] text-[color:var(--orion-text-muted)]">{userRole}</p>
                     </div>
                     <form action={logoutAction}>
                         <button
                             type="submit"
                             title="Sair do sistema"
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 outline-none transition hover:bg-white/10 hover:text-white"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[color:var(--orion-text-secondary)] outline-none transition-colors hover:bg-[color:var(--orion-hover)] hover:text-[color:var(--orion-text)]"
                         >
                             <LogOut className="h-4 w-4" />
                         </button>
