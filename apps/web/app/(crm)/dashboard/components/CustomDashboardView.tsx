@@ -49,11 +49,94 @@ function countBusinessDaysRemaining(date: Date): number {
   return count;
 }
 
+function relativeTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (diff < 60) return 'agora';
+  if (diff < 3600) return `há ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `há ${Math.floor(diff / 3600)}h`;
+  return `ontem`;
+}
+
+/* TASK-008: label contextual por tipo de atividade */
+function activityLabel(kind: string, label: string): string {
+  if (kind === 'lead') return label.toLowerCase().includes('novo') ? 'Novo lead captado' : 'Lead atualizado';
+  if (kind === 'order') return label.toLowerCase().includes('pagamento') ? 'Pagamento confirmado' : label.toLowerCase().includes('finaliz') ? 'Pedido finalizado' : 'Pedido atualizado';
+  if (kind === 'payment') return 'Pagamento recebido';
+  if (kind === 'stock') return 'Ajuste de estoque';
+  return 'Registro do sistema';
+}
+
+/* TASK-016: Skeleton loader component */
+function DashboardSkeleton() {
+  return (
+    <div className="dashboard-root">
+      {/* KPI row skeleton */}
+      <div className="grid-4">
+        {[0,1,2,3].map(i => (
+          <div key={i} className="skeleton-kpi">
+            <div className="skeleton skeleton-line w-half" />
+            <div className="skeleton skeleton-line xl w-3-4" />
+            <div className="skeleton skeleton-line w-1-3" style={{height:'34px',borderRadius:'4px'}} />
+            <div className="skeleton skeleton-line w-half" />
+          </div>
+        ))}
+      </div>
+      {/* Chart skeleton */}
+      <div className="grid-2" style={{gridTemplateColumns:'1fr 340px'}}>
+        <div className="skeleton-chart">
+          <div className="skeleton skeleton-line w-1-3" />
+          <div className="skeleton" style={{flex:1,minHeight:'180px',borderRadius:'8px'}} />
+          <div style={{display:'flex',gap:'20px',paddingTop:'10px'}}>
+            {[0,1,2].map(i => <div key={i} className="skeleton skeleton-line" style={{width:'80px',height:'32px'}} />)}
+          </div>
+        </div>
+        <div className="skeleton-panel">
+          <div className="skeleton skeleton-line w-half" />
+          <div className="skeleton skeleton-line xl w-3-4" />
+          <div className="skeleton" style={{height:'8px',borderRadius:'4px',width:'100%'}} />
+          <div className="grid-3" style={{marginTop:'8px'}}>
+            {[0,1,2].map(i => <div key={i} className="skeleton" style={{height:'60px',borderRadius:'8px'}} />)}
+          </div>
+        </div>
+      </div>
+      {/* Ação imediata skeleton */}
+      <div className="grid-3">
+        {[0,1,2].map(i => (
+          <div key={i} className="skeleton-panel">
+            <div className="skeleton skeleton-line w-half" />
+            {[0,1,2].map(j => <div key={j} className="skeleton skeleton-line w-full" style={{height:'52px',borderRadius:'8px'}} />)}
+          </div>
+        ))}
+      </div>
+      {/* Activity skeleton */}
+      <div className="grid-3">
+        {[0,1,2].map(i => (
+          <div key={i} className="skeleton-panel">
+            <div className="skeleton skeleton-line w-half" />
+            {[0,1,2,3].map(j => <div key={j} className="skeleton skeleton-line w-full" />)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* TASK-015: Etapas de produção canônicas — mesmas em ambos os cards */
+const PRODUCTION_STAGES_CANONICAL = [
+  { stage: 'PENDENTE',     stage_label: 'Designer 3D', avg_days: 1.5, color: '#818CF8', pct: 37 },
+  { stage: 'EM_ANDAMENTO', stage_label: 'Fundição',    avg_days: 3.2, color: '#FBBF24', pct: 80 },
+  { stage: 'EM_ANDAMENTO', stage_label: 'Cravação',    avg_days: 2.4, color: '#C8A97A', pct: 60 },
+  { stage: 'PAUSADA',      stage_label: 'Acabamento',  avg_days: 4.1, color: '#F87171', pct: 100 },
+  { stage: 'CONCLUIDA',    stage_label: 'Polimento',   avg_days: 0.8, color: '#34D399', pct: 20 },
+];
+
 export function CustomDashboardView({ data }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const [currentMonth, setCurrentMonth] = useState<Date | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [congratsOpen, setCongratsOpen] = useState(false);
 
   useEffect(() => {
     setCurrentMonth(new Date());
@@ -98,10 +181,11 @@ export function CustomDashboardView({ data }: Props) {
     { method: 'DEBIT_CARD', amount_cents: 0, percentage: 17 },
   ];
 
+  /* TASK-005: top_clients valores em centavos — garante mesma unidade do KPI de faturamento */
   const topClients = (hasRealData && data.top_clients && data.top_clients.length > 0) ? data.top_clients : [
-    { client_name: 'Ana Carolina', order_count: 3, total_cents: 1984000 },
-    { client_name: 'Pedro Monteiro', order_count: 2, total_cents: 1630000 },
-    { client_name: 'Julia Siqueira', order_count: 1, total_cents: 1170000 },
+    { client_name: 'Ana Carolina', order_count: 3, total_cents: 198400 },
+    { client_name: 'Pedro Monteiro', order_count: 2, total_cents: 163000 },
+    { client_name: 'Julia Siqueira', order_count: 1, total_cents: 117000 },
   ];
 
   const leadsBySource = (hasRealData && data.leads_by_source && data.leads_by_source.length > 0) ? data.leads_by_source : [
@@ -112,13 +196,13 @@ export function CustomDashboardView({ data }: Props) {
     { source: 'outros', count: 5, percentage: 5 },
   ];
 
-  const productionByStage = (hasRealData && data.production_by_stage && data.production_by_stage.length > 0) ? data.production_by_stage : [
-    { stage: 'PENDENTE', stage_label: 'Designer 3D', count: 4 },
-    { stage: 'EM_ANDAMENTO', stage_label: 'Fundição', count: 3 },
-    { stage: 'EM_ANDAMENTO', stage_label: 'Cravação', count: 2 },
-    { stage: 'PAUSADA', stage_label: 'Acabamento', count: 2 },
-    { stage: 'CONCLUIDA', stage_label: 'Polimento', count: 1 },
-  ];
+  /* TASK-015: produção usa stages canônicos mesclados com counts reais */
+  const productionByStage = PRODUCTION_STAGES_CANONICAL.map((canonical) => {
+    const real = hasRealData && data?.production_by_stage
+      ? data.production_by_stage.find(s => s.stage_label === canonical.stage_label)
+      : null;
+    return { ...canonical, count: real?.count ?? (canonical.stage === 'PENDENTE' ? 4 : canonical.stage === 'CONCLUIDA' ? 1 : 2) };
+  });
 
   const activity = (hasRealData && data.activity && data.activity.length > 0) ? data.activity : [
     { kind: 'lead', label: 'Novo lead: João Silva', created_at: '2026-04-23T09:10:00-03:00' },
@@ -374,6 +458,9 @@ export function CustomDashboardView({ data }: Props) {
     );
   });
 
+  /* TASK-016: durante a hidratação (currentMonth=null), exibir skeleton */
+  if (!currentMonth) return <DashboardSkeleton />;
+
   return (
     <div className="dashboard-root" ref={rootRef}>
 
@@ -424,6 +511,8 @@ export function CustomDashboardView({ data }: Props) {
       </div>
 
       {/* ══════════ 2. FINANCEIRO ══════════ */}
+      {/* TASK-016: exibe skeleton se sem dados reais e ainda carregando */
+      /* currentMonth null = hydration ainda não rodou, mostra skeleton */}
       <div id="section-financeiro" className="section-divider anim-in">
         <div className="section-divider-icon" style={{background:'rgba(200,169,122,0.1)'}}><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" strokeWidth="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
         <span className="section-divider-label">Financeiro</span>
@@ -510,10 +599,10 @@ export function CustomDashboardView({ data }: Props) {
           <div className="panel-head"><span className="panel-title">Alertas — Requer Atenção</span></div>
           <div className="panel-body" style={{gap:0}}>
             {stockAlerts.length > 0 ? stockAlerts.slice(0, 3).map((alert, i) => (
-              <div key={i} className="alert-block" style={{'--ac':'#F87171','--abg':'rgba(248,113,113,0.08)'} as any}>
+              <div key={i} className="alert-block" role="button" tabIndex={0} style={{'--ac':'#F87171','--abg':'rgba(248,113,113,0.08)'} as any} onClick={() => router.push('/estoque')} onKeyDown={(e) => e.key === 'Enter' && router.push('/estoque')}>
                 <div className="alert-kind">Estoque Crítico</div>
                 <div className="alert-val">{alert.product_name}</div>
-                <div className="alert-sub">Mínimo: {alert.minimum_stock}</div>
+                <div className="alert-sub">Mínimo: {alert.minimum_stock} · Ver no estoque →</div>
               </div>
             )) : (
               <div className="alert-block" style={{'--ac':'#34D399','--abg':'rgba(52,211,153,0.08)'} as any}>
@@ -533,6 +622,7 @@ export function CustomDashboardView({ data }: Props) {
 
         {/* Agenda */}
         <div className="panel anim-in">
+          {/* TASK-017: link padronizado "Ver todos →" */}
           <div className="panel-head"><span className="panel-title">Agenda</span><Link href="/agenda" className="panel-action">Ver todos →</Link></div>
           <div className="panel-body">
             <div className="cal-header">
@@ -620,6 +710,7 @@ export function CustomDashboardView({ data }: Props) {
 
       <div className="grid-2 anim-in">
         {/* Produção por Etapa */}
+        {/* TASK-015: Produção por Etapa — mesmas etapas do card de Tempo Médio */}
         <div className="panel anim-in">
           <div className="panel-head"><span className="panel-title">Produção por Etapa</span><Link href="/producao" className="panel-action">Ver todos →</Link></div>
           <div className="panel-body" style={{justifyContent:'space-around'}}>
@@ -635,14 +726,21 @@ export function CustomDashboardView({ data }: Props) {
         </div>
 
         {/* Tempo Médio */}
+        {/* TASK-015: Tempo Médio por Etapa — usa mesmas etapas canônicas de PRODUCTION_STAGES_CANONICAL */}
         <div className="panel anim-in">
           <div className="panel-head"><span className="panel-title">Tempo Médio por Etapa</span></div>
           <div className="panel-body" style={{gap:0}}>
-            <div className="tempo-row"><div className="tempo-dot" style={{background:'#818CF8'}}></div><div className="tempo-label">Designer 3D</div><div className="tempo-bar-bg"><div className="tempo-bar" style={{width:'37%',background:'#818CF8'}}></div></div><div className="tempo-days ok">1,5 dias</div></div>
-            <div className="tempo-row"><div className="tempo-dot" style={{background:'#FBBF24'}}></div><div className="tempo-label">Fundição</div><div className="tempo-bar-bg"><div className="tempo-bar" style={{width:'80%',background:'#FBBF24'}}></div></div><div className="tempo-days warn">3,2 dias</div></div>
-            <div className="tempo-row"><div className="tempo-dot" style={{background:'#C8A97A'}}></div><div className="tempo-label">Cravação</div><div className="tempo-bar-bg"><div className="tempo-bar" style={{width:'60%',background:'#C8A97A'}}></div></div><div className="tempo-days warn">2,4 dias</div></div>
-            <div className="tempo-row"><div className="tempo-dot" style={{background:'#F87171'}}></div><div className="tempo-label">Acabamento</div><div className="tempo-bar-bg"><div className="tempo-bar" style={{width:'100%',background:'#F87171'}}></div></div><div className="tempo-days bad">4,1 dias</div></div>
-            <div className="tempo-row"><div className="tempo-dot" style={{background:'#34D399'}}></div><div className="tempo-label">Polimento</div><div className="tempo-bar-bg"><div className="tempo-bar" style={{width:'20%',background:'#34D399'}}></div></div><div className="tempo-days ok">0,8 dias</div></div>
+            {PRODUCTION_STAGES_CANONICAL.map((stage) => {
+              const dayClass = stage.avg_days < 2 ? 'ok' : stage.avg_days < 3.5 ? 'warn' : 'bad';
+              return (
+                <div key={stage.stage_label} className="tempo-row">
+                  <div className="tempo-dot" style={{background: stage.color}} />
+                  <div className="tempo-label">{stage.stage_label}</div>
+                  <div className="tempo-bar-bg"><div className="tempo-bar" style={{width:`${stage.pct}%`, background: stage.color}} /></div>
+                  <div className={`tempo-days ${dayClass}`}>{stage.avg_days.toFixed(1).replace('.',',')} dias</div>
+                </div>
+              );
+            })}
             <div className="tempo-avg"><div className="tempo-avg-label">Ciclo completo médio</div><div className="tempo-avg-val">12 dias</div></div>
           </div>
         </div>
@@ -665,9 +763,10 @@ export function CustomDashboardView({ data }: Props) {
               <div className="feed-row" key={i}>
                 <span className="feed-badge" style={{background: e.kind === 'lead' ? 'rgba(200,169,122,0.15)' : 'rgba(52,211,153,0.15)', color: e.kind === 'lead' ? '#C8A97A' : '#34D399'}}>{e.kind === 'lead' ? 'Lead' : 'Pedido'}</span>
                 <div className="feed-name" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.label}</div>
-                <div className="feed-meta">Novo registro</div>
+                {/* TASK-008: label contextual ao invés de "Novo registro" genérico */}
+                <div className="feed-meta">{activityLabel(e.kind, e.label)}</div>
                 <div className="feed-time" suppressHydrationWarning>
-                  {new Date(e.created_at).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone: 'America/Sao_Paulo' })}
+                  {relativeTime(e.created_at)}
                 </div>
               </div>
             )) : (
@@ -700,7 +799,43 @@ export function CustomDashboardView({ data }: Props) {
             <div className="aniv-row"><div className="aniv-avatar" style={{background:'rgba(200,169,122,0.15)',color:'#C8A97A',border:'1px solid rgba(200,169,122,0.2)'}}>AC</div><div className="aniv-info"><div className="aniv-name">Ana Carolina</div><div className="aniv-sub">27 Mar · cliente há 3 anos</div></div><span className="aniv-badge hoje">Hoje 🎂</span></div>
             <div className="aniv-row"><div className="aniv-avatar" style={{background:'rgba(96,165,250,0.12)',color:'#60A5FA',border:'1px solid rgba(96,165,250,0.2)'}}>MR</div><div className="aniv-info"><div className="aniv-name">Mariana Ramos</div><div className="aniv-sub">28 Mar · 2 pedidos no histórico</div></div><span className="aniv-badge amanha">Amanhã</span></div>
             <div className="aniv-row"><div className="aniv-avatar" style={{background:'rgba(192,132,252,0.12)',color:'#C084FC',border:'1px solid rgba(192,132,252,0.2)'}}>JS</div><div className="aniv-info"><div className="aniv-name">João Silveira</div><div className="aniv-sub">31 Mar · cliente VIP</div></div><span className="aniv-badge semana">Sex</span></div>
-            <div className="aniv-cta"><div className="aniv-btn">✉ Enviar parabéns</div><div className="aniv-btn">💬 Mandar WhatsApp</div></div>
+            <div className="aniv-cta">
+              <button
+                type="button"
+                className="aniv-btn"
+                onClick={() => setCongratsOpen(true)}
+                aria-label="Enviar mensagem de parabéns para Ana Carolina"
+              >
+                <Mail size={13} style={{flexShrink:0}} /> Enviar parabéns
+              </button>
+              <button
+                type="button"
+                className="aniv-btn"
+                onClick={() => window.open('https://wa.me/5511999991111?text=' + encodeURIComponent('Feliz aniversário, Ana! 🎂🎉 Que seu dia seja incrível!'), '_blank')}
+                aria-label="Mandar WhatsApp para Ana Carolina"
+              >
+                <MessageCircle size={13} style={{flexShrink:0}} /> Mandar WhatsApp
+              </button>
+            </div>
+            {congratsOpen && (
+              <div style={{marginTop:'10px',padding:'12px',background:'rgba(200,169,122,0.08)',borderRadius:'8px',border:'1px solid rgba(200,169,122,0.2)'}}>
+                <div style={{fontSize:'10px',letterSpacing:'.14em',textTransform:'uppercase',color:'#C8A97A',marginBottom:'6px'}}>Mensagem de parabéns</div>
+                <div style={{fontSize:'12px',color:'#C8C6C0',lineHeight:1.6,marginBottom:'8px'}}>
+                  Olá, Ana Carolina! 🎂 Passamos para desejar um feliz aniversário! É um prazer tê-la como nossa cliente. Aproveite muito seu dia especial!
+                </div>
+                <div style={{display:'flex',gap:'6px'}}>
+                  <button type="button" className="aniv-btn" style={{fontSize:'10px',padding:'5px'}} onClick={() => {
+                    window.open('https://wa.me/5511999991111?text=' + encodeURIComponent('Olá, Ana Carolina! 🎂 Passamos para desejar um feliz aniversário! É um prazer tê-la como nossa cliente. Aproveite muito seu dia especial!'), '_blank');
+                    setCongratsOpen(false);
+                  }}>
+                    <MessageCircle size={11} /> Enviar via WhatsApp
+                  </button>
+                  <button type="button" className="aniv-btn" style={{fontSize:'10px',padding:'5px',background:'transparent',border:'1px solid rgba(255,255,255,0.08)',color:'#666'}} onClick={() => setCongratsOpen(false)}>
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
