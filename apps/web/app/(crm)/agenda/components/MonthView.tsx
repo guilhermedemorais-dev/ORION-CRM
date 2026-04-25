@@ -76,7 +76,7 @@ export function MonthView({
     };
 
     return (
-        <div className="flex flex-col rounded-xl border border-white/5 bg-surface-sidebar overflow-hidden h-full min-h-[600px] shadow-lg">
+        <div className="flex flex-col rounded-xl border border-white/5 bg-surface-sidebar overflow-hidden h-full shadow-lg">
             {/* Header / Weekdays */}
             <div className="grid grid-cols-7 border-b border-white/5 bg-black/20 shrink-0">
                 {WEEKDAYS.map((day) => (

@@ -339,6 +339,64 @@ Existe um segundo top bar (header idêntico ao principal) renderizado no bottom 
 
 ---
 
+8️⃣ FEATURE — VISUALIZAÇÕES MÚLTIPLAS (PARIDADE GOOGLE CALENDAR)
+
+[FEATURE-AGENDA-001] — Implementar seletor de visualizações Dia / Semana / Mês / Ano / Programação / 4 dias
+Tipo: Feature crítica | Severidade: Crítica (substitui BUG-FUNCIONAL-002, UX-PROBLEMA-001, RISCO-PRODUTO-003) | Dispositivo: Todos
+Referência visual: Google Calendar (prints anexados em 2026-04-24).
+
+Contexto:
+A agenda atual oferece apenas a visão de Mês. O botão "Semana" existe mas está marcado como "Em breve" (cursor-not-allowed). O usuário não tem como navegar pelo dia, semana, ano ou programação. Em produção, isto torna a agenda inutilizável para uso diário (a maioria dos operadores trabalha em visão diária ou semanal).
+
+Comportamento esperado (funcional, NÃO mockup):
+1. Seletor único de view — dropdown ou toggle group no header com as opções:
+   - Dia (atalho D)
+   - Semana (atalho W)
+   - Mês (atalho M) — atual padrão
+   - Ano (atalho Y)
+   - Programação (atalho A) — lista de próximos eventos
+   - 4 dias (atalho X)
+2. View persistida via querystring (?view=day|week|month|year|schedule|4days) e em localStorage como preferência do usuário.
+3. Navegação Anterior/Próximo/Hoje deve respeitar a granularidade da view ativa (ex.: em Semana, "Próximo" avança 7 dias; em Ano, avança 1 ano).
+4. Toggle "Mostrar fins de semana" — afeta Semana/Mês/4 dias (oculta colunas sáb/dom). Persistir em localStorage.
+5. Toggle "Mostrar concluídos" — filtra eventos com status CONCLUIDO/CANCELADO. Persistir em localStorage.
+6. Backend já aceita range arbitrário em GET /appointments?start_date=&end_date= — não requer mudança de API, apenas calcular o range no client por view.
+
+Especificação por view:
+- Dia: 1 coluna, grid horário 00h–23h com slots de 30min, eventos posicionados pela hora de início e altura proporcional à duração. Indicador visual da hora atual (linha vermelha).
+- Semana: 7 colunas (ou 5 se "fins de semana" off), mesma grid horária da Dia. Header sticky com os dias da semana e número.
+- Mês: visão atual mantida. Continuar usando getDaysInMonthView.
+- Ano: 12 mini-grids (3 colunas × 4 linhas) com mês compacto. Click no dia → navega para Dia.
+- Programação: lista vertical agrupada por dia, mostrando todos os eventos do range (próximos 30 dias por padrão). Empty state se não houver eventos.
+- 4 dias: igual à Semana, mas com 4 colunas a partir do dia atual.
+
+Arquitetura sugerida:
+- apps/web/app/(crm)/agenda/components/views/DayView.tsx
+- apps/web/app/(crm)/agenda/components/views/WeekView.tsx (parametrizada por número de dias para reuso em 4 dias)
+- apps/web/app/(crm)/agenda/components/views/YearView.tsx
+- apps/web/app/(crm)/agenda/components/views/ScheduleView.tsx
+- apps/web/app/(crm)/agenda/components/ViewSelector.tsx (dropdown com atalhos)
+- apps/web/app/(crm)/agenda/lib/dateRange.ts (extrair getDateRange para suportar todas as views)
+- apps/web/app/(crm)/agenda/lib/usePreferences.ts (hook para localStorage: weekends, completed, lastView)
+- apps/web/app/(crm)/agenda/page.tsx (substituir <MonthView /> hardcoded por switch de view)
+- apps/web/app/(crm)/agenda/components/CalendarHeader.tsx (substituir botão "Semana" disabled pelo ViewSelector; remover badge "Em breve")
+
+Critérios de aceitação:
+- [ ] Todas as 6 views renderizam dados reais da API (não mocks).
+- [ ] Atalhos de teclado D/W/M/Y/A/X funcionam quando o foco não está em input.
+- [ ] Toggles de fins de semana e concluídos persistem entre reloads.
+- [ ] Navegação Anterior/Próximo/Hoje respeita a granularidade da view.
+- [ ] Click em evento abre o AppointmentSheet em qualquer view (manter ?selected= na URL).
+- [ ] Click em dia da view Ano/Mês navega para a view Dia daquele dia.
+- [ ] Linha de "agora" aparece em Dia/Semana/4 dias quando o range inclui hoje.
+- [ ] Mobile: ViewSelector como dropdown nativo (não toggle horizontal); Dia/Semana scrolláveis.
+- [ ] tsc --noEmit limpo.
+- [ ] Empty state em todas as views.
+
+Substitui as tasks: BUG-FUNCIONAL-002, UX-PROBLEMA-001, RISCO-PRODUTO-003 (já resolvidas parcialmente como "estado disabled", agora ficam obsoletas com a entrega da feature completa).
+
+---
+
 - [ ] **[BAIXA] Ocultar label "ORION CRM" no topo da sidebar**
   Tipo: Refatoração UI | Severidade: Baixa | Dispositivo: Todos
   O texto "ORION CRM" exibido acima do nome da empresa ("ORIN JOIAS") na sidebar expõe o nome da plataforma white-label ao usuário final, o que pode conflitar com a identidade da marca do cliente. Remover ou ocultar esse elemento com `hidden` / `display: none`. Manter apenas o nome/logo do cliente ("ORIN JOIAS") no topo da sidebar.

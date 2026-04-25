@@ -1,92 +1,147 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock } from "lucide-react";
+import { useEffect, useMemo } from "react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { CalendarLegendInline, CalendarLegendDots, CalendarLegendPopover } from "./CalendarLegend";
+import { ViewSelector } from "./ViewSelector";
+import {
+    type AgendaView,
+    getPeriodLabel,
+    navigateDate,
+    toDateParam,
+} from "../lib/dateRange";
+
+const SHORTCUT_MAP: Record<string, AgendaView> = {
+    d: 'day',
+    w: 'week',
+    m: 'month',
+    y: 'year',
+    a: 'schedule',
+    x: '4days',
+};
 
 export function CalendarHeader({
     currentDate,
     view = 'month',
 }: {
     currentDate: Date;
-    view?: 'month' | 'week' | 'day';
+    view?: AgendaView;
 }) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
-    // ensure reliable uppercase month rendering
-    const monthLabel = currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-    
-    // helper to change month
-    const changeMonth = (offset: number) => {
-        const newDate = new Date(currentDate);
-        newDate.setMonth(newDate.getMonth() + offset);
-        
+    const periodLabel = useMemo(() => getPeriodLabel(currentDate, view), [currentDate, view]);
+
+    const updateParams = (updater: (p: URLSearchParams) => void) => {
         const params = new URLSearchParams(searchParams.toString());
-        // YYYY-MM-DD
-        const year = newDate.getFullYear();
-        const month = String(newDate.getMonth() + 1).padStart(2, '0');
-        const day = String(newDate.getDate()).padStart(2, '0');
-        params.set('date', `${year}-${month}-${day}`);
-        params.set('view', searchParams.get('view') ?? 'month'); 
+        updater(params);
         router.push(`${pathname}?${params.toString()}`);
+    };
+
+    const navigate = (direction: -1 | 1) => {
+        const next = navigateDate(currentDate, view, direction);
+        updateParams((p) => {
+            p.set('date', toDateParam(next));
+            p.set('view', view);
+        });
     };
 
     const goToday = () => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.delete('date');
-        params.set('view', searchParams.get('view') ?? 'month');
-        router.push(`${pathname}?${params.toString()}`);
+        updateParams((p) => {
+            p.delete('date');
+            p.set('view', view);
+        });
+    };
+
+    const setView = (next: AgendaView) => {
+        updateParams((p) => {
+            p.set('view', next);
+        });
     };
 
     const openNewAppointment = () => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('create', 'true');
-        router.push(`${pathname}?${params.toString()}`);
+        updateParams((p) => p.set('create', 'true'));
     };
 
+    // Keyboard shortcuts — D/W/M/Y/A/X switch views, T or H = today, ←/→ = prev/next
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if (e.metaKey || e.ctrlKey || e.altKey) return;
+            const target = e.target as HTMLElement | null;
+            if (target) {
+                const tag = target.tagName;
+                if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) return;
+            }
+            const key = e.key.toLowerCase();
+            if (SHORTCUT_MAP[key]) {
+                e.preventDefault();
+                setView(SHORTCUT_MAP[key]);
+            } else if (key === 't' || key === 'h') {
+                e.preventDefault();
+                goToday();
+            } else if (key === 'arrowleft' || key === 'j') {
+                e.preventDefault();
+                navigate(-1);
+            } else if (key === 'arrowright' || key === 'k') {
+                e.preventDefault();
+                navigate(1);
+            }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [view, currentDate, searchParams.toString()]);
+
     return (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-            {/* Left controls */}
-            <div className="flex items-center gap-4 min-w-0">
-                {/* FIX: flex-shrink-0 + truncate on title to prevent wrapping when detail panel compresses layout */}
-                <h1 className="text-2xl font-semibold text-white capitalize shrink-0 truncate max-w-[220px] lg:max-w-none">{monthLabel}</h1>
-                <div className="flex items-center gap-1 bg-surface-sidebar rounded-md p-1 border border-white/5 shrink-0">
-                    <button onClick={() => changeMonth(-1)} className="p-1 text-gray-400 hover:text-white transition-colors" title="Mês anterior">
-                        <ChevronLeft className="w-5 h-5" />
+        <div className="flex items-center gap-2 sm:gap-3 mb-3 min-w-0">
+            {/* Title + nav */}
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
+                <h1 className="text-lg sm:text-xl xl:text-2xl font-semibold text-white capitalize truncate">
+                    {periodLabel}
+                </h1>
+                <div className="flex items-center gap-0.5 bg-surface-sidebar rounded-md p-0.5 border border-white/5 shrink-0">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="h-8 w-8 inline-flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
+                        title="Anterior"
+                        aria-label="Período anterior"
+                    >
+                        <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <button onClick={goToday} className="px-3 py-1 text-sm text-gray-300 hover:text-white font-medium transition-colors">
+                    <button
+                        onClick={goToday}
+                        className="h-8 px-3 text-[12px] text-gray-300 hover:text-white hover:bg-white/5 rounded font-medium transition-colors"
+                        title="Hoje (T)"
+                    >
                         Hoje
                     </button>
-                    <button onClick={() => changeMonth(1)} className="p-1 text-gray-400 hover:text-white transition-colors" title="Próximo mês">
-                        <ChevronRight className="w-5 h-5" />
+                    <button
+                        onClick={() => navigate(1)}
+                        className="h-8 w-8 inline-flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
+                        title="Próximo"
+                        aria-label="Próximo período"
+                    >
+                        <ChevronRight className="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
-            {/* Right controls */}
-            <div className="flex items-center gap-2 shrink-0">
-                {/* FIX: Toggle visibility on mobile restored + "Semana" button now clearly disabled */}
-                <div className="hidden sm:flex items-center bg-surface-sidebar rounded-md p-1 border border-white/5 mr-2">
-                    <button className="px-3 py-1.5 text-xs font-medium bg-brand-gold/10 text-brand-gold rounded transition-colors flex items-center gap-2">
-                        <CalendarIcon className="w-3.5 h-3.5" />
-                        Mês
-                    </button>
-                    {/* FIX: Clear disabled state with opacity, cursor-not-allowed, and "(Em breve)" label */}
-                    <button 
-                        disabled
-                        className="px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors flex items-center gap-2 cursor-not-allowed opacity-40 relative"
-                        title="Visualização semanal — Em breve"
-                    >
-                        <Clock className="w-3.5 h-3.5" />
-                        Semana
-                        <span className="text-[8px] font-bold uppercase tracking-wide text-amber-500/80 bg-amber-500/10 px-1 py-0.5 rounded-sm leading-none">
-                            Em breve
-                        </span>
-                    </button>
-                </div>
-                <Button onClick={openNewAppointment} icon={<Plus className="w-4 h-4" />}>
+            {/* Spacer + responsive legend slot */}
+            <div className="flex-1 min-w-0 flex items-center justify-end gap-2 sm:gap-3">
+                <CalendarLegendInline className="hidden 2xl:flex" />
+                <CalendarLegendDots   className="hidden lg:flex 2xl:hidden" />
+                <CalendarLegendPopover className="lg:hidden" />
+
+                <ViewSelector view={view} onChange={setView} compact={false} />
+
+                <Button
+                    onClick={openNewAppointment}
+                    icon={<Plus className="w-4 h-4" />}
+                    className="shrink-0"
+                >
                     <span className="hidden sm:inline">Novo Agendamento</span>
                     <span className="sm:hidden">Novo</span>
                 </Button>
