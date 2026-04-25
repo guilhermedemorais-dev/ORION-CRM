@@ -2,7 +2,6 @@ import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { authenticate } from '../middleware/auth.js';
 import { AppError } from '../lib/errors.js';
 
 const router = Router();
@@ -160,10 +159,9 @@ async function readResolvedFile(): Promise<string | null> {
     return null;
 }
 
-// GET /api/internal/system/timeline — returns parsed releases
+// GET /api/v1/system/timeline — public, no auth required (dev timeline data)
 router.get(
     '/timeline',
-    authenticate,
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const wantsPending = req.query['pending'] === 'true';
@@ -220,10 +218,9 @@ const ACTIVITY_STATS = {
     startDate: COMMIT_ACTIVITY[0]?.date ?? '',
 };
 
-// GET /api/v1/system/activity
+// GET /api/v1/system/activity — public, no auth required (commit heatmap data)
 router.get(
     '/activity',
-    authenticate,
     (_req: Request, res: Response): void => {
         res.json({ days: COMMIT_ACTIVITY, stats: ACTIVITY_STATS });
     }

@@ -5,22 +5,33 @@ function getApiBaseUrl(): string {
     return process.env.ORION_API_URL ?? 'http://localhost:4000/api/v1';
 }
 
+// Paths that don't require a user session (public system data)
+const PUBLIC_PREFIXES = ['system/timeline', 'system/activity'];
+
+function isPublicPath(pathSegments: string[]): boolean {
+    const joined = pathSegments.join('/');
+    return PUBLIC_PREFIXES.some(p => joined.startsWith(p));
+}
+
 async function forward(request: Request, params: { path: string[] }) {
-    const session = getSession();
-
-    if (!session) {
-        return NextResponse.json({ message: 'Sessão expirada. Faça login novamente.' }, { status: 401 });
-    }
-
     if (!params.path.length) {
         return NextResponse.json({ message: 'Rota inválida.' }, { status: 400 });
+    }
+
+    const isPublic = isPublicPath(params.path);
+    const session = getSession();
+
+    if (!session && !isPublic) {
+        return NextResponse.json({ message: 'Sessão expirada. Faça login novamente.' }, { status: 401 });
     }
 
     const url = new URL(request.url);
     const backendUrl = `${getApiBaseUrl()}/${params.path.join('/')}${url.search}`;
 
     const headers = new Headers();
-    headers.set('Authorization', `Bearer ${session.accessToken}`);
+    if (session) {
+        headers.set('Authorization', `Bearer ${session.accessToken}`);
+    }
 
     const contentType = request.headers.get('content-type');
     let body: BodyInit | undefined;
