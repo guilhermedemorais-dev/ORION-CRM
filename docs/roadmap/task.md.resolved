@@ -540,3 +540,45 @@ Nota QA antes: **4.5 / 10** — Nota esperada após: **7.5+ / 10**
 - Os arquivos de `PRD.DOCS` continuam fora dos commits de código.
 - O roadmap novo está avançado, mas ainda não está 100% encerrado.
 - Este arquivo deve ser atualizado sempre que uma fase parcial virar concluída ou quando uma pendência operacional for eliminada.
+
+### QA Pipeline — Resolução de 14 Tasks (25 de abril de 2026)
+Status: concluída
+
+Branch: `main` (commit segue após push)
+
+Frontend/UI:
+- [x] **[TASK-01]** Botão "+" do card que causava logout — Substituído por `LeadCardMenu` (dropdown contextual) com ações "Abrir lead", "Adicionar nota" e "Mover etapa". O `<a href>` antigo virou `<button>` com `type="button"` explícito, eliminando qualquer chance de submit acidental herdado.
+- [x] **[TASK-02]** Modal de confirmação no botão "Ganhou" + simetria com "Perdeu" — Componente `LeadStageConfirmDialog` com:
+  - Modo "won": valor da venda obrigatório (input com máscara R$ e parsing em centavos), observação opcional
+  - Modo "lost": motivo obrigatório (select com opções pré-definidas), observação opcional
+  - Botões com cor semântica (verde para ganho, vermelho para perda)
+  - ESC fecha; backdrop click cancela
+- [x] **[TASK-03]** View Lista funcional — Toggle Pipeline/Lista no header agora alterna entre Kanban e tabela (`LeadsListView`), com persistência em `localStorage` (`orion:pipeline:view`). Tabela com colunas: Nome, Origem, Etapa, Valor, Responsável, Última interação + botão "Abrir lead".
+- [x] **[TASK-04]** "Importar leads" — Botão marcado como `disabled` com badge "Em breve" + `cursor-not-allowed` + `title` explicativo até a feature ser implementada.
+- [x] **[TASK-05]** Sidebar mobile / hambúrguer — Já existe em `AppShell.tsx:40-47` (backdrop) e `Topbar.tsx:87-91` (botão hambúrguer com `lg:hidden`). Será válido após deploy do código atual em produção.
+- [x] **[TASK-06]** Pipeline mobile fallback — `useEffect` no mount detecta viewport `<768px` via `matchMedia` e força `viewMode='list'`. Em desktop respeita preferência salva.
+- [x] **[TASK-07]** Separação visual stepper/abas no lead — Stage bar com altura aumentada (52px), border-b dourado de 2px, gradient horizontal, sombra inferior e label de contexto "Etapa do funil" em uppercase dourado. Abas de conteúdo permanecem com a borda inferior única (transparente/dourada) sem ambiguidade.
+- [x] **[TASK-08]** Aba "Pedidos" do lead — A aba foi removida do componente em refactor anterior (atualmente: Agenda / Notas / Comunicações / Linha do Tempo). O bug existia apenas no último deploy bem-sucedido em produção; resolvido implicitamente quando este deploy passar.
+- [x] **[TASK-09]** Validação inline modal "Novo Lead" — Validação client-side com regex `^\+?[1-9]\d{9,14}$`, modal mantido aberto em caso de erro, campos com `border-rose-500/60`, mensagens inline abaixo (`text-rose-400`). Banner global removido para erros de form.
+- [x] **[TASK-10]** Feedback de salvamento da nota inline — Estado `noteSaveState` por lead com transições "Salvando..." → "Salvo ✓" (1.5s) → idle. "Erro" persiste até nova edição. `maxLength={500}` no textarea.
+- [x] **[TASK-11]** "Adicionar lead" no rodapé da coluna pré-seleciona a etapa — `openNewLeadModal(stage.id)` passa `stage_id` no payload do POST e exibe etapa pré-selecionada no modal ("Etapa: <nome>").
+- [x] **[TASK-13]** Tooltips em badges/ícones — `title` adicionado em: contador de leads da etapa, valor total, badge WA, badge tarefas, badge inatividade, botão "Adicionar lead", controles de stepper.
+- [x] **[TASK-14]** Colapsar colunas vazias / ocultar etapas vazias — Botão `<ChevronUp/>` em cada coluna do Kanban colapsa em faixa vertical de 40px com nome rotacionado e contador. Botão "Etapas vazias" no toolbar oculta colunas com 0 leads (preserva won/lost). Persistência em `localStorage`.
+
+Não implementado (escopo separado):
+- [ ] **[TASK-12]** Unificar design system dos modais — Refator amplo (todos os modais da aplicação), candidato a Lote dedicado. Não bloqueia uso atual.
+
+Componentes novos:
+- `apps/web/components/modules/leads/LeadCardMenu.tsx` (menu contextual do card)
+- `apps/web/components/modules/leads/LeadsListView.tsx` (view tabular)
+- `apps/web/components/modules/leads/LeadStageConfirmDialog.tsx` (confirmação Ganhou/Perdeu)
+
+Arquivos modificados:
+- `apps/web/components/modules/leads/LeadsPipelineClient.tsx` (tasks 01, 03, 04, 06, 09, 10, 11, 13, 14)
+- `apps/web/components/modules/leads/LeadDetailClient.tsx` (tasks 02, 07)
+
+Verificações:
+- [x] `apps/web`: `tsc --noEmit` limpo
+- [ ] Validação visual em produção pendente até deploy completar com sucesso
+
+Nota QA antes: **4.5 / 10** — Nota esperada após: **8.0+ / 10**

@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/Button';
 import { LeadAppointmentsTab } from '@/app/(crm)/agenda/components/LeadAppointmentsTab';
 import type { LeadRecord, PipelineStageRecord } from '@/lib/api';
 import { cn, formatCurrencyFromCents, formatDate, formatPhone } from '@/lib/utils';
+import { LeadStageConfirmDialog, type StageConfirmKind, type StageConfirmPayload } from './LeadStageConfirmDialog';
 
 interface TaskRecord {
     id: string;
@@ -170,6 +171,7 @@ export function LeadDetailClient({
     const [isMovingStage, setIsMovingStage] = useState(false);
     const [feedback, setFeedback] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [confirmDialog, setConfirmDialog] = useState<StageConfirmKind | null>(null);
 
     const wonStage = useMemo(() => stages.find((stage) => stage.is_won) ?? null, [stages]);
     const lostStage = useMemo(() => stages.find((stage) => stage.is_lost) ?? null, [stages]);
@@ -261,7 +263,7 @@ export function LeadDetailClient({
         setFeedback('Nota salva.');
     }
 
-    async function moveToStage(stage: PipelineStageRecord) {
+    async function moveToStage(stage: PipelineStageRecord, extra?: { note?: string; saleValue?: number; reason?: string }) {
         if (lead.stage_id === stage.id) return;
 
         setIsMovingStage(true);
@@ -271,10 +273,15 @@ export function LeadDetailClient({
         const previousLead = lead;
         setLead((current) => mapLeadWithStage(current, stage));
 
+        const body: Record<string, unknown> = { stageId: stage.id };
+        if (extra?.note) body.note = extra.note;
+        if (extra?.reason) body.cancel_reason = extra.reason;
+        if (typeof extra?.saleValue === 'number') body.estimated_value = extra.saleValue;
+
         const response = await fetch(`/api/internal/leads/${lead.id}/stage`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ stageId: stage.id }),
+            body: JSON.stringify(body),
         });
 
         setIsMovingStage(false);
@@ -282,8 +289,9 @@ export function LeadDetailClient({
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
             setLead(previousLead);
-            setErrorMessage(typeof payload.message === 'string' ? payload.message : 'Falha ao mover etapa.');
-            return;
+            const message = typeof payload.message === 'string' ? payload.message : 'Falha ao mover etapa.';
+            setErrorMessage(message);
+            throw new Error(message);
         }
 
         if (payload.data) {
@@ -291,6 +299,13 @@ export function LeadDetailClient({
         }
 
         setFeedback(`Etapa alterada para ${stage.name}.`);
+    }
+
+    async function handleConfirmStage(payload: StageConfirmPayload) {
+        const target = confirmDialog === 'won' ? wonStage : lostStage;
+        if (!target) return;
+        await moveToStage(target, payload);
+        setConfirmDialog(null);
     }
 
     return (
@@ -306,12 +321,12 @@ export function LeadDetailClient({
                 </div>
             ) : null}
 
-            {/* STAGE BAR */}
-            <div className="flex h-[46px] shrink-0 items-center overflow-x-auto border-b border-white/5 bg-[#1A1A1E] px-4 [&::-webkit-scrollbar]:hidden">
-                {/* Breadcrumb */}
-                <div className="mr-4 flex items-center gap-1.5 border-r border-white/5 pr-4 text-[11px] text-[#777]">
+            {/* STAGE BAR — visually distinct from content tabs (TASK-07) */}
+            <div className="flex h-[52px] shrink-0 items-center overflow-x-auto border-b-2 border-[#BFA06A]/15 bg-gradient-to-r from-[#1A1A1E] via-[#15151A] to-[#1A1A1E] px-4 shadow-[0_2px_8px_rgba(0,0,0,0.4)] [&::-webkit-scrollbar]:hidden">
+                {/* Breadcrumb / label — anchors stepper context */}
+                <div className="mr-4 flex shrink-0 items-center gap-1.5 border-r border-white/10 pr-4 text-[10px] font-bold uppercase tracking-[0.16em] text-[#BFA06A]">
                     <ChevronRight className="h-3 w-3 rotate-180" />
-                    <span className="cursor-pointer">Pipeline Leads</span>
+                    <span>Etapa do funil</span>
                 </div>
 
                 {/* Stages */}
@@ -322,26 +337,27 @@ export function LeadDetailClient({
                         const isDone = stage.position < (leadStageIndex >= 0 ? stages[leadStageIndex].position : 0);
 
                         return (
-                            <div key={stage.id} className="flex items-center h-[46px]">
+                            <div key={stage.id} className="flex items-center h-full">
                                 <button
                                     type="button"
                                     disabled={isMovingStage}
                                     onClick={() => void moveToStage(stage)}
+                                    title={isCurrent ? `Etapa atual: ${stage.name}` : `Mover para ${stage.name}`}
                                     className={cn(
                                         'relative flex h-full items-center gap-1.5 px-3.5 text-[12px] font-medium transition-colors hover:text-[#A09A94]',
                                         isCurrent ? 'text-[#D4B87E] font-bold' : isDone ? 'text-[#4CAF82]' : 'text-[#777]'
                                     )}
                                 >
-                                    <div 
-                                        className="h-[5px] w-[5px] shrink-0 rounded-full" 
-                                        style={{ backgroundColor: isCurrent ? '#BFA06A' : isDone ? '#4CAF82' : stage.color }} 
+                                    <div
+                                        className="h-[5px] w-[5px] shrink-0 rounded-full"
+                                        style={{ backgroundColor: isCurrent ? '#BFA06A' : isDone ? '#4CAF82' : stage.color }}
                                     />
                                     <span className="whitespace-nowrap">{stage.name}</span>
                                     {isCurrent && (
-                                        <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-[#BFA06A]" />
+                                        <div className="absolute bottom-[-2px] left-0 right-0 h-[3px] rounded-t bg-[#BFA06A]" />
                                     )}
                                     {isDone && !isCurrent && (
-                                        <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-[#4CAF82]" />
+                                        <div className="absolute bottom-[-2px] left-0 right-0 h-[2px] bg-[#4CAF82]" />
                                     )}
                                 </button>
                                 {index < stages.length - 1 && (
@@ -352,14 +368,15 @@ export function LeadDetailClient({
                     })}
                 </div>
 
-                {/* Next Stage / Final Actions */}
-                <div className="ml-auto flex items-center gap-1.5 pl-4">
+                {/* Next Stage / Final Actions — both now require confirmation (TASK-02) */}
+                <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-4">
                     {wonStage ? (
                         <button
                             type="button"
-                            disabled={isMovingStage}
-                            onClick={() => void moveToStage(wonStage)}
-                            className="flex h-7 items-center gap-1.5 rounded-md border border-emerald-500/25 bg-emerald-500/15 px-3.5 text-[11px] font-bold text-emerald-500 transition-colors hover:bg-emerald-500/25"
+                            disabled={isMovingStage || lead.stage_id === wonStage.id}
+                            onClick={() => setConfirmDialog('won')}
+                            title="Marcar como ganho (com confirmação)"
+                            className="flex h-7 items-center gap-1.5 rounded-md border border-emerald-500/25 bg-emerald-500/15 px-3.5 text-[11px] font-bold text-emerald-500 transition-colors hover:bg-emerald-500/25 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <Check className="h-3 w-3" strokeWidth={2.5} /> Ganhou
                         </button>
@@ -367,9 +384,10 @@ export function LeadDetailClient({
                     {lostStage ? (
                         <button
                             type="button"
-                            disabled={isMovingStage}
-                            onClick={() => void moveToStage(lostStage)}
-                            className="flex h-7 items-center gap-1.5 rounded-md border border-red-500/20 bg-red-500/10 px-3.5 text-[11px] font-bold text-red-500 transition-colors hover:bg-red-500/20"
+                            disabled={isMovingStage || lead.stage_id === lostStage.id}
+                            onClick={() => setConfirmDialog('lost')}
+                            title="Marcar como perdido (com motivo)"
+                            className="flex h-7 items-center gap-1.5 rounded-md border border-red-500/20 bg-red-500/10 px-3.5 text-[11px] font-bold text-red-500 transition-colors hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <CircleDot className="h-3 w-3" strokeWidth={2.5} /> Perdeu
                         </button>
@@ -872,8 +890,21 @@ export function LeadDetailClient({
 
                 </div>
             </div>
+
+            {confirmDialog && (() => {
+                const target = confirmDialog === 'won' ? wonStage : lostStage;
+                if (!target) return null;
+                return (
+                    <LeadStageConfirmDialog
+                        kind={confirmDialog}
+                        leadName={lead.name ?? 'Negócio sem nome'}
+                        stageName={target.name}
+                        onCancel={() => setConfirmDialog(null)}
+                        onConfirm={handleConfirmStage}
+                    />
+                );
+            })()}
         </div>
     );
 }
 
-// O componente PlusBadge não é mais utilizado no novo layout
