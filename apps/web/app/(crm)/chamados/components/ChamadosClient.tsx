@@ -351,6 +351,164 @@ function IncidentsTab({ userRole }: { userRole: string }) {
     );
 }
 
+// ---------- Activity Graph ----------
+
+interface ActivityDay { date: string; count: number; }
+interface ActivityStats { totalCommits: number; activeDays: number; startDate: string; }
+
+function cellColor(count: number): string {
+    if (count === 0) return '#1A1A1E';
+    if (count <= 3) return 'rgba(200,169,122,0.25)';
+    if (count <= 8) return 'rgba(200,169,122,0.50)';
+    if (count <= 15) return 'rgba(200,169,122,0.75)';
+    return '#C8A97A';
+}
+
+function ActivityGraph() {
+    const [days, setDays] = useState<ActivityDay[]>([]);
+    const [stats, setStats] = useState<ActivityStats | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetch('/api/internal/system/activity')
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(d => { setDays(d.days ?? []); setStats(d.stats ?? null); })
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    }, []);
+
+    if (loading) {
+        return (
+            <div style={{ background: '#0F0F11', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '20px', height: '110px', position: 'relative', overflow: 'hidden', marginBottom: '24px' }}>
+                <div className="skeleton-shimmer" style={{ position: 'absolute', inset: 0 }} />
+            </div>
+        );
+    }
+
+    if (days.length === 0) return null;
+
+    // Build a map date→count
+    const countMap: Record<string, number> = {};
+    days.forEach(d => { countMap[d.date] = d.count; });
+
+    // Determine grid: from startDate to today, week columns
+    const start = new Date(days[0]!.date + 'T00:00:00');
+    // Align to Monday of start week
+    const startMon = new Date(start);
+    startMon.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+
+    const today = new Date();
+    const endSun = new Date(today);
+    endSun.setDate(today.getDate() + (6 - ((today.getDay() + 6) % 7)));
+
+    // Build weeks array: each week = array of 7 dates (Mon-Sun)
+    const weeks: Date[][] = [];
+    const cur = new Date(startMon);
+    while (cur <= endSun) {
+        const week: Date[] = [];
+        for (let d = 0; d < 7; d++) {
+            week.push(new Date(cur));
+            cur.setDate(cur.getDate() + 1);
+        }
+        weeks.push(week);
+    }
+
+    const CELL = 11; // cell size px
+    const GAP = 2;
+    const LABEL_W = 26;
+    const LABEL_H = 16;
+    const dayLabels = ['Seg', '', 'Qua', '', 'Sex', '', ''];
+
+    // Month labels: find first week of each month
+    const monthLabels: { label: string; col: number }[] = [];
+    const seenMonths = new Set<string>();
+    weeks.forEach((week, wi) => {
+        const firstDay = week[0]!;
+        const key = `${firstDay.getFullYear()}-${firstDay.getMonth()}`;
+        if (!seenMonths.has(key)) {
+            seenMonths.add(key);
+            const monthName = new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(firstDay);
+            monthLabels.push({ label: monthName.replace('.', ''), col: wi });
+        }
+    });
+
+    const svgW = LABEL_W + weeks.length * (CELL + GAP);
+    const svgH = LABEL_H + 7 * (CELL + GAP);
+
+    function isoDate(d: Date): string {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    function formatTooltip(d: Date, count: number): string {
+        const label = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(d);
+        return count > 0 ? `${label} — ${count} commit${count > 1 ? 's' : ''}` : `${label} — sem commits`;
+    }
+
+    return (
+        <div style={{ background: '#0F0F11', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 24px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: '16px', fontWeight: 700, color: '#F0EDE8' }}>Atividade de Desenvolvimento</div>
+                {stats && (
+                    <div style={{ fontSize: '11px', color: '#7A7774' }}>
+                        {stats.totalCommits} commits · {stats.activeDays} dias ativos · desde {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(stats.startDate + 'T00:00:00'))}
+                    </div>
+                )}
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+                <svg width={svgW} height={svgH} style={{ display: 'block' }}>
+                    {/* Month labels */}
+                    {monthLabels.map(({ label, col }) => (
+                        <text key={label} x={LABEL_W + col * (CELL + GAP)} y={10} fontSize={9} fill="#7A7774" fontFamily="DM Sans, sans-serif">
+                            {label}
+                        </text>
+                    ))}
+                    {/* Day labels */}
+                    {dayLabels.map((lbl, row) => lbl ? (
+                        <text key={row} x={0} y={LABEL_H + row * (CELL + GAP) + CELL - 2} fontSize={8} fill="#5A5754" fontFamily="DM Sans, sans-serif">
+                            {lbl}
+                        </text>
+                    ) : null)}
+                    {/* Cells */}
+                    {weeks.map((week, wi) =>
+                        week.map((date, di) => {
+                            const iso = isoDate(date);
+                            const count = countMap[iso] ?? 0;
+                            const isFuture = date > today;
+                            return (
+                                <rect
+                                    key={iso}
+                                    x={LABEL_W + wi * (CELL + GAP)}
+                                    y={LABEL_H + di * (CELL + GAP)}
+                                    width={CELL}
+                                    height={CELL}
+                                    rx={2}
+                                    fill={isFuture ? 'transparent' : cellColor(count)}
+                                    stroke={isFuture ? 'rgba(255,255,255,0.04)' : 'none'}
+                                >
+                                    <title>{formatTooltip(date, count)}</title>
+                                </rect>
+                            );
+                        })
+                    )}
+                </svg>
+            </div>
+
+            {/* Legend */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px', justifyContent: 'flex-end' }}>
+                <span style={{ fontSize: '10px', color: '#5A5754' }}>Menos</span>
+                {[0, 0.25, 0.5, 0.75, 1].map((op, i) => (
+                    <div key={i} style={{ width: '10px', height: '10px', borderRadius: '2px', background: op === 0 ? '#1A1A1E' : `rgba(200,169,122,${op})` }} />
+                ))}
+                <span style={{ fontSize: '10px', color: '#5A5754' }}>Mais</span>
+            </div>
+        </div>
+    );
+}
+
 // ---------- Timeline Tab ----------
 
 function TimelineTab() {
@@ -416,6 +574,8 @@ function TimelineTab() {
     }
 
     return (
+        <>
+        <ActivityGraph />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', position: 'relative' }}>
             <div style={{ position: 'absolute', left: '11px', top: '8px', bottom: '8px', width: '1px', background: 'linear-gradient(to bottom, rgba(200,169,122,0.4), rgba(200,169,122,0.05))', pointerEvents: 'none' }} />
 
@@ -472,6 +632,7 @@ function TimelineTab() {
                 </div>
             ))}
         </div>
+        </>
     );
 }
 
@@ -482,6 +643,15 @@ function UpdatesTab() {
     const [pending, setPending] = useState<PendingSection[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [expandedReleases, setExpandedReleases] = useState<Set<string>>(new Set());
+
+    function toggleExpand(key: string) {
+        setExpandedReleases(prev => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key); else next.add(key);
+            return next;
+        });
+    }
 
     const fetchUpdates = useCallback(async () => {
         setLoading(true);
@@ -577,21 +747,33 @@ function UpdatesTab() {
                                         {entry.title}
                                     </div>
                                 )}
-                                {entry.items.length > 0 && (
-                                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                        {entry.items.slice(0, 5).map((item, i) => (
-                                            <li key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '12px', color: '#C8C4BE', lineHeight: 1.55 }}>
-                                                <span style={{ color: '#3FB87A', flexShrink: 0, marginTop: '4px', fontSize: '8px' }}>●</span>
-                                                <span style={{ minWidth: 0 }}>{item}</span>
-                                            </li>
-                                        ))}
-                                        {entry.items.length > 5 && (
-                                            <li style={{ fontSize: '11px', color: '#7A7774', paddingLeft: '16px', fontStyle: 'italic' }}>
-                                                + {entry.items.length - 5} item(ns)
-                                            </li>
-                                        )}
-                                    </ul>
-                                )}
+                                {entry.items.length > 0 && (() => {
+                                    const key = `${entry.version}-${idx}`;
+                                    const expanded = expandedReleases.has(key);
+                                    const visible = expanded ? entry.items : entry.items.slice(0, 5);
+                                    const hidden = entry.items.length - 5;
+                                    return (
+                                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            {visible.map((item, i) => (
+                                                <li key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '12px', color: '#C8C4BE', lineHeight: 1.55 }}>
+                                                    <span style={{ color: '#3FB87A', flexShrink: 0, marginTop: '4px', fontSize: '8px' }}>●</span>
+                                                    <span style={{ minWidth: 0 }}>{item}</span>
+                                                </li>
+                                            ))}
+                                            {hidden > 0 && (
+                                                <li>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleExpand(key)}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: '#C8A97A', paddingLeft: '16px', fontStyle: 'italic', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+                                                    >
+                                                        {expanded ? '− mostrar menos' : `+ ${hidden} item(ns)`}
+                                                    </button>
+                                                </li>
+                                            )}
+                                        </ul>
+                                    );
+                                })()}
                             </div>
                         ))}
                     </div>

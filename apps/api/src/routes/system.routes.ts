@@ -188,4 +188,45 @@ router.get(
     }
 );
 
+// Commit activity data — hardcoded from git log (avoids spawning git at runtime)
+const COMMIT_ACTIVITY: { date: string; count: number }[] = [
+    { date: '2026-03-02', count: 2 },
+    { date: '2026-03-03', count: 6 },
+    { date: '2026-03-09', count: 3 },
+    { date: '2026-03-12', count: 4 },
+    { date: '2026-03-16', count: 23 },
+    { date: '2026-03-17', count: 6 },
+    { date: '2026-03-18', count: 13 },
+    { date: '2026-03-19', count: 9 },
+    { date: '2026-03-22', count: 1 },
+    { date: '2026-03-27', count: 14 },
+    { date: '2026-03-28', count: 7 },
+    { date: '2026-03-29', count: 6 },
+    { date: '2026-03-30', count: 11 },
+    { date: '2026-03-31', count: 2 },
+    { date: '2026-04-01', count: 9 },
+    { date: '2026-04-06', count: 1 },
+    { date: '2026-04-07', count: 5 },
+    { date: '2026-04-12', count: 4 },
+    { date: '2026-04-13', count: 1 },
+    { date: '2026-04-23', count: 2 },
+    { date: '2026-04-24', count: 8 },
+    { date: '2026-04-25', count: 4 },
+];
+
+const ACTIVITY_STATS = {
+    totalCommits: COMMIT_ACTIVITY.reduce((s, d) => s + d.count, 0),
+    activeDays: COMMIT_ACTIVITY.length,
+    startDate: COMMIT_ACTIVITY[0]?.date ?? '',
+};
+
+// GET /api/v1/system/activity
+router.get(
+    '/activity',
+    authenticate,
+    (_req: Request, res: Response): void => {
+        res.json({ days: COMMIT_ACTIVITY, stats: ACTIVITY_STATS });
+    }
+);
+
 export default router;

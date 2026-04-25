@@ -2,180 +2,158 @@
 
 > Changelog estruturado do desenvolvimento do sistema, organizado por versão e data.
 > Atualizado manualmente pelo dev a cada entrega significativa.
-> Este arquivo é consumido pelo endpoint `GET /api/internal/system/timeline` e exibido na página `/chamados` (abas "Linha do Tempo" e "Atualizações").
+> Este arquivo é consumido pelo endpoint `GET /api/internal/system/timeline`.
 
 ---
 
-## [v0.8.1] — 2026-04-25
-### Módulo Suporte expandido com Linha do Tempo e Atualizações
-- Reformulação do módulo `/chamados` com 3 abas: Incidentes, Linha do Tempo e Atualizações
-- Endpoint `GET /api/internal/system/timeline` que parseia este arquivo e retorna JSON estruturado
-- Linha do Tempo visual estilo changelog com badges de versão dourados
-- Aba Atualizações separa "Entregue recentemente" de "Em desenvolvimento"
-- Cliente passa a acompanhar a evolução do sistema sem precisar de daily
+## [v1.3.0] — 2026-04-25
+### Pipeline QA + Módulo Suporte com Linha do Tempo
+- Pipeline com 13 das 14 tasks de qualidade resolvidas (críticas e altas prioridades)
+- Toolbar compacta do Pipeline com visualização rápida, import/export CSV e rodapé do card
+- Menu contextual no card do lead substituindo botão que causava logout acidental
+- Modal "Ganhou/Perdeu" com confirmação: valor da venda obrigatório vs motivo obrigatório
+- View Lista funcional com toggle Pipeline/Lista e preferência salva no navegador
+- Pipeline mobile: muda automaticamente para lista em telas pequenas
+- Validação inline no modal "Novo Lead" com mensagens de erro contextuais
+- Feedback visual ao salvar nota: "Salvando..." → "Salvo ✓" → idle
+- Colunas vazias recolhíveis e etapas sem leads ocultáveis, com persistência
+- Módulo Suporte reformulado com 3 abas: Incidentes, Linha do Tempo e Atualizações
+- Registro de bugs e sugestões com upload de imagens e vídeos
+- Histórico visual completo do desenvolvimento com gráfico de atividade por dia
+- Separação entre entregas concluídas e itens em desenvolvimento
+- Correção de logout ao navegar em ambiente local com HTTP
 
-## [v0.8.0] — 2026-04-25
-### Pipeline QA + Módulo Suporte/Chamados
-- Pipeline QA: 13 das 14 tasks resolvidas (críticas, altas e quick wins)
-- Toolbar compacta do Pipeline com QuickView, import/export CSV e card footer
-- LeadCardMenu (dropdown contextual) substituindo botão "+" que causava logout
-- Modal de confirmação Ganhou/Perdeu com simetria (valor obrigatório vs motivo obrigatório)
-- View Lista funcional com toggle Pipeline/Lista e persistência em localStorage
-- Pipeline mobile fallback automático para view de lista em viewports <768px
-- Validação inline modal "Novo Lead" com regex e mensagens contextuais
-- Feedback de salvamento da nota inline (Salvando → Salvo ✓ → idle)
-- Colapsar colunas vazias e ocultar etapas vazias com persistência
-- Módulo Suporte/Chamados completo (migration 044, rota /chamados, upload de mídias)
-- Tabela `system_tickets` com tipos BUG/SUGGESTION/OTHER e status OPEN/EVALUATING/RESOLVED/REJECTED
-- Painel admin transparente com select inline de status para ROOT/ADMIN
-- Fix de logout em ambiente local com http (cookies sem secure flag)
+## [v1.2.0] — 2026-04-24
+### Dashboard QA Completo + Agenda Reformulada
+- Dashboard com 22 tasks de qualidade resolvidas — responsividade, dados e polish visual
+- Responsividade completa: mobile (640px), tablet (1024px) e telas estreitas (380px)
+- Calendário do dashboard com data real sem erro de hydration SSR
+- Gráfico de faturamento SVG com fallback "Nenhum dado para o período"
+- KPI cards com skeleton de carregamento e proteção contra flickering
+- Top Clientes com valores consistentes ao faturamento real
+- Botões de aniversariantes com modal de parabéns e link WhatsApp pré-preenchido
+- Painel de Notificações no Topbar com acessibilidade completa
+- Atividade recente com tempo relativo e labels por tipo de evento
+- Cards de estoque crítico clicáveis com navegação direta ao módulo
+- Agenda com 6 visualizações estilo Google Calendar (Mês, Semana, Dia, 4 Dias, Agenda, Programação)
+- Agenda com 19 tasks de qualidade resolvidas — CRUD completo e responsividade
+- CRUD completo: criar, editar, cancelar com motivo e remarcar agendamentos
+- Confirmação obrigatória antes de concluir atendimento, com campo de observações
+- Deduplicação de eventos e sistema de cores unificado em todo o calendário
+- Máscara de WhatsApp com validação em tempo real no formulário
+- Responsável pré-selecionado com o usuário logado ao criar agendamento
 
-## [v0.7.1] — 2026-04-24
-### QA Agenda — 19 tasks resolvidas
-- 6 visualizações estilo Google Calendar (Mês, Semana, Dia, 4 Dias, Agenda, Programação)
-- Barra única consolidada de navegação do calendário
-- CRUD completo de agendamentos (criar, editar, cancelar com motivo, remarcar)
-- Confirmação inline antes de "Concluir Atendimento"
-- Deduplicação de eventos duplicados no calendário
-- Cor CONCLUÍDO corrigida para verde (era cinza)
-- Máscara WhatsApp `(XX) XXXXX-XXXX` com `inputMode="numeric"`
-- Pré-seleção do responsável com user.id logado via sessão
-- Sanitização de nomes de eventos (ALL_CAPS → "Formato Normal")
-- Modal centralizado na viewport com max-h-[90vh]
-- Área de toque dos eventos com min-h-[44px] (WCAG 2.5.5)
-- Tooltip com nome completo e tipo nos eventos do calendário
-- Sistema de cores unificado entre eventos do calendário e badges do painel
+## [v1.1.0] — 2026-04-12
+### Central de Ajuda + IA Copiloto com Skills
+- Central de Ajuda com abas Ajuda e Tutorial, documentação de todos os módulos
+- Módulo IA Copiloto nas configurações com sistema de skills personalizáveis
+- Skills organizadas em cards visuais com ícones por categoria
+- Suporte ao modelo Qwen como alternativa ao assistente padrão
+- WhatsApp reorganizado como sub-aba dentro de Integrações
+- Até 2 agendamentos por slot de horário com validação na API
+- Bot cria lead automaticamente ao agendar via WhatsApp
 
-## [v0.7.0] — 2026-04-23
-### Dashboard QA Completo — 22 tasks resolvidas
-- Responsividade completa: breakpoints mobile (640px), tablet (1024px), narrow (380px)
-- Calendário dinâmico com `new Date()` em useEffect (evita hydration mismatch)
-- Gráfico de faturamento com série SVG + fallback "Nenhum dado para o período"
-- KPI values com `suppressHydrationWarning` + DashboardSkeleton durante hydration
-- Top Clientes corrigido para centavos coerentes com faturamento (`total_cents`)
-- Botões de aniversariantes: modal de parabéns + WhatsApp wa.me com texto pré-preenchido
-- Painel de Notificações no Topbar com `aria-haspopup`, `aria-expanded` e close on outside click
-- Atividade recente com `relativeTime()` + `activityLabel()` por tipo
-- AI Assistant com badge "manutenção", `disabled`, tooltip e env var `NEXT_PUBLIC_ORION_AI_ENABLED`
-- Cards de estoque crítico clicáveis com `onClick → router.push('/estoque')`
-- Etapas de produção canônicas (`PRODUCTION_STAGES_CANONICAL`)
-- Skeleton loaders para KPIs, gráfico, alertas e atividade
-- KPI cards clicáveis com `router.push()`, `role="link"`, `tabIndex={0}`
-- Auto-refresh 60s com `router.refresh()` + timestamp "Atualizado: HH:mm"
+## [v1.0.0] — 2026-04-07
+### Dashboard com Dados Reais do Banco
+- Dashboard passou a exibir dados reais da API em vez de valores fixos
+- KPIs dinâmicos: faturamento mensal, novos leads, pedidos em aberto, ticket médio
+- Fallback visual quando o banco não retorna dados para o período selecionado
+- Queries adaptadas por role: admin vê visão geral, produção vê fila, financeiro vê fluxo de caixa
 
-## [v0.6.0] — 2026-04-13
-### IA Copiloto + Central de Ajuda + Agenda Backend
-- Módulo IA Copiloto com sistema de skills e suporte Qwen
-- Refatoração do layout de skills para cards visuais com ícones por categoria
-- Central de Ajuda com abas Ajuda/Tutorial e documentação de todos os módulos
-- Backend de appointments completo (3a32469): rotas + integração com leads
-- Calendário estilo Google Calendar com botões funcionais
-- Validação obrigatória de campos no agendamento + lead aparece no kanban
-- Permitir até 2 agendamentos por slot, retornar mensagem formatada e criar lead automaticamente
-- WhatsApp movido para sub-aba dentro de Integrações
-- Endpoints n8n: lead-context, available-slots e create-appointment
+## [v0.9.0] — 2026-04-01
+### Agenda Completa + Redesign do Assistente IA
+- Agenda com backend completo: criação, edição, cancelamento e conclusão de atendimentos
+- Calendário navegável por mês, semana e dia com visual Google Calendar
+- Lead aparece no kanban do pipeline automaticamente após agendamento
+- Redesign completo do Assistente IA: painel lateral estilo Hostinger com botão na topbar
+- PageHeader como faixa dourada compacta padronizada em todos os módulos
+- Novos endpoints para integração n8n: contexto do lead, slots disponíveis e criação de agendamento
 
-## [v0.5.1] — 2026-03-30
-### Settings — Webhook Multi-Key + RBAC Hardening
-- Multi-key webhook management panel
-- Card de webhook key movido para aba "API & Webhooks"
-- Geração de CRM webhook key para automações externas
-- Fix RBAC: ROOT bypass em userCan + ADMIN full access na permissions matrix
-- Fix n8n: parâmetro de query corrigido + erro no update-lead
-- Pipeline_id e stage_id incluídos no upsert de leads via n8n
+## [v0.8.0] — 2026-03-27
+### Webhooks, Login UX, CI/CD e Estabilidade
+- Geração de chave de webhook para integrações externas com o CRM
+- Painel de gerenciamento de múltiplas chaves de webhook nas configurações
+- Login: contador regressivo no erro de limite de tentativas
+- Login: toggle mostrar/ocultar senha
+- Auto-criação do usuário ROOT no primeiro boot via variáveis de ambiente
+- Pipeline CI/CD com GitHub Actions, build via GHCR e deploy automático
+- Suite de testes E2E com Playwright: health check, login, operação e RBAC
+- Correções: 404 falso em leads, cores do modal, scroll no inbox, bypass do ROOT no RBAC
+- Múltiplas correções de estabilidade no NGINX e na rede Docker
 
-## [v0.5.0] — 2026-03-27
-### Dashboard Real + User Management v2 (5 roles)
-- Dashboard refeito com dados reais do banco (queries agregadas por role)
-- Endpoint `GET /api/internal/dashboard` com `getAdminDashboard`, `getAtendenteDashboard`, `getProducaoDashboard`, `getFinanceiroDashboard`
-- Animação de contagem numérica com easing cúbico nos KPI cards
-- IntersectionObserver para animações de entrada com stagger
-- Migration 038: expansão de user roles (ROOT, ADMIN, GERENTE, VENDEDOR, PRODUCAO)
-- Middleware `requireRole` com bypass total para ROOT
-- Modal "Convidar Usuário" redesenhado conforme mockup v2
-- Modal "Editar Usuário" redesenhado com barra de status inline
-- Grid de permissões com 10 módulos fixos + pipelines dinâmicos
-- Endpoint `DELETE /api/internal/users/:id` com prevenção de auto-exclusão e audit log
-- Botão "Excluir" com Trash2 vermelho e confirmação via window.confirm()
-- Aba de Segurança com restrição de login por horário e session timeout configurável
+## [v0.7.0] — 2026-03-19
+### Segurança Avançada + Ferramentas de Operação
+- Timeout de sessão configurável: sistema desconecta automaticamente após inatividade
+- Restrição de login por horário: bloqueia acesso fora do expediente definido
+- Aba de Segurança nas configurações com controles de acesso avançados
+- Adminer: interface web para consulta e gerenciamento direto do banco de dados
 
-## [v0.4.0] — 2026-03-16
-### Busca Global + RBAC Expandido + PRDs PDV/Estoque
-- Migration 035: tabela `proposal_attachments` para anexos de propostas
-- Endpoint `/api/internal/search` para busca global
-- Busca simultânea em clientes, produtos, pedidos e leads
-- Endpoints `/api/v1/customers/:id/proposals/attachments` (GET, POST, DELETE)
-- Componente `GlobalSearch.tsx` com modal de busca
-- Atalho de teclado Cmd+K/Ctrl+K no Topbar
-- Migrations 025-034 para PDV, estoque, painel cliente, carriers e providers
-- Middleware RBAC permissions
-- Carriers service com adapters e REST routes
-- Routes: attendance, renders, service-orders, deliveries
-- Routes: whatsapp-providers, integration-providers
-- PRDs adicionados para PDV, Estoque, Painel Cliente, Help System e Ajustes
-- Settings: Fiscal e Logística mescladas em Integrações como sub-tabs
+## [v0.6.0] — 2026-03-18
+### Deploy em Produção — Hostinger + Traefik + SSL
+- Migração para Traefik como proxy reverso na Hostinger VPS
+- Domínio oficial configurado com SSL automático via Let's Encrypt (HTTPS)
+- NGINX com configuração embarcada na imagem Docker
+- Correções de rede, DNS e crash loop na inicialização da API em produção
+- Restart automático dos containers com healthcheck integrado
 
-## [v0.3.1] — 2026-03-13
-### Inbox Closure + Analytics Tabs + Automations Canvas
-- Inbox closure (fechamento de conversas)
-- Analytics tabs adicionais
-- Automations canvas inicial (drag-and-drop)
-- Financial receipt upload (comprovante físico)
-- LeadDetailClient layout refactor + fix UI text references
+## [v0.5.0] — 2026-03-16
+### PDV, Estoque, Clientes v2, Busca Global e RBAC Expandido
+- Ponto de Venda (PDV): busca de produtos, carrinho, finalização de venda e troco
+- Recibo de venda com modal de impressão
+- Estoque: lista de produtos com ajustes manuais de entrada e saída
+- Painel completo do cliente: histórico, ordens de serviço, propostas e atendimento
+- Pipeline do lead com detalhe lateral e linha do tempo de atividades
+- Busca global funcional com atalho Cmd+K — busca em clientes, produtos, pedidos e leads
+- 10 novas migrations: PDV, estoque, painel cliente, transportadoras e provedores
+- Controle de acesso por função (RBAC) validado em cada endpoint da API
+- Central de Ajuda com conteúdo contextual por módulo e painel deslizante
+- Fiscal e Logística unificados na aba Integrações das configurações
 
-## [v0.3.0] — 2026-03-12
-### Evolution — Pipeline v2, Inbox Multicanal, Loja, Analytics, IA v2
-- Migration 017: pipelines foundation com modelo canônico
-- Migration 018: inbox multichannel foundation
-- Migration 019: store foundation
-- Migration 020: store_order_crm_sync (rastreabilidade store → CRM)
-- API `/api/v1/pipelines/*` com sidebar dinâmica por pipeline
-- Rota canônica `/pipeline/[slug]` + builder inicial `/pipeline/[slug]/builder`
-- Inbox v2 foundation com SSE realtime e quick replies
-- Catálogo backend de automações
-- API canônica `/api/v1/financeiro/*` com compatibilidade legada
-- Checkout público via preferência Mercado Pago
-- Sync `store_order → customer → crm order → payment → stock`
-- Simulação local de venda aprovada para testes sem produção
-- Analytics de vendas `/api/v1/analytics/sales` com Recharts
-- Assistente IA v2 com fallback por tools, RBAC reforçado, usage no retorno
-- Rotas públicas `/loja` e `/loja/produto/[slug]`
-- Rota admin `/settings/loja`
-- Widget do assistente com Ctrl+K, Esc, skeleton e exibição de uso
+## [v0.4.0] — 2026-03-12
+### Design System v2 + Inbox Avançado + Financeiro
+- Dark theme consistente aplicado em todos os módulos internos
+- Inbox com encerramento de atendimentos, abas de analytics e canvas de automações
+- Upload de comprovante de pagamento no módulo financeiro
+- Lead detail reformulado com layout lateral e hierarquia visual clara
+
+## [v0.3.0] — 2026-03-09
+### Pipeline v2, Loja Pública, Analytics e IA v2
+- Pipeline v2 com modelo canônico no banco e sidebar dinâmica por funil
+- Rotas /pipeline/[slug] (kanban) e /pipeline/[slug]/builder (configuração de etapas)
+- Loja pública: catálogo de produtos, página individual e checkout com Mercado Pago
+- Admin da loja: configuração, categorias, produtos e acompanhamento de pedidos
+- Dashboard de analytics de vendas com filtros por período
+- Assistente IA v2 com histórico de conversa, permissões por role e log de uso
+- Simulador de venda aprovada para testes sem depender do ambiente de produção
 
 ## [v0.2.0] — 2026-03-03
-### CRM Core Completo + Deploy Hostinger
-- Bloco 2: design system + shell frontend (Next.js 14 + Tailwind + componentes base)
-- Bloco 2: layout do CRM com auth guard
-- Bloco 3: CRUD de leads + pipeline kanban inicial
-- Bloco 3: lista e detalhe de clientes com painel completo
-- Bloco 4: Inbox WhatsApp base (lista, thread, assign, close, webhook, worker)
-- Bloco 5: pedidos pronta entrega + personalizados com state machine
-- Bloco 5: fila de produção com avanço de etapa
-- Bloco 6: produtos + ajustes de estoque com SELECT FOR UPDATE
-- Bloco 6: PDV com busca debounce, carrinho e finalização
-- Bloco 6: financeiro (entradas, despesas, relatórios)
-- Bloco 7: Mercado Pago — link de pagamento + webhook MP
-- Bloco 7: dashboard inicial e assistente IA v1
-- Bloco 8: n8n no compose, landing pública, captura de leads
-- Bloco 9: CRUD de workflows n8n com toggle, execuções e seed
-- Bloco 10: assistente IA v2 operacional com histórico curto, RBAC e logs
-- Deploy na Hostinger com Traefik + SSL
-- GitHub Actions com build + push para GHCR
+### CRM Core Completo — Do Funil ao Deploy
+- Design system: Next.js 14 + Tailwind + shadcn/ui com layout de CRM e autenticação
+- Gestão de leads com kanban por etapa do funil de vendas
+- Gestão de clientes com histórico e painel de detalhes
+- Inbox WhatsApp: conversas, atribuição, encerramento, webhook e fila BullMQ
+- Pedidos de pronta entrega e pedidos personalizados com upload de design
+- Fila de produção com avanço por etapa e registro de fotos
+- Controle de estoque com entradas e saídas
+- Módulo financeiro com lançamentos e fluxo de caixa
+- PDV com carrinho e finalização de pagamento
+- Mercado Pago: link de pagamento e confirmação via webhook
+- Dashboard com KPIs e feed de atividade recente
+- Assistente IA integrado ao CRM
+- Landing pública e catálogo público de produtos
+- Deploy funcional com Docker Compose
 
 ## [v0.1.0] — 2026-03-02
-### Fundação Backend + Infra
-- API Express + TypeScript strict
-- Migrations principais do CRM (leads, clientes, pedidos, produção)
-- Sistema de auth com JWT + refresh token rotacionado em transação
-- RBAC middleware com `requireRole([...])`
-- Audit log middleware automático em toda operação de escrita
-- Rate limiting por endpoint sensível
-- Settings singleton com cache Redis (TTL 5min)
-- Operator webhook com HMAC + ação `provision`
-- Health check (`GET /health` e `GET /api/v1/operator/health`)
-- Docker Compose completo (api, postgres, redis, nginx)
-- `.env.example` documentado
-- Estrutura de upload com magic bytes validation
-- requestId (UUID v4) em todo log e resposta de erro
-- Formato de erro padrão `{error, message, requestId, details}`
+### Fundação do Sistema
+- Monorepo estruturado: API Express + TypeScript, Next.js 14, PostgreSQL 16, Redis
+- Autenticação JWT com refresh token rotativo e proteção de sessão
+- Controle de acesso por função (ROOT, ADMIN, GERENTE, VENDEDOR, PRODUCAO)
+- Audit log automático em toda operação de escrita no banco
+- Rate limiting e proteção contra força bruta no login
+- Migrations iniciais: leads, clientes, pedidos, produção, pagamentos, estoque, financeiro
+- Settings singleton com cache Redis (TTL 5 minutos)
+- Middleware de suspensão de conta executado antes da autenticação
+- Webhook do operador com validação HMAC
+- Health check da API e endpoint de diagnóstico
+- Docker Compose completo: API, PostgreSQL, Redis, NGINX
+- Arquivo .env.example com todas as variáveis documentadas
