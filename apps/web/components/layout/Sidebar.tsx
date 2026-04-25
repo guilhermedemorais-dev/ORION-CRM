@@ -21,6 +21,7 @@ import {
     ShoppingBag,
     UserCheck,
     Users,
+    LifeBuoy,
 } from 'lucide-react';
 import type { PipelineRecord } from '@/lib/api';
 
@@ -50,6 +51,7 @@ const navGroups = [
             { icon: BarChart3, label: 'Analytics', href: '/analytics' },
             { icon: Store, label: 'Loja', href: '/settings/loja' },
             { icon: Settings, label: 'Ajustes', href: '/ajustes' },
+            { icon: LifeBuoy, label: 'Suporte', href: '/chamados' },
         ],
     },
 ];

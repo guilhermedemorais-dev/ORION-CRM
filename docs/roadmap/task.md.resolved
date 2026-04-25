@@ -448,27 +448,23 @@ Ainda falta:
 
 ## Pendências Reais para Fechar 100%
 
-### Infra / Banco
-- [ ] rodar migrations novas no banco real
-  - `017_pipelines_foundation.sql`
-  - `018_inbox_multichannel_foundation.sql`
-  - `019_store_foundation.sql`
-  - `020_store_order_crm_sync.sql`
+### Módulos em Construção (UI marcada com aviso)
+- [ ] Pedidos — reescrita completa da interface (lista + detalhe + state machine visual)
+- [ ] Produção — reescrita completa da interface (fila, etapas, fotos de evidência)
+- [ ] Loja — validar checkout real com Mercado Pago + admin da loja completo
 
 ### Phase 2
-- [ ] builder visual final das automações
+- [ ] builder visual final das automações (drag-and-drop real)
 - [ ] multicanal real além do WhatsApp
 - [ ] validação operacional completa do inbox novo
 
 ### Phase 3
-- [ ] teste real de checkout Mercado Pago
-- [ ] teste real de webhook Mercado Pago
-- [ ] validação de baixa de estoque e criação de pedido com dados reais
-- [ ] upload real de comprovante no financeiro
+- [ ] validar webhook real do Mercado Pago (retorno financeiro + baixa de estoque)
+- [ ] upload físico de comprovante no financeiro
 
 ### Phase 4
 - [ ] tabs restantes do analytics
-- [ ] validação final do assistente em ambiente real
+- [ ] validação final do assistente IA em ambiente real com chave definitiva
 
 ## Como Testar Hoje Sem Produção
 - [x] Loja: usar `Simular venda` em `/settings/loja`
@@ -582,3 +578,33 @@ Verificações:
 - [ ] Validação visual em produção pendente até deploy completar com sucesso
 
 Nota QA antes: **4.5 / 10** — Nota esperada após: **8.0+ / 10**
+
+### Módulo de Suporte / Chamados (25 de abril de 2026)
+Status: concluída
+
+Implementação do módulo global de chamados/feedback para todos os usuários reportarem incidentes e sugestões, com moderação e avaliação pelos administradores.
+
+Banco:
+- [x] Migration `044_system_tickets.sql` criando a tabela `system_tickets` com enums `ticket_type` (BUG, SUGGESTION, OTHER) e `ticket_status` (OPEN, EVALUATING, RESOLVED, REJECTED).
+- [x] Suporte a arquivos anexados via coluna `attachments` (JSONB).
+
+API/Backend:
+- [x] Rota `POST /api/v1/tickets` implementada com `multer` (multipart/form-data) para upload de múltiplas imagens/vídeos.
+- [x] Rota `GET /api/v1/tickets` implementada com filtro de permissões (ROOT/ADMIN vêem todos, Atendente/Vendedor vêem apenas os seus próprios chamados).
+- [x] Rota `PUT /api/v1/tickets/:id/status` para atualização do status do chamado (restrita a ROOT/ADMIN).
+- [x] Interface `SystemTicket` e os enums de tickets adicionados aos tipos em `entities.ts`.
+
+Frontend/UI:
+- [x] Nova página `/chamados` adicionada no menu lateral (Sidebar) em "Sistema".
+- [x] Listagem de chamados (feed) responsiva exibindo descrições, data de envio (via Intl.DateTimeFormat), autor, e renderização das mídias anexadas (imagens/vídeos inline).
+- [x] Modal "Novo Relato" no frontend permitindo input de título, descrição, tipo de relato, e upload de múltiplos arquivos via `FormData`.
+- [x] Painel de administração transparente: usuários de role ROOT/ADMIN possuem select inline nos chamados para mudar o status de andamento em tempo real.
+
+Arquivos criados/modificados:
+- `apps/api/src/db/migrations/044_system_tickets.sql`
+- `apps/api/src/routes/tickets.routes.ts`
+- `apps/api/src/types/entities.ts`
+- `apps/api/src/index.ts`
+- `apps/web/app/(crm)/chamados/page.tsx`
+- `apps/web/app/(crm)/chamados/components/ChamadosClient.tsx`
+- `apps/web/components/layout/Sidebar.tsx`

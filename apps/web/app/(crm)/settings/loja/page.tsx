@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { StoreSettingsClient } from '@/components/modules/store/StoreSettingsClient';
+import { UnderConstruction } from '@/components/ui/UnderConstruction';
 import { apiRequest } from '@/lib/api';
 import { requireSession } from '@/lib/auth';
 import type {
@@ -26,13 +27,16 @@ export default async function StoreSettingsPage() {
     ]);
 
     return (
-        <StoreSettingsClient
-            initialConfig={config}
-            initialCategories={categories.data}
-            initialProducts={products.data}
-            initialOrders={orders.data}
-            stockProducts={stockProducts.data}
-            simulationEnabled={process.env.NODE_ENV !== 'production'}
-        />
+        <>
+            <StoreSettingsClient
+                initialConfig={config}
+                initialCategories={categories.data}
+                initialProducts={products.data}
+                initialOrders={orders.data}
+                stockProducts={stockProducts.data}
+                simulationEnabled={process.env.NODE_ENV !== 'production'}
+            />
+            <UnderConstruction />
+        </>
     );
 }

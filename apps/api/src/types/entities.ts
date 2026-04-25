@@ -645,3 +645,18 @@ export interface OperatorWebhookLog {
     error_message: string | null;
     received_at: Date;
 }
+
+export type TicketType = 'BUG' | 'SUGGESTION' | 'OTHER';
+export type TicketStatus = 'OPEN' | 'EVALUATING' | 'RESOLVED' | 'REJECTED';
+
+export interface SystemTicket {
+    id: string;
+    user_id: string;
+    title: string;
+    description: string;
+    type: TicketType;
+    status: TicketStatus;
+    attachments: string[]; // JSONB array of strings
+    created_at: Date;
+    updated_at: Date;
+}

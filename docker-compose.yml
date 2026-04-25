@@ -74,6 +74,7 @@ services:
       - app_network_v2
     volumes:
       - uploads_data:/app/uploads
+      - ./docs:/app/docs:ro
 
   # ---- ORION Web (Next.js shell + CRM) ----
   web:
