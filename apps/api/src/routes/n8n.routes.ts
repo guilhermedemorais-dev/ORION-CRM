@@ -772,7 +772,7 @@ router.post(
                     });
                     await client.query(
                         `INSERT INTO lead_timeline (lead_id, type, title, body)
-                         VALUES ($1, 'APPOINTMENT_CREATED', $2, $3)`,
+                         VALUES ($1, 'NOTE_ADDED', $2, $3)`,
                         [
                             resolvedLeadId,
                             `Agendamento criado via bot`,

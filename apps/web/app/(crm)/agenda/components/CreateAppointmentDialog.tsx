@@ -104,6 +104,7 @@ export function CreateAppointmentDialog({
     const [createdId, setCreatedId] = useState<string | null>(null);
     const [notifySending, setNotifySending] = useState(false);
     const [notifySent, setNotifySent] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
     // Edit mode detection via URL params
     const editId = searchParams.get('edit');
@@ -160,6 +161,7 @@ export function CreateAppointmentDialog({
         setCreatedId(null);
         setNotifySent(false);
         setEditData(null);
+        setSubmitError(null);
 
         if (isControlled && controlledOnClose) {
             controlledOnClose();
@@ -209,6 +211,7 @@ export function CreateAppointmentDialog({
         resolver: zodResolver(activeSchema) as any,
         defaultValues,
     });
+    const contactPhoneField = register('contact_phone');
 
     // Reset form when editData loads
     useEffect(() => {
@@ -226,6 +229,7 @@ export function CreateAppointmentDialog({
 
     const onSubmit = (data: AppointmentFormValues) => {
         startTransition(async () => {
+            setSubmitError(null);
             const formData = new FormData();
             
             if (isEditMode && editId) {
@@ -258,11 +262,14 @@ export function CreateAppointmentDialog({
                     if (result?.id) {
                         setCreatedId(result.id);
                     } else {
-                        handleClose();
+                        setSubmitError('A API não retornou o agendamento criado.');
                     }
                 }
-            } catch {
-                handleClose();
+            } catch (error) {
+                const message = error instanceof Error
+                    ? error.message
+                    : 'Não foi possível registrar o agendamento.';
+                setSubmitError(message);
             }
         });
     };
@@ -333,6 +340,12 @@ export function CreateAppointmentDialog({
                     /* ── Form view ── */
                     <>
                         <div className="p-6 space-y-4">
+                            {submitError && (
+                                <div className="rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+                                    {submitError}
+                                </div>
+                            )}
+
                             {/* FIX: grid-cols-1 sm:grid-cols-2 — collapses to single column on mobile */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
@@ -401,6 +414,9 @@ export function CreateAppointmentDialog({
                                         <input
                                             type="tel"
                                             inputMode="numeric"
+                                            name={contactPhoneField.name}
+                                            ref={contactPhoneField.ref}
+                                            onBlur={contactPhoneField.onBlur}
                                             placeholder="(XX) XXXXX-XXXX"
                                             value={phoneValue || ''}
                                             onChange={handlePhoneChange}
