@@ -44,10 +44,14 @@ export function requireSession(): WebSession {
 
 export function setSession(session: WebSession, maxAgeSeconds?: number): void {
     const effectiveMaxAge = maxAgeSeconds ?? 60 * 60 * 8; // default 8h
+    // ORION_COOKIE_SECURE allows forcing secure=false in local Docker (NODE_ENV=production + http)
+    const isSecure = process.env.ORION_COOKIE_SECURE === 'false'
+        ? false
+        : process.env.NODE_ENV === 'production';
     cookies().set(SESSION_COOKIE, JSON.stringify(session), {
         httpOnly: true,
         sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
+        secure: isSecure,
         path: '/',
         maxAge: effectiveMaxAge > 0 ? effectiveMaxAge : 60 * 60 * 24 * 365, // 0 = never expire (1 year)
     });
