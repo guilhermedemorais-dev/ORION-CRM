@@ -7,21 +7,25 @@ import {
     ChevronUp,
     Clock3,
     Download,
+    Filter,
     LayoutGrid,
     List,
     MessageCircle,
     Plus,
     Search,
     SlidersHorizontal,
+    Upload,
     Users2,
     X,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import type { LeadRecord, PipelineStageRecord } from '@/lib/api';
-import { cn, formatCurrencyFromCents } from '@/lib/utils';
+import { cn, formatCurrencyFromCents, formatDate } from '@/lib/utils';
 import { LeadCardMenu } from './LeadCardMenu';
 import { LeadsListView } from './LeadsListView';
+import { LeadQuickViewDialog } from './LeadQuickViewDialog';
+import { LeadsImportDialog } from './LeadsImportDialog';
 
 type PipelineViewMode = 'kanban' | 'list';
 type NoteSaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -123,6 +127,9 @@ export function LeadsPipelineClient({
     );
     const [query, setQuery] = useState(initialQuery);
     const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+    const [quickViewLead, setQuickViewLead] = useState<LeadRecord | null>(null);
+    const [showImportDialog, setShowImportDialog] = useState(false);
+    const [showFiltersMenu, setShowFiltersMenu] = useState(false);
     const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null);
     const [highlightStageId, setHighlightStageId] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -268,6 +275,50 @@ export function LeadsPipelineClient({
         const firstPopulatedStage = stages.findIndex((stage) => (leadsByStage.get(stage.id) ?? []).length > 0);
         return firstPopulatedStage >= 0 ? firstPopulatedStage : 0;
     }, [leadsByStage, selectedLead, stages]);
+
+    async function patchLead(leadId: string, patch: Partial<LeadRecord>): Promise<LeadRecord | null> {
+        const response = await fetch(`/api/internal/leads/${leadId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patch),
+        });
+        if (!response.ok) return null;
+        const payload = await response.json() as { data: LeadRecord };
+        if (payload.data) {
+            setLeads((current) => current.map((l) => l.id === leadId ? payload.data : l));
+            return payload.data;
+        }
+        return null;
+    }
+
+    function exportCSV() {
+        const rows = [
+            ['Nome', 'WhatsApp', 'Email', 'Valor estimado (R$)', 'Etapa', 'Responsável', 'Origem', 'Criado em'],
+            ...filteredLeads.map((lead) => {
+                const stageName = stages.find((s) => s.id === lead.stage_id)?.name ?? '';
+                const responsible = lead.assigned_to?.name ?? (lead.source === 'WHATSAPP' ? 'BOT' : '');
+                const value = lead.estimated_value ? (lead.estimated_value / 100).toFixed(2).replace('.', ',') : '';
+                return [
+                    lead.name ?? '',
+                    lead.whatsapp_number ?? '',
+                    lead.email ?? '',
+                    value,
+                    stageName,
+                    responsible,
+                    lead.source ?? '',
+                    lead.created_at ? new Date(lead.created_at).toLocaleDateString('pt-BR') : '',
+                ];
+            }),
+        ];
+        const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
 
     async function refreshFromApi() {
         const [leadsRes, stagesRes] = await Promise.all([
@@ -560,122 +611,110 @@ export function LeadsPipelineClient({
             ) : null}
 
             <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-                <div className="flex flex-wrap items-center gap-3 px-5 pt-4">
-                    <div className="flex items-center gap-3">
+                {/* ── Compact single-row toolbar ── */}
+                <div className="flex items-center gap-2 px-5 pt-3 pb-2 flex-wrap">
+                    {/* Title */}
+                    <div className="flex items-center gap-2 shrink-0">
                         <Users2 className="h-4 w-4 text-[color:var(--orion-gold)]" />
-                        <h1 className="font-serif text-[15px] font-semibold text-[color:var(--orion-text)]">
+                        <h1 className="font-serif text-[14px] font-semibold text-[color:var(--orion-text)] leading-none">
                             {pipelineName}
                         </h1>
-                        <span className="rounded-full border border-[color:var(--orion-gold-border)] bg-[color:var(--orion-gold-bg)] px-3 py-1 text-[10px] font-semibold text-[color:var(--orion-gold)]">
-                            Pipeline de Vendas
-                        </span>
                     </div>
 
-                    <div className="ml-auto flex flex-wrap items-center gap-2">
-                        <button
-                            type="button"
-                            disabled
-                            title="Importação de leads via CSV — em breve"
-                            aria-disabled="true"
-                            className="inline-flex h-8 items-center gap-2 rounded-[7px] border border-[color:var(--orion-border-mid)] bg-white/5 px-3 text-[11px] font-semibold text-[color:var(--orion-text-muted)] opacity-50 cursor-not-allowed"
-                        >
-                            <Download className="h-3.5 w-3.5" />
-                            Importar leads
-                            <span className="text-[8px] font-bold uppercase tracking-wide text-amber-500/80 bg-amber-500/10 px-1 py-0.5 rounded-sm leading-none">
-                                Em breve
-                            </span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => openNewLeadModal(null)}
-                            className="inline-flex h-8 items-center gap-2 rounded-[7px] bg-[color:var(--orion-gold)] px-3 text-[11px] font-bold text-[#0A0A0C] transition hover:bg-[color:var(--orion-gold-light)]"
-                        >
-                            <Plus className="h-3.5 w-3.5" />
-                            Novo Lead
-                        </button>
-                    </div>
-                </div>
+                    <div className="h-4 w-px bg-[color:var(--orion-border-mid)] shrink-0" />
 
-                <div className="mt-3 flex flex-wrap items-center gap-2 px-5 pb-2">
-                    <div className="relative">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--orion-text-muted)]" />
+                    {/* Search */}
+                    <div className="relative shrink-0">
+                        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-[color:var(--orion-text-muted)]" />
                         <Input
                             value={query}
                             onChange={(event) => setQuery(event.target.value)}
                             placeholder="Buscar lead..."
-                            className="h-8 w-[200px] rounded-md border border-[color:var(--orion-border-mid)] bg-[color:var(--orion-base)] pl-8 text-[12px] text-[color:var(--orion-text)] placeholder:text-[color:var(--orion-text-muted)] focus:border-[color:var(--orion-gold-border)] focus:ring-2 focus:ring-[color:var(--orion-gold-bg)]"
+                            className="h-8 w-[180px] rounded-md border border-[color:var(--orion-border-mid)] bg-[color:var(--orion-base)] pl-7 text-[11px] text-[color:var(--orion-text)] placeholder:text-[color:var(--orion-text-muted)] focus:border-[color:var(--orion-gold-border)]"
                         />
                     </div>
 
-                    {[
-                        { value: 'ALL', label: 'Todos' },
-                        { value: 'MINE', label: 'Meus leads', icon: Users2, tone: 'blue' },
-                        { value: 'WHATSAPP', label: 'Com WA', icon: MessageCircle },
-                        { value: 'STALE', label: 'Sem interação 7d+', icon: Clock3, tone: 'warn' },
-                        { value: 'HAS_TASKS', label: 'Com tarefas', icon: CheckSquare },
-                    ].map((item) => (
+                    {/* Filters dropdown */}
+                    <div className="relative shrink-0">
                         <button
-                            key={item.value}
                             type="button"
-                            onClick={() => setActiveQuickFilter(item.value as 'ALL' | 'MINE' | 'WHATSAPP' | 'STALE' | 'HAS_TASKS')}
+                            onClick={() => setShowFiltersMenu((v) => !v)}
                             className={cn(
                                 'inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-[11px] font-semibold transition',
-                                activeQuickFilter === item.value
-                                    ? 'border-[color:var(--orion-gold)] bg-[color:var(--orion-gold)] text-[#0A0A0C]'
-                                    : item.tone === 'warn'
-                                        ? 'border-[color:var(--orion-amber)]/30 bg-[rgba(240,160,64,0.1)] text-[color:var(--orion-amber)] hover:border-[color:var(--orion-amber)]/50'
-                                        : item.tone === 'blue'
-                                            ? 'border-[color:var(--orion-blue)]/25 bg-[rgba(74,158,255,0.1)] text-[color:var(--orion-blue)] hover:border-[color:var(--orion-blue)]/45'
-                                            : 'border-[color:var(--orion-border-mid)] bg-white/5 text-[color:var(--orion-text-secondary)] hover:border-[color:var(--orion-border-strong)] hover:text-[color:var(--orion-text)]'
+                                activeQuickFilter !== 'ALL'
+                                    ? 'border-[color:var(--orion-gold)] bg-[color:var(--orion-gold-bg)] text-[color:var(--orion-gold)]'
+                                    : 'border-[color:var(--orion-border-mid)] bg-white/5 text-[color:var(--orion-text-secondary)] hover:text-[color:var(--orion-text)]'
                             )}
                         >
-                            {item.icon ? <item.icon className="h-3.5 w-3.5" /> : null}
-                            {item.label}
+                            <Filter className="h-3 w-3" />
+                            Filtros
+                            {activeQuickFilter !== 'ALL' && (
+                                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[color:var(--orion-gold)] text-[9px] font-bold text-black">1</span>
+                            )}
                         </button>
-                    ))}
-
-                    {canManagePipeline ? (
-                        <button
-                            type="button"
-                            onClick={() => setShowPipelineConfig(true)}
-                            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[color:var(--orion-border-mid)] bg-white/5 px-3 text-[11px] font-semibold text-[color:var(--orion-text-secondary)] transition hover:border-[color:var(--orion-border-strong)] hover:text-[color:var(--orion-text)]"
-                        >
-                            <SlidersHorizontal className="h-3.5 w-3.5" />
-                            Pipeline
-                        </button>
-                    ) : null}
-
-                    <button
-                        type="button"
-                        onClick={toggleHideEmpty}
-                        title={hideEmptyStages ? 'Mostrar todas as etapas' : 'Ocultar etapas sem leads'}
-                        aria-pressed={hideEmptyStages}
-                        className={cn(
-                            'inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-[11px] font-semibold transition',
-                            hideEmptyStages
-                                ? 'border-brand-gold/40 bg-brand-gold/10 text-brand-gold'
-                                : 'border-[color:var(--orion-border-mid)] bg-white/5 text-[color:var(--orion-text-secondary)] hover:border-[color:var(--orion-border-strong)] hover:text-[color:var(--orion-text)]'
+                        {showFiltersMenu && (
+                            <div className="absolute left-0 top-full z-50 mt-1 min-w-[200px] rounded-lg border border-white/10 bg-[color:var(--orion-surface)] p-1 shadow-xl shadow-black/50">
+                                {([
+                                    { value: 'ALL', label: 'Todos os leads' },
+                                    { value: 'MINE', label: 'Meus leads', icon: Users2 },
+                                    { value: 'WHATSAPP', label: 'Com WhatsApp', icon: MessageCircle },
+                                    { value: 'STALE', label: 'Sem interação 7d+', icon: Clock3 },
+                                    { value: 'HAS_TASKS', label: 'Com tarefas', icon: CheckSquare },
+                                ] as { value: string; label: string; icon?: React.ElementType }[]).map((item) => (
+                                    <button
+                                        key={item.value}
+                                        type="button"
+                                        onClick={() => {
+                                            setActiveQuickFilter(item.value as 'ALL' | 'MINE' | 'WHATSAPP' | 'STALE' | 'HAS_TASKS');
+                                            setShowFiltersMenu(false);
+                                        }}
+                                        className={cn(
+                                            'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[12px] text-left transition-colors',
+                                            activeQuickFilter === item.value
+                                                ? 'bg-[color:var(--orion-gold-bg)] text-[color:var(--orion-gold)]'
+                                                : 'text-[color:var(--orion-text-secondary)] hover:bg-white/5 hover:text-[color:var(--orion-text)]'
+                                        )}
+                                    >
+                                        {item.icon && <item.icon className="h-3.5 w-3.5 shrink-0" />}
+                                        {item.label}
+                                        {activeQuickFilter === item.value && (
+                                            <span className="ml-auto text-[10px]">✓</span>
+                                        )}
+                                    </button>
+                                ))}
+                                <div className="my-1 border-t border-white/5" />
+                                <button
+                                    type="button"
+                                    onClick={() => { toggleHideEmpty(); setShowFiltersMenu(false); }}
+                                    className={cn(
+                                        'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[12px] text-left transition-colors',
+                                        hideEmptyStages
+                                            ? 'bg-[color:var(--orion-gold-bg)] text-[color:var(--orion-gold)]'
+                                            : 'text-[color:var(--orion-text-secondary)] hover:bg-white/5 hover:text-[color:var(--orion-text)]'
+                                    )}
+                                >
+                                    {hideEmptyStages ? <ChevronUp className="h-3.5 w-3.5 shrink-0" /> : <ChevronDown className="h-3.5 w-3.5 shrink-0" />}
+                                    {hideEmptyStages ? 'Mostrar etapas vazias' : 'Ocultar etapas vazias'}
+                                </button>
+                            </div>
                         )}
-                    >
-                        {hideEmptyStages ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                        Etapas vazias
-                    </button>
+                    </div>
 
-                    <div className="ml-auto flex overflow-hidden rounded-md border border-[color:var(--orion-border-mid)] bg-[color:var(--orion-base)]">
+                    {/* View toggle */}
+                    <div className="flex overflow-hidden rounded-md border border-[color:var(--orion-border-mid)] bg-[color:var(--orion-base)] shrink-0">
                         <button
                             type="button"
                             onClick={() => applyViewMode('kanban')}
                             aria-pressed={viewMode === 'kanban'}
                             title="Visualização Kanban"
                             className={cn(
-                                'flex h-8 items-center gap-1 px-3 text-[11px] font-semibold transition-colors',
+                                'flex h-8 items-center gap-1 px-2.5 text-[11px] font-semibold transition-colors',
                                 viewMode === 'kanban'
                                     ? 'bg-white/10 text-[color:var(--orion-text)]'
                                     : 'text-[color:var(--orion-text-secondary)] hover:text-[color:var(--orion-text)]'
                             )}
                         >
                             <LayoutGrid className="h-3.5 w-3.5" />
-                            Pipeline
                         </button>
                         <button
                             type="button"
@@ -683,34 +722,84 @@ export function LeadsPipelineClient({
                             aria-pressed={viewMode === 'list'}
                             title="Visualização em lista"
                             className={cn(
-                                'flex h-8 items-center gap-1 px-3 text-[11px] font-semibold transition-colors',
+                                'flex h-8 items-center gap-1 px-2.5 text-[11px] font-semibold transition-colors',
                                 viewMode === 'list'
                                     ? 'bg-white/10 text-[color:var(--orion-text)]'
                                     : 'text-[color:var(--orion-text-secondary)] hover:text-[color:var(--orion-text)]'
                             )}
                         >
                             <List className="h-3.5 w-3.5" />
-                            Lista
                         </button>
                     </div>
+
+                    {/* Spacer */}
+                    <div className="flex-1" />
+
+                    {/* Pipeline config */}
+                    {canManagePipeline && (
+                        <button
+                            type="button"
+                            onClick={() => setShowPipelineConfig(true)}
+                            title="Configurar pipeline"
+                            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[color:var(--orion-border-mid)] bg-white/5 px-2.5 text-[11px] font-semibold text-[color:var(--orion-text-secondary)] transition hover:border-[color:var(--orion-border-strong)] hover:text-[color:var(--orion-text)]"
+                        >
+                            <SlidersHorizontal className="h-3.5 w-3.5" />
+                        </button>
+                    )}
+
+                    {/* Export */}
+                    <button
+                        type="button"
+                        onClick={exportCSV}
+                        title="Exportar leads para CSV"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[color:var(--orion-border-mid)] bg-white/5 px-2.5 text-[11px] font-semibold text-[color:var(--orion-text-secondary)] transition hover:border-[color:var(--orion-border-strong)] hover:text-[color:var(--orion-text)]"
+                    >
+                        <Download className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Exportar</span>
+                    </button>
+
+                    {/* Import */}
+                    <button
+                        type="button"
+                        onClick={() => setShowImportDialog(true)}
+                        title="Importar leads via CSV"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[color:var(--orion-border-mid)] bg-white/5 px-2.5 text-[11px] font-semibold text-[color:var(--orion-text-secondary)] transition hover:border-[color:var(--orion-border-strong)] hover:text-[color:var(--orion-text)]"
+                    >
+                        <Upload className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Importar</span>
+                    </button>
+
+                    {/* New Lead */}
+                    <button
+                        type="button"
+                        onClick={() => openNewLeadModal(null)}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-[7px] bg-[color:var(--orion-gold)] px-3 text-[11px] font-bold text-[#0A0A0C] transition hover:bg-[color:var(--orion-gold-light)] shrink-0"
+                    >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Novo Lead</span>
+                        <span className="sm:hidden">Novo</span>
+                    </button>
                 </div>
 
-                <div className="flex items-center gap-2 overflow-x-auto px-5 pb-1">
+                {/* Stage tabs (scrollable) */}
+                <div className="flex items-center gap-2 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {stages.map((stage, index) => (
                         <button
                             key={stage.id}
                             type="button"
                             onClick={() => setSelectedLeadId((leadsByStage.get(stage.id) ?? [])[0]?.id ?? null)}
                             className={cn(
-                                'flex h-8 items-center gap-2 rounded-md px-3 text-[11px] font-semibold transition',
+                                'flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[10px] font-semibold transition',
                                 index === focusedStageIndex
                                     ? 'bg-white/10 text-[color:var(--orion-text)]'
                                     : 'text-[color:var(--orion-text-secondary)] hover:bg-[color:var(--orion-hover)] hover:text-[color:var(--orion-text)]'
                             )}
                         >
-                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: stage.color }} />
-                            <span>{stage.name}</span>
-                            {stage.is_won ? <span className="text-[10px] text-[color:var(--orion-text-muted)]">✓</span> : null}
+                            <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
+                            <span className="whitespace-nowrap">{stage.name}</span>
+                            <span className="text-[9px] text-[color:var(--orion-text-muted)]">
+                                {leadsByStage.get(stage.id)?.length ?? 0}
+                            </span>
                         </button>
                     ))}
                 </div>
@@ -850,9 +939,9 @@ export function LeadsPipelineClient({
                                                         key={lead.id}
                                                         draggable
                                                         onDragStart={() => onDragStart(lead.id)}
-                                                        onClick={() => setSelectedLeadId(lead.id)}
+                                                        onClick={() => setQuickViewLead(lead)}
                                                         className={cn(
-                                                            'relative rounded-[10px] border border-[color:var(--orion-border-low)] bg-[color:var(--orion-surface)] p-3 transition hover:-translate-y-0.5 hover:border-[color:var(--orion-border-strong)] hover:bg-[color:var(--orion-elevated)]',
+                                                            'relative cursor-pointer rounded-[10px] border border-[color:var(--orion-border-low)] bg-[color:var(--orion-surface)] p-3 transition hover:-translate-y-0.5 hover:border-[color:var(--orion-border-strong)] hover:bg-[color:var(--orion-elevated)]',
                                                             draggingLeadId === lead.id && 'opacity-50',
                                                             selectedLeadId === lead.id && 'border-[color:var(--orion-gold-border)]'
                                                         )}
@@ -883,61 +972,52 @@ export function LeadsPipelineClient({
                                                             </div>
                                                         </div>
 
-                                                        <div className="relative mb-2">
-                                                            <textarea
-                                                                ref={(el) => { noteRefs.current[lead.id] = el; }}
-                                                                value={lead.quick_note ?? ''}
-                                                                maxLength={500}
-                                                                onClick={(event) => event.stopPropagation()}
-                                                                onChange={(event) => updateQuickNoteLocally(lead.id, event.target.value)}
-                                                                placeholder="Adicionar nota..."
-                                                                className="min-h-[40px] w-full resize-none rounded-md border border-[color:var(--orion-border-subtle)] bg-white/5 px-2 py-1.5 pr-16 text-[11px] leading-[1.5] text-[color:var(--orion-text-secondary)] outline-none transition placeholder:text-[color:var(--orion-text-disabled)] hover:border-[color:var(--orion-border-mid)] focus:border-[color:var(--orion-gold-border)]"
-                                                            />
-                                                            {noteSaveState[lead.id] && (
+                                                        {lead.quick_note && (
+                                                            <p className="mb-2 truncate text-[10px] text-[color:var(--orion-text-muted)] leading-[1.4]">
+                                                                {lead.quick_note}
+                                                            </p>
+                                                        )}
+
+                                                        {(lead.estimated_value ?? 0) > 0 && (
+                                                            <p className="mb-2 text-[12px] font-semibold text-[color:var(--orion-text)]">
+                                                                {formatCurrencyFromCents(lead.estimated_value ?? 0)}
+                                                            </p>
+                                                        )}
+
+                                                        {/* Card footer: badges + date/responsible */}
+                                                        <div className="mt-1 flex items-center gap-1">
+                                                            {lead.whatsapp_number && (
                                                                 <span
-                                                                    className={cn(
-                                                                        'pointer-events-none absolute right-2 top-2 text-[9px] font-semibold uppercase tracking-wider',
-                                                                        noteSaveState[lead.id] === 'saving' && 'text-[color:var(--orion-text-muted)]',
-                                                                        noteSaveState[lead.id] === 'saved'  && 'text-emerald-400',
-                                                                        noteSaveState[lead.id] === 'error'  && 'text-rose-400'
-                                                                    )}
+                                                                    title={`WhatsApp: ${lead.whatsapp_number}`}
+                                                                    className="inline-flex items-center gap-0.5 rounded border border-[color:var(--orion-green)]/25 bg-[rgba(76,175,130,0.12)] px-1.5 py-0.5 text-[9px] font-semibold text-[color:var(--orion-green)]"
                                                                 >
-                                                                    {noteSaveState[lead.id] === 'saving' ? 'Salvando...' : noteSaveState[lead.id] === 'saved' ? 'Salvo ✓' : 'Erro'}
+                                                                    <MessageCircle className="h-2.5 w-2.5" />
+                                                                    WA
                                                                 </span>
                                                             )}
-                                                        </div>
-
-                                                        <p className={cn('text-[12px] font-semibold', lead.estimated_value ? 'text-[color:var(--orion-text)]' : 'text-[color:var(--orion-text-muted)]')}>
-                                                            {formatCurrencyFromCents(lead.estimated_value ?? 0)}
-                                                        </p>
-
-                                                        <div className="mt-2 flex items-center gap-1.5">
-                                                            <span
-                                                                title={lead.whatsapp_number ? `WhatsApp: ${lead.whatsapp_number}` : 'Sem WhatsApp cadastrado'}
-                                                                className="inline-flex items-center gap-1 rounded-md border border-[color:var(--orion-green)]/25 bg-[rgba(76,175,130,0.12)] px-2 py-0.5 text-[9px] font-semibold text-[color:var(--orion-green)]"
-                                                            >
-                                                                <MessageCircle className="h-3 w-3" />
-                                                                {lead.whatsapp_number ? 'WA' : '--'}
-                                                            </span>
-                                                            <span
-                                                                title={`${lead.open_tasks_count ?? 0} tarefa(s) em aberto`}
-                                                                className="inline-flex items-center gap-1 rounded-md border border-[color:var(--orion-border-subtle)] bg-white/5 px-2 py-0.5 text-[9px] font-semibold text-[color:var(--orion-text-muted)]"
-                                                            >
-                                                                <CheckSquare className="h-3 w-3" />
-                                                                {lead.open_tasks_count ?? 0}
-                                                            </span>
-                                                            <span
-                                                                title={`Último contato há ${inactivity} dia(s)`}
-                                                                className={cn(
-                                                                    'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[9px] font-semibold',
-                                                                    inactivity >= 8
-                                                                        ? 'border-[color:var(--orion-red)]/30 bg-[rgba(224,82,82,0.12)] text-[color:var(--orion-red)]'
-                                                                        : 'border-[color:var(--orion-amber)]/30 bg-[rgba(240,160,64,0.12)] text-[color:var(--orion-amber)]'
-                                                                )}
-                                                            >
-                                                                <Clock3 className="h-3 w-3" />
-                                                                {inactivity}d
-                                                            </span>
+                                                            {(lead.open_tasks_count ?? 0) > 0 && (
+                                                                <span
+                                                                    title={`${lead.open_tasks_count} tarefa(s) em aberto`}
+                                                                    className="inline-flex items-center gap-0.5 rounded border border-[color:var(--orion-border-subtle)] bg-white/5 px-1.5 py-0.5 text-[9px] font-semibold text-[color:var(--orion-text-muted)]"
+                                                                >
+                                                                    <CheckSquare className="h-2.5 w-2.5" />
+                                                                    {lead.open_tasks_count}
+                                                                </span>
+                                                            )}
+                                                            {inactivity >= 7 && (
+                                                                <span
+                                                                    title={`Sem interação há ${inactivity} dia(s)`}
+                                                                    className={cn(
+                                                                        'inline-flex items-center gap-0.5 rounded border px-1.5 py-0.5 text-[9px] font-semibold',
+                                                                        inactivity >= 8
+                                                                            ? 'border-[color:var(--orion-red)]/30 bg-[rgba(224,82,82,0.12)] text-[color:var(--orion-red)]'
+                                                                            : 'border-[color:var(--orion-amber)]/30 bg-[rgba(240,160,64,0.12)] text-[color:var(--orion-amber)]'
+                                                                    )}
+                                                                >
+                                                                    <Clock3 className="h-2.5 w-2.5" />
+                                                                    {inactivity}d
+                                                                </span>
+                                                            )}
                                                             <LeadCardMenu
                                                                 lead={lead}
                                                                 stages={stages}
@@ -951,6 +1031,14 @@ export function LeadsPipelineClient({
                                                                 }}
                                                                 onFocusNote={focusNoteForLead}
                                                             />
+                                                        </div>
+
+                                                        {/* Footer: date + responsible */}
+                                                        <div className="mt-1.5 flex items-center justify-between text-[9px] text-[color:var(--orion-text-disabled)]">
+                                                            <span>{lead.created_at ? formatDate(lead.created_at) : '—'}</span>
+                                                            <span className="truncate ml-2 text-right">
+                                                                {lead.assigned_to?.name ?? (lead.source === 'WHATSAPP' ? 'BOT' : '—')}
+                                                            </span>
                                                         </div>
                                                     </article>
                                                 );
@@ -1076,6 +1164,36 @@ export function LeadsPipelineClient({
                     </div>
                 </div>
             ) : null}
+
+            {quickViewLead && (
+                <LeadQuickViewDialog
+                    lead={quickViewLead}
+                    stages={stages}
+                    onClose={() => setQuickViewLead(null)}
+                    onPatch={patchLead}
+                    onMoveStage={async (id, stageId) => {
+                        await moveLead(id, stageId);
+                        setQuickViewLead((prev) => {
+                            if (!prev || prev.id !== id) return prev;
+                            const stage = stages.find((s) => s.id === stageId);
+                            if (!stage) return prev;
+                            return normalizeLeadWithStage(prev, stage);
+                        });
+                    }}
+                />
+            )}
+
+            {showImportDialog && (
+                <LeadsImportDialog
+                    pipelineId={pipelineId}
+                    onClose={() => setShowImportDialog(false)}
+                    onImported={async () => {
+                        await refreshFromApi();
+                        setShowImportDialog(false);
+                        setInfoMessage('Importação concluída. Pipeline atualizado.');
+                    }}
+                />
+            )}
 
             {showPipelineConfig && canManagePipeline ? (
                 <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/55 p-4">
