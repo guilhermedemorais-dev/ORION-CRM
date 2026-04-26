@@ -415,7 +415,7 @@ function ActivityGraph() {
     const GAP = 2;
     const LABEL_W = 26;
     const LABEL_H = 16;
-    const dayLabels = ['Seg', '', 'Qua', '', 'Sex', '', ''];
+    const dayLabels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
     // Month labels: find first week of each month
     const monthLabels: { label: string; col: number }[] = [];
