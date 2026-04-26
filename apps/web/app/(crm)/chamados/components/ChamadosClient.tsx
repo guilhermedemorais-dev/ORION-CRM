@@ -397,7 +397,7 @@ function ActivityGraph() {
     endSun.setDate(today.getDate() + (6 - ((today.getDay() + 6) % 7)));
 
     const startMon = new Date(endSun);
-    startMon.setDate(endSun.getDate() - 26 * 7 + 1);
+    startMon.setDate(endSun.getDate() - 52 * 7 + 1);
 
     // Build weeks array: each week = array of 7 dates (Mon-Sun)
     const weeks: Date[][] = [];
