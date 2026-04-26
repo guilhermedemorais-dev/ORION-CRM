@@ -90,18 +90,22 @@ const MONTH_FULL_LABELS = [
     'Dezembro',
 ];
 
+function parseLocalDate(value: string): Date {
+    const clean = value.split('T')[0];
+    const [year, month, day] = clean.split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
 function formatShortDate(value: string | undefined): string {
     if (!value) {
         return 'Sem data';
     }
 
-    const date = value.includes('T') ? new Date(value) : new Date(`${value}T12:00:00`);
-
     return new Intl.DateTimeFormat('pt-BR', {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
-    }).format(date);
+    }).format(parseLocalDate(value));
 }
 
 function formatCompactDate(value: string | undefined): string {
@@ -109,8 +113,7 @@ function formatCompactDate(value: string | undefined): string {
         return '--';
     }
 
-    const date = value.includes('T') ? new Date(value) : new Date(`${value}T12:00:00`);
-    return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(date);
+    return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(parseLocalDate(value));
 }
 
 function formatDelta(delta: number): string {
@@ -999,8 +1002,8 @@ export function FinanceiroClient({
                                 Sem movimentação financeira confirmada no período.
                             </div>
                         ) : (
-                            <div className="h-[210px] min-h-[210px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
+                            <div className="h-[210px] min-h-[210px] w-full min-w-0">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={200}>
                                     <BarChart data={aggregatedBars} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
                                         <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
                                         <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} />
@@ -1019,11 +1022,11 @@ export function FinanceiroClient({
                                             contentStyle={{ borderRadius: '10px', borderColor: 'rgba(255,255,255,0.1)', backgroundColor: '#1A1A1E', color: '#fff' }}
                                             formatter={(value, name) => [
                                                 formatCurrencyFromCents(Number(value ?? 0)),
-                                                name === 'receitas_cents' ? 'Receitas' : 'Despesas',
+                                                name === 'Receitas' || name === 'receitas_cents' ? 'Receitas' : 'Despesas',
                                             ]}
                                         />
-                                        <Bar name="Receitas" dataKey="receitas_cents" fill="#10B981" radius={[5, 5, 0, 0]} />
-                                        <Bar name="Despesas" dataKey="despesas_cents" fill="#FCA5A5" radius={[5, 5, 0, 0]} />
+                                        <Bar name="Receitas" dataKey="receitas_cents" fill="#22C55E" radius={[5, 5, 0, 0]} />
+                                        <Bar name="Despesas" dataKey="despesas_cents" fill="#EF4444" radius={[5, 5, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
@@ -1031,11 +1034,11 @@ export function FinanceiroClient({
 
                         <div className="mt-3 flex items-center gap-4 text-[12px] text-white/50">
                             <div className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full bg-[#10B981]" />
+                                <span className="h-2 w-2 rounded-full bg-[#22C55E]" />
                                 Receitas
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full bg-[#FCA5A5]" />
+                                <span className="h-2 w-2 rounded-full bg-[#EF4444]" />
                                 Despesas
                             </div>
                         </div>
@@ -1051,8 +1054,8 @@ export function FinanceiroClient({
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                <div className="h-[180px] min-h-[180px] w-full">
-                                    <ResponsiveContainer width="100%" height={180}>
+                                <div className="h-[180px] min-h-[180px] w-full min-w-0">
+                                    <ResponsiveContainer width="100%" height={180} minWidth={1} minHeight={180}>
                                         <PieChart>
                                             <Pie
                                                 data={pieData}
@@ -1119,7 +1122,7 @@ export function FinanceiroClient({
                                         type="button"
                                         onClick={() => navigateWith({ type: option.value, page: 1 })}
                                         className={cn(
-                                            'rounded-full border px-3 py-1.5 text-[12px] font-medium transition',
+                                            'inline-flex min-h-[44px] items-center justify-center rounded-full border px-3 text-[12px] font-medium transition lg:min-h-0 lg:h-8 lg:py-1.5',
                                             filters.type === option.value
                                                 ? 'border-[#C8A97A] bg-[#C8A97A] text-black'
                                                 : 'border-white/15 bg-white/5 text-white/60 hover:bg-white/10'

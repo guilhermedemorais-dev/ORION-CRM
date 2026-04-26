@@ -134,7 +134,7 @@ export function Sidebar({
                                         key={item.href}
                                         href={item.href}
                                         onClick={onCloseMobile}
-                                        className={`mx-0 flex h-8 items-center gap-[10px] px-5 text-[12px] font-medium transition-colors duration-120 ${
+                                        className={`mx-0 flex min-h-[44px] items-center gap-[10px] px-5 py-3 text-[12px] font-medium transition-colors duration-120 lg:min-h-0 lg:h-8 lg:py-0 ${
                                             active
                                                 ? 'border-l-[2px] border-[color:var(--orion-gold)] bg-[color:var(--orion-active)] font-semibold text-[color:var(--orion-text)]'
                                                 : 'border-l-[2px] border-transparent text-[color:var(--orion-text-secondary)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)]'
@@ -162,7 +162,7 @@ export function Sidebar({
                             return (
                                 <div
                                     key={pipeline.id}
-                                    className={`mx-0 rounded-none px-5 py-2 ${
+                                    className={`mx-0 flex min-h-[44px] flex-col justify-center rounded-none px-5 py-2 lg:min-h-0 lg:py-2 ${
                                         pipelineActive ? '' : 'opacity-80'
                                     }`}
                                 >
@@ -198,7 +198,7 @@ export function Sidebar({
                             <Link
                                 href="/pipeline/novo/builder"
                                 onClick={onCloseMobile}
-                                className="mx-0 flex h-8 items-center gap-[10px] px-5 text-[12px] font-medium text-[color:var(--orion-text-secondary)] transition-colors hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)]"
+                                className="mx-0 flex min-h-[44px] items-center gap-[10px] px-5 py-3 text-[12px] font-medium text-[color:var(--orion-text-secondary)] transition-colors hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)] lg:min-h-0 lg:h-8 lg:py-0"
                             >
                                 <PlusCircle className="h-4 w-4 shrink-0 text-[color:var(--orion-gold)]" />
                                 <span>Novo pipeline</span>
@@ -225,7 +225,7 @@ export function Sidebar({
                                         key={item.href}
                                         href={item.href}
                                         onClick={onCloseMobile}
-                                        className={`mx-0 flex h-8 items-center gap-[10px] px-5 text-[12px] font-medium transition-colors duration-120 ${
+                                        className={`mx-0 flex min-h-[44px] items-center gap-[10px] px-5 py-3 text-[12px] font-medium transition-colors duration-120 lg:min-h-0 lg:h-8 lg:py-0 ${
                                             active
                                                 ? 'border-l-[2px] border-[color:var(--orion-gold)] bg-[color:var(--orion-active)] font-semibold text-[color:var(--orion-text)]'
                                                 : 'border-l-[2px] border-transparent text-[color:var(--orion-text-secondary)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)]'

@@ -85,7 +85,7 @@ export function Topbar({
                 <button
                     type="button"
                     onClick={onMenuClick}
-                    className="mr-3 flex h-8 w-8 items-center justify-center rounded-md border border-[color:var(--orion-border-low)] bg-white/5 text-[color:var(--orion-text-secondary)] outline-none transition-colors duration-120 hover:border-[color:var(--orion-border-mid)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)] lg:hidden"
+                    className="mr-3 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-[color:var(--orion-border-low)] bg-white/5 text-[color:var(--orion-text-secondary)] outline-none transition-colors duration-120 hover:border-[color:var(--orion-border-mid)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)] lg:hidden"
                     aria-label="Abrir menu de navegação"
                 >
                     <Menu className="h-4 w-4" />
@@ -121,7 +121,7 @@ export function Topbar({
                     type="button"
                     onClick={() => setHelpOpen(true)}
                     title="Ajuda"
-                    className="flex h-8 w-8 items-center justify-center rounded-md border border-[color:var(--orion-border-low)] bg-white/5 text-[color:var(--orion-text-secondary)] outline-none transition-colors duration-120 hover:border-[color:var(--orion-border-mid)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)]"
+                    className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-[color:var(--orion-border-low)] bg-white/5 text-[color:var(--orion-text-secondary)] outline-none transition-colors duration-120 hover:border-[color:var(--orion-border-mid)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)] lg:h-8 lg:w-8 lg:min-h-0 lg:min-w-0"
                     aria-label="Ajuda"
                 >
                     <HelpCircle className="h-4 w-4" />
@@ -132,7 +132,7 @@ export function Topbar({
                     <button
                         type="button"
                         onClick={() => setNotifOpen((prev) => !prev)}
-                        className="flex h-8 w-8 items-center justify-center rounded-md border border-[color:var(--orion-border-low)] bg-white/5 text-[color:var(--orion-text-secondary)] outline-none transition-colors duration-120 hover:border-[color:var(--orion-border-mid)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)]"
+                        className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-[color:var(--orion-border-low)] bg-white/5 text-[color:var(--orion-text-secondary)] outline-none transition-colors duration-120 hover:border-[color:var(--orion-border-mid)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)] lg:h-8 lg:w-8 lg:min-h-0 lg:min-w-0"
                         aria-label="Notificações"
                         aria-haspopup="true"
                         aria-expanded={notifOpen}
@@ -177,7 +177,7 @@ export function Topbar({
                         }}
                         disabled={!AI_ENABLED}
                         title={AI_ENABLED ? 'Assistente IA (Ctrl+J)' : 'Assistente temporariamente indisponível'}
-                        className={`flex h-8 items-center gap-2 rounded-md border px-3 text-[11px] font-bold outline-none transition-colors duration-120 ${
+                        className={`flex min-h-[44px] items-center gap-2 rounded-md border px-3 text-[11px] font-bold outline-none transition-colors duration-120 lg:h-8 lg:min-h-0 ${
                             AI_ENABLED
                                 ? 'border-[color:var(--orion-border-mid)] bg-[color:var(--orion-gold-bg)] text-[color:var(--orion-gold)] hover:bg-[color:rgba(191,160,106,0.14)] hover:border-[color:rgba(191,160,106,0.35)]'
                                 : 'cursor-not-allowed border-[color:var(--orion-border-low)] bg-white/5 text-[color:var(--orion-text-muted)] opacity-60'

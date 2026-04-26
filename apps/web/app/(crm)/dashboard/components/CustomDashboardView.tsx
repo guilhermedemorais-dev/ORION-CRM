@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mail, MessageCircle } from 'lucide-react';
 import type { DashboardPayload } from '@/lib/api';
 import { formatCurrencyFromCents } from '@/lib/utils';
 import './DashboardTemplate.css';
@@ -14,18 +13,6 @@ interface Props {
 
 /* ─── helpers ─── */
 const fmtBRL = (v: number) => formatCurrencyFromCents(Math.round(v * 100));
-
-/* ─── Heatmap data ─── */
-const HM_WEIGHTS = [
-  [0,0,0,0,0,0,0,0,0,0,0,0],
-  [1,2,3,2,1,3,4,3,2,1,1,0],
-  [1,2,4,3,2,3,5,4,3,2,1,0],
-  [1,3,4,3,2,4,5,4,3,2,1,0],
-  [1,2,3,3,2,3,5,5,4,3,2,1],
-  [2,3,5,4,3,5,7,8,7,5,3,2],
-  [3,4,6,5,4,6,8,9,8,6,4,2],
-];
-const HM_DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
 const CAL_MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -122,6 +109,23 @@ function DashboardSkeleton() {
   );
 }
 
+/* TASK-013: rótulos canônicos para origens de leads (API pode retornar uppercase ou lowercase) */
+const SOURCE_LABELS: Record<string, string> = {
+  WHATSAPP: 'WhatsApp',
+  INSTAGRAM: 'Instagram',
+  INDICACAO: 'Indicação',
+  LOJA: 'Loja Física',
+  FACEBOOK: 'Facebook',
+  SITE: 'Site',
+  OUTRO: 'Outros',
+  OUTROS: 'Outros',
+};
+
+function getSourceLabel(source: string): string {
+  const key = source?.toUpperCase?.() ?? '';
+  return SOURCE_LABELS[key] ?? source;
+}
+
 /* TASK-015: Etapas de produção canônicas — mesmas em ambos os cards */
 const PRODUCTION_STAGES_CANONICAL = [
   { stage: 'PENDENTE',     stage_label: 'Designer 3D', avg_days: 1.5, color: '#818CF8', pct: 37 },
@@ -136,7 +140,6 @@ export function CustomDashboardView({ data }: Props) {
   const router = useRouter();
   const [currentMonth, setCurrentMonth] = useState<Date | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const [congratsOpen, setCongratsOpen] = useState(false);
 
   useEffect(() => {
     setCurrentMonth(new Date());
@@ -482,7 +485,7 @@ export function CustomDashboardView({ data }: Props) {
           <div className="kpi-top"><div className="kpi-label">Faturamento do Mês</div><div className="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" strokeWidth="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div></div>
           <div className="kpi-value" suppressHydrationWarning>{fmtBRL(revenue)}</div>
           <svg className="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(200,169,122,0.08)" points="0,34 0,30 25,26 50,28 75,20 100,22 125,14 150,11 175,8 200,6 200,34"/><polyline fill="none" stroke="rgba(200,169,122,0.55)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points="0,30 25,26 50,28 75,20 100,22 125,14 150,11 175,8 200,6"/></svg>
-          <div className="kpi-footer"><span className="delta up">↑ 18%</span><span className="delta-sub">vs mês anterior</span></div>
+          <div className="kpi-footer"><span className="delta neu" title="Comparativo com o mês anterior ainda não disponível">--</span><span className="delta-sub">vs mês anterior</span></div>
         </div>
         {/* PDV */}
         <div className="kpi-card anim-in" onClick={() => router.push('/pdv')} role="link" tabIndex={0} title="Ver PDV">
@@ -496,9 +499,9 @@ export function CustomDashboardView({ data }: Props) {
         <div className="kpi-card anim-in" onClick={() => router.push('/pipeline/leads')} role="link" tabIndex={0} title="Ver Pipeline">
           <div className="kpi-top"><div className="kpi-label">Leads — Pipeline</div><div className="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" strokeWidth="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div></div>
           <div className="kpi-value" suppressHydrationWarning>{leadsToday}</div>
-          <div className="kpi-sub">Novos hoje <b style={{color:'#C8A97A'}}>+3</b></div>
+          <div className="kpi-sub">Novos hoje</div>
           <svg className="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(200,169,122,0.08)" points="0,34 0,34 25,28 50,22 75,26 100,18 125,16 150,20 175,12 200,10 200,34"/><polyline fill="none" stroke="rgba(200,169,122,0.55)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points="0,34 25,28 50,22 75,26 100,18 125,16 150,20 175,12 200,10"/></svg>
-          <div className="kpi-footer"><span className="delta up">↑ 12%</span><span className="delta-sub">conversão 34%</span></div>
+          <div className="kpi-footer"><span className="delta neu" title="Taxa de conversão ainda não disponível">--</span><span className="delta-sub">conversão</span></div>
         </div>
         {/* Pedidos */}
         <div className="kpi-card anim-in" onClick={() => router.push('/pedidos')} role="link" tabIndex={0} title="Ver Pedidos">
@@ -544,8 +547,8 @@ export function CustomDashboardView({ data }: Props) {
             <div className="chart-stats">
               <div><div className="cs-label">Maior Dia</div><div className="cs-val" suppressHydrationWarning>{fmtBRL(chartStats.maxDay)}</div></div>
               <div><div className="cs-label">Média Diária</div><div className="cs-val" suppressHydrationWarning>{fmtBRL(chartStats.avgDay)}</div></div>
-              <div><div className="cs-label">Meta do Mês</div><div className="cs-val green">94%</div></div>
-              <div style={{marginLeft:'auto'}}><div className="cs-label">Projeção</div><div className="cs-val">R$ 51.200</div></div>
+              <div><div className="cs-label">Meta do Mês</div><div className="cs-val" title="Nenhuma meta configurada">--</div></div>
+              <div style={{marginLeft:'auto'}}><div className="cs-label">Projeção</div><div className="cs-val" title="Projeção indisponível sem meta configurada">--</div></div>
             </div>
           </div>
         </div>
@@ -553,17 +556,19 @@ export function CustomDashboardView({ data }: Props) {
         {/* Meta + Pagamentos */}
         <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
           <div className="panel anim-in" style={{flex:1}}>
-            <div className="panel-head"><span className="panel-title">Meta do Mês</span><Link href="/financeiro" className="panel-action">Ajustar</Link></div>
-            <div className="panel-body">
-              <div className="meta-hero"><div className="meta-value" suppressHydrationWarning>{fmtBRL(revenue)}</div><div className="meta-pct">94%</div></div>
-              <div style={{fontSize:'10px',color:'#444',marginBottom:'8px'}}>de R$ 50.000 — faltam R$ 2.620</div>
-              <div className="meta-bar-wrap"><div className="meta-bar-fill" style={{width:'94%'}}></div></div>
-              <div className="meta-stats">
-                <div className="meta-stat"><div className="meta-stat-label">Dias úteis</div><div className="meta-stat-val">{businessDaysRemaining} restam</div></div>
-                <div className="meta-stat"><div className="meta-stat-label">Diário p/ bater</div><div className="meta-stat-val">R$ 873</div></div>
-                <div className="meta-stat"><div className="meta-stat-label">Melhor dia</div><div className="meta-stat-val">R$ 4.280</div></div>
+            <div className="panel-head"><span className="panel-title">Meta do Mês</span></div>
+            <div className="panel-body" style={{justifyContent:'center',alignItems:'center',gap:'10px',textAlign:'center',minHeight:'180px'}}>
+              <div style={{fontSize:'11px',color:'#888',lineHeight:1.6,maxWidth:'240px'}}>
+                Nenhuma meta configurada para o mês. Defina um valor para acompanhar progresso e projeção de fechamento.
               </div>
-              <div className="meta-proj"><div className="meta-proj-label">Projeção de fechamento</div><div className="meta-proj-val">R$ 51.200 ↑</div></div>
+              <Link
+                href="/ajustes"
+                className="panel-action"
+                style={{fontSize:'12px',color:'#C8A97A',padding:'8px 14px',border:'1px solid rgba(200,169,122,0.3)',borderRadius:'6px',textDecoration:'none'}}
+              >
+                Configurar meta →
+              </Link>
+              <div style={{fontSize:'10px',color:'#555',marginTop:'4px'}}>{businessDaysRemaining} dias úteis restam</div>
             </div>
           </div>
           <div className="panel anim-in">
@@ -664,9 +669,9 @@ export function CustomDashboardView({ data }: Props) {
               ))}
             </div>
             <div className="section-label">Hoje — {todayLabel}</div>
-            <div className="cal-event-row"><div className="cal-event-time">10:00</div><div className="cal-event-dot" style={{background:'#C8A97A'}}></div><div className="cal-event-name">Ana Lima</div><div className="cal-event-sub">Anel noivado</div></div>
-            <div className="cal-event-row"><div className="cal-event-time">14:00</div><div className="cal-event-dot" style={{background:'#60A5FA'}}></div><div className="cal-event-name">Carlos Mendes</div><div className="cal-event-sub">Entrega pulseira</div></div>
-            <div className="cal-event-row"><div className="cal-event-time">16:30</div><div className="cal-event-dot" style={{background:'#555'}}></div><div className="cal-event-name">Revisão orçamento</div><div className="cal-event-sub">#PED-0051</div></div>
+            <div style={{textAlign:'center',padding:'16px 8px',fontSize:'11px',color:'#888'}}>
+              Nenhum compromisso hoje.
+            </div>
           </div>
         </div>
 
@@ -795,47 +800,10 @@ export function CustomDashboardView({ data }: Props) {
         {/* Aniversariantes */}
         <div className="panel anim-in">
           <div className="panel-head"><span className="panel-title">Aniversariantes da Semana</span><Link href="/clientes" className="panel-action">Ver todos →</Link></div>
-          <div className="panel-body" style={{gap:0}}>
-            <div className="aniv-row"><div className="aniv-avatar" style={{background:'rgba(200,169,122,0.15)',color:'#C8A97A',border:'1px solid rgba(200,169,122,0.2)'}}>AC</div><div className="aniv-info"><div className="aniv-name">Ana Carolina</div><div className="aniv-sub">27 Mar · cliente há 3 anos</div></div><span className="aniv-badge hoje">Hoje 🎂</span></div>
-            <div className="aniv-row"><div className="aniv-avatar" style={{background:'rgba(96,165,250,0.12)',color:'#60A5FA',border:'1px solid rgba(96,165,250,0.2)'}}>MR</div><div className="aniv-info"><div className="aniv-name">Mariana Ramos</div><div className="aniv-sub">28 Mar · 2 pedidos no histórico</div></div><span className="aniv-badge amanha">Amanhã</span></div>
-            <div className="aniv-row"><div className="aniv-avatar" style={{background:'rgba(192,132,252,0.12)',color:'#C084FC',border:'1px solid rgba(192,132,252,0.2)'}}>JS</div><div className="aniv-info"><div className="aniv-name">João Silveira</div><div className="aniv-sub">31 Mar · cliente VIP</div></div><span className="aniv-badge semana">Sex</span></div>
-            <div className="aniv-cta">
-              <button
-                type="button"
-                className="aniv-btn"
-                onClick={() => setCongratsOpen(true)}
-                aria-label="Enviar mensagem de parabéns para Ana Carolina"
-              >
-                <Mail size={13} style={{flexShrink:0}} /> Enviar parabéns
-              </button>
-              <button
-                type="button"
-                className="aniv-btn"
-                onClick={() => window.open('https://wa.me/5511999991111?text=' + encodeURIComponent('Feliz aniversário, Ana! 🎂🎉 Que seu dia seja incrível!'), '_blank')}
-                aria-label="Mandar WhatsApp para Ana Carolina"
-              >
-                <MessageCircle size={13} style={{flexShrink:0}} /> Mandar WhatsApp
-              </button>
+          <div className="panel-body" style={{justifyContent:'center',alignItems:'center',minHeight:'160px',textAlign:'center'}}>
+            <div style={{fontSize:'11px',color:'#888',lineHeight:1.6}}>
+              Nenhum aniversariante esta semana.
             </div>
-            {congratsOpen && (
-              <div style={{marginTop:'10px',padding:'12px',background:'rgba(200,169,122,0.08)',borderRadius:'8px',border:'1px solid rgba(200,169,122,0.2)'}}>
-                <div style={{fontSize:'10px',letterSpacing:'.14em',textTransform:'uppercase',color:'#C8A97A',marginBottom:'6px'}}>Mensagem de parabéns</div>
-                <div style={{fontSize:'12px',color:'#C8C6C0',lineHeight:1.6,marginBottom:'8px'}}>
-                  Olá, Ana Carolina! 🎂 Passamos para desejar um feliz aniversário! É um prazer tê-la como nossa cliente. Aproveite muito seu dia especial!
-                </div>
-                <div style={{display:'flex',gap:'6px'}}>
-                  <button type="button" className="aniv-btn" style={{fontSize:'10px',padding:'5px'}} onClick={() => {
-                    window.open('https://wa.me/5511999991111?text=' + encodeURIComponent('Olá, Ana Carolina! 🎂 Passamos para desejar um feliz aniversário! É um prazer tê-la como nossa cliente. Aproveite muito seu dia especial!'), '_blank');
-                    setCongratsOpen(false);
-                  }}>
-                    <MessageCircle size={11} /> Enviar via WhatsApp
-                  </button>
-                  <button type="button" className="aniv-btn" style={{fontSize:'10px',padding:'5px',background:'transparent',border:'1px solid rgba(255,255,255,0.08)',color:'#666'}} onClick={() => setCongratsOpen(false)}>
-                    Fechar
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -851,36 +819,9 @@ export function CustomDashboardView({ data }: Props) {
         {/* Heatmap */}
         <div className="panel anim-in">
           <div className="panel-head"><span className="panel-title">Mapa de Calor — Vendas por Dia × Horário</span></div>
-          <div className="panel-body">
-            <div className="heatmap-wrap">
-              <div className="heatmap-days">
-                {HM_DAYS.map(d => <div className="heatmap-day-label" key={d}>{d}</div>)}
-              </div>
-              <div className="heatmap-main">
-                <div className="heatmap-hours">
-                  {Array.from({length:12}, (_,i) => <div className="hm-hour" key={i}>{9+i}h</div>)}
-                </div>
-                <div className="heatmap-grid" id="hm-grid">
-                  {HM_WEIGHTS.map((row, d) => (
-                    <div className="hm-row" key={d}>
-                      {row.map((v, h) => (
-                        <div className="hm-cell" key={h} style={{background:`rgba(200,169,122,${v===0?0.03:(v/9*0.9).toFixed(2)})`}} title={`${HM_DAYS[d]} ${9+h}h — ${v} vendas`}></div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="hm-legend">
-              <div className="hm-legend-label">Menos</div>
-              <div className="hm-legend-bar">
-                <div className="hm-legend-swatch" style={{background:'rgba(200,169,122,0.08)'}}></div>
-                <div className="hm-legend-swatch" style={{background:'rgba(200,169,122,0.25)'}}></div>
-                <div className="hm-legend-swatch" style={{background:'rgba(200,169,122,0.45)'}}></div>
-                <div className="hm-legend-swatch" style={{background:'rgba(200,169,122,0.65)'}}></div>
-                <div className="hm-legend-swatch" style={{background:'rgba(200,169,122,0.9)'}}></div>
-              </div>
-              <div className="hm-legend-label">Mais vendas</div>
+          <div className="panel-body" style={{justifyContent:'center',alignItems:'center',minHeight:'180px',textAlign:'center'}}>
+            <div style={{fontSize:'11px',color:'#888',lineHeight:1.6,maxWidth:'320px'}}>
+              Ainda sem dados suficientes para análise. Registre vendas para ver padrões por horário.
             </div>
           </div>
         </div>
@@ -898,7 +839,7 @@ export function CustomDashboardView({ data }: Props) {
               </svg>
               <div style={{flex:1}}>
                 {leadsBySource.map((source, i) => {
-                  const sourceLabel = source.source === 'whatsapp' ? 'WhatsApp' : source.source === 'instagram' ? 'Instagram' : source.source === 'indicacao' ? 'Indicação' : source.source === 'site' ? 'Site' : 'Outros';
+                  const sourceLabel = getSourceLabel(source.source);
                   const colors = ['#34D399', '#C084FC', '#C8A97A', '#60A5FA', '#333'];
                   return (
                     <div key={i} className="origem-row">

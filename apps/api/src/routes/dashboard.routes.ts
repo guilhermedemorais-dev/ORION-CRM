@@ -75,9 +75,10 @@ async function getAdminDashboard() {
              WHERE type = 'ENTRADA'
                AND date_trunc('month', competence_date) = date_trunc('month', CURRENT_DATE)`
         ),
-        // Contagem de alertas de estoque
+        // Contagem de alertas de estoque — DISTINCT por nome para
+        // alinhar com a listagem deduplicada de stock_alerts_detail.
         query<{ total: string }>(
-            `SELECT COUNT(*)::text AS total
+            `SELECT COUNT(DISTINCT name)::text AS total
              FROM products
              WHERE is_active = true
                AND stock_quantity <= minimum_stock`
@@ -131,12 +132,19 @@ async function getAdminDashboard() {
              LIMIT 5`
         ),
         
-        // Alertas de estoque detalhados
+        // Alertas de estoque detalhados — DISTINCT ON evita duplicatas
+        // quando existem registros com o mesmo nome (ex.: SKUs herdados sem
+        // índice UNIQUE em name). Mantém o registro de menor estoque por nome.
         query<{ id: string; name: string; stock_quantity: number; minimum_stock: number }>(
             `SELECT id, name, stock_quantity, minimum_stock
-             FROM products
-             WHERE is_active = true
-               AND stock_quantity <= minimum_stock
+             FROM (
+               SELECT DISTINCT ON (name)
+                 id, name, stock_quantity, minimum_stock
+               FROM products
+               WHERE is_active = true
+                 AND stock_quantity <= minimum_stock
+               ORDER BY name ASC, stock_quantity ASC
+             ) AS deduped
              ORDER BY stock_quantity ASC
              LIMIT 10`
         ),
