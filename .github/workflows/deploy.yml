@@ -32,6 +32,9 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       # ── API ──────────────────────────────────────────────
+      - name: Copy docs into API context
+        run: cp -r docs apps/api/docs
+
       - name: Build & push API
         uses: docker/build-push-action@v5
         with:
