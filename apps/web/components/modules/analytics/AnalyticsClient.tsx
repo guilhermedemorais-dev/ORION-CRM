@@ -748,11 +748,11 @@ export function AnalyticsClient({
                             description={`Atual ${sales.period.from} → ${sales.period.to} contra a janela anterior.`}
                             className="min-w-0 border-white/5 bg-[#131316]"
                         >
-                            <div className="h-[340px]">
+                            <div className="h-[340px] min-h-[340px] w-full min-w-0">
                                 {!hasMounted ? (
                                     <div className="h-full rounded-2xl border border-white/10 bg-[color:var(--orion-base)]" />
                                 ) : (
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={200}>
                                     <LineChart data={sales.charts.revenue_timeline}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                                         <XAxis dataKey="label" stroke="#A09A94" />
@@ -826,11 +826,11 @@ export function AnalyticsClient({
 
                         <div className="grid gap-6 xl:grid-cols-2">
                         <Card title="Faturamento por canal" description="Loja online separada da operação manual." className="min-w-0">
-                            <div className="h-[320px]">
+                            <div className="h-[320px] min-h-[320px] w-full min-w-0">
                                 {!hasMounted ? (
                                     <div className="h-full rounded-2xl border border-white/10 bg-[color:var(--orion-base)]" />
                                 ) : (
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={200}>
                                     <BarChart data={sales.charts.revenue_by_channel}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                                         <XAxis dataKey="channel" stroke="#A09A94" />
@@ -850,11 +850,11 @@ export function AnalyticsClient({
                         </Card>
 
                         <Card title="Top categorias por receita" description="Categorias que mais puxaram faturamento neste recorte." className="min-w-0 border-white/5 bg-[#131316]">
-                            <div className="h-[320px]">
+                            <div className="h-[320px] min-h-[320px] w-full min-w-0">
                                 {!hasMounted ? (
                                     <div className="h-full rounded-2xl border border-white/10 bg-[color:var(--orion-base)]" />
                                 ) : (
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={200}>
                                     <BarChart data={sales.charts.top_categories} layout="vertical" margin={{ left: 16 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                                         <XAxis
