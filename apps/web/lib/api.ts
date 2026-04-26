@@ -356,6 +356,7 @@ export interface DashboardPayload {
         month_out_cents?: number;
         balance_cents?: number;
         pending_payments?: number;
+        appointments_today?: number;
     };
     alerts: {
         stock_alerts?: number;
@@ -412,6 +413,15 @@ export interface DashboardPayload {
     revenue_last_30_days?: Array<{
         date: string;
         amount_cents: number;
+    }>;
+    upcoming_appointments?: Array<{
+        id: string;
+        type: string;
+        status: string;
+        starts_at: string;
+        ends_at: string;
+        contact_name: string;
+        contact_phone: string | null;
     }>;
 }
 
