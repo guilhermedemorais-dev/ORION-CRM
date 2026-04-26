@@ -47,10 +47,6 @@ async function getAdminDashboard() {
 
         // Receita diária dos últimos 30 dias
         revenueLast30Days,
-
-        // Agenda
-        appointmentsToday,
-        upcomingAppointments,
     ] = await Promise.all([
         // Leads de hoje
         query<{ total: string }>(
@@ -90,8 +86,8 @@ async function getAdminDashboard() {
         // PDV - Vendas de hoje
         query<{ total: string; average: string }>(
             `SELECT 
-                COALESCE(SUM(final_amount_cents), 0)::text AS total,
-                COALESCE(AVG(final_amount_cents), 0)::text AS average
+                COALESCE(SUM(total_cents), 0)::text AS total,
+                COALESCE(AVG(total_cents), 0)::text AS average
              FROM orders
              WHERE created_at::date = CURRENT_DATE
                AND status NOT IN ('CANCELADO')`
@@ -151,12 +147,11 @@ async function getAdminDashboard() {
                 o.id,
                 o.order_number,
                 COALESCE(c.name, 'Cliente') AS client_name,
-                o.final_amount_cents::text AS total_cents,
+                o.total_cents,
                 EXTRACT(DAY FROM NOW() - o.updated_at)::text AS ready_days
              FROM orders o
-             LEFT JOIN customers c ON c.id = o.customer_id
-             WHERE o.delivery_type = 'RETIRADA'
-               AND o.status IN ('PAGO', 'SEPARANDO')
+             LEFT JOIN clients c ON c.id = o.client_id
+             WHERE o.status = 'PRONTO'
                AND o.updated_at IS NOT NULL
              ORDER BY o.updated_at ASC
              LIMIT 5`
@@ -165,9 +160,16 @@ async function getAdminDashboard() {
         // Produção por etapa
         query<{ stage: string; total: string }>(
             `SELECT 
-                status::text AS stage,
+                CASE 
+                    WHEN status = 'PENDENTE' THEN 'Pendente'
+                    WHEN status = 'EM_ANDAMENTO' THEN 'Em Andamento'
+                    WHEN status = 'PAUSADA' THEN 'Pausada'
+                    WHEN status = 'CONCLUIDA' THEN 'Concluída'
+                    ELSE status
+                END AS stage,
                 COUNT(*)::text AS total
              FROM production_orders
+             WHERE status NOT IN ('CANCELADA')
              GROUP BY status
              ORDER BY 
                 CASE status 
@@ -187,7 +189,7 @@ async function getAdminDashboard() {
                 COALESCE(SUM(fe.amount_cents), 0)::text AS total_cents
              FROM financial_entries fe
              JOIN orders o ON o.id = fe.order_id
-             JOIN customers c ON c.id = o.customer_id
+             JOIN clients c ON c.id = o.client_id
              WHERE fe.type = 'ENTRADA'
                AND date_trunc('month', fe.competence_date) = date_trunc('month', CURRENT_DATE)
              GROUP BY c.id, c.name
@@ -198,7 +200,7 @@ async function getAdminDashboard() {
         // Leads por origem
         query<{ source: string; total: string }>(
             `SELECT 
-                COALESCE(source::text, 'OUTRO') AS source,
+                COALESCE(source, 'outros') AS source,
                 COUNT(*)::text AS total
              FROM leads
              GROUP BY source
@@ -229,40 +231,6 @@ async function getAdminDashboard() {
              GROUP BY d
              ORDER BY d ASC`
         ),
-
-        query<{ total: string }>(
-            `SELECT COUNT(*)::text AS total
-             FROM appointments
-             WHERE starts_at >= CURRENT_DATE
-               AND starts_at < CURRENT_DATE + interval '1 day'
-               AND status NOT IN ('CANCELADO', 'NAO_COMPARECEU')`
-        ),
-
-        query<{
-            id: string;
-            type: string;
-            status: string;
-            starts_at: Date;
-            ends_at: Date;
-            contact_name: string;
-            contact_phone: string | null;
-        }>(
-            `SELECT
-                a.id,
-                a.type,
-                a.status,
-                a.starts_at,
-                a.ends_at,
-                COALESCE(c.name, l.name, 'Contato') AS contact_name,
-                COALESCE(c.whatsapp_number, l.whatsapp_number) AS contact_phone
-             FROM appointments a
-             LEFT JOIN customers c ON c.id = a.customer_id
-             LEFT JOIN leads l ON l.id = a.lead_id
-             WHERE a.starts_at >= CURRENT_DATE
-               AND a.status NOT IN ('CANCELADO', 'NAO_COMPARECEU')
-             ORDER BY a.starts_at ASC
-             LIMIT 8`
-        ),
     ]);
 
     // Calcular ticket médio
@@ -290,17 +258,16 @@ async function getAdminDashboard() {
     const readyOrdersTotal = readyOrders.rows.reduce((acc, r) => acc + Number(r.total_cents), 0);
 
     // Mapeamento de estágios para o frontend
-    const stageLabelMap: Record<string, string> = {
-        PENDENTE: 'Pendente',
-        EM_ANDAMENTO: 'Em Andamento',
-        PAUSADA: 'Pausada',
-        CONCLUIDA: 'Concluída',
-        REPROVADA: 'Reprovada',
+    const stageMap: Record<string, string> = {
+        'Pendente': 'PENDENTE',
+        'Em Andamento': 'EM_ANDAMENTO',
+        'Pausada': 'PAUSADA',
+        'Concluída': 'CONCLUIDA'
     };
 
     const productionStages = productionByStage.rows.map(s => ({
-        stage: s.stage,
-        stage_label: stageLabelMap[s.stage] || s.stage,
+        stage: stageMap[s.stage] || s.stage,
+        stage_label: s.stage,
         count: Number(s.total)
     }));
 
@@ -316,7 +283,6 @@ async function getAdminDashboard() {
             pdv_sales_today_cents: Number(pdvSalesToday.rows[0]?.total ?? '0'),
             pdv_orders_today: Number(pdvOrdersToday.rows[0]?.total ?? '0'),
             pdv_ticket_avg_cents: Math.round(pdvTicketAvg),
-            appointments_today: Number(appointmentsToday.rows[0]?.total ?? '0'),
         },
         alerts: {
             stock_alerts: Number(stockAlertsCount.rows[0]?.total ?? '0'),
@@ -359,15 +325,6 @@ async function getAdminDashboard() {
         revenue_last_30_days: revenueLast30Days.rows.map((row) => ({
             date: row.bucket,
             amount_cents: Number(row.total),
-        })),
-        upcoming_appointments: upcomingAppointments.rows.map((appointment) => ({
-            id: appointment.id,
-            type: appointment.type,
-            status: appointment.status,
-            starts_at: appointment.starts_at,
-            ends_at: appointment.ends_at,
-            contact_name: appointment.contact_name,
-            contact_phone: appointment.contact_phone,
         })),
     };
 }
