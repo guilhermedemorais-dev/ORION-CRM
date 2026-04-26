@@ -433,6 +433,163 @@ router.post(
     }
 );
 
+const updateLaunchSchema = z.object({
+    tipo: z.enum(['receita', 'despesa']),
+    valor: z.coerce.number().int().positive(),
+    descricao: z.string().trim().min(5).max(2000),
+    data: z.string().date(),
+    categoria: z.string().trim().min(2).max(100),
+});
+
+router.put(
+    '/lancamentos/:id',
+    authenticate,
+    requireRole(['ADMIN', 'FINANCEIRO']),
+    rateLimit({ windowMs: 60 * 1000, max: 60, name: 'financial-launches-update' }),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const paramsParsed = financialParamsSchema.safeParse(req.params);
+            if (!paramsParsed.success) {
+                next(AppError.badRequest('Lançamento inválido.'));
+                return;
+            }
+
+            const parsed = updateLaunchSchema.safeParse(req.body);
+            if (!parsed.success) {
+                next(AppError.badRequest(
+                    'Verifique os dados do lançamento.',
+                    parsed.error.errors.map((error) => ({ field: error.path.join('.'), message: error.message }))
+                ));
+                return;
+            }
+
+            const existing = await fetchFinancialEntry(paramsParsed.data.id);
+            if (!existing) {
+                next(AppError.notFound('Lançamento financeiro não encontrado.'));
+                return;
+            }
+
+            const result = await query<FinancialEntryRow>(
+                `UPDATE financial_entries
+                 SET type = $1,
+                     amount_cents = $2,
+                     category = $3,
+                     description = $4,
+                     competence_date = $5
+                 WHERE id = $6
+                 RETURNING
+                    id,
+                    type,
+                    amount_cents,
+                    category,
+                    description,
+                    order_id,
+                    payment_id,
+                    commission_user_id,
+                    commission_amount_cents,
+                    competence_date,
+                    receipt_url,
+                    created_at,
+                    created_by AS created_by_user_id,
+                    (SELECT name FROM users WHERE id = financial_entries.created_by) AS created_by_user_name`,
+                [
+                    parsed.data.tipo === 'receita' ? 'ENTRADA' : 'SAIDA',
+                    parsed.data.valor,
+                    parsed.data.categoria.trim().toUpperCase(),
+                    parsed.data.descricao,
+                    parsed.data.data,
+                    paramsParsed.data.id,
+                ]
+            );
+
+            const updated = result.rows[0];
+
+            if (req.user && updated) {
+                await createAuditLog({
+                    userId: req.user.id,
+                    action: 'UPDATE',
+                    entityType: 'financial_entries',
+                    entityId: updated.id,
+                    oldValue: {
+                        type: existing.type,
+                        amount_cents: existing.amount_cents,
+                        category: existing.category,
+                        description: existing.description,
+                        competence_date: existing.competence_date,
+                    },
+                    newValue: {
+                        type: updated.type,
+                        amount_cents: updated.amount_cents,
+                        category: updated.category,
+                        description: updated.description,
+                        competence_date: updated.competence_date,
+                    },
+                    req,
+                });
+            }
+
+            res.json(mapFinancialEntry(updated as FinancialEntryRow));
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+router.delete(
+    '/lancamentos/:id',
+    authenticate,
+    requireRole(['ADMIN', 'FINANCEIRO']),
+    rateLimit({ windowMs: 60 * 1000, max: 60, name: 'financial-launches-delete' }),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const paramsParsed = financialParamsSchema.safeParse(req.params);
+            if (!paramsParsed.success) {
+                next(AppError.badRequest('Lançamento inválido.'));
+                return;
+            }
+
+            const existing = await fetchFinancialEntry(paramsParsed.data.id);
+            if (!existing) {
+                next(AppError.notFound('Lançamento financeiro não encontrado.'));
+                return;
+            }
+
+            // Block deletion of system-generated entries (linked to orders/payments)
+            if (existing.order_id || existing.payment_id) {
+                next(new AppError(
+                    409,
+                    'FINANCIAL_ENTRY_LINKED',
+                    'Lançamentos vinculados a pedidos ou pagamentos não podem ser excluídos.'
+                ));
+                return;
+            }
+
+            await query('DELETE FROM financial_entries WHERE id = $1', [paramsParsed.data.id]);
+
+            if (req.user) {
+                await createAuditLog({
+                    userId: req.user.id,
+                    action: 'DELETE',
+                    entityType: 'financial_entries',
+                    entityId: paramsParsed.data.id,
+                    oldValue: {
+                        type: existing.type,
+                        amount_cents: existing.amount_cents,
+                        category: existing.category,
+                        description: existing.description,
+                    },
+                    newValue: null,
+                    req,
+                });
+            }
+
+            res.status(204).send();
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
 router.post(
     '/lancamentos/:id/comprovante',
     authenticate,
