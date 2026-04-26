@@ -17,8 +17,8 @@ test.describe('Infrastructure Health', () => {
         expect(body).toMatchObject({ status: 'ok' });
     });
 
-    test('GET /api/v1/operator/health — banco conectado', async ({ request }) => {
-        const res = await request.get(`${API_URL}/api/v1/operator/health`);
+    test('GET /health — banco conectado', async ({ request }) => {
+        const res = await request.get(`${API_URL}/health`);
         expect(res.status()).toBe(200);
         const body = await res.json();
         // Deve retornar status ok E indicar que o DB está conectado

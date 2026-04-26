@@ -22,11 +22,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 # Migration SQL files must be at dist/db/migrations (migrate.js uses __dirname)
 COPY --from=builder /app/src/db/migrations ./dist/db/migrations
-# Embed docs so releases.md is available in production without a host volume mount
-COPY --from=builder /app/docs ./docs
 
-# Create uploads directory
-RUN mkdir -p /app/uploads && chown -R orion:nodejs /app/uploads
+# Create runtime directories. docker-compose mounts the repository docs folder at /app/docs.
+RUN mkdir -p /app/uploads /app/docs && chown -R orion:nodejs /app/uploads /app/docs
 
 USER orion
 

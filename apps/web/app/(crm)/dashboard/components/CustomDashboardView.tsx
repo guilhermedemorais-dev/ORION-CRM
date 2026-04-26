@@ -58,6 +58,14 @@ function relativeTime(dateStr: string): string {
   return `ontem`;
 }
 
+function formatTimeOnly(dateStr: string): string {
+  return new Date(dateStr).toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  });
+}
+
 /* TASK-008: label contextual por tipo de atividade */
 function activityLabel(kind: string, label: string): string {
   if (kind === 'lead') return label.toLowerCase().includes('novo') ? 'Novo lead captado' : 'Lead atualizado';
@@ -151,86 +159,43 @@ export function CustomDashboardView({ data }: Props) {
     return () => clearInterval(id);
   }, [router]);
 
-  /* ─── Dados reais da API ou fallback visual ─── */
-  const hasRealData = data?.kpis && data.kpis.month_revenue_cents != null;
+  /* ─── Dados reais da API. Quando o banco está vazio, a tela deve mostrar zero/empty state. ─── */
+  const hasRealData = Boolean(data?.kpis);
 
-  // KPIs - usa dados reais se disponíveis, senão fallback visual
-  const revenue = hasRealData ? (data.kpis.month_revenue_cents || 0) / 100 : 47840;
-  const pdvOrdersToday = hasRealData ? (data.kpis.pdv_orders_today || 0) : 7;
-  const pdvTicketAvg = hasRealData ? (data.kpis.pdv_ticket_avg_cents || 0) / 100 : 1240;
-  const overdueProduction = hasRealData ? (data.alerts?.overdue_production || 0) : 0;
-  const leadsToday = hasRealData ? (data.kpis.leads_today || 0) : 24;
-  const openOrders = hasRealData ? (data.kpis.open_orders || 0) : 12;
+  const revenue = (data?.kpis.month_revenue_cents ?? 0) / 100;
+  const pdvOrdersToday = data?.kpis.pdv_orders_today ?? 0;
+  const pdvTicketAvg = (data?.kpis.pdv_ticket_avg_cents ?? 0) / 100;
+  const overdueProduction = data?.alerts?.overdue_production ?? 0;
+  const leadsToday = data?.kpis.leads_today ?? 0;
+  const openOrders = data?.kpis.open_orders ?? 0;
 
-  // Listas - usa dados reais se disponíveis, senão fallback visual
-  const readyOrders = (hasRealData && data.ready_orders && data.ready_orders.length > 0) ? data.ready_orders : [
-    { order_number: '#0042', client_name: 'Ana Carolina', total_cents: 1984000, ready_days: 3 },
-    { order_number: '#0039', client_name: 'Pedro Monteiro', total_cents: 1630000, ready_days: 1 },
-    { order_number: '#0035', client_name: 'Julia Siqueira', total_cents: 1170000, ready_days: 0 },
-  ];
-
-  const stockAlerts = (hasRealData && data.stock_alerts_detail && data.stock_alerts_detail.length > 0) ? data.stock_alerts_detail : [
-    { product_name: 'Ouro 18k - 50cm', minimum_stock: 5 },
-    { product_name: 'Prata 925 - Argola', minimum_stock: 10 },
-    { product_name: 'Bolsa Veludo Premium', minimum_stock: 3 },
-  ];
-
-  const paymentMethods = (hasRealData && data.payment_methods && data.payment_methods.length > 0) ? data.payment_methods : [
-    { method: 'CREDIT_CARD', amount_cents: 0, percentage: 52 },
-    { method: 'PIX', amount_cents: 0, percentage: 31 },
-    { method: 'DEBIT_CARD', amount_cents: 0, percentage: 17 },
-  ];
-
-  /* TASK-005: top_clients valores em centavos — garante mesma unidade do KPI de faturamento */
-  const topClients = (hasRealData && data.top_clients && data.top_clients.length > 0) ? data.top_clients : [
-    { client_name: 'Ana Carolina', order_count: 3, total_cents: 198400 },
-    { client_name: 'Pedro Monteiro', order_count: 2, total_cents: 163000 },
-    { client_name: 'Julia Siqueira', order_count: 1, total_cents: 117000 },
-  ];
-
-  const leadsBySource = (hasRealData && data.leads_by_source && data.leads_by_source.length > 0) ? data.leads_by_source : [
-    { source: 'whatsapp', count: 36, percentage: 42 },
-    { source: 'instagram', count: 24, percentage: 28 },
-    { source: 'indicacao', count: 16, percentage: 18 },
-    { source: 'site', count: 6, percentage: 7 },
-    { source: 'outros', count: 5, percentage: 5 },
-  ];
+  const readyOrders = data?.ready_orders ?? [];
+  const stockAlerts = data?.stock_alerts_detail ?? [];
+  const paymentMethods = data?.payment_methods ?? [];
+  const topClients = data?.top_clients ?? [];
+  const leadsBySource = data?.leads_by_source ?? [];
+  const upcomingAppointments = data?.upcoming_appointments ?? [];
 
   /* TASK-015: produção usa stages canônicos mesclados com counts reais */
   const productionByStage = PRODUCTION_STAGES_CANONICAL.map((canonical) => {
     const real = hasRealData && data?.production_by_stage
       ? data.production_by_stage.find(s => s.stage_label === canonical.stage_label)
       : null;
-    return { ...canonical, count: real?.count ?? (canonical.stage === 'PENDENTE' ? 4 : canonical.stage === 'CONCLUIDA' ? 1 : 2) };
+    return { ...canonical, count: real?.count ?? 0 };
   });
 
-  const activity = (hasRealData && data.activity && data.activity.length > 0) ? data.activity : [
-    { kind: 'lead', label: 'Novo lead: João Silva', created_at: '2026-04-23T09:10:00-03:00' },
-    { kind: 'order', label: 'Pedido #0042 finalizado', created_at: '2026-04-23T10:42:00-03:00' },
-    { kind: 'lead', label: 'Lead convertido: Maria Santos', created_at: '2026-04-23T14:25:00-03:00' },
-    { kind: 'order', label: 'Pagamento confirmado', created_at: '2026-04-23T16:31:00-03:00' },
-  ];
+  const activity = data?.activity ?? [];
 
   // Valores derivados
-  const totalLeads = leadsBySource.reduce((acc, s) => acc + s.count, 0) || 87;
-  const readyOrdersTotal = readyOrders.reduce((acc, o) => acc + o.total_cents, 0) / 100 || 9200;
-  const topClientsTotalCents = topClients.reduce((acc, c) => acc + c.total_cents, 0);
+  const totalLeads = leadsBySource.reduce((acc, s) => acc + s.count, 0);
+  const readyOrdersTotalCents = readyOrders.reduce((acc, o) => acc + o.total_cents, 0);
   const monthDate = currentMonth ?? new Date('2026-01-01T12:00:00-03:00');
   const businessDaysRemaining = countBusinessDaysRemaining(monthDate);
   const todayLabel = monthDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', timeZone: 'America/Sao_Paulo' });
 
   const chartSeries = useMemo(() => {
-    const fallback = [
-      680, 740, 710, 820, 900, 980, 870, 1040, 1120, 980, 1210, 1320, 1415, 1540, 1490,
-      1620, 1700, 1840, 1920, 2010, 2130, 2260, 2200, 2380, 2490, 2630, 2780, 2910, 3050, 3190,
-    ].map((amount, index) => {
-      const date = new Date(monthDate);
-      date.setDate(date.getDate() - (29 - index));
-      return { date: formatDateKey(date), amount_cents: amount * 100 };
-    });
-    if (!hasRealData) return fallback;
     return data?.revenue_last_30_days ?? [];
-  }, [data?.revenue_last_30_days, hasRealData, monthDate]);
+  }, [data?.revenue_last_30_days]);
 
   const hasChartData = chartSeries.length > 0 && chartSeries.some((point) => point.amount_cents > 0);
 
@@ -278,18 +243,31 @@ export function CustomDashboardView({ data }: Props) {
     };
   }, [chartSeries, hasChartData]);
 
+  const appointmentDateKeys = useMemo(() => {
+    return new Set(upcomingAppointments.map((appointment) => formatDateKey(new Date(appointment.starts_at))));
+  }, [upcomingAppointments]);
+
+  const todayAppointments = useMemo(() => {
+    const todayKey = formatDateKey(new Date());
+    return upcomingAppointments
+      .filter((appointment) => formatDateKey(new Date(appointment.starts_at)) === todayKey)
+      .slice(0, 3);
+  }, [upcomingAppointments]);
+
   const calendarCells = useMemo(() => {
     if (!currentMonth) return [];
     const firstOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
     const start = new Date(firstOfMonth);
     start.setDate(firstOfMonth.getDate() - firstOfMonth.getDay());
-    const cells: Array<{ key: string; day: number; isCurrentMonth: boolean; isToday: boolean }> = [];
+    const cells: Array<{ key: string; dateKey: string; day: number; isCurrentMonth: boolean; isToday: boolean }> = [];
     for (let i = 0; i < 42; i += 1) {
       const cellDate = new Date(start);
       cellDate.setDate(start.getDate() + i);
-      const isToday = formatDateKey(cellDate) === formatDateKey(new Date());
+      const dateKey = formatDateKey(cellDate);
+      const isToday = dateKey === formatDateKey(new Date());
       cells.push({
         key: cellDate.toISOString(),
+        dateKey,
         day: cellDate.getDate(),
         isCurrentMonth: cellDate.getMonth() === currentMonth.getMonth(),
         isToday,
@@ -488,7 +466,7 @@ export function CustomDashboardView({ data }: Props) {
         <div className="kpi-card anim-in" onClick={() => router.push('/pdv')} role="link" tabIndex={0} title="Ver PDV">
           <div className="kpi-top"><div className="kpi-label">PDV — Vendas Hoje</div><div className="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" strokeWidth="1.5"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div></div>
           <div className="kpi-value" suppressHydrationWarning>{pdvOrdersToday}</div>
-          <div className="kpi-sub">Ticket médio <b>{fmtBRL(pdvTicketAvg * 100)}</b></div>
+          <div className="kpi-sub">Ticket médio <b>{fmtBRL(pdvTicketAvg)}</b></div>
           <svg className="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(200,169,122,0.08)" points="0,34 0,32 25,26 50,28 75,22 100,18 125,24 150,14 175,10 200,16 200,34"/><polyline fill="none" stroke="rgba(200,169,122,0.55)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points="0,32 25,26 50,28 75,22 100,18 125,24 150,14 175,10 200,16"/></svg>
           <div className="kpi-footer"><span className="delta up">↑ +{pdvOrdersToday > 4 ? pdvOrdersToday - 4 : pdvOrdersToday}</span><span className="delta-sub">vs ontem</span></div>
         </div>
@@ -506,7 +484,7 @@ export function CustomDashboardView({ data }: Props) {
           <div className="kpi-value" suppressHydrationWarning>{openOrders}</div>
           <div className={`kpi-sub ${overdueProduction > 0 ? 'danger' : 'ok'}`}>{overdueProduction > 0 ? `${overdueProduction} com prazo vencido` : 'Nenhum atraso'}</div>
           <svg className="spark" width="100%" height="34" viewBox="0 0 200 34" preserveAspectRatio="none"><polygon fill="rgba(248,113,113,0.07)" points="0,34 0,20 25,18 50,24 75,16 100,20 125,14 150,18 175,16 200,14 200,34"/><polyline fill="none" stroke="rgba(248,113,113,0.45)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points="0,20 25,18 50,24 75,16 100,20 125,14 150,18 175,16 200,14"/></svg>
-          <div className="kpi-footer"><span className="delta neu">→ estável</span><span className="delta-sub" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'120px'}}>{fmtBRL(revenue * 100)} em aberto</span></div>
+          <div className="kpi-footer"><span className="delta neu">→ estável</span><span className="delta-sub" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'120px'}}>{fmtBRL(revenue)} em aberto</span></div>
         </div>
       </div>
 
@@ -654,19 +632,26 @@ export function CustomDashboardView({ data }: Props) {
             </div>
             <div className="cal-grid">
               <div className="cal-dow">D</div><div className="cal-dow">S</div><div className="cal-dow">T</div><div className="cal-dow">Q</div><div className="cal-dow">Q</div><div className="cal-dow">S</div><div className="cal-dow">S</div>
-              {calendarCells.map((cell, index) => (
+              {calendarCells.map((cell) => (
                 <div
                   key={cell.key}
-                  className={`cal-day ${cell.isCurrentMonth ? '' : 'other-month'} ${cell.isToday ? 'today' : ''} ${index % 5 === 0 ? 'has-event' : ''}`}
+                  className={`cal-day ${cell.isCurrentMonth ? '' : 'other-month'} ${cell.isToday ? 'today' : ''} ${appointmentDateKeys.has(cell.dateKey) ? 'has-event' : ''}`}
                 >
                   {cell.day}
                 </div>
               ))}
             </div>
             <div className="section-label">Hoje — {todayLabel}</div>
-            <div className="cal-event-row"><div className="cal-event-time">10:00</div><div className="cal-event-dot" style={{background:'#C8A97A'}}></div><div className="cal-event-name">Ana Lima</div><div className="cal-event-sub">Anel noivado</div></div>
-            <div className="cal-event-row"><div className="cal-event-time">14:00</div><div className="cal-event-dot" style={{background:'#60A5FA'}}></div><div className="cal-event-name">Carlos Mendes</div><div className="cal-event-sub">Entrega pulseira</div></div>
-            <div className="cal-event-row"><div className="cal-event-time">16:30</div><div className="cal-event-dot" style={{background:'#555'}}></div><div className="cal-event-name">Revisão orçamento</div><div className="cal-event-sub">#PED-0051</div></div>
+            {todayAppointments.length > 0 ? todayAppointments.map((appointment, index) => (
+              <div className="cal-event-row" key={appointment.id}>
+                <div className="cal-event-time">{formatTimeOnly(appointment.starts_at)}</div>
+                <div className="cal-event-dot" style={{background: index === 0 ? '#C8A97A' : index === 1 ? '#60A5FA' : '#555'}}></div>
+                <div className="cal-event-name">{appointment.contact_name}</div>
+                <div className="cal-event-sub">{appointment.type}</div>
+              </div>
+            )) : (
+              <div style={{textAlign:'center',padding:'14px',color:'#666'}}>Nenhum agendamento hoje</div>
+            )}
           </div>
         </div>
 
@@ -675,25 +660,23 @@ export function CustomDashboardView({ data }: Props) {
           <div className="panel-head"><span className="panel-title">Prontos — Aguardando Retirada</span><Link href="/pedidos" className="panel-action">Ver todos →</Link></div>
           <div className="panel-body">
             {readyOrders.length > 0 ? (
-              readyOrders.length > 3 ? readyOrders.slice(0, 3).map((order, i) => (
+              readyOrders.slice(0, 3).map((order, i) => (
                 <div key={i} className="pronto-row">
                   <div className="pronto-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
                   <div className="pronto-info"><div className="pronto-id">{order.order_number}</div><div className="pronto-cliente">{order.client_name}</div></div>
                   <div className="pronto-right">
-                    <div className="pronto-val">{fmtBRL(order.total_cents)}</div>
+                    <div className="pronto-val">{formatCurrencyFromCents(order.total_cents)}</div>
                     <div className={`pronto-dias ${order.ready_days > 2 ? 'urgent' : ''}`}>{order.ready_days === 0 ? 'Hoje' : `${order.ready_days} dia(s) aguardando`}</div>
                   </div>
                 </div>
-              )) : (
-                <div style={{textAlign:'center',padding:'20px',color:'#666'}}>Nenhum pedido pronto</div>
-              )
+              ))
             ) : (
               <div style={{textAlign:'center',padding:'20px',color:'#666'}}>Nenhum pedido pronto</div>
             )}
             {readyOrders.length > 0 && (
               <div className="pronto-footer">
                 <div className="pronto-footer-label">Total retido</div>
-                <div className="pronto-footer-val">{fmtBRL(readyOrdersTotal * 100)}</div>
+                <div className="pronto-footer-val">{formatCurrencyFromCents(readyOrdersTotalCents)}</div>
               </div>
             )}
           </div>
@@ -786,7 +769,7 @@ export function CustomDashboardView({ data }: Props) {
                   {client.client_name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                 </div>
                 <div className="cliente-info"><b>{client.client_name}</b><span>{client.order_count} pedido(s)</span></div>
-                <div className="cliente-val" suppressHydrationWarning style={{color: i === 0 ? '#C8A97A' : '#888'}}>{fmtBRL(client.total_cents)}</div>
+                <div className="cliente-val" suppressHydrationWarning style={{color: i === 0 ? '#C8A97A' : '#888'}}>{formatCurrencyFromCents(client.total_cents)}</div>
               </div>
             ))}
           </div>
