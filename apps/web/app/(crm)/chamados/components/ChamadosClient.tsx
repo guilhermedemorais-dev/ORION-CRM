@@ -391,13 +391,19 @@ function ActivityGraph() {
     const countMap: Record<string, number> = {};
     days.forEach(d => { countMap[d.date] = d.count; });
 
-    // Always show last 26 weeks (6 months) so the grid looks substantial
+    // Show full calendar year: Jan 1 to Dec 31 of current year
     const today = new Date();
-    const endSun = new Date(today);
-    endSun.setDate(today.getDate() + (6 - ((today.getDay() + 6) % 7)));
+    const year = today.getFullYear();
 
-    const startMon = new Date(endSun);
-    startMon.setDate(endSun.getDate() - 52 * 7 + 1);
+    // Start: Monday on or before Jan 1
+    const jan1 = new Date(year, 0, 1);
+    const startMon = new Date(jan1);
+    startMon.setDate(jan1.getDate() - ((jan1.getDay() + 6) % 7));
+
+    // End: Sunday on or after Dec 31
+    const dec31 = new Date(year, 11, 31);
+    const endSun = new Date(dec31);
+    endSun.setDate(dec31.getDate() + (6 - ((dec31.getDay() + 6) % 7)));
 
     // Build weeks array: each week = array of 7 dates (Mon-Sun)
     const weeks: Date[][] = [];
