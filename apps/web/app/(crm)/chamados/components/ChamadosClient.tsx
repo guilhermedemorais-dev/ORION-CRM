@@ -391,15 +391,13 @@ function ActivityGraph() {
     const countMap: Record<string, number> = {};
     days.forEach(d => { countMap[d.date] = d.count; });
 
-    // Determine grid: from startDate to today, week columns
-    const start = new Date(days[0]!.date + 'T00:00:00');
-    // Align to Monday of start week
-    const startMon = new Date(start);
-    startMon.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-
+    // Always show last 26 weeks (6 months) so the grid looks substantial
     const today = new Date();
     const endSun = new Date(today);
     endSun.setDate(today.getDate() + (6 - ((today.getDay() + 6) % 7)));
+
+    const startMon = new Date(endSun);
+    startMon.setDate(endSun.getDate() - 26 * 7 + 1);
 
     // Build weeks array: each week = array of 7 dates (Mon-Sun)
     const weeks: Date[][] = [];
