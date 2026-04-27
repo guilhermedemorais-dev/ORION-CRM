@@ -209,7 +209,7 @@ async function getAdminDashboard() {
         // Leads por origem
         query<{ source: string; total: string }>(
             `SELECT 
-                COALESCE(source, 'outros') AS source,
+                COALESCE(source::text, 'outros') AS source,
                 COUNT(*)::text AS total
              FROM leads
              GROUP BY source
