@@ -60,7 +60,7 @@ export async function createFinancialLaunchAction(formData: FormData) {
                 valor: amountCents,
                 data: parsed.data.data,
                 categoria: parsed.data.categoria,
-                payment_method: parsed.data.payment_method ?? null,
+                payment_method: parsed.data.payment_method ?? '',
             }),
         });
     } catch (error) {
