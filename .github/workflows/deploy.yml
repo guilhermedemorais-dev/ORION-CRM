@@ -76,12 +76,15 @@ jobs:
       - name: SSH deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
+          host: 92.112.176.127
+          username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
+          port: 22
+          script_stop: true
           script: |
             cd /docker/orion-crm
+
+            test -n "${{ secrets.GHCR_TOKEN }}" || (echo "GHCR_TOKEN secret is empty" && exit 1)
 
             # Login no GHCR com Personal Access Token
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u guilhermedemorais-dev --password-stdin
