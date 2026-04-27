@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { apiRequest } from '@/lib/api';
+import { parseCurrencyToCents } from '@/lib/financeiro';
 
 const createFinancialLaunchSchema = z.object({
     tipo: z.enum(['receita', 'despesa']),
@@ -19,36 +20,8 @@ const createFinancialLaunchSchema = z.object({
         'TRANSFERENCIA',
         'BOLETO',
         'LINK_PAGAMENTO',
-    ]).optional(),
+    ]).optional().or(z.literal('')),
 });
-
-function parseCurrencyToCents(value: string): number | null {
-    const cleanedValue = value.replace(/[R$\s]/g, '');
-    if (!cleanedValue) {
-        return null;
-    }
-
-    let normalizedValue = cleanedValue;
-
-    if (normalizedValue.includes(',') && normalizedValue.includes('.')) {
-        normalizedValue = normalizedValue.replace(/\./g, '').replace(',', '.');
-    } else if (normalizedValue.includes(',')) {
-        normalizedValue = normalizedValue.replace(',', '.');
-    } else {
-        const parts = normalizedValue.split('.');
-        if (parts.length > 2 || (parts.length === 2 && parts[1] && parts[1].length > 2)) {
-            normalizedValue = parts.join('');
-        }
-    }
-
-    const amount = Number(normalizedValue);
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-        return null;
-    }
-
-    return Math.round(amount * 100);
-}
 
 export async function createFinancialLaunchAction(formData: FormData) {
     const parsed = createFinancialLaunchSchema.safeParse({

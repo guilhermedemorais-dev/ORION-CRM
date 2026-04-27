@@ -45,6 +45,7 @@ import type {
     FinanceLaunchRecord,
     FinancePeriod,
 } from '@/lib/financeiro-types';
+import { parseCurrencyToCents } from '@/lib/financeiro';
 import { cn, formatCurrencyFromCents } from '@/lib/utils';
 
 const TYPE_OPTIONS: Array<{ value: FinanceLaunchFilter; label: string }> = [
@@ -159,6 +160,10 @@ function getLaunchBadge(record: FinanceLaunchRecord) {
         label: 'Despesa',
         className: 'bg-[#FEE2E2] text-[#991B1B]',
     };
+}
+
+function canDeleteLaunch(record: FinanceLaunchRecord): boolean {
+    return record.status !== 'pendente' && !record.reference.order_id && !record.reference.payment_id;
 }
 
 interface ToastState {
@@ -326,32 +331,6 @@ function makeEmptyDraft(todayDate: string): LaunchDraft {
     };
 }
 
-function parseValueToCents(value: string): number | null {
-    const cleaned = value.replace(/[R$\s]/g, '');
-    if (!cleaned) {
-        return null;
-    }
-
-    let normalized = cleaned;
-    if (normalized.includes(',') && normalized.includes('.')) {
-        normalized = normalized.replace(/\./g, '').replace(',', '.');
-    } else if (normalized.includes(',')) {
-        normalized = normalized.replace(',', '.');
-    } else {
-        const parts = normalized.split('.');
-        if (parts.length > 2 || (parts.length === 2 && parts[1] && parts[1].length > 2)) {
-            normalized = parts.join('');
-        }
-    }
-
-    const amount = Number(normalized);
-    if (!Number.isFinite(amount) || amount <= 0) {
-        return null;
-    }
-
-    return Math.round(amount * 100);
-}
-
 function LaunchFormModal({
     title,
     initial,
@@ -381,7 +360,7 @@ function LaunchFormModal({
             setDescricaoError(null);
         }
 
-        const cents = parseValueToCents(target.valor);
+        const cents = parseCurrencyToCents(target.valor);
         if (!cents) {
             setValorError('Informe um valor maior que zero');
             ok = false;
@@ -497,7 +476,7 @@ function LaunchFormModal({
                                 }
                             }}
                             onBlur={() => {
-                                const cents = parseValueToCents(draft.valor);
+                                const cents = parseCurrencyToCents(draft.valor);
                                 if (!cents) {
                                     setValorError('Informe um valor maior que zero');
                                 }
@@ -613,9 +592,10 @@ interface KebabMenuProps {
     onEdit: () => void;
     onDelete: () => void;
     disabled?: boolean;
+    canDelete?: boolean;
 }
 
-function KebabMenu({ onEdit, onDelete, disabled }: KebabMenuProps) {
+function KebabMenu({ onEdit, onDelete, disabled, canDelete = true }: KebabMenuProps) {
     const [open, setOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -657,10 +637,20 @@ function KebabMenu({ onEdit, onDelete, disabled }: KebabMenuProps) {
                     <button
                         type="button"
                         onClick={() => {
+                            if (!canDelete) {
+                                return;
+                            }
                             setOpen(false);
                             onDelete();
                         }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-[#FCA5A5] hover:bg-white/10"
+                        disabled={!canDelete}
+                        title={canDelete ? 'Excluir lançamento' : 'Lançamentos vinculados a pedidos ou pagamentos não podem ser excluídos'}
+                        className={cn(
+                            'flex w-full items-center gap-2 px-3 py-2 text-left text-[12px]',
+                            canDelete
+                                ? 'text-[#FCA5A5] hover:bg-white/10'
+                                : 'cursor-not-allowed text-white/30'
+                        )}
                     >
                         <Trash2 className="h-3.5 w-3.5" />
                         Excluir
@@ -774,7 +764,7 @@ export function FinanceiroClient({
     }
 
     async function submitLaunch(draft: LaunchDraft): Promise<{ ok: boolean; message?: string }> {
-        const cents = parseValueToCents(draft.valor);
+        const cents = parseCurrencyToCents(draft.valor);
         if (!cents) {
             return { ok: false, message: 'Informe um valor maior que zero.' };
         }
@@ -795,7 +785,7 @@ export function FinanceiroClient({
                     valor: cents,
                     data: draft.data,
                     categoria: draft.categoria,
-                    payment_method: draft.payment_method || null,
+                    payment_method: draft.payment_method || '',
                 }),
             });
 
@@ -832,6 +822,11 @@ export function FinanceiroClient({
     async function handleDelete(record: FinanceLaunchRecord) {
         if (record.status === 'pendente') {
             pushToast({ type: 'error', message: 'Pagamentos pendentes não podem ser excluídos.' });
+            return;
+        }
+
+        if (!canDeleteLaunch(record)) {
+            pushToast({ type: 'error', message: 'Lançamentos vinculados a pedidos ou pagamentos não podem ser excluídos.' });
             return;
         }
 
@@ -1205,6 +1200,7 @@ export function FinanceiroClient({
                                                     </div>
                                                     <KebabMenu
                                                         disabled={record.status === 'pendente'}
+                                                        canDelete={canDeleteLaunch(record)}
                                                         onEdit={() => setEditingLaunch(record)}
                                                         onDelete={() => setConfirmDelete(record)}
                                                     />
@@ -1329,6 +1325,7 @@ export function FinanceiroClient({
                                                         <td className="px-3 py-3 text-right">
                                                             <KebabMenu
                                                                 disabled={record.status === 'pendente'}
+                                                                canDelete={canDeleteLaunch(record)}
                                                                 onEdit={() => setEditingLaunch(record)}
                                                                 onDelete={() => setConfirmDelete(record)}
                                                             />
