@@ -9,6 +9,9 @@ export function errorHandler(
     _next: NextFunction
 ): void {
     if (err instanceof AppError) {
+        if (err.code === 'RATE_LIMITED' && typeof err.retryAfterSeconds === 'number') {
+            res.setHeader('Retry-After', String(err.retryAfterSeconds));
+        }
         res.status(err.statusCode).json({
             error: err.code,
             message: err.message,

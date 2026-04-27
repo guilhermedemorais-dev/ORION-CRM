@@ -433,6 +433,11 @@
   color: #C8A97A;
   background: rgba(200,169,122,0.08);
 }
+.dash-anchor-link.active {
+  color: #C8A97A;
+  background: rgba(200,169,122,0.10);
+  box-shadow: inset 0 0 0 1px rgba(200,169,122,0.25);
+}
 .dash-anchor-time {
   font-size: 9px;
   color: #333;

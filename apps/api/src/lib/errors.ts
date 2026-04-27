@@ -2,17 +2,20 @@ export class AppError extends Error {
     public readonly statusCode: number;
     public readonly code: string;
     public readonly details: Array<{ field: string; message: string }>;
+    public readonly retryAfterSeconds?: number;
 
     constructor(
         statusCode: number,
         code: string,
         message: string,
-        details: Array<{ field: string; message: string }> = []
+        details: Array<{ field: string; message: string }> = [],
+        retryAfterSeconds?: number
     ) {
         super(message);
         this.statusCode = statusCode;
         this.code = code;
         this.details = details;
+        this.retryAfterSeconds = retryAfterSeconds;
         this.name = 'AppError';
         Error.captureStackTrace(this, this.constructor);
     }
@@ -38,7 +41,13 @@ export class AppError extends Error {
     }
 
     static rateLimited(retryAfterSeconds: number) {
-        return new AppError(429, 'RATE_LIMITED', `Muitas requisições. Tente em ${retryAfterSeconds} segundos.`);
+        return new AppError(
+            429,
+            'RATE_LIMITED',
+            `Muitas requisições. Tente em ${retryAfterSeconds} segundos.`,
+            [],
+            retryAfterSeconds
+        );
     }
 
     static serviceUnavailable(code: string, message: string) {

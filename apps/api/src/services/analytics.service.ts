@@ -324,7 +324,7 @@ export function resolveAnalyticsPeriodRange(
 }
 
 async function fetchSalesSummary(start: string, endExclusive: string): Promise<SalesSummary> {
-    const [ordersResult, storeResult] = await Promise.all([
+    const [ordersResult, storeResult, manualResult] = await Promise.all([
         executeQuery<{
             total_orders: string;
             revenue_orders: string;
@@ -357,10 +357,23 @@ async function fetchSalesSummary(start: string, endExclusive: string): Promise<S
                AND created_at < $2`,
             [start, endExclusive]
         ),
+        executeQuery<{ revenue_cents: string }>(
+            `SELECT
+                COALESCE(SUM(fe.amount_cents), 0)::text AS revenue_cents
+             FROM financial_entries fe
+             WHERE fe.type = 'ENTRADA'
+               AND fe.order_id IS NULL
+               AND fe.payment_id IS NULL
+               AND fe.competence_date >= $1
+               AND fe.competence_date < $2`,
+            [start, endExclusive]
+        ),
     ]);
 
     return {
-        revenue_cents: parseInteger(ordersResult.rows[0]?.revenue_cents) + parseInteger(storeResult.rows[0]?.revenue_cents),
+        revenue_cents: parseInteger(ordersResult.rows[0]?.revenue_cents)
+            + parseInteger(storeResult.rows[0]?.revenue_cents)
+            + parseInteger(manualResult.rows[0]?.revenue_cents),
         total_orders: parseInteger(ordersResult.rows[0]?.total_orders) + parseInteger(storeResult.rows[0]?.total_orders),
         revenue_orders: parseInteger(ordersResult.rows[0]?.revenue_orders) + parseInteger(storeResult.rows[0]?.revenue_orders),
         cancelled_orders: parseInteger(ordersResult.rows[0]?.cancelled_orders) + parseInteger(storeResult.rows[0]?.cancelled_orders),
@@ -368,9 +381,12 @@ async function fetchSalesSummary(start: string, endExclusive: string): Promise<S
 }
 
 async function fetchSalesTimeline(range: AnalyticsPeriodRange): Promise<SalesTimelineRow[]> {
-    const bucketExpression = range.bucket === 'month'
+    const orderBucketExpression = range.bucket === 'month'
         ? `to_char(date_trunc('month', created_at), 'YYYY-MM-01')`
         : `to_char(date_trunc('day', created_at), 'YYYY-MM-DD')`;
+    const financeBucketExpression = range.bucket === 'month'
+        ? `to_char(date_trunc('month', competence_date), 'YYYY-MM-01')`
+        : `to_char(date_trunc('day', competence_date), 'YYYY-MM-DD')`;
 
     const result = await executeQuery<SalesTimelineRow>(
         `SELECT
@@ -380,7 +396,7 @@ async function fetchSalesTimeline(range: AnalyticsPeriodRange): Promise<SalesTim
             COUNT(*)::text AS orders_count
          FROM (
             SELECT
-                ${bucketExpression} AS bucket,
+                ${orderBucketExpression} AS bucket,
                 'current'::text AS scope,
                 final_amount_cents AS amount_cents
             FROM orders
@@ -391,7 +407,7 @@ async function fetchSalesTimeline(range: AnalyticsPeriodRange): Promise<SalesTim
             UNION ALL
 
             SELECT
-                ${bucketExpression} AS bucket,
+                ${orderBucketExpression} AS bucket,
                 'current'::text AS scope,
                 amount_cents
             FROM store_orders
@@ -402,7 +418,20 @@ async function fetchSalesTimeline(range: AnalyticsPeriodRange): Promise<SalesTim
             UNION ALL
 
             SELECT
-                ${bucketExpression} AS bucket,
+                ${financeBucketExpression} AS bucket,
+                'current'::text AS scope,
+                amount_cents
+            FROM financial_entries
+            WHERE competence_date >= $1
+              AND competence_date < $2
+              AND type = 'ENTRADA'
+              AND order_id IS NULL
+              AND payment_id IS NULL
+
+            UNION ALL
+
+            SELECT
+                ${orderBucketExpression} AS bucket,
                 'previous'::text AS scope,
                 final_amount_cents AS amount_cents
             FROM orders
@@ -413,13 +442,26 @@ async function fetchSalesTimeline(range: AnalyticsPeriodRange): Promise<SalesTim
             UNION ALL
 
             SELECT
-                ${bucketExpression} AS bucket,
+                ${orderBucketExpression} AS bucket,
                 'previous'::text AS scope,
                 amount_cents
             FROM store_orders
             WHERE created_at >= $3
               AND created_at < $4
               AND status = 'approved'
+
+            UNION ALL
+
+            SELECT
+                ${financeBucketExpression} AS bucket,
+                'previous'::text AS scope,
+                amount_cents
+            FROM financial_entries
+            WHERE competence_date >= $3
+              AND competence_date < $4
+              AND type = 'ENTRADA'
+              AND order_id IS NULL
+              AND payment_id IS NULL
          ) raw
          GROUP BY raw.bucket, raw.scope
          ORDER BY raw.scope, raw.bucket`,
@@ -495,6 +537,18 @@ async function fetchChannelRevenue(start: string, endExclusive: string) {
             WHERE created_at >= $1
               AND created_at < $2
               AND status = 'approved'
+
+            UNION ALL
+
+            SELECT
+                'Financeiro' AS channel,
+                amount_cents
+            FROM financial_entries
+            WHERE competence_date >= $1
+              AND competence_date < $2
+              AND type = 'ENTRADA'
+              AND order_id IS NULL
+              AND payment_id IS NULL
          ) combined
          GROUP BY combined.channel`,
         [start, endExclusive]
@@ -504,6 +558,7 @@ async function fetchChannelRevenue(start: string, endExclusive: string) {
         ['Loja Online', { channel: 'Loja Online', revenue_cents: 0, orders: 0 }],
         ['PDV', { channel: 'PDV', revenue_cents: 0, orders: 0 }],
         ['WhatsApp', { channel: 'WhatsApp', revenue_cents: 0, orders: 0 }],
+        ['Financeiro', { channel: 'Financeiro', revenue_cents: 0, orders: 0 }],
     ]);
 
     for (const row of result.rows) {

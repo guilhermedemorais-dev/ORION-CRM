@@ -455,3 +455,57 @@ O ORION CRM tem uma **base visual promissora** — o design dark theme com doura
 Porém, o produto tem **3 bloqueadores absolutos para produção**: (1) APIs sem autenticação — dados de clientes expostos, (2) dados hardcoded no Dashboard — sistema apresenta informações falsas como reais, (3) desconexão Analytics/Financeiro — a principal promessa do produto (visão unificada) não funciona.
 
 Esses 3 itens precisam ser resolvidos antes de qualquer demo para clientes ou lançamento em ambiente compartilhado. O restante pode ser tratado em sprints subsequentes com base nas tasks priorizadas acima.
+
+---
+
+# ✅ RESULTADO — QA (26/04/2026)
+
+**Resumo:** 9 tasks de QA concluídas. Todos os `tsc --noEmit` passaram limpos.
+
+## Segurança
+
+| Task | Status | O que foi feito |
+|---|---|---|
+| **TASK-001** | ✅ | Type guard `isWebSession()` — cookie malformado retorna **401**. `force-dynamic` evita cache de Edge |
+| **TASK-007** | ✅ | Cookie alterado de `SameSite=Lax` para `SameSite=Strict` — CSRF mitigado |
+
+## Bugs Funcionais
+
+| Task | Status | O que foi feito |
+|---|---|---|
+| **TASK-002** | ✅ | Datas parseadas como **data local** — 26/04 não vira mais 25/04 |
+| **TASK-004** | ✅ | Tooltip Recharts corrigido — **Receitas** em verde, **Despesas** em vermelho |
+| **TASK-013** | ✅ | `SOURCE_LABELS` implementado — `"WHATSAPP"` → `"WhatsApp"` no gráfico de pizza |
+
+## Dashboard
+
+| Task | Status | O que foi feito |
+|---|---|---|
+| **TASK-003** | ✅ | `18%`, `94%`, `R$ 51.200`, `+3`, `34%` removidos — substituídos por `--` ou empty state |
+| **TASK-011** | ✅ | Mensagens técnicas de dev removidas — copy neutro de produto |
+
+## Banco / Mobile
+
+| Task | Status | O que foi feito |
+|---|---|---|
+| **TASK-006** | ✅ | `DISTINCT ON (name)` na query de estoque — produto duplicado eliminado |
+| **TASK-008** | ✅ | `minWidth={1}` `minHeight={200}` nos `ResponsiveContainer` — gráficos visíveis em mobile |
+| **TASK-009** | ✅ | Touch targets ajustados para `min-h-[44px]` — sidebar, topbar e filtros do financeiro |
+
+## Tasks restantes (requerem decisão arquitetural)
+
+- **TASK-005** — Unificar Analytics + Financeiro (fonte única de verdade)
+- **TASK-010** — Validação Zod no backend de lançamentos
+- **TASK-012** — Rate limiting
+- **TASK-014** — Campo `payment_method` nos lançamentos
+- **TASK-015** — Scrollspy na nav do Dashboard
+
+## Validação em runtime (manual)
+
+- Subir stack: `docker compose up -d --force-recreate`
+- Testar rotas: `/dashboard`, `/financeiro`, `/analytics` em **mobile** e **desktop**
+
+
+
+
+

@@ -52,6 +52,7 @@ export interface FinanceLaunchRecord {
     type: FinancialEntryType;
     description: string;
     category: string;
+    payment_method: string | null;
     amount_cents: number;
     competence_date: string;
     created_at: string;
@@ -103,6 +104,7 @@ interface FinancialEntryLaunchRow {
     order_id: string | null;
     order_number: string | null;
     payment_id: string | null;
+    payment_method: string | null;
     competence_date: string;
     receipt_url: string | null;
     created_at: string;
@@ -419,6 +421,7 @@ async function fetchFinancialLaunchRows(startDate: string, endDateExclusive: str
             fe.order_id,
             o.order_number,
             fe.payment_id,
+            fe.payment_method,
             fe.competence_date,
             fe.receipt_url,
             fe.created_at,
@@ -504,6 +507,7 @@ function buildLaunchRecords(
         type: row.type,
         description: row.description,
         category: row.category,
+        payment_method: row.payment_method,
         amount_cents: row.amount_cents,
         competence_date: row.competence_date,
         created_at: row.created_at,
@@ -526,6 +530,7 @@ function buildLaunchRecords(
         type: 'ENTRADA',
         description: `Pagamento pendente do pedido ${row.order_number}`,
         category: row.payment_method ?? 'LINK_PAGAMENTO',
+        payment_method: row.payment_method ?? null,
         amount_cents: row.amount_cents,
         competence_date: row.created_at,
         created_at: row.created_at,

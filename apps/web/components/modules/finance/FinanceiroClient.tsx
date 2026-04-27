@@ -311,6 +311,7 @@ interface LaunchDraft {
     valor: string;
     data: string;
     categoria: string;
+    payment_method: string;
 }
 
 function makeEmptyDraft(todayDate: string): LaunchDraft {
@@ -321,6 +322,7 @@ function makeEmptyDraft(todayDate: string): LaunchDraft {
         valor: '',
         data: todayDate,
         categoria: 'OUTROS',
+        payment_method: '',
     };
 }
 
@@ -439,6 +441,24 @@ function LaunchFormModal({
                         />
                     </label>
                 </div>
+
+                <label className="grid gap-2">
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[#6B7280]">Método de pagamento</span>
+                    <select
+                        value={draft.payment_method}
+                        onChange={(event) => setDraft((prev) => ({ ...prev, payment_method: event.target.value }))}
+                        className="h-10 rounded-[10px] border border-[#E8E5E0] px-3 text-[13px] text-[#111827] outline-none"
+                    >
+                        <option value="">Selecionar (opcional)</option>
+                        <option value="PIX">PIX</option>
+                        <option value="CARTAO_CREDITO">Cartão de crédito</option>
+                        <option value="CARTAO_DEBITO">Cartão de débito</option>
+                        <option value="DINHEIRO">Dinheiro</option>
+                        <option value="TRANSFERENCIA">Transferência</option>
+                        <option value="BOLETO">Boleto</option>
+                        <option value="LINK_PAGAMENTO">Link de pagamento</option>
+                    </select>
+                </label>
 
                 <label className="grid gap-2">
                     <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[#6B7280]">Descrição</span>
@@ -775,6 +795,7 @@ export function FinanceiroClient({
                     valor: cents,
                     data: draft.data,
                     categoria: draft.categoria,
+                    payment_method: draft.payment_method || null,
                 }),
             });
 
@@ -851,6 +872,7 @@ export function FinanceiroClient({
             categoria: CATEGORY_OPTIONS.includes(record.category as typeof CATEGORY_OPTIONS[number])
                 ? record.category
                 : 'OUTROS',
+            payment_method: record.payment_method ?? '',
         };
     }
 

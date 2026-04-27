@@ -140,9 +140,46 @@ export function CustomDashboardView({ data }: Props) {
   const router = useRouter();
   const [currentMonth, setCurrentMonth] = useState<Date | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [activeSection, setActiveSection] = useState<string>('section-financeiro');
 
   useEffect(() => {
     setCurrentMonth(new Date());
+  }, []);
+
+  /* TASK-015: Scrollspy na nav do Dashboard */
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    const sectionIds = [
+      'section-financeiro',
+      'section-acao-imediata',
+      'section-operacoes',
+      'section-comercial',
+      'section-analytics',
+    ];
+
+    const sections = sectionIds
+      .map((id) => root.querySelector<HTMLElement>(`#${id}`))
+      .filter((el): el is HTMLElement => Boolean(el));
+
+    if (sections.length === 0) return;
+
+    const obs = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((e) => e.isIntersecting)
+        .sort((a, b) => (a.boundingClientRect.top - b.boundingClientRect.top));
+      const first = visible[0]?.target as HTMLElement | undefined;
+      if (first?.id) setActiveSection(first.id);
+    }, {
+      root: null,
+      threshold: [0.15, 0.35, 0.55],
+      // account for sticky nav
+      rootMargin: '-64px 0px -55% 0px',
+    });
+
+    sections.forEach((section) => obs.observe(section));
+    return () => obs.disconnect();
   }, []);
 
   /* ─── TASK-022: Auto-refresh a cada 60 segundos ─── */
@@ -469,11 +506,36 @@ export function CustomDashboardView({ data }: Props) {
 
       {/* ══════════ TASK-020: NAVEGAÇÃO RÁPIDA POR ÂNCORAS ══════════ */}
       <nav className="dash-anchor-nav">
-        <a href="#section-financeiro" className="dash-anchor-link">Financeiro</a>
-        <a href="#section-acao-imediata" className="dash-anchor-link">Ação Imediata</a>
-        <a href="#section-operacoes" className="dash-anchor-link">Operações</a>
-        <a href="#section-comercial" className="dash-anchor-link">Comercial</a>
-        <a href="#section-analytics" className="dash-anchor-link">Analytics</a>
+        <a
+          href="#section-financeiro"
+          className={`dash-anchor-link ${activeSection === 'section-financeiro' ? 'active' : ''}`}
+        >
+          Financeiro
+        </a>
+        <a
+          href="#section-acao-imediata"
+          className={`dash-anchor-link ${activeSection === 'section-acao-imediata' ? 'active' : ''}`}
+        >
+          Ação Imediata
+        </a>
+        <a
+          href="#section-operacoes"
+          className={`dash-anchor-link ${activeSection === 'section-operacoes' ? 'active' : ''}`}
+        >
+          Operações
+        </a>
+        <a
+          href="#section-comercial"
+          className={`dash-anchor-link ${activeSection === 'section-comercial' ? 'active' : ''}`}
+        >
+          Comercial
+        </a>
+        <a
+          href="#section-analytics"
+          className={`dash-anchor-link ${activeSection === 'section-analytics' ? 'active' : ''}`}
+        >
+          Analytics
+        </a>
         <div style={{flex:1}}/>
         <span className="dash-anchor-time">Atualizado: {lastUpdated.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</span>
       </nav>
