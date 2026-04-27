@@ -2,22 +2,24 @@ import {
     createMercadoPagoPaymentLinkAction,
     createCustomOrderAction,
     createReadyOrderAction,
+    requestOrderNfeAction,
+    sendOrderReceiptAction,
     updateOrderStatusAction,
 } from '@/app/(crm)/pedidos/actions';
+import { OrdersFlashToast } from '@/app/(crm)/pedidos/OrdersFlashToast';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/Input';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { UnderConstruction } from '@/components/ui/UnderConstruction';
 import type {
     ApiListResponse,
     CustomerRecord,
     OrderRecord,
 } from '@/lib/api';
 import { apiRequest } from '@/lib/api';
-import { formatCurrencyFromCents, formatDate } from '@/lib/utils';
+import { getSession } from '@/lib/auth';
+import { cn, formatCurrencyFromCents, formatDate } from '@/lib/utils';
 
 const orderStatuses: OrderRecord['status'][] = [
     'RASCUNHO',
@@ -34,6 +36,42 @@ const orderStatuses: OrderRecord['status'][] = [
 ];
 
 const paymentEligibleStatuses: OrderRecord['status'][] = ['RASCUNHO', 'AGUARDANDO_PAGAMENTO'];
+const commercialActionRoles = new Set(['ROOT', 'ADMIN', 'ATENDENTE']);
+
+function formatOrderStatusLabel(status: OrderRecord['status']) {
+    return status.replaceAll('_', ' ');
+}
+
+function formatOrderTypeLabel(type: OrderRecord['type']) {
+    return type === 'PRONTA_ENTREGA' ? 'Pronta entrega' : 'Personalizado';
+}
+
+function formatDeliveryTypeLabel(deliveryType: OrderRecord['delivery_type']) {
+    return deliveryType === 'RETIRADA' ? 'Retirada' : 'Entrega';
+}
+
+function buildOrdersHref(params: {
+    selected?: string;
+    status?: OrderRecord['status'] | '';
+    type?: OrderRecord['type'] | '';
+}) {
+    const search = new URLSearchParams();
+
+    if (params.selected) {
+        search.set('selected', params.selected);
+    }
+
+    if (params.status) {
+        search.set('status', params.status);
+    }
+
+    if (params.type) {
+        search.set('type', params.type);
+    }
+
+    const query = search.toString();
+    return query ? `/pedidos?${query}` : '/pedidos';
+}
 
 export default async function OrdersPage({
     searchParams,
@@ -42,9 +80,13 @@ export default async function OrdersPage({
         selected?: string;
         status?: OrderRecord['status'] | '';
         type?: OrderRecord['type'] | '';
-        error?: string;
+        notice?: string;
+        noticeType?: 'success' | 'error';
     };
 }) {
+    const session = getSession();
+    const canUseCommercialActions = commercialActionRoles.has(session?.user.role ?? '');
+
     const ordersQuery = new URLSearchParams({ limit: '100' });
     if (searchParams?.status) {
         ordersQuery.set('status', searchParams.status);
@@ -65,43 +107,71 @@ export default async function OrdersPage({
             : null;
 
     const quickFilters = [
-        { label: 'Todos', href: '/pedidos' },
-        { label: 'Aguard. Pag.', href: '/pedidos?status=AGUARDANDO_PAGAMENTO' },
-        { label: 'Em Produção', href: '/pedidos?status=EM_PRODUCAO' },
-        { label: 'Prontos', href: '/pedidos?status=RETIRADO' },
+        {
+            label: 'Todos',
+            href: buildOrdersHref({ type: searchParams?.type }),
+            active: !searchParams?.status,
+        },
+        {
+            label: 'Aguard. Pag.',
+            href: buildOrdersHref({ status: 'AGUARDANDO_PAGAMENTO', type: searchParams?.type }),
+            active: searchParams?.status === 'AGUARDANDO_PAGAMENTO',
+        },
+        {
+            label: 'Em Produção',
+            href: buildOrdersHref({ status: 'EM_PRODUCAO', type: searchParams?.type }),
+            active: searchParams?.status === 'EM_PRODUCAO',
+        },
+        {
+            label: 'Prontos',
+            href: buildOrdersHref({ status: 'RETIRADO', type: searchParams?.type }),
+            active: searchParams?.status === 'RETIRADO',
+        },
     ];
 
     return (
         <div className="space-y-6">
-            <PageHeader
-                title="Pedidos"
-                description="Operação comercial com criação rápida de pronta entrega e personalizados, já conectada à fila de produção."
-                actions={
-                    <div className="flex flex-wrap gap-2">
-                        {quickFilters.map((filter) => (
-                            <a
-                                key={filter.href}
-                                href={filter.href}
-                                className="rounded-full border border-canvas-border bg-white px-3 py-2 text-xs font-medium uppercase tracking-[0.16em] text-gray-600 transition hover:border-brand-gold hover:text-gray-900"
-                            >
-                                {filter.label}
-                            </a>
-                        ))}
-                    </div>
-                }
+            <OrdersFlashToast
+                initialMessage={searchParams?.notice}
+                initialType={searchParams?.noticeType}
             />
 
-            {searchParams?.error ? (
-                <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {searchParams.error}
+            <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div className="space-y-2">
+                    <p className="text-xs font-medium uppercase text-gray-500">Operação comercial</p>
+                    <div>
+                        <h1 className="text-2xl font-semibold text-gray-950">Pedidos</h1>
+                        <p className="mt-2 max-w-3xl text-sm text-gray-600">
+                            Criação rápida de pronta entrega e personalizados, com acompanhamento comercial e passagem para produção.
+                        </p>
+                    </div>
                 </div>
-            ) : null}
+
+                <div className="flex flex-wrap gap-2">
+                    {quickFilters.map((filter) => (
+                        <a
+                            key={filter.href}
+                            href={filter.href}
+                            className={cn(
+                                'rounded-md border px-3 py-2 text-sm font-medium transition',
+                                filter.active
+                                    ? 'border-gray-900 bg-gray-900 text-white'
+                                    : 'border-canvas-border bg-white text-gray-600 hover:border-brand-gold hover:text-gray-900'
+                            )}
+                        >
+                            {filter.label}
+                        </a>
+                    ))}
+                </div>
+            </section>
 
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
                 <div className="space-y-6">
                     <div className="grid gap-6 lg:grid-cols-2">
                         <Card title="Novo pedido · Pronta entrega" description="Fluxo rápido para venda de joia pronta, sem depender do catálogo completo ainda.">
                             <form action={createReadyOrderAction} className="grid gap-3">
+                                <input type="hidden" name="return_status" value={searchParams?.status ?? ''} />
+                                <input type="hidden" name="return_type" value={searchParams?.type ?? ''} />
                                 <select
                                     name="customer_id"
                                     required
@@ -140,6 +210,8 @@ export default async function OrdersPage({
 
                         <Card title="Novo pedido · Personalizado" description="Captura comercial da peça sob medida, já pronta para aprovação e produção.">
                             <form action={createCustomOrderAction} className="grid gap-3">
+                                <input type="hidden" name="return_status" value={searchParams?.status ?? ''} />
+                                <input type="hidden" name="return_type" value={searchParams?.type ?? ''} />
                                 <select
                                     name="customer_id"
                                     required
@@ -181,7 +253,7 @@ export default async function OrdersPage({
                             >
                                 <option value="">Todos os status</option>
                                 {orderStatuses.map((status) => (
-                                    <option key={status} value={status}>{status.replaceAll('_', ' ')}</option>
+                                    <option key={status} value={status}>{formatOrderStatusLabel(status)}</option>
                                 ))}
                             </select>
                             <select
@@ -198,13 +270,33 @@ export default async function OrdersPage({
 
                         <div className="space-y-3">
                             {ordersResponse.data.length === 0 ? (
-                                <p className="text-sm text-gray-500">Nenhum pedido encontrado.</p>
+                                <EmptyState
+                                    title="Nenhum pedido encontrado"
+                                    description="Ajuste os filtros ou crie um novo pedido para começar a fila comercial."
+                                    action={(searchParams?.status || searchParams?.type) ? (
+                                        <a
+                                            href="/pedidos"
+                                            className="rounded-md border border-canvas-border bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:border-brand-gold hover:text-gray-950"
+                                        >
+                                            Limpar filtros
+                                        </a>
+                                    ) : undefined}
+                                />
                             ) : (
                                 ordersResponse.data.map((order) => (
                                     <a
                                         key={order.id}
-                                        href={`/pedidos?selected=${order.id}`}
-                                        className="block rounded-xl border border-canvas-border bg-white px-4 py-4 transition hover:border-brand-gold-light hover:shadow-card-hover"
+                                        href={buildOrdersHref({
+                                            selected: order.id,
+                                            status: searchParams?.status,
+                                            type: searchParams?.type,
+                                        })}
+                                        className={cn(
+                                            'block rounded-xl border bg-white px-4 py-4 transition hover:border-brand-gold-light hover:shadow-card-hover',
+                                            selectedOrder?.id === order.id
+                                                ? 'border-brand-gold bg-brand-gold/5'
+                                                : 'border-canvas-border'
+                                        )}
                                     >
                                         <div className="flex flex-wrap items-start justify-between gap-3">
                                             <div>
@@ -214,7 +306,7 @@ export default async function OrdersPage({
                                             <StatusBadge status={order.status} />
                                         </div>
                                         <div className="mt-3 grid gap-2 text-xs uppercase tracking-[0.16em] text-gray-500 md:grid-cols-4">
-                                            <span>{order.type === 'PRONTA_ENTREGA' ? 'Pronta entrega' : 'Personalizado'}</span>
+                                            <span>{formatOrderTypeLabel(order.type)}</span>
                                             <span>{formatCurrencyFromCents(order.final_amount_cents)}</span>
                                             <span>{order.assigned_to.name}</span>
                                             <span>{formatDate(order.created_at)}</span>
@@ -230,7 +322,7 @@ export default async function OrdersPage({
                     {selectedOrder ? (
                         <Card
                             title={selectedOrder.order_number}
-                            description={`${selectedOrder.customer.name} · ${selectedOrder.type === 'PRONTA_ENTREGA' ? 'Pronta entrega' : 'Personalizado'}`}
+                            description={`${selectedOrder.customer.name} · ${formatOrderTypeLabel(selectedOrder.type)}`}
                         >
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
@@ -247,7 +339,15 @@ export default async function OrdersPage({
                                     </div>
                                     <div>
                                         <p className="text-xs font-medium uppercase tracking-[0.16em] text-gray-500">Entrega</p>
-                                        <p className="mt-1">{selectedOrder.delivery_type}</p>
+                                        <p className="mt-1">{formatDeliveryTypeLabel(selectedOrder.delivery_type)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium uppercase tracking-[0.16em] text-gray-500">Criado em</p>
+                                        <p className="mt-1">{formatDate(selectedOrder.created_at)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium uppercase tracking-[0.16em] text-gray-500">Atualizado em</p>
+                                        <p className="mt-1">{formatDate(selectedOrder.updated_at)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs font-medium uppercase tracking-[0.16em] text-gray-500">Observações</p>
@@ -260,6 +360,26 @@ export default async function OrdersPage({
                                         <p className="text-xs font-medium uppercase tracking-[0.16em] text-gray-500">Detalhes do personalizado</p>
                                         <p className="mt-2 text-sm text-gray-800">{selectedOrder.custom_details.design_description}</p>
                                         <p className="mt-2 text-xs uppercase tracking-[0.16em] text-gray-500">{selectedOrder.custom_details.metal_type}</p>
+                                        <div className="mt-3 grid gap-3 text-sm text-gray-700">
+                                            <div>
+                                                <p className="text-xs font-medium uppercase tracking-[0.16em] text-gray-500">Prazo de produção</p>
+                                                <p className="mt-1">{formatDate(selectedOrder.custom_details.production_deadline)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-medium uppercase tracking-[0.16em] text-gray-500">Aprovado em</p>
+                                                <p className="mt-1">{formatDate(selectedOrder.custom_details.approved_at)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-medium uppercase tracking-[0.16em] text-gray-500">Cliente aprovou</p>
+                                                <p className="mt-1">
+                                                    {selectedOrder.custom_details.approved_by_customer === null
+                                                        ? 'Sem retorno registrado'
+                                                        : selectedOrder.custom_details.approved_by_customer
+                                                            ? 'Sim'
+                                                            : 'Não'}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : null}
 
@@ -277,13 +397,16 @@ export default async function OrdersPage({
 
                                 <form action={updateOrderStatusAction} className="space-y-3">
                                     <input type="hidden" name="order_id" value={selectedOrder.id} />
+                                    <input type="hidden" name="selected" value={selectedOrder.id} />
+                                    <input type="hidden" name="return_status" value={searchParams?.status ?? ''} />
+                                    <input type="hidden" name="return_type" value={searchParams?.type ?? ''} />
                                     <select
                                         name="status"
                                         defaultValue={selectedOrder.status}
                                         className="w-full rounded-md border border-canvas-border bg-white px-3 py-2 text-sm text-gray-900 outline-none"
                                     >
                                         {orderStatuses.map((status) => (
-                                            <option key={status} value={status}>{status.replaceAll('_', ' ')}</option>
+                                            <option key={status} value={status}>{formatOrderStatusLabel(status)}</option>
                                         ))}
                                     </select>
                                     <Button type="submit" variant="secondary" className="w-full justify-center">
@@ -294,6 +417,9 @@ export default async function OrdersPage({
                                 {paymentEligibleStatuses.includes(selectedOrder.status) ? (
                                     <form action={createMercadoPagoPaymentLinkAction}>
                                         <input type="hidden" name="order_id" value={selectedOrder.id} />
+                                        <input type="hidden" name="selected" value={selectedOrder.id} />
+                                        <input type="hidden" name="return_status" value={searchParams?.status ?? ''} />
+                                        <input type="hidden" name="return_type" value={searchParams?.type ?? ''} />
                                         <Button type="submit" className="w-full justify-center">
                                             Gerar link Mercado Pago
                                         </Button>
@@ -303,6 +429,43 @@ export default async function OrdersPage({
                                         O link do Mercado Pago fica disponível enquanto o pedido estiver em rascunho ou aguardando pagamento.
                                     </div>
                                 )}
+
+                                {canUseCommercialActions ? (
+                                    <div className="space-y-3 rounded-lg border border-canvas-border bg-white px-4 py-3">
+                                        <p className="text-xs font-medium uppercase tracking-[0.16em] text-gray-500">Ações comerciais</p>
+                                        <form action={requestOrderNfeAction}>
+                                            <input type="hidden" name="order_id" value={selectedOrder.id} />
+                                            <input type="hidden" name="selected" value={selectedOrder.id} />
+                                            <input type="hidden" name="return_status" value={searchParams?.status ?? ''} />
+                                            <input type="hidden" name="return_type" value={searchParams?.type ?? ''} />
+                                            <Button type="submit" variant="secondary" className="w-full justify-center">
+                                                Solicitar NF-e
+                                            </Button>
+                                        </form>
+                                        <div className="grid gap-2 sm:grid-cols-2">
+                                            <form action={sendOrderReceiptAction}>
+                                                <input type="hidden" name="order_id" value={selectedOrder.id} />
+                                                <input type="hidden" name="channel" value="whatsapp" />
+                                                <input type="hidden" name="selected" value={selectedOrder.id} />
+                                                <input type="hidden" name="return_status" value={searchParams?.status ?? ''} />
+                                                <input type="hidden" name="return_type" value={searchParams?.type ?? ''} />
+                                                <Button type="submit" variant="secondary" className="w-full justify-center">
+                                                    Comprovante WhatsApp
+                                                </Button>
+                                            </form>
+                                            <form action={sendOrderReceiptAction}>
+                                                <input type="hidden" name="order_id" value={selectedOrder.id} />
+                                                <input type="hidden" name="channel" value="email" />
+                                                <input type="hidden" name="selected" value={selectedOrder.id} />
+                                                <input type="hidden" name="return_status" value={searchParams?.status ?? ''} />
+                                                <input type="hidden" name="return_type" value={searchParams?.type ?? ''} />
+                                                <Button type="submit" variant="secondary" className="w-full justify-center">
+                                                    Comprovante E-mail
+                                                </Button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                ) : null}
                             </div>
                         </Card>
                     ) : (
@@ -313,7 +476,6 @@ export default async function OrdersPage({
                     )}
                 </div>
             </div>
-            <UnderConstruction />
         </div>
     );
 }

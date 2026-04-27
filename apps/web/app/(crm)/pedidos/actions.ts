@@ -6,6 +6,22 @@ import { z } from 'zod';
 import type { PaymentLinkResponse } from '@/lib/api';
 import { apiRequest } from '@/lib/api';
 
+const orderStatusSchema = z.enum([
+    'RASCUNHO',
+    'AGUARDANDO_PAGAMENTO',
+    'PAGO',
+    'SEPARANDO',
+    'ENVIADO',
+    'RETIRADO',
+    'CANCELADO',
+    'AGUARDANDO_APROVACAO_DESIGN',
+    'APROVADO',
+    'EM_PRODUCAO',
+    'CONTROLE_QUALIDADE',
+]);
+
+const orderTypeSchema = z.enum(['PRONTA_ENTREGA', 'PERSONALIZADO']);
+
 const createReadyOrderSchema = z.object({
     customer_id: z.string().uuid(),
     item_description: z.string().trim().min(2).max(500),
@@ -30,35 +46,103 @@ const createCustomOrderSchema = z.object({
 
 const updateOrderStatusSchema = z.object({
     order_id: z.string().uuid(),
-    status: z.enum([
-        'RASCUNHO',
-        'AGUARDANDO_PAGAMENTO',
-        'PAGO',
-        'SEPARANDO',
-        'ENVIADO',
-        'RETIRADO',
-        'CANCELADO',
-        'AGUARDANDO_APROVACAO_DESIGN',
-        'APROVADO',
-        'EM_PRODUCAO',
-        'CONTROLE_QUALIDADE',
-    ]),
+    status: orderStatusSchema,
 });
 
 const createPaymentLinkSchema = z.object({
     order_id: z.string().uuid(),
 });
 
-function redirectWithError(message: string, selected?: string): never {
+const returnContextSchema = z.object({
+    selected: z.string().uuid().optional(),
+    status: orderStatusSchema.optional().or(z.literal('')),
+    type: orderTypeSchema.optional().or(z.literal('')),
+});
+
+const sendOrderReceiptSchema = z.object({
+    order_id: z.string().uuid(),
+    channel: z.enum(['whatsapp', 'email']),
+});
+
+type OrdersReturnContext = {
+    selected?: string;
+    status?: z.infer<typeof orderStatusSchema>;
+    type?: z.infer<typeof orderTypeSchema>;
+};
+
+type NoticeType = 'success' | 'error';
+
+function extractReturnContext(formData: FormData): OrdersReturnContext {
+    const parsed = returnContextSchema.safeParse({
+        selected: formData.get('selected') || undefined,
+        status: formData.get('return_status') || '',
+        type: formData.get('return_type') || '',
+    });
+
+    if (!parsed.success) {
+        return {};
+    }
+
+    return {
+        selected: parsed.data.selected,
+        status: parsed.data.status || undefined,
+        type: parsed.data.type || undefined,
+    };
+}
+
+function redirectToOrders({
+    selected,
+    status,
+    type,
+    notice,
+    noticeType,
+}: OrdersReturnContext & {
+    notice?: string;
+    noticeType?: NoticeType;
+}): never {
     const params = new URLSearchParams();
-    params.set('error', message);
+
     if (selected) {
         params.set('selected', selected);
     }
-    redirect(`/pedidos?${params.toString()}`);
+
+    if (status) {
+        params.set('status', status);
+    }
+
+    if (type) {
+        params.set('type', type);
+    }
+
+    if (notice) {
+        params.set('notice', notice);
+    }
+
+    if (noticeType) {
+        params.set('noticeType', noticeType);
+    }
+
+    redirect(`/pedidos${params.toString() ? `?${params.toString()}` : ''}`);
+}
+
+function redirectWithNotice(message: string, noticeType: NoticeType, context?: OrdersReturnContext): never {
+    redirectToOrders({
+        ...context,
+        notice: message,
+        noticeType,
+    });
+}
+
+function redirectWithError(message: string, context?: OrdersReturnContext): never {
+    redirectWithNotice(message, 'error', context);
+}
+
+function redirectWithSuccess(message: string, context?: OrdersReturnContext): never {
+    redirectWithNotice(message, 'success', context);
 }
 
 export async function createReadyOrderAction(formData: FormData) {
+    const returnContext = extractReturnContext(formData);
     const parsed = createReadyOrderSchema.safeParse({
         customer_id: formData.get('customer_id'),
         item_description: formData.get('item_description'),
@@ -70,7 +154,7 @@ export async function createReadyOrderAction(formData: FormData) {
     });
 
     if (!parsed.success) {
-        redirectWithError('Verifique os dados do pedido de pronta entrega.');
+        redirectWithError('Verifique os dados do pedido de pronta entrega.', returnContext);
     }
 
     const data = parsed.data;
@@ -97,14 +181,18 @@ export async function createReadyOrderAction(formData: FormData) {
         });
 
         revalidatePath('/pedidos');
-        redirect(`/pedidos?selected=${order.id}`);
+        redirectWithSuccess('Pedido criado com sucesso.', {
+            ...returnContext,
+            selected: order.id,
+        });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Falha ao criar pedido.';
-        redirectWithError(message);
+        redirectWithError(message, returnContext);
     }
 }
 
 export async function createCustomOrderAction(formData: FormData) {
+    const returnContext = extractReturnContext(formData);
     const parsed = createCustomOrderSchema.safeParse({
         customer_id: formData.get('customer_id'),
         item_description: formData.get('item_description'),
@@ -118,7 +206,7 @@ export async function createCustomOrderAction(formData: FormData) {
     });
 
     if (!parsed.success) {
-        redirectWithError('Verifique os dados do pedido personalizado.');
+        redirectWithError('Verifique os dados do pedido personalizado.', returnContext);
     }
 
     const data = parsed.data;
@@ -148,21 +236,25 @@ export async function createCustomOrderAction(formData: FormData) {
 
         revalidatePath('/pedidos');
         revalidatePath('/producao');
-        redirect(`/pedidos?selected=${order.id}`);
+        redirectWithSuccess('Pedido personalizado criado com sucesso.', {
+            ...returnContext,
+            selected: order.id,
+        });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Falha ao criar pedido personalizado.';
-        redirectWithError(message);
+        redirectWithError(message, returnContext);
     }
 }
 
 export async function updateOrderStatusAction(formData: FormData) {
+    const returnContext = extractReturnContext(formData);
     const parsed = updateOrderStatusSchema.safeParse({
         order_id: formData.get('order_id'),
         status: formData.get('status'),
     });
 
     if (!parsed.success) {
-        redirectWithError('Não foi possível atualizar o status do pedido.');
+        redirectWithError('Não foi possível atualizar o status do pedido.', returnContext);
     }
 
     const data = parsed.data;
@@ -176,21 +268,28 @@ export async function updateOrderStatusAction(formData: FormData) {
         });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Falha ao atualizar pedido.';
-        redirectWithError(message, data.order_id);
+        redirectWithError(message, {
+            ...returnContext,
+            selected: data.order_id,
+        });
     }
 
     revalidatePath('/pedidos');
     revalidatePath('/producao');
-    redirect(`/pedidos?selected=${data.order_id}`);
+    redirectWithSuccess('Status do pedido atualizado.', {
+        ...returnContext,
+        selected: data.order_id,
+    });
 }
 
 export async function createMercadoPagoPaymentLinkAction(formData: FormData) {
+    const returnContext = extractReturnContext(formData);
     const parsed = createPaymentLinkSchema.safeParse({
         order_id: formData.get('order_id'),
     });
 
     if (!parsed.success) {
-        redirectWithError('Não foi possível gerar o link de pagamento.');
+        redirectWithError('Não foi possível gerar o link de pagamento.', returnContext);
     }
 
     try {
@@ -204,6 +303,76 @@ export async function createMercadoPagoPaymentLinkAction(formData: FormData) {
         redirect(payment.payment_url);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Falha ao gerar link de pagamento.';
-        redirectWithError(message, parsed.data.order_id);
+        redirectWithError(message, {
+            ...returnContext,
+            selected: parsed.data.order_id,
+        });
+    }
+}
+
+export async function requestOrderNfeAction(formData: FormData) {
+    const returnContext = extractReturnContext(formData);
+    const orderId = String(formData.get('order_id') ?? '');
+
+    if (!z.string().uuid().safeParse(orderId).success) {
+        redirectWithError('Não foi possível solicitar a NF-e.', returnContext);
+    }
+
+    try {
+        const response = await apiRequest<{ message?: string }>(`/orders/${orderId}/nfe`, {
+            method: 'POST',
+        });
+
+        revalidatePath('/pedidos');
+        redirectWithSuccess(response.message || 'NF-e solicitada com sucesso.', {
+            ...returnContext,
+            selected: orderId,
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Falha ao solicitar NF-e.';
+        redirectWithError(message, {
+            ...returnContext,
+            selected: orderId,
+        });
+    }
+}
+
+export async function sendOrderReceiptAction(formData: FormData) {
+    const returnContext = extractReturnContext(formData);
+    const parsed = sendOrderReceiptSchema.safeParse({
+        order_id: formData.get('order_id'),
+        channel: formData.get('channel'),
+    });
+
+    if (!parsed.success) {
+        redirectWithError('Não foi possível preparar o comprovante.', returnContext);
+    }
+
+    try {
+        const response = await apiRequest<{ url?: string; email?: string }>(`/orders/${parsed.data.order_id}/send-receipt`, {
+            method: 'POST',
+            body: JSON.stringify({
+                channel: parsed.data.channel,
+            }),
+        });
+
+        if (parsed.data.channel === 'whatsapp' && response.url) {
+            redirect(response.url);
+        }
+
+        if (parsed.data.channel === 'email' && response.email) {
+            redirect(`mailto:${response.email}`);
+        }
+
+        redirectWithError('O comprovante não retornou um destino válido.', {
+            ...returnContext,
+            selected: parsed.data.order_id,
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Falha ao preparar o comprovante.';
+        redirectWithError(message, {
+            ...returnContext,
+            selected: parsed.data.order_id,
+        });
     }
 }
