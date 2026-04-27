@@ -774,7 +774,7 @@ export async function getAnalyticsLeads(
              FROM leads l
              LEFT JOIN pipeline_stages ps ON ps.id = l.stage_id
              WHERE l.created_at >= $1 AND l.created_at < $2
-               AND l.status != 'LOST'
+               AND l.stage != 'PERDIDO'
              GROUP BY 1
              ORDER BY COUNT(l.id) DESC`,
             [current_start, current_end_exclusive]
@@ -785,7 +785,7 @@ export async function getAnalyticsLeads(
                     l.lost_reason AS reason
              FROM leads l
              WHERE l.updated_at >= $1 AND l.updated_at < $2
-               AND l.status = 'LOST'
+               AND l.stage = 'PERDIDO'
              ORDER BY l.updated_at DESC
              LIMIT 20`,
             [current_start, current_end_exclusive]
@@ -793,8 +793,8 @@ export async function getAnalyticsLeads(
         executeQuery<{ new_leads: string; converted: string; lost: string }>(
             `SELECT
                COUNT(*)::text AS new_leads,
-               COUNT(*) FILTER (WHERE status = 'CONVERTED')::text AS converted,
-               COUNT(*) FILTER (WHERE status = 'LOST')::text AS lost
+               COUNT(*) FILTER (WHERE stage = 'CONVERTIDO')::text AS converted,
+               COUNT(*) FILTER (WHERE stage = 'PERDIDO')::text AS lost
              FROM leads
              WHERE created_at >= $1 AND created_at < $2`,
             [current_start, current_end_exclusive]
@@ -858,12 +858,11 @@ export async function getAnalyticsProduction(
         ),
         executeQuery<{ id: string; client: string | null; deadline: string | null; days_late: number }>(
             `SELECT o.id::text,
-                    COALESCE(c.name, l.name) AS client,
+                    COALESCE(c.name, 'Cliente') AS client,
                     o.deadline::text,
                     GREATEST(0, DATE_PART('day', NOW() - o.deadline))::int AS days_late
              FROM orders o
              LEFT JOIN customers c ON c.id = o.customer_id
-             LEFT JOIN leads l ON l.id = o.lead_id
              WHERE o.deadline IS NOT NULL
                AND o.deadline < NOW()
                AND o.status NOT IN ('ENTREGUE', 'CANCELADO')
@@ -1012,7 +1011,7 @@ export async function getAnalyticsAgents(
            u.name,
            COUNT(DISTINCT c.id)::text AS conversations_handled,
            COUNT(DISTINCT m.id)::text AS messages_sent,
-           COUNT(DISTINCT l.id) FILTER (WHERE l.status = 'CONVERTED')::text AS leads_converted
+           COUNT(DISTINCT l.id) FILTER (WHERE l.stage = 'CONVERTIDO')::text AS leads_converted
          FROM users u
          LEFT JOIN conversations c
            ON c.assigned_to = u.id
