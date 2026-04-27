@@ -87,8 +87,8 @@ async function getAdminDashboard() {
         // PDV - Vendas de hoje
         query<{ total: string; average: string }>(
             `SELECT 
-                COALESCE(SUM(total_cents), 0)::text AS total,
-                COALESCE(AVG(total_cents), 0)::text AS average
+                COALESCE(SUM(final_amount_cents), 0)::text AS total,
+                COALESCE(AVG(final_amount_cents), 0)::text AS average
              FROM orders
              WHERE created_at::date = CURRENT_DATE
                AND status NOT IN ('CANCELADO')`
@@ -155,11 +155,12 @@ async function getAdminDashboard() {
                 o.id,
                 o.order_number,
                 COALESCE(c.name, 'Cliente') AS client_name,
-                o.total_cents,
+                o.final_amount_cents AS total_cents,
                 EXTRACT(DAY FROM NOW() - o.updated_at)::text AS ready_days
              FROM orders o
-             LEFT JOIN clients c ON c.id = o.client_id
-             WHERE o.status = 'PRONTO'
+             LEFT JOIN customers c ON c.id = o.customer_id
+             WHERE o.status IN ('PAGO', 'SEPARANDO')
+               AND o.delivery_type = 'RETIRADA'
                AND o.updated_at IS NOT NULL
              ORDER BY o.updated_at ASC
              LIMIT 5`
@@ -197,7 +198,7 @@ async function getAdminDashboard() {
                 COALESCE(SUM(fe.amount_cents), 0)::text AS total_cents
              FROM financial_entries fe
              JOIN orders o ON o.id = fe.order_id
-             JOIN clients c ON c.id = o.client_id
+             JOIN customers c ON c.id = o.customer_id
              WHERE fe.type = 'ENTRADA'
                AND date_trunc('month', fe.competence_date) = date_trunc('month', CURRENT_DATE)
              GROUP BY c.id, c.name
