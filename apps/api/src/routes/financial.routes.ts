@@ -46,6 +46,15 @@ const createExpenseSchema = z.object({
     description: z.string().trim().min(5).max(2000),
     competence_date: z.string().date(),
     category: z.string().trim().min(2).max(100),
+    payment_method: z.enum([
+        'PIX',
+        'CARTAO_CREDITO',
+        'CARTAO_DEBITO',
+        'DINHEIRO',
+        'TRANSFERENCIA',
+        'BOLETO',
+        'LINK_PAGAMENTO',
+    ]).optional(),
     receipt_url: z.string().trim().url().max(500).optional(),
 });
 
@@ -67,6 +76,15 @@ const createLaunchSchema = z.object({
     descricao: z.string().trim().min(5).max(2000),
     data: z.string().date(),
     categoria: z.string().trim().min(2).max(100),
+    payment_method: z.enum([
+        'PIX',
+        'CARTAO_CREDITO',
+        'CARTAO_DEBITO',
+        'DINHEIRO',
+        'TRANSFERENCIA',
+        'BOLETO',
+        'LINK_PAGAMENTO',
+    ]).optional().or(z.literal('')),
     comprovante: z.string().trim().url().max(500).optional().or(z.literal('')),
 });
 
@@ -84,6 +102,7 @@ interface FinancialEntryRow {
     created_by_user_id: string;
     created_by_user_name: string;
     receipt_url: string | null;
+    payment_method: string | null;
     created_at: Date;
 }
 
@@ -100,6 +119,7 @@ function mapFinancialEntry(row: FinancialEntryRow) {
         commission_amount_cents: row.commission_amount_cents,
         competence_date: row.competence_date,
         receipt_url: row.receipt_url,
+        payment_method: row.payment_method,
         created_at: row.created_at,
         created_by: {
             id: row.created_by_user_id,
@@ -165,6 +185,7 @@ async function fetchFinancialEntry(financialEntryId: string): Promise<FinancialE
             fe.commission_amount_cents,
             fe.competence_date,
             fe.receipt_url,
+            fe.payment_method,
             fe.created_at,
             u.id AS created_by_user_id,
             u.name AS created_by_user_name
@@ -253,6 +274,7 @@ router.get(
                     fe.commission_amount_cents,
                     fe.competence_date,
                     fe.receipt_url,
+                    fe.payment_method,
                     fe.created_at,
                     u.id AS created_by_user_id,
                     u.name AS created_by_user_name
@@ -378,8 +400,9 @@ router.post(
                     description,
                     competence_date,
                     receipt_url,
+                    payment_method,
                     created_by
-                  ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                   RETURNING
                     id,
                     type,
@@ -392,9 +415,10 @@ router.post(
                     commission_amount_cents,
                     competence_date,
                     receipt_url,
+                    payment_method,
                     created_at,
-                    $7::uuid AS created_by_user_id,
-                    $8::text AS created_by_user_name`,
+                    $8::uuid AS created_by_user_id,
+                    $9::text AS created_by_user_name`,
                 [
                     parsed.data.tipo === 'receita' ? 'ENTRADA' : 'SAIDA',
                     parsed.data.valor,
@@ -402,6 +426,7 @@ router.post(
                     parsed.data.descricao,
                     parsed.data.data,
                     parsed.data.comprovante?.trim() || null,
+                    parsed.data.payment_method ? parsed.data.payment_method : null,
                     req.user?.id,
                     req.user?.name,
                 ]
@@ -421,6 +446,7 @@ router.post(
                         amount_cents: entry.amount_cents,
                         category: entry.category,
                         receipt_url: entry.receipt_url,
+                        payment_method: entry.payment_method,
                     },
                     req,
                 });
@@ -439,6 +465,15 @@ const updateLaunchSchema = z.object({
     descricao: z.string().trim().min(5).max(2000),
     data: z.string().date(),
     categoria: z.string().trim().min(2).max(100),
+    payment_method: z.enum([
+        'PIX',
+        'CARTAO_CREDITO',
+        'CARTAO_DEBITO',
+        'DINHEIRO',
+        'TRANSFERENCIA',
+        'BOLETO',
+        'LINK_PAGAMENTO',
+    ]).optional().or(z.literal('')),
 });
 
 router.put(
@@ -475,8 +510,9 @@ router.put(
                      amount_cents = $2,
                      category = $3,
                      description = $4,
-                     competence_date = $5
-                 WHERE id = $6
+                     competence_date = $5,
+                     payment_method = $6
+                 WHERE id = $7
                  RETURNING
                     id,
                     type,
@@ -489,6 +525,7 @@ router.put(
                     commission_amount_cents,
                     competence_date,
                     receipt_url,
+                    payment_method,
                     created_at,
                     created_by AS created_by_user_id,
                     (SELECT name FROM users WHERE id = financial_entries.created_by) AS created_by_user_name`,
@@ -498,6 +535,7 @@ router.put(
                     parsed.data.categoria.trim().toUpperCase(),
                     parsed.data.descricao,
                     parsed.data.data,
+                    parsed.data.payment_method ? parsed.data.payment_method : null,
                     paramsParsed.data.id,
                 ]
             );
@@ -516,6 +554,7 @@ router.put(
                         category: existing.category,
                         description: existing.description,
                         competence_date: existing.competence_date,
+                        payment_method: (existing as FinancialEntryRow).payment_method ?? null,
                     },
                     newValue: {
                         type: updated.type,
@@ -523,6 +562,7 @@ router.put(
                         category: updated.category,
                         description: updated.description,
                         competence_date: updated.competence_date,
+                        payment_method: updated.payment_method,
                     },
                     req,
                 });
@@ -722,8 +762,9 @@ router.post(
                     description,
                     competence_date,
                     receipt_url,
+                    payment_method,
                     created_by
-                  ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                   RETURNING
                     id,
                     type,
@@ -736,9 +777,10 @@ router.post(
                     commission_amount_cents,
                     competence_date,
                     receipt_url,
+                    payment_method,
                     created_at,
-                    $7::uuid AS created_by_user_id,
-                    $8::text AS created_by_user_name`,
+                    $8::uuid AS created_by_user_id,
+                    $9::text AS created_by_user_name`,
                 [
                     data.type,
                     data.amount_cents,
@@ -746,6 +788,7 @@ router.post(
                     data.description,
                     data.competence_date,
                     data.receipt_url ?? null,
+                    data.payment_method ?? null,
                     req.user?.id,
                     req.user?.name,
                 ]

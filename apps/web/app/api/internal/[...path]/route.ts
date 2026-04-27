@@ -96,11 +96,16 @@ async function forward(request: Request, params: { path: string[] }) {
     const payload = await response.text();
     const responseContentType = response.headers.get('content-type') ?? 'application/json';
 
+    const forwardHeaders = new Headers();
+    forwardHeaders.set('content-type', responseContentType);
+    const retryAfter = response.headers.get('retry-after');
+    if (retryAfter) {
+        forwardHeaders.set('retry-after', retryAfter);
+    }
+
     return new NextResponse(payload, {
         status: response.status,
-        headers: {
-            'content-type': responseContentType,
-        },
+        headers: forwardHeaders,
     });
 }
 

@@ -11,6 +11,15 @@ const createFinancialLaunchSchema = z.object({
     valor: z.string().trim().min(1),
     data: z.string().date(),
     categoria: z.string().trim().min(2).max(100),
+    payment_method: z.enum([
+        'PIX',
+        'CARTAO_CREDITO',
+        'CARTAO_DEBITO',
+        'DINHEIRO',
+        'TRANSFERENCIA',
+        'BOLETO',
+        'LINK_PAGAMENTO',
+    ]).optional(),
 });
 
 function parseCurrencyToCents(value: string): number | null {
@@ -48,6 +57,7 @@ export async function createFinancialLaunchAction(formData: FormData) {
         valor: formData.get('valor'),
         data: formData.get('data'),
         categoria: formData.get('categoria'),
+        payment_method: formData.get('payment_method'),
     });
 
     if (!parsed.success) {
@@ -77,6 +87,7 @@ export async function createFinancialLaunchAction(formData: FormData) {
                 valor: amountCents,
                 data: parsed.data.data,
                 categoria: parsed.data.categoria,
+                payment_method: parsed.data.payment_method ?? null,
             }),
         });
     } catch (error) {

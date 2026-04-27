@@ -49,6 +49,7 @@ export interface FinanceLaunchRecord {
     type: 'ENTRADA' | 'SAIDA';
     description: string;
     category: string;
+    payment_method: string | null;
     amount_cents: number;
     competence_date: string;
     created_at: string;
