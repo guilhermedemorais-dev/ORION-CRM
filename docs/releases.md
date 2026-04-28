@@ -6,6 +6,19 @@
 
 ---
 
+## [v1.4.0] — 2026-04-28
+### Clientes, Pipeline e Suporte sincronizados com commits recentes
+- Correção da ficha do cliente para não tentar converter lead novamente quando o registro já é cliente
+- Validação inline na ficha do cliente com feedback visual para nome, WhatsApp, e-mail, CPF e estado
+- Persistência de WhatsApp liberada no PATCH de clientes
+- Pipeline: modal "Novo lead" agora busca por nome, CPF ou telefone com e sem máscara
+- Sugestões de cliente existente podem preencher o formulário para evitar retrabalho
+- Sugestões de lead existente permitem abrir o cadastro já criado e evitar duplicidade
+- UX do modal de lead ajustada para usuário leigo com textos mais claros e ação principal dinâmica
+- Rate limit de login ignorado em ambiente local para permitir testes Playwright sem bloqueio
+- Módulo Suporte agora tenta refletir commits reais via git local ou fallback pelo GitHub
+- Timeline e Atualizações deixam de quebrar quando o arquivo de releases não estiver disponível
+
 ## [v1.3.0] — 2026-04-25
 ### Pipeline QA + Módulo Suporte com Linha do Tempo
 - Pipeline com 13 das 14 tasks de qualidade resolvidas (críticas e altas prioridades)

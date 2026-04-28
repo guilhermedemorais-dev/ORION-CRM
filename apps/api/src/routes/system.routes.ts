@@ -1,10 +1,13 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { readFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import path from 'node:path';
 import { AppError } from '../lib/errors.js';
 
 const router = Router();
+const execFileAsync = promisify(execFile);
 
 interface TimelineEntry {
     version: string;
@@ -42,6 +45,14 @@ async function readReleasesFile(): Promise<string> {
         }
     }
     throw lastError ?? new Error('docs/releases.md not found in any expected location');
+}
+
+async function readReleasesFileSafe(): Promise<string | null> {
+    try {
+        return await readReleasesFile();
+    } catch {
+        return null;
+    }
 }
 
 function parseReleases(markdown: string): TimelineEntry[] {
@@ -87,6 +98,120 @@ function parseReleases(markdown: string): TimelineEntry[] {
     // Sort by date descending (most recent first)
     entries.sort((a, b) => b.date.localeCompare(a.date));
     return entries;
+}
+
+interface GitCommitEntry {
+    date: string;
+    hash: string;
+    subject: string;
+}
+
+const GITHUB_REPO_API = 'https://api.github.com/repos/guilhermedemorais-dev/ORION-CRM/commits?per_page=200';
+
+async function readGitCommits(): Promise<GitCommitEntry[]> {
+    const cwdCandidates = [
+        process.cwd(),
+        path.resolve(process.cwd(), '..'),
+        path.resolve(process.cwd(), '../..'),
+        path.resolve(process.cwd(), '../../..'),
+    ];
+
+    for (const cwd of cwdCandidates) {
+        try {
+            const { stdout } = await execFileAsync(
+                'git',
+                ['log', '--date=short', '--pretty=format:%ad\t%h\t%s', '--no-merges', '-200'],
+                { cwd, timeout: 5000, maxBuffer: 1024 * 1024 },
+            );
+
+            return stdout
+                .split(/\r?\n/)
+                .map((line) => {
+                    const [date, hash, ...subjectParts] = line.split('\t');
+                    return {
+                        date: date?.trim() ?? '',
+                        hash: hash?.trim() ?? '',
+                        subject: subjectParts.join('\t').trim(),
+                    };
+                })
+                .filter((entry) => entry.date && entry.hash && entry.subject);
+        } catch {
+            // Try next cwd candidate
+        }
+    }
+
+    return [];
+}
+
+async function readGithubCommits(): Promise<GitCommitEntry[]> {
+    try {
+        const response = await fetch(GITHUB_REPO_API, {
+            headers: {
+                Accept: 'application/vnd.github+json',
+                'User-Agent': 'orion-crm-support-module',
+            },
+        });
+
+        if (!response.ok) {
+            return [];
+        }
+
+        const data = await response.json() as Array<{
+            sha?: string;
+            commit?: {
+                message?: string;
+                author?: { date?: string };
+            };
+        }>;
+
+        return data
+            .map((entry) => ({
+                date: String(entry.commit?.author?.date ?? '').slice(0, 10),
+                hash: String(entry.sha ?? '').slice(0, 7),
+                subject: String(entry.commit?.message ?? '').split('\n')[0]?.trim() ?? '',
+            }))
+            .filter((entry) => entry.date && entry.hash && entry.subject);
+    } catch {
+        return [];
+    }
+}
+
+async function readCommitFeed(): Promise<GitCommitEntry[]> {
+    const localCommits = await readGitCommits();
+    if (localCommits.length > 0) {
+        return localCommits;
+    }
+
+    return readGithubCommits();
+}
+
+function buildTimelineEntriesFromGit(commits: GitCommitEntry[]): TimelineEntry[] {
+    const grouped = new Map<string, GitCommitEntry[]>();
+
+    for (const commit of commits) {
+        const bucket = grouped.get(commit.date) ?? [];
+        bucket.push(commit);
+        grouped.set(commit.date, bucket);
+    }
+
+    return Array.from(grouped.entries())
+        .sort((a, b) => b[0].localeCompare(a[0]))
+        .map(([date, items], index) => ({
+            version: index === 0 ? 'Em desenvolvimento' : `Build ${date}`,
+            date,
+            title: index === 0 ? 'Commits recentes ainda não documentados' : 'Atualizações por commits',
+            items: items.map((commit) => `${commit.subject} (${commit.hash})`),
+        }));
+}
+
+function mergeReleaseTimelineWithGit(releases: TimelineEntry[], commits: GitCommitEntry[]): TimelineEntry[] {
+    const latestReleaseDate = releases[0]?.date ?? null;
+    const unreleasedCommits = latestReleaseDate
+        ? commits.filter((commit) => commit.date > latestReleaseDate)
+        : commits;
+
+    const gitEntries = buildTimelineEntriesFromGit(unreleasedCommits);
+    return [...gitEntries, ...releases];
 }
 
 function parsePendingFromResolved(markdown: string): PendingItem[] {
@@ -165,11 +290,16 @@ router.get(
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const wantsPending = req.query['pending'] === 'true';
-            const markdown = await readReleasesFile();
-            const entries = parseReleases(markdown);
+            const [releasesMarkdown, gitCommits, resolved] = await Promise.all([
+                readReleasesFileSafe(),
+                readCommitFeed(),
+                wantsPending ? readResolvedFile() : Promise.resolve(null),
+            ]);
+
+            const releases = releasesMarkdown ? parseReleases(releasesMarkdown) : [];
+            const entries = mergeReleaseTimelineWithGit(releases, gitCommits);
 
             if (wantsPending) {
-                const resolved = await readResolvedFile();
                 const pending = resolved ? parsePendingFromResolved(resolved) : [];
                 res.json({ timeline: entries, pending });
                 return;
@@ -177,10 +307,6 @@ router.get(
 
             res.json(entries);
         } catch (err) {
-            if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') {
-                next(AppError.notFound('Arquivo de releases não encontrado.'));
-                return;
-            }
             next(err);
         }
     }
@@ -221,8 +347,31 @@ const ACTIVITY_STATS = {
 // GET /api/v1/system/activity — public, no auth required (commit heatmap data)
 router.get(
     '/activity',
-    (_req: Request, res: Response): void => {
-        res.json({ days: COMMIT_ACTIVITY, stats: ACTIVITY_STATS });
+    async (_req: Request, res: Response): Promise<void> => {
+        const gitCommits = await readCommitFeed();
+
+        if (gitCommits.length === 0) {
+            res.json({ days: COMMIT_ACTIVITY, stats: ACTIVITY_STATS });
+            return;
+        }
+
+        const grouped = new Map<string, number>();
+        for (const commit of gitCommits) {
+            grouped.set(commit.date, (grouped.get(commit.date) ?? 0) + 1);
+        }
+
+        const days = Array.from(grouped.entries())
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([date, count]) => ({ date, count }));
+
+        res.json({
+            days,
+            stats: {
+                totalCommits: gitCommits.length,
+                activeDays: days.length,
+                startDate: days[0]?.date ?? '',
+            },
+        });
     }
 );
 
