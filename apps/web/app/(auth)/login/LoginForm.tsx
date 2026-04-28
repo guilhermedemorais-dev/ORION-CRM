@@ -1,11 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { loginAction } from '@/app/(auth)/login/actions';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+
+function SubmitButton({ isRateLimited, countdown }: { isRateLimited: boolean; countdown: number | null }) {
+    const { pending } = useFormStatus();
+    const disabled = isRateLimited || pending;
+    const label = isRateLimited
+        ? `Aguarde ${countdown}s`
+        : pending
+            ? 'Entrando…'
+            : 'Entrar no CRM';
+    return (
+        <Button className="w-full justify-center" type="submit" disabled={disabled}>
+            {label}
+        </Button>
+    );
+}
 
 interface Props {
     error?: string;
@@ -23,7 +39,7 @@ export function LoginForm({ error }: Props) {
     const isRateLimited = countdown !== null && countdown > 0;
 
     useEffect(() => {
-        if (!countdown || countdown <= 0) return;
+        if (countdown === null || countdown <= 0) return;
         const interval = setInterval(() => {
             setCountdown(prev => {
                 if (prev === null || prev <= 1) {
@@ -34,7 +50,13 @@ export function LoginForm({ error }: Props) {
             });
         }, 1000);
         return () => clearInterval(interval);
-    }, []);
+    }, [countdown]);
+
+    // Re-arm countdown when error prop carries a fresh retry value (re-renders).
+    useEffect(() => {
+        const next = error ? parseRetrySeconds(error) : null;
+        if (next !== null) setCountdown(next);
+    }, [error]);
 
     return (
         <Card className="mt-8">
@@ -70,9 +92,7 @@ export function LoginForm({ error }: Props) {
                     </div>
                 ) : null}
 
-                <Button className="w-full justify-center" type="submit" disabled={isRateLimited}>
-                    {isRateLimited ? `Aguarde ${countdown}s` : 'Entrar no CRM'}
-                </Button>
+                <SubmitButton isRateLimited={isRateLimited} countdown={countdown} />
             </form>
         </Card>
     );

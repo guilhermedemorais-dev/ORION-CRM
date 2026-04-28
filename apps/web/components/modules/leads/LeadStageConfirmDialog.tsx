@@ -31,11 +31,11 @@ export function LeadStageConfirmDialog({ kind, leadName, stageName, onCancel, on
 
     useEffect(() => {
         const onEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onCancel();
+            if (e.key === 'Escape' && !submitting) onCancel();
         };
         document.addEventListener('keydown', onEsc);
         return () => document.removeEventListener('keydown', onEsc);
-    }, [onCancel]);
+    }, [onCancel, submitting]);
 
     const isWon = kind === 'won';
 
@@ -101,8 +101,9 @@ export function LeadStageConfirmDialog({ kind, leadName, stageName, onCancel, on
                     <button
                         type="button"
                         onClick={onCancel}
+                        disabled={submitting}
                         aria-label="Cancelar"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/10 text-[color:var(--orion-text-muted)] hover:text-white hover:border-white/20 transition-colors"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/10 text-[color:var(--orion-text-muted)] hover:text-white hover:border-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <X className="h-4 w-4" />
                     </button>
@@ -190,7 +191,8 @@ export function LeadStageConfirmDialog({ kind, leadName, stageName, onCancel, on
                         <button
                             type="button"
                             onClick={onCancel}
-                            className="h-10 px-4 rounded-md border border-white/10 text-[12px] font-semibold text-[color:var(--orion-text-secondary)] hover:bg-white/5 hover:text-white transition-colors"
+                            disabled={submitting}
+                            className="h-10 px-4 rounded-md border border-white/10 text-[12px] font-semibold text-[color:var(--orion-text-secondary)] hover:bg-white/5 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Cancelar
                         </button>

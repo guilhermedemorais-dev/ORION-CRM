@@ -17,7 +17,12 @@ const baseFields = {
     assigned_to_id: z.string().optional(),
     lead_id: z.string().optional(),
     customer_id: z.string().optional(),
-    date: z.string().min(1, "Data é obrigatória"),
+    date: z.string().min(1, "Data é obrigatória").refine((d) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const picked = new Date(`${d}T00:00:00`);
+        return picked.getTime() >= today.getTime();
+    }, { message: "A data não pode estar no passado" }),
     time: z.string().min(1, "Horário é obrigatório"),
     notes: z.string().optional(),
 };
@@ -157,11 +162,14 @@ export function CreateAppointmentDialog({
             .catch(() => {});
     }, [editId, isVisible]);
 
+    const [editSuccess, setEditSuccess] = useState(false);
+
     const handleClose = useCallback(() => {
         setCreatedId(null);
         setNotifySent(false);
         setEditData(null);
         setSubmitError(null);
+        setEditSuccess(false);
 
         if (isControlled && controlledOnClose) {
             controlledOnClose();
@@ -204,14 +212,24 @@ export function CreateAppointmentDialog({
             time: "10:00",
             notes: ""
         };
-    }, [editData, isReschedule, prefilledLeadId, prefilledCustomerId]);
+    }, [editData, isReschedule, prefilledLeadId, prefilledCustomerId, currentUserId]);
 
-    const { register, handleSubmit, formState: { errors }, setValue, watch, reset } = useForm<AppointmentFormValues>({
+    const { register, handleSubmit, formState: { errors, isDirty }, setValue, watch, reset } = useForm<AppointmentFormValues>({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(activeSchema) as any,
         defaultValues,
     });
     const contactPhoneField = register('contact_phone');
+
+    // Confirms discard when form is dirty; blocks close while submitting.
+    const requestClose = useCallback(() => {
+        if (isPending) return;
+        if (isDirty && !createdId && !editSuccess) {
+            const ok = window.confirm('Você tem alterações não salvas. Deseja descartá-las?');
+            if (!ok) return;
+        }
+        handleClose();
+    }, [isPending, isDirty, createdId, editSuccess, handleClose]);
 
     // Reset form when editData loads
     useEffect(() => {
@@ -257,6 +275,9 @@ export function CreateAppointmentDialog({
             try {
                 if (isEditMode) {
                     await editAppointmentAction(formData);
+                    setEditSuccess(true);
+                    // Close shortly after so user sees the toast banner.
+                    setTimeout(() => handleClose(), 1100);
                 } else {
                     const result = await createAppointmentAction(formData);
                     if (result?.id) {
@@ -290,18 +311,20 @@ export function CreateAppointmentDialog({
     if (!isVisible) return null;
 
     // FIX: Determine title based on mode
-    const dialogTitle = createdId 
-        ? 'Agendamento Criado ✓' 
-        : isEditMode 
-            ? (isReschedule ? 'Remarcar Agendamento' : 'Editar Agendamento')
-            : 'Novo Agendamento';
+    const dialogTitle = createdId
+        ? 'Agendamento Criado ✓'
+        : editSuccess
+            ? 'Agendamento Atualizado ✓'
+            : isEditMode
+                ? (isReschedule ? 'Remarcar Agendamento' : 'Editar Agendamento')
+                : 'Novo Agendamento';
 
     return (
         /* FIX: fixed inset-0 with flex items-center justify-center ensures modal stays centered in viewport.
          * body scroll is prevented by the overlay covering the full screen.
          * Added p-4 for mobile safe area and max-h-[90vh] with overflow-y-auto on the form. */
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={handleClose}>
-            <form 
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={requestClose}>
+            <form
                 onSubmit={handleSubmit(onSubmit)}
                 className="w-full max-w-lg bg-surface-sidebar border border-white/10 rounded-xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
                 onClick={(e) => e.stopPropagation()}
@@ -310,12 +333,18 @@ export function CreateAppointmentDialog({
                     <h2 className="text-lg font-semibold text-white">
                         {dialogTitle}
                     </h2>
-                    <button type="button" onClick={handleClose} className="p-1 -mr-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/5" aria-label="Fechar modal">
+                    <button type="button" onClick={requestClose} disabled={isPending} className="p-1 -mr-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/5 disabled:opacity-40" aria-label="Fechar modal">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                {createdId ? (
+                {editSuccess ? (
+                    <div className="p-6">
+                        <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                            Agendamento atualizado com sucesso.
+                        </div>
+                    </div>
+                ) : createdId ? (
                     /* ── Post-creation view ── */
                     <div className="p-6 space-y-4">
                         <p className="text-sm text-gray-300">

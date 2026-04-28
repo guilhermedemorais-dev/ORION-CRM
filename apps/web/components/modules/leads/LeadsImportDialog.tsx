@@ -28,8 +28,25 @@ interface LeadsImportDialogProps {
 
 const SOURCE_VALUES = ['WHATSAPP', 'BALCAO', 'INDICACAO', 'INSTAGRAM', 'OUTRO'];
 
+const MAX_CSV_BYTES = 5 * 1024 * 1024; // 5 MB
+
+function stripBom(text: string): string {
+    if (text.charCodeAt(0) === 0xfeff) return text.slice(1);
+    return text;
+}
+
+function isLikelyTextCsv(text: string): boolean {
+    // Reject obvious binaries (NUL bytes in first 4KB indicate binary).
+    const probe = text.slice(0, 4096);
+    for (let i = 0; i < probe.length; i++) {
+        if (probe.charCodeAt(i) === 0) return false;
+    }
+    return true;
+}
+
 function parseCsv(text: string): { headers: string[]; rows: string[][] } {
-    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    const cleaned = stripBom(text);
+    const lines = cleaned.split(/\r?\n/).filter((l) => l.trim().length > 0);
     if (lines.length === 0) return { headers: [], rows: [] };
     const splitLine = (line: string) => {
         const out: string[] = [];
@@ -104,7 +121,15 @@ export function LeadsImportDialog({ pipelineId, onClose, onImported }: LeadsImpo
     async function handleFile(file: File) {
         setParseError(null);
         setFileName(file.name);
+        if (file.size > MAX_CSV_BYTES) {
+            setParseError(`Arquivo muito grande (${(file.size / 1024 / 1024).toFixed(1)} MB). Limite: 5 MB.`);
+            return;
+        }
         const text = await file.text();
+        if (!isLikelyTextCsv(text)) {
+            setParseError('O arquivo não parece ser um CSV de texto válido.');
+            return;
+        }
         const { headers, rows: rawRows } = parseCsv(text);
         if (headers.length === 0 || rawRows.length === 0) {
             setParseError('Arquivo CSV vazio ou sem cabeçalho.');
@@ -149,9 +174,10 @@ export function LeadsImportDialog({ pipelineId, onClose, onImported }: LeadsImpo
         const errors: ImportResult['errors'] = [];
         let success = 0;
         let duplicate = 0;
+        let done = 0;
 
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
+        const CONCURRENCY = 8;
+        const sendOne = async (row: ParsedRow, rowIndex: number) => {
             try {
                 const response = await fetch('/api/internal/leads', {
                     method: 'POST',
@@ -166,16 +192,23 @@ export function LeadsImportDialog({ pipelineId, onClose, onImported }: LeadsImpo
                 });
                 const payload = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    errors.push({ row: i + 2, message: typeof payload.message === 'string' ? payload.message : `HTTP ${response.status}` });
+                    errors.push({ row: rowIndex + 2, message: typeof payload.message === 'string' ? payload.message : `HTTP ${response.status}` });
                 } else if (payload.duplicate_prevented) {
                     duplicate++;
                 } else {
                     success++;
                 }
             } catch (err) {
-                errors.push({ row: i + 2, message: err instanceof Error ? err.message : 'Erro de rede' });
+                errors.push({ row: rowIndex + 2, message: err instanceof Error ? err.message : 'Erro de rede' });
+            } finally {
+                done++;
+                setProgress({ done, total: rows.length });
             }
-            setProgress({ done: i + 1, total: rows.length });
+        };
+
+        for (let i = 0; i < rows.length; i += CONCURRENCY) {
+            const chunk = rows.slice(i, i + CONCURRENCY);
+            await Promise.all(chunk.map((row, j) => sendOne(row, i + j)));
         }
 
         setResult({ success, duplicate, errors });

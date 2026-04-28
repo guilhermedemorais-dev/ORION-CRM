@@ -1,6 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { parseCurrencyToCents } from '@/lib/financeiro';
+
+function formatCentsBRInput(cents: number): string {
+  return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 interface Props {
   customerId: string;
@@ -76,11 +81,11 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && !saving) onClose();
     }
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
-  }, [onClose]);
+  }, [onClose, saving]);
 
   function handleChange(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -88,13 +93,23 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
     };
   }
 
+  function handleCurrencyChange(field: 'deposit_cents_str' | 'total_cents_str') {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      const onlyNums = e.target.value.replace(/\D/g, '');
+      const next = onlyNums ? formatCentsBRInput(Number(onlyNums)) : '';
+      setForm((prev) => ({ ...prev, [field]: next }));
+    };
+  }
+
   function parseCents(str: string): number {
-    const num = parseFloat(str.replace(',', '.'));
-    return isNaN(num) ? 0 : Math.round(num * 100);
+    return parseCurrencyToCents(str) ?? 0;
   }
 
   async function handleSave() {
-    if (!form.product_name.trim()) return;
+    if (!form.product_name.trim()) {
+      setError('Informe o nome do produto.');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -141,7 +156,7 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
         zIndex: 1000,
         padding: '20px',
       }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onClick={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}
     >
       <div
         style={{
@@ -268,10 +283,10 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
             <SectionTitle>Valores</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <FieldGroup label="Sinal / Entrada (R$)">
-                <input style={inputStyle} value={form.deposit_cents_str} onChange={handleChange('deposit_cents_str')} placeholder="0,00" />
+                <input style={inputStyle} inputMode="numeric" value={form.deposit_cents_str} onChange={handleCurrencyChange('deposit_cents_str')} placeholder="0,00" />
               </FieldGroup>
               <FieldGroup label="Total (R$)">
-                <input style={inputStyle} value={form.total_cents_str} onChange={handleChange('total_cents_str')} placeholder="0,00" />
+                <input style={inputStyle} inputMode="numeric" value={form.total_cents_str} onChange={handleCurrencyChange('total_cents_str')} placeholder="0,00" />
               </FieldGroup>
             </div>
           </div>

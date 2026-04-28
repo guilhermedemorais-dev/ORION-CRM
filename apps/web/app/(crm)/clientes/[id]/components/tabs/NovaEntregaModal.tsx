@@ -3,6 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Truck, Package, MapPin, CheckCircle } from 'lucide-react';
 import type { CustomerFull } from '../types';
+import { parseCurrencyToCents } from '@/lib/financeiro';
+
+function formatCentsBRInput(cents: number): string {
+    return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 interface CarrierOption {
     id: string;
@@ -57,7 +62,7 @@ export function NovaEntregaModal({
     const [carrierId, setCarrierId] = useState('');
     const [service, setService] = useState('');
     const [address, setAddress] = useState(customer.address_full ?? '');
-    const [declaredValue, setDeclaredValue] = useState(String((declaredValueCents / 100).toFixed(2)));
+    const [declaredValue, setDeclaredValue] = useState(declaredValueCents > 0 ? formatCentsBRInput(declaredValueCents) : '');
     const [pickupDate, setPickupDate] = useState('');
     const [notes, setNotes] = useState('');
     const [saving, setSaving] = useState(false);
@@ -76,10 +81,23 @@ export function NovaEntregaModal({
 
     useEffect(() => { fetchCarriers(); }, [fetchCarriers]);
 
+    const safeClose = useCallback(() => {
+        if (saving) return;
+        onClose();
+    }, [saving, onClose]);
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') safeClose();
+        };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [safeClose]);
+
     const selectedCarrier = carriers.find((c) => c.id === carrierId);
 
-    // Estimated insurance
-    const declaredCents = Math.round(parseFloat(declaredValue || '0') * 100);
+    // Estimated insurance — uses pt-BR-safe parser
+    const declaredCents = parseCurrencyToCents(declaredValue) ?? 0;
     const estInsurance = selectedCarrier
         ? Math.max(
             selectedCarrier.min_insurance_cents,
@@ -87,7 +105,9 @@ export function NovaEntregaModal({
           )
         : 0;
 
-    async function handleSubmit() {
+    async function handleSubmit(e?: React.FormEvent<HTMLFormElement>) {
+        e?.preventDefault();
+        if (saving) return;
         if (type === 'shipping' && !carrierId) {
             setError('Selecione uma transportadora.'); return;
         }
@@ -126,8 +146,8 @@ export function NovaEntregaModal({
 
     return (
         <>
-            <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 199, background: 'rgba(0,0,0,0.55)' }} />
-            <div style={{
+            <div onClick={safeClose} style={{ position: 'fixed', inset: 0, zIndex: 199, background: 'rgba(0,0,0,0.55)' }} />
+            <form onSubmit={handleSubmit} style={{
                 position: 'fixed', left: '50%', top: '50%',
                 transform: 'translate(-50%, -50%)',
                 width: '480px', maxWidth: '96vw', maxHeight: '92vh',
@@ -151,7 +171,7 @@ export function NovaEntregaModal({
                             </div>
                         )}
                     </div>
-                    <button aria-label="Fechar" onClick={onClose} style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '6px', color: '#7A7774', cursor: 'pointer' }}>
+                    <button type="button" aria-label="Fechar" onClick={safeClose} disabled={saving} style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '6px', color: '#7A7774', cursor: 'pointer' }}>
                         <X size={14} />
                     </button>
                 </div>
@@ -269,13 +289,17 @@ export function NovaEntregaModal({
                         <div>
                             <label style={{ fontSize: '11px', fontWeight: 600, color: '#C8C4BE', display: 'block', marginBottom: '4px' }}>Valor declarado (R$)</label>
                             <input
-                                type="number"
-                                min="0"
-                                step="0.01"
+                                type="text"
+                                inputMode="numeric"
                                 style={baseInput}
                                 value={declaredValue}
-                                onChange={(e) => setDeclaredValue(e.target.value)}
-                                title="Valor declarado do pacote"
+                                onChange={(e) => {
+                                    const onlyNums = e.target.value.replace(/\D/g, '');
+                                    if (!onlyNums) { setDeclaredValue(''); return; }
+                                    setDeclaredValue(formatCentsBRInput(Number(onlyNums)));
+                                }}
+                                placeholder="0,00"
+                                title="Valor declarado do pacote (em reais)"
                             />
                         </div>
                         <div>
@@ -323,11 +347,11 @@ export function NovaEntregaModal({
 
                 {/* Footer */}
                 <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'flex-end', gap: '8px', flexShrink: 0 }}>
-                    <button onClick={onClose} style={{ height: '34px', padding: '0 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '7px', color: '#C8C4BE', fontSize: '12px', cursor: 'pointer' }}>
+                    <button type="button" onClick={safeClose} disabled={saving} style={{ height: '34px', padding: '0 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '7px', color: '#C8C4BE', fontSize: '12px', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
                         Cancelar
                     </button>
                     <button
-                        onClick={handleSubmit}
+                        type="submit"
                         disabled={saving || (type === 'shipping' && carriers.length === 0)}
                         style={{
                             height: '34px', padding: '0 20px',
@@ -344,7 +368,7 @@ export function NovaEntregaModal({
                         {saving ? 'Despachando…' : 'Despachar'}
                     </button>
                 </div>
-            </div>
+            </form>
             <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
         </>
     );
