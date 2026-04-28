@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 
 import { useEffect, useMemo, useState, useRef, type DragEvent } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useConfirm } from '@/components/system/ConfirmDialog';
 import {
     Check,
     ChevronDown,
@@ -446,6 +447,7 @@ export function AjustesClient({
 }) {
     const router = useRouter();
     const pathname = usePathname();
+    const confirm = useConfirm();
     const [activeTab, setActiveTab] = useState<AjustesTab>(initialTab);
     const [settings, setSettings] = useState(initialSettings);
     const [users, setUsers] = useState(initialUsers);
@@ -1168,7 +1170,12 @@ export function AjustesClient({
             return;
         }
 
-        const confirmed = window.confirm(`Tem certeza que deseja excluir o usuário "${user.name}"? Esta ação é irreversível.`);
+        const confirmed = await confirm({
+            title: `Excluir o usuário "${user.name}"?`,
+            description: 'Esta ação é irreversível e remove todo o acesso do usuário ao sistema.',
+            confirmLabel: 'Excluir',
+            variant: 'destructive',
+        });
         if (!confirmed) return;
 
         try {

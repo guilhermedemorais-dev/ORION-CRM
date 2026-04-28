@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { X, Truck, Package, MapPin, CheckCircle } from 'lucide-react';
 import type { CustomerFull } from '../types';
 import { parseCurrencyToCents } from '@/lib/financeiro';
+import { notify } from '@/lib/toast';
 
 function formatCentsBRInput(cents: number): string {
     return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -55,6 +57,7 @@ export function NovaEntregaModal({
     declaredValueCents = 0, balanceCents = 0,
     onClose, onCreated,
 }: Props) {
+    const router = useRouter();
     const [carriers, setCarriers] = useState<CarrierOption[]>([]);
     const [loadingCarriers, setLoadingCarriers] = useState(true);
 
@@ -136,7 +139,9 @@ export function NovaEntregaModal({
                 const data = await res.json().catch(() => ({})) as { message?: string };
                 throw new Error(data.message ?? 'Erro ao criar entrega.');
             }
+            notify.success('Entrega registrada', orderNumber ? `Pedido/OS ${orderNumber}` : undefined);
             onCreated();
+            router.refresh();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Não foi possível criar a entrega.');
         } finally {

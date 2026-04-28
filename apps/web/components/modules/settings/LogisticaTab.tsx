@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Truck, Plus, Pencil, Trash2, ToggleLeft, ToggleRight, CheckCircle, AlertCircle, X, ChevronDown } from 'lucide-react';
 import type { CarrierConfig, CarrierAdapterType } from '@/lib/ajustes-types';
+import { useConfirm } from '@/components/system/ConfirmDialog';
 
 const ADAPTER_OPTIONS: { value: CarrierAdapterType; label: string; description: string }[] = [
     { value: 'jadlog',       label: 'Jadlog',          description: 'E-commerce nacional — cobertura ampla, seguro opcional' },
@@ -294,6 +295,7 @@ function AddCarrierModal({ editing, onClose, onSaved, showToast }: AddCarrierMod
 interface ToastRecord { id: number; kind: 'success' | 'error'; message: string; }
 
 export function LogisticaTab() {
+    const confirm = useConfirm();
     const [carriers, setCarriers] = useState<CarrierConfig[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -335,7 +337,13 @@ export function LogisticaTab() {
     }
 
     async function handleDelete(carrier: CarrierConfig) {
-        if (!confirm(`Excluir "${carrier.name}"? Esta ação não pode ser desfeita.`)) return;
+        const ok = await confirm({
+            title: `Excluir "${carrier.name}"?`,
+            description: 'Esta ação não pode ser desfeita.',
+            confirmLabel: 'Excluir',
+            variant: 'destructive',
+        });
+        if (!ok) return;
         try {
             const res = await fetch(`/api/internal/carriers/${carrier.id}`, { method: 'DELETE' });
             if (!res.ok) {

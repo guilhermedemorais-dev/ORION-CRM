@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { CheckCircle2, FileSpreadsheet, Upload, X, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { notify } from '@/lib/toast';
 
 type Step = 'upload' | 'preview' | 'importing' | 'done';
 
@@ -98,6 +100,7 @@ function findKey(headers: string[], options: string[]): number {
 }
 
 export function LeadsImportDialog({ pipelineId, onClose, onImported }: LeadsImportDialogProps) {
+    const router = useRouter();
     const [step, setStep] = useState<Step>('upload');
     const [fileName, setFileName] = useState<string>('');
     const [rows, setRows] = useState<ParsedRow[]>([]);
@@ -213,7 +216,13 @@ export function LeadsImportDialog({ pipelineId, onClose, onImported }: LeadsImpo
 
         setResult({ success, duplicate, errors });
         setStep('done');
+        if (errors.length === 0) {
+            notify.success(`${success} lead(s) importados`, duplicate > 0 ? `${duplicate} duplicado(s) reaproveitado(s)` : undefined);
+        } else {
+            notify.warning(`Importação concluída com ${errors.length} erro(s)`, `${success} sucesso · ${duplicate} duplicado(s)`);
+        }
         await onImported();
+        router.refresh();
     }
 
     return (

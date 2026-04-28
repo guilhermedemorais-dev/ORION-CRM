@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useConfirm } from '@/components/system/ConfirmDialog';
 
 interface Product {
   id: string; code: string; name: string;
@@ -397,6 +398,7 @@ function AdjustModal({ product, onClose, onSaved, showToast }: {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function EstoqueClient({ initialProducts, initialMeta, initialStats }: EstoqueClientProps) {
+  const confirm = useConfirm();
   const [products, setProducts] = useState(initialProducts);
   const [meta, setMeta] = useState(initialMeta);
   const [stats, setStats] = useState(initialStats);
@@ -532,7 +534,13 @@ export default function EstoqueClient({ initialProducts, initialMeta, initialSta
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Desativar ${selected.size} produto(s)?`)) return;
+    const ok = await confirm({
+      title: `Desativar ${selected.size} produto(s)?`,
+      description: 'Os produtos serão removidos do PDV e não aparecerão em buscas. Você pode reativá-los depois.',
+      confirmLabel: 'Desativar',
+      variant: 'destructive',
+    });
+    if (!ok) return;
     try {
       await Promise.all([...selected].map(id => fetch(`/api/internal/products/${id}`, { method: 'DELETE' })));
       showToast(`${selected.size} produto(s) desativado(s)`);

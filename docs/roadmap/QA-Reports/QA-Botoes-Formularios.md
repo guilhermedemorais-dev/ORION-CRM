@@ -329,19 +329,16 @@
 - [x] **CreateAppointmentDialog: confirmar perda ao clicar fora com isDirty** — `requestClose()` checa `isDirty` + `isPending` e pede confirmação antes de descartar.
 - [x] **Validação de tamanho/magic bytes em CSV de leads** — limite de 5 MB e rejeição de binário (NUL bytes nos primeiros 4 KB) em `LeadsImportDialog`.
 
-- [ ] **Sistema global de toast** *(pendente)*
-  Tipo: UX · Severidade: Alta · Global
-  Instalar `sonner`, montar `<Toaster />` no `app/(crm)/layout.tsx`. Helper `notify` em `lib/toast.ts`. Uso em todos os `onSubmit` resolvidos.
+- [x] **Sistema global de toast** — `<ToastProvider>` in-house (sem nova dep) montado no `app/(crm)/layout.tsx`; helper `notify.success/error/warning/info` em `lib/toast.ts`. Aplicado em NovaEntregaModal, ServiceOrderModal, CreateAppointmentDialog (criar+editar), LeadStageConfirmDialog, LeadsImportDialog, ClientPropostaTab e DebugTab.
 
 - [x] **Bloqueio de duplo-clique no LoginForm** — `<SubmitButton>` interno usa `useFormStatus`, desabilita durante `pending` e exibe "Entrando…".
 
 ### Médias
-- [ ] **Substituir `window.confirm` por ConfirmDialog** *(pendente — escopo amplo, exige componente compartilhado e refatorar 5 telas)*
-  Tipo: UX · Severidade: Média · Páginas: Estoque, Logística, Ajustes, Propostas, Debug
+- [x] **Substituir `window.confirm` por ConfirmDialog** — `<ConfirmDialogProvider>` + hook `useConfirm()` em `components/system/ConfirmDialog.tsx`. Substituído em EstoqueClient (bulk delete), AjustesClient (excluir usuário), LogisticaTab (excluir transportadora), ClientPropostaTab (excluir proposta) e DebugTab (limpar erros). Variante `destructive` com botão vermelho.
 - [x] **Validar data futura em CreateAppointmentDialog** — Zod `.refine` rejeita datas no passado.
 - [x] **Refactor LeadsImportDialog para batches paralelos** — `Promise.all` em chunks de 8.
 - [x] **Tratar BOM e CRLF no parser CSV** — `stripBom()` removendo U+FEFF no header[0]; split já era `\r?\n`.
-- [ ] **Padronizar refresh: router.refresh() ao final dos onCreated/onSaved** *(pendente — cabe a cada parent)*
+- [x] **Padronizar refresh: router.refresh() ao final dos onCreated/onSaved** — `useRouter().refresh()` adicionado após sucesso em NovaEntregaModal, ServiceOrderModal e LeadsImportDialog (CreateAppointmentDialog já usa server actions com `revalidatePath`).
 - [x] **Mensagem de validação visível em ServiceOrderModal (product_name)** — `setError('Informe o nome do produto.')`.
 
 ### Baixas

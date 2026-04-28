@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { parseCurrencyToCents } from '@/lib/financeiro';
+import { notify } from '@/lib/toast';
 
 function formatCentsBRInput(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -62,6 +64,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export default function ServiceOrderModal({ customerId, onClose, onSaved }: Props) {
+  const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -135,7 +138,9 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
         }),
       });
       if (!res.ok) throw new Error('Falha ao criar OS');
+      notify.success('Ordem de serviço criada', form.product_name);
       onSaved();
+      router.refresh();
       onClose();
     } catch {
       setError('Erro ao criar OS. Tente novamente.');

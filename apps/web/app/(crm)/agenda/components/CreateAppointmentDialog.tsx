@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { createAppointmentAction, editAppointmentAction, notifyAppointmentAction } from "../actions";
+import { notify } from "@/lib/toast";
 import { useTransition, useEffect, useState, useMemo, useCallback } from "react";
 import type { AppointmentRecord } from "../types";
 
@@ -276,12 +277,14 @@ export function CreateAppointmentDialog({
                 if (isEditMode) {
                     await editAppointmentAction(formData);
                     setEditSuccess(true);
+                    notify.success('Agendamento atualizado');
                     // Close shortly after so user sees the toast banner.
                     setTimeout(() => handleClose(), 1100);
                 } else {
                     const result = await createAppointmentAction(formData);
                     if (result?.id) {
                         setCreatedId(result.id);
+                        notify.success('Agendamento criado');
                     } else {
                         setSubmitError('A API não retornou o agendamento criado.');
                     }

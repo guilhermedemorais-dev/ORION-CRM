@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FileText, Upload, Eye, Download, Trash2, Paperclip } from 'lucide-react';
+import { useConfirm } from '@/components/system/ConfirmDialog';
+import { notify } from '@/lib/toast';
 
 interface Props {
   customerId: string;
@@ -168,6 +170,7 @@ function Skeleton() {
 }
 
 export default function ClientPropostaTab({ customerId }: Props) {
+  const confirm = useConfirm();
   const [pdfs, setPdfs] = useState<ProposalPdf[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -226,16 +229,23 @@ export default function ClientPropostaTab({ customerId }: Props) {
   );
 
   const handleDelete = useCallback(async (id: string) => {
-    if (!confirm('Excluir esta proposta?')) return;
+    const ok = await confirm({
+      title: 'Excluir esta proposta?',
+      description: 'O PDF anexado será removido permanentemente.',
+      confirmLabel: 'Excluir',
+      variant: 'destructive',
+    });
+    if (!ok) return;
     try {
       await fetch(`/api/internal/customers/${customerId}/proposals/attachments/${id}`, {
         method: 'DELETE',
       });
       setPdfs((prev) => prev.filter((p) => p.id !== id));
+      notify.success('Proposta excluída');
     } catch {
-      alert('Não foi possível excluir. Tente novamente.');
+      notify.error('Não foi possível excluir', 'Tente novamente em instantes.');
     }
-  }, [customerId]);
+  }, [customerId, confirm]);
 
   return (
     <>

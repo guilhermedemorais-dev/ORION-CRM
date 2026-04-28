@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Check, CircleDot, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { notify } from '@/lib/toast';
 
 export type StageConfirmKind = 'won' | 'lost';
 
@@ -70,6 +71,7 @@ export function LeadStageConfirmDialog({ kind, leadName, stageName, onCancel, on
         setSubmitting(true);
         try {
             await onConfirm(payload);
+            notify.success(isWon ? 'Lead marcado como ganho' : 'Lead marcado como perdido', leadName);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Não foi possível concluir a ação.');
         } finally {
