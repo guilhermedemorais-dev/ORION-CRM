@@ -174,11 +174,10 @@ async function getAdminDashboard() {
                     WHEN status = 'EM_ANDAMENTO' THEN 'Em Andamento'
                     WHEN status = 'PAUSADA' THEN 'Pausada'
                     WHEN status = 'CONCLUIDA' THEN 'Concluída'
-                    ELSE status
+                    ELSE status::text
                 END AS stage,
                 COUNT(*)::text AS total
              FROM production_orders
-             WHERE status NOT IN ('CANCELADA')
              GROUP BY status
              ORDER BY 
                 CASE status 

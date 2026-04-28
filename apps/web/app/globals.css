@@ -290,6 +290,73 @@ input:-webkit-autofill:active {
   transition: background-color 9999s ease-in-out 0s;
 }
 
+/* Pipeline Builder — ReactFlow dark theme overrides */
+.orion-builder-canvas {
+  background: #0d0d10;
+  --xy-background-color-default: #0d0d10;
+  --xy-edge-stroke-default: #3a3a42;
+  --xy-edge-stroke-selected-default: var(--orion-gold);
+  --xy-connectionline-stroke-default: var(--orion-gold);
+  --xy-attribution-background-color-default: transparent;
+  --xy-controls-button-background-color-default: var(--orion-elevated);
+  --xy-controls-button-background-color-hover-default: rgba(191, 160, 106, 0.16);
+  --xy-controls-button-color-default: var(--orion-text);
+  --xy-controls-button-border-color-default: var(--orion-border-mid);
+  --xy-minimap-background-color-default: var(--orion-surface);
+}
+
+.orion-builder-canvas .react-flow__background {
+  background-color: #0d0d10;
+}
+
+.orion-builder-canvas .react-flow__handle {
+  background: var(--orion-gold);
+  border: 2px solid var(--orion-base);
+  width: 10px;
+  height: 10px;
+}
+
+.orion-builder-canvas .react-flow__edge-path {
+  stroke: #3a3a42;
+  stroke-width: 2;
+}
+
+.orion-builder-canvas .react-flow__edge.selected .react-flow__edge-path,
+.orion-builder-canvas .react-flow__edge:focus .react-flow__edge-path {
+  stroke: var(--orion-gold);
+}
+
+.orion-builder-canvas .react-flow__controls {
+  border: 1px solid var(--orion-border-mid);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--orion-shadow-card);
+}
+
+.orion-builder-canvas .react-flow__controls-button {
+  border-bottom: 1px solid var(--orion-border-mid);
+  background: var(--orion-elevated);
+  color: var(--orion-text);
+  fill: var(--orion-text);
+}
+
+.orion-builder-canvas .react-flow__controls-button:hover {
+  background: rgba(191, 160, 106, 0.12);
+}
+
+.orion-builder-canvas .react-flow__attribution {
+  background: transparent;
+  color: var(--orion-text-muted);
+}
+
+.orion-builder-canvas .react-flow__attribution a {
+  color: var(--orion-text-muted);
+}
+
+.orion-builder-canvas .react-flow__node.selected .orion-builder-node {
+  box-shadow: 0 0 0 2px var(--orion-gold), 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
 /* Kanban board — scrollbar horizontal fina e dourada */
 .kanban-board {
   scrollbar-width: thin;

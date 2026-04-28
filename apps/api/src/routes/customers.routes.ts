@@ -241,13 +241,13 @@ router.get(
                     o.type,
                     o.status,
                     o.final_amount_cents,
-                    p.method AS payment_method,
+                    p.payment_method AS payment_method,
                     o.created_at,
                     fd.status AS nfe_status,
                     fd.id AS nfe_id
                  FROM orders o
                  LEFT JOIN LATERAL (
-                     SELECT method FROM payments WHERE order_id = o.id ORDER BY created_at DESC LIMIT 1
+                     SELECT payment_method FROM payments WHERE order_id = o.id ORDER BY created_at DESC LIMIT 1
                  ) p ON true
                  LEFT JOIN LATERAL (
                      SELECT id, status FROM fiscal_documents WHERE order_id = o.id ORDER BY created_at DESC LIMIT 1
@@ -443,7 +443,10 @@ router.patch(
             const values: unknown[] = [];
 
             for (const [k, v] of Object.entries(fields)) {
-                if (v !== undefined) { values.push(v); sets.push(`${k} = $${values.length}`); }
+                if (v === undefined) continue;
+                const normalized = typeof v === 'string' && v.trim() === '' ? null : v;
+                values.push(normalized);
+                sets.push(`${k} = $${values.length}`);
             }
             if (sets.length === 0) { res.json({ message: 'Nenhuma alteração.' }); return; }
             sets.push('updated_at = NOW()');

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import DebugTab from './DebugTab';
 
 // ---------- Types ----------
 
@@ -29,7 +30,7 @@ interface PendingSection {
     items: string[];
 }
 
-type TabKey = 'incidents' | 'timeline' | 'updates';
+type TabKey = 'incidents' | 'debug' | 'timeline' | 'updates';
 
 // ---------- New Ticket Modal (preserved from original) ----------
 
@@ -39,11 +40,16 @@ function NewTicketModal({ onClose, onCreated }: { onClose: () => void; onCreated
     const [type, setType] = useState('BUG');
     const [files, setFiles] = useState<File[]>([]);
     const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        if (!title.trim() || !description.trim()) return;
+        setError(null);
+        if (!title.trim()) { setError('[VALIDATION] Título é obrigatório (mínimo 3 caracteres).'); return; }
+        if (title.trim().length < 3) { setError('[VALIDATION] Título deve ter pelo menos 3 caracteres.'); return; }
+        if (!description.trim()) { setError('[VALIDATION] Descrição é obrigatória (mínimo 10 caracteres).'); return; }
+        if (description.trim().length < 10) { setError('[VALIDATION] Descrição deve ter pelo menos 10 caracteres.'); return; }
         setSaving(true);
         try {
             const formData = new FormData();
@@ -60,11 +66,25 @@ function NewTicketModal({ onClose, onCreated }: { onClose: () => void; onCreated
                 body: formData,
             });
 
-            if (!res.ok) throw new Error('Erro ao criar chamado');
+            if (!res.ok) {
+                let msg = `[HTTP_${res.status}] Falha ao criar chamado.`;
+                try {
+                    const body = await res.json();
+                    const code = body?.error || `HTTP_${res.status}`;
+                    const reqId = body?.requestId ? ` · req: ${String(body.requestId).slice(0, 8)}` : '';
+                    const detailMsgs = Array.isArray(body?.details)
+                        ? body.details.map((d: { field?: string; message?: string }) => d.field ? `${d.field}: ${d.message}` : d.message).filter(Boolean).join('; ')
+                        : '';
+                    const detail = detailMsgs ? ` — ${detailMsgs}` : '';
+                    msg = `[${code}] ${body?.message || 'Erro desconhecido.'}${detail}${reqId}`;
+                } catch { /* keep fallback */ }
+                setError(msg);
+                return;
+            }
             onCreated();
             onClose();
-        } catch {
-            alert('Erro ao criar chamado.');
+        } catch (err) {
+            setError(`[NETWORK_ERROR] ${err instanceof Error ? err.message : 'Erro de rede.'}`);
         } finally {
             setSaving(false);
         }
@@ -141,6 +161,12 @@ function NewTicketModal({ onClose, onCreated }: { onClose: () => void; onCreated
                             )}
                         </div>
                     </div>
+
+                    {error && (
+                        <div style={{ marginTop: '14px', background: 'rgba(224,82,82,0.10)', border: '1px solid rgba(224,82,82,0.30)', borderRadius: '7px', padding: '10px 12px', color: '#E05252', fontSize: '12px', fontFamily: 'ui-monospace, monospace', wordBreak: 'break-word' }}>
+                            {error}
+                        </div>
+                    )}
 
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                         <button type="button" onClick={onClose} style={{ height: '34px', padding: '0 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', color: '#C8C4BE', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancelar</button>
@@ -826,8 +852,11 @@ function UpdatesTab() {
 export default function ChamadosClient({ userRole }: { userRole: string }) {
     const [activeTab, setActiveTab] = useState<TabKey>('incidents');
 
+    const isAdmin = userRole === 'ADMIN' || userRole === 'ROOT';
+    const isRoot = userRole === 'ROOT';
     const tabs: { key: TabKey; label: string }[] = [
         { key: 'incidents', label: 'Incidentes' },
+        ...(isRoot ? [{ key: 'debug' as TabKey, label: 'Debug ao vivo' }] : []),
         { key: 'timeline', label: 'Linha do Tempo' },
         { key: 'updates', label: 'Atualizações' },
     ];
@@ -835,7 +864,6 @@ export default function ChamadosClient({ userRole }: { userRole: string }) {
     return (
         <>
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap');
                 .tck-row:hover { background: #141417 !important; }
                 .tck-btn:hover { background: #E8D5B0 !important; }
                 .status-select { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #F0EDE8; border-radius: 4px; padding: 2px 6px; font-size: 11px; outline: none; cursor: pointer; }
@@ -868,6 +896,7 @@ export default function ChamadosClient({ userRole }: { userRole: string }) {
                 </div>
 
                 {activeTab === 'incidents' && <IncidentsTab userRole={userRole} />}
+                {activeTab === 'debug' && <DebugTab userRole={userRole} />}
                 {activeTab === 'timeline' && <TimelineTab />}
                 {activeTab === 'updates' && <UpdatesTab />}
             </div>

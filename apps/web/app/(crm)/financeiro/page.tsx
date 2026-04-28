@@ -71,6 +71,7 @@ export default async function FinancialPage({
             filters={{ period, type, search }}
             todayDate={getTodayDate()}
             error={error}
+            currentUserRole={session.user.role}
         />
     );
 }

@@ -53,6 +53,8 @@ import systemRoutes from './routes/system.routes.js';
 import integrationProvidersRoutes from './routes/integration-providers.routes.js';
 import appointmentsRoutes from './routes/appointments.routes.js';
 import ticketsRoutes from './routes/tickets.routes.js';
+import systemErrorsRoutes from './routes/system-errors.routes.js';
+import { captureSystemError } from './services/systemErrors.service.js';
 import { initializeWhatsAppWebhookWorker, shutdownWhatsAppWebhookWorker } from './workers/whatsappWebhook.worker.js';
 import { initializeAppointmentReminderWorker, shutdownAppointmentReminderWorker } from './workers/appointmentReminder.worker.js';
 import { seedN8nSystemWorkflows } from './startup/seed-n8n-workflows.js';
@@ -143,6 +145,7 @@ app.use('/api/v1/org', settingsRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/appointments', appointmentsRoutes);
 app.use('/api/v1/tickets', ticketsRoutes);
+app.use('/api/v1/system/errors', systemErrorsRoutes);
 app.use('/api/v1/system', systemRoutes);
 app.use('/api/v1/webhooks/whatsapp', whatsappRoutes);
 app.use('/api/v1/whatsapp', whatsappAdminRoutes);
@@ -225,5 +228,28 @@ const shutdown = async (signal: string) => {
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
+
+process.on('uncaughtException', (err: Error) => {
+    logger.error({ err }, 'uncaughtException');
+    void captureSystemError({
+        source: 'api',
+        severity: 'fatal',
+        message: err.message || 'uncaughtException',
+        stack: err.stack ?? null,
+        context: { name: err.name },
+    });
+});
+
+process.on('unhandledRejection', (reason: unknown) => {
+    const err = reason instanceof Error ? reason : new Error(String(reason));
+    logger.error({ err }, 'unhandledRejection');
+    void captureSystemError({
+        source: 'api',
+        severity: 'fatal',
+        message: err.message || 'unhandledRejection',
+        stack: err.stack ?? null,
+        context: { name: err.name },
+    });
+});
 
 export default app;

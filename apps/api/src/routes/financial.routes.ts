@@ -202,7 +202,7 @@ async function fetchFinancialEntry(financialEntryId: string): Promise<FinancialE
 router.get(
     '/',
     authenticate,
-    requireRole(['ADMIN', 'FINANCEIRO']),
+    requireRole(['ROOT', 'ADMIN', 'FINANCEIRO']),
     rateLimit({ windowMs: 60 * 1000, max: 120, name: 'financial-list' }),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
@@ -313,7 +313,7 @@ router.get(
 router.get(
     '/dashboard',
     authenticate,
-    requireRole(['ADMIN', 'FINANCEIRO']),
+    requireRole(['ROOT', 'ADMIN', 'FINANCEIRO']),
     rateLimit({ windowMs: 60 * 1000, max: 60, name: 'financial-dashboard' }),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
@@ -334,7 +334,7 @@ router.get(
 router.get(
     '/comissoes',
     authenticate,
-    requireRole(['ADMIN', 'FINANCEIRO']),
+    requireRole(['ROOT', 'ADMIN', 'FINANCEIRO']),
     rateLimit({ windowMs: 60 * 1000, max: 60, name: 'financial-commissions' }),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
@@ -355,7 +355,7 @@ router.get(
 router.get(
     '/lancamentos',
     authenticate,
-    requireRole(['ADMIN', 'FINANCEIRO']),
+    requireRole(['ROOT', 'ADMIN', 'FINANCEIRO']),
     rateLimit({ windowMs: 60 * 1000, max: 90, name: 'financial-launches' }),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
@@ -379,7 +379,7 @@ router.get(
 router.post(
     '/lancamentos',
     authenticate,
-    requireRole(['ADMIN', 'FINANCEIRO']),
+    requireRole(['ROOT', 'ADMIN', 'FINANCEIRO']),
     rateLimit({ windowMs: 60 * 1000, max: 30, name: 'financial-launches-create' }),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
@@ -479,7 +479,7 @@ const updateLaunchSchema = z.object({
 router.put(
     '/lancamentos/:id',
     authenticate,
-    requireRole(['ADMIN', 'FINANCEIRO']),
+    requireRole(['ROOT', 'ADMIN', 'FINANCEIRO']),
     rateLimit({ windowMs: 60 * 1000, max: 60, name: 'financial-launches-update' }),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
@@ -578,7 +578,7 @@ router.put(
 router.delete(
     '/lancamentos/:id',
     authenticate,
-    requireRole(['ADMIN', 'FINANCEIRO']),
+    requireRole(['ROOT', 'ADMIN', 'FINANCEIRO']),
     rateLimit({ windowMs: 60 * 1000, max: 60, name: 'financial-launches-delete' }),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
@@ -594,8 +594,9 @@ router.delete(
                 return;
             }
 
-            // Block deletion of system-generated entries (linked to orders/payments)
-            if (existing.order_id || existing.payment_id) {
+            // Block deletion of system-generated entries (linked to orders/payments),
+            // except for ROOT who can override during testing and data cleanup.
+            if ((existing.order_id || existing.payment_id) && req.user?.role !== 'ROOT') {
                 next(new AppError(
                     409,
                     'FINANCIAL_ENTRY_LINKED',
@@ -633,7 +634,7 @@ router.delete(
 router.post(
     '/lancamentos/:id/comprovante',
     authenticate,
-    requireRole(['ADMIN', 'FINANCEIRO']),
+    requireRole(['ROOT', 'ADMIN', 'FINANCEIRO']),
     rateLimit({ windowMs: 60 * 1000, max: 20, name: 'financial-launches-receipt-upload' }),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
@@ -714,7 +715,7 @@ router.post(
 router.get(
     '/:id',
     authenticate,
-    requireRole(['ADMIN', 'FINANCEIRO']),
+    requireRole(['ROOT', 'ADMIN', 'FINANCEIRO']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const parsed = financialParamsSchema.safeParse(req.params);
@@ -739,7 +740,7 @@ router.get(
 router.post(
     '/',
     authenticate,
-    requireRole(['ADMIN', 'FINANCEIRO']),
+    requireRole(['ROOT', 'ADMIN', 'FINANCEIRO']),
     rateLimit({ windowMs: 60 * 1000, max: 30, name: 'financial-create' }),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {

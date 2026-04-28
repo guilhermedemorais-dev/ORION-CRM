@@ -43,10 +43,17 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
     const [whatsapp, setWhatsapp] = useState('');
     const [email, setEmail] = useState('');
     const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        if (!name.trim() || !whatsapp.trim()) return;
+        setError(null);
+        if (!name.trim()) { setError('[VALIDATION] Nome é obrigatório.'); return; }
+        if (!whatsapp.trim()) { setError('[VALIDATION] WhatsApp é obrigatório.'); return; }
+        if (!/^\+[1-9]\d{1,14}$/.test(whatsapp.trim())) {
+            setError('[VALIDATION] WhatsApp deve estar no formato E.164. Exemplo: +5511999998888');
+            return;
+        }
         setSaving(true);
         try {
             const res = await fetch('/api/internal/customers', {
@@ -54,11 +61,25 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: name.trim(), whatsapp_number: whatsapp.trim(), email: email.trim() || undefined }),
             });
-            if (!res.ok) throw new Error('Erro ao criar cliente');
+            if (!res.ok) {
+                let msg = `[HTTP_${res.status}] Falha ao criar cliente.`;
+                try {
+                    const body = await res.json();
+                    const code = body?.error || `HTTP_${res.status}`;
+                    const reqId = body?.requestId ? ` · req: ${String(body.requestId).slice(0, 8)}` : '';
+                    const detailMsgs = Array.isArray(body?.details)
+                        ? body.details.map((d: { field?: string; message?: string }) => d.field ? `${d.field}: ${d.message}` : d.message).filter(Boolean).join('; ')
+                        : '';
+                    const detail = detailMsgs ? ` — ${detailMsgs}` : '';
+                    msg = `[${code}] ${body?.message || 'Erro desconhecido.'}${detail}${reqId}`;
+                } catch { /* keep fallback */ }
+                setError(msg);
+                return;
+            }
             onCreated();
             onClose();
-        } catch {
-            alert('Erro ao criar cliente.');
+        } catch (err) {
+            setError(`[NETWORK_ERROR] ${err instanceof Error ? err.message : 'Erro de rede.'}`);
         } finally {
             setSaving(false);
         }
@@ -93,6 +114,11 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
                             </div>
                         ))}
                     </div>
+                    {error && (
+                        <div style={{ marginTop: '14px', background: 'rgba(224,82,82,0.10)', border: '1px solid rgba(224,82,82,0.30)', borderRadius: '7px', padding: '10px 12px', color: '#E05252', fontSize: '12px', fontFamily: 'ui-monospace, monospace', wordBreak: 'break-word' }}>
+                            {error}
+                        </div>
+                    )}
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                         <button type="button" onClick={onClose} style={{ height: '34px', padding: '0 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', color: '#C8C4BE', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancelar</button>
                         <button type="submit" disabled={saving} style={{ height: '34px', padding: '0 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: '#C8A97A', border: 'none', color: '#000', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: saving ? 0.6 : 1 }}>
@@ -134,7 +160,6 @@ export default function ClientesPage() {
     return (
         <>
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap');
                 .cl-row:hover { background: #141417 !important; }
                 .cl-link:hover { color: #C8A97A !important; }
                 .cl-btn:hover { background: #E8D5B0 !important; }

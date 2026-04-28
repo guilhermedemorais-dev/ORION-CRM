@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AppError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
+import { captureSystemError } from '../services/systemErrors.service.js';
 
 export function errorHandler(
     err: Error,
@@ -11,6 +12,20 @@ export function errorHandler(
     if (err instanceof AppError) {
         if (err.code === 'RATE_LIMITED' && typeof err.retryAfterSeconds === 'number') {
             res.setHeader('Retry-After', String(err.retryAfterSeconds));
+        }
+        if (err.statusCode >= 500) {
+            void captureSystemError({
+                source: 'api',
+                severity: 'error',
+                requestId: req.requestId,
+                userId: req.user?.id ?? null,
+                method: req.method,
+                path: req.path,
+                statusCode: err.statusCode,
+                message: err.message,
+                stack: err.stack ?? null,
+                context: { code: err.code, details: err.details },
+            });
         }
         res.status(err.statusCode).json({
             error: err.code,
@@ -32,6 +47,19 @@ export function errorHandler(
         },
         'Unhandled error'
     );
+
+    void captureSystemError({
+        source: 'api',
+        severity: 'error',
+        requestId: req.requestId,
+        userId: req.user?.id ?? null,
+        method: req.method,
+        path: req.path,
+        statusCode: 500,
+        message: err.message || 'Unhandled error',
+        stack: err.stack ?? null,
+        context: { name: err.name },
+    });
 
     res.status(500).json({
         error: 'INTERNAL_ERROR',

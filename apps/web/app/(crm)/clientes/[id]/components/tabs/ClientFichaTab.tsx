@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import type { CustomerFull } from '../types';
 
 interface Props {
@@ -74,6 +75,22 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+async function readApiError(res: Response, fallbackCode: string): Promise<string> {
+  try {
+    const body = await res.json();
+    const code = body?.error || fallbackCode;
+    const message = body?.message || 'Erro desconhecido.';
+    const reqId = body?.requestId ? ` · req: ${String(body.requestId).slice(0, 8)}` : '';
+    const detailMsgs = Array.isArray(body?.details)
+      ? body.details.map((d: { field?: string; message?: string }) => d.field ? `${d.field}: ${d.message}` : d.message).filter(Boolean).join('; ')
+      : '';
+    const detail = detailMsgs ? ` — ${detailMsgs}` : '';
+    return `[${code}] ${message}${detail}${reqId}`;
+  } catch {
+    return `[${fallbackCode}] HTTP ${res.status} ${res.statusText}`;
+  }
+}
+
 function fmtDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
   try {
@@ -90,6 +107,7 @@ function fmtDate(dateStr: string | null | undefined): string {
 }
 
 export default function ClientFichaTab({ customer, customerId, onUpdate }: Props) {
+  const router = useRouter();
   const [form, setForm] = useState({
     name: customer.name ?? '',
     social_name: customer.social_name ?? '',
@@ -151,16 +169,44 @@ export default function ClientFichaTab({ customer, customerId, onUpdate }: Props
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/internal/customers/${customerId}`, {
+      let targetId = customerId;
+
+      if (customer.is_converted === false) {
+        const convertRes = await fetch(`/api/internal/leads/${customerId}/convert`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!convertRes.ok) {
+          setError(await readApiError(convertRes, 'CONVERT_FAILED'));
+          return;
+        }
+        const convertData = await convertRes.json();
+        const newId = convertData?.customer?.id;
+        if (!newId) {
+          setError('[CONVERT_NO_ID] Conversão concluída mas servidor não retornou o ID do cliente.');
+          return;
+        }
+        targetId = newId;
+      }
+
+      const res = await fetch(`/api/internal/customers/${targetId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error('Falha ao salvar');
+      if (!res.ok) {
+        setError(await readApiError(res, 'PATCH_FAILED'));
+        return;
+      }
       const data = await res.json();
       onUpdate(data);
-    } catch {
-      setError('Erro ao salvar. Tente novamente.');
+
+      if (targetId !== customerId) {
+        router.replace(`/clientes/${targetId}`);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro desconhecido.';
+      setError(`[NETWORK_ERROR] ${msg}`);
     } finally {
       setSaving(false);
     }
@@ -339,6 +385,8 @@ export default function ClientFichaTab({ customer, customerId, onUpdate }: Props
             color: '#E05252',
             fontSize: '12px',
             marginBottom: '12px',
+            wordBreak: 'break-word',
+            fontFamily: 'ui-monospace, monospace',
           }}
         >
           {error}

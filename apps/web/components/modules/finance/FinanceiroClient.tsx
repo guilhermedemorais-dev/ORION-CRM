@@ -23,20 +23,13 @@ import {
     X,
     XCircle,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-    Bar,
-    BarChart,
-    CartesianGrid,
-    Cell,
-    Pie,
-    PieChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
-} from 'recharts';
 import { uploadFinancialReceiptAction } from '@/app/(crm)/financeiro/actions';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import '@/app/(crm)/dashboard/components/DashboardTemplate.css';
+import { MonthlyGoalModal } from '@/components/modules/finance/MonthlyGoalModal';
 import type {
     FinanceCommissionRecord,
     FinanceDashboardResponse,
@@ -46,6 +39,7 @@ import type {
     FinancePeriod,
 } from '@/lib/financeiro-types';
 import { parseCurrencyToCents } from '@/lib/financeiro';
+import { getMonthlyFinanceGoalKey, readMonthlyFinanceGoal, writeMonthlyFinanceGoal } from '@/lib/finance-goal';
 import { cn, formatCurrencyFromCents } from '@/lib/utils';
 
 const TYPE_OPTIONS: Array<{ value: FinanceLaunchFilter; label: string }> = [
@@ -162,7 +156,11 @@ function getLaunchBadge(record: FinanceLaunchRecord) {
     };
 }
 
-function canDeleteLaunch(record: FinanceLaunchRecord): boolean {
+function canDeleteLaunch(record: FinanceLaunchRecord, role?: string): boolean {
+    if (role === 'ROOT') {
+        return true;
+    }
+
     return record.status !== 'pendente' && !record.reference.order_id && !record.reference.payment_id;
 }
 
@@ -212,20 +210,18 @@ function LightCard({
     description,
     className,
     children,
+    id,
 }: {
     title: string;
     description?: string;
     className?: string;
     children: ReactNode;
+    id?: string;
 }) {
     return (
-        <section className={cn('rounded-[14px] border border-white/10 bg-[#1A1A1E] p-5', className)}>
-            <div className="mb-4">
-                <h2 className="font-serif text-[1rem] font-semibold text-white">{title}</h2>
-                {description ? <p className="mt-1 text-[12px] text-white/50">{description}</p> : null}
-            </div>
+        <Card id={id} title={title} description={description} className={cn('bg-[color:var(--orion-surface)]', className)}>
             {children}
-        </section>
+        </Card>
     );
 }
 
@@ -245,13 +241,13 @@ function KpiCard({
     helper: string;
 }) {
     return (
-        <div className="overflow-hidden rounded-[14px] border border-white/10 bg-[#1A1A1E]">
+        <div className="overflow-hidden rounded-[18px] border border-[color:var(--orion-border-low)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] shadow-[var(--orion-shadow-card)]">
             <div className={cn('h-[3px] w-full', accentClassName)} />
             <div className="p-5">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/50">{label}</div>
-                <div className={cn('mt-3 font-serif text-[28px] font-semibold', valueClassName)}>{value}</div>
-                <div className="mt-2 text-[12px] font-medium text-white">{delta}</div>
-                <div className="mt-1 text-[11px] text-white/50">{helper}</div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-text-muted)]">{label}</div>
+                <div className={cn('mt-3 font-serif text-[26px] font-semibold leading-none', valueClassName)}>{value}</div>
+                <div className="mt-2 text-[12px] font-semibold text-[color:var(--orion-text)]">{delta}</div>
+                <div className="mt-1 text-[11px] text-[color:var(--orion-text-secondary)]">{helper}</div>
             </div>
         </div>
     );
@@ -285,20 +281,20 @@ function DialogContainer({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-[2px]"
             onClick={onClose}
         >
             <div
-                className="relative w-full max-w-[440px] rounded-[18px] bg-white p-7 shadow-[0_20px_60px_rgba(0,0,0,0.16)]"
+                className="relative w-full max-w-[460px] rounded-[18px] border border-[color:var(--orion-border-low)] bg-[color:var(--orion-surface)] p-7 shadow-[var(--orion-shadow-dialog)]"
                 onClick={(event) => event.stopPropagation()}
             >
                 <div className="mb-5 flex items-center justify-between gap-3">
-                    <h2 className="font-serif text-[18px] font-semibold text-[#111827]">{title}</h2>
+                    <h2 className="font-serif text-[18px] font-semibold text-[color:var(--orion-text)]">{title}</h2>
                     <button
                         type="button"
                         onClick={onClose}
                         aria-label="Fechar"
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-[#6B7280] transition hover:bg-[#F3EFE8]"
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--orion-text-secondary)] transition hover:bg-white/5 hover:text-[color:var(--orion-text)]"
                     >
                         <X className="h-4 w-4" />
                     </button>
@@ -399,34 +395,34 @@ function LaunchFormModal({
             <form onSubmit={handleSubmit} className="grid gap-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
-                        <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[#6B7280]">Tipo</span>
+                        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">Tipo</span>
                         <select
                             value={draft.tipo}
                             onChange={(event) => setDraft((prev) => ({ ...prev, tipo: event.target.value as 'receita' | 'despesa' }))}
-                            className="h-10 rounded-[10px] border border-[#E8E5E0] px-3 text-[13px] text-[#111827] outline-none"
+                            className="h-10 rounded-[10px] border border-[color:var(--orion-border-mid)] bg-[color:var(--orion-base)] px-3 text-[13px] text-[color:var(--orion-text)] outline-none"
                         >
                             <option value="receita">Receita</option>
                             <option value="despesa">Despesa</option>
                         </select>
                     </label>
                     <label className="grid gap-2">
-                        <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[#6B7280]">Data</span>
+                        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">Data</span>
                         <input
                             type="date"
                             required
                             value={draft.data}
                             onChange={(event) => setDraft((prev) => ({ ...prev, data: event.target.value }))}
-                            className="h-10 rounded-[10px] border border-[#E8E5E0] px-3 text-[13px] text-[#111827] outline-none"
+                            className="h-10 rounded-[10px] border border-[color:var(--orion-border-mid)] bg-[color:var(--orion-base)] px-3 text-[13px] text-[color:var(--orion-text)] outline-none"
                         />
                     </label>
                 </div>
 
                 <label className="grid gap-2">
-                    <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[#6B7280]">Método de pagamento</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">Método de pagamento</span>
                     <select
                         value={draft.payment_method}
                         onChange={(event) => setDraft((prev) => ({ ...prev, payment_method: event.target.value }))}
-                        className="h-10 rounded-[10px] border border-[#E8E5E0] px-3 text-[13px] text-[#111827] outline-none"
+                        className="h-10 rounded-[10px] border border-[color:var(--orion-border-mid)] bg-[color:var(--orion-base)] px-3 text-[13px] text-[color:var(--orion-text)] outline-none"
                     >
                         <option value="">Selecionar (opcional)</option>
                         <option value="PIX">PIX</option>
@@ -440,7 +436,7 @@ function LaunchFormModal({
                 </label>
 
                 <label className="grid gap-2">
-                    <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[#6B7280]">Descrição</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">Descrição</span>
                     <input
                         placeholder="Ex: Venda de aliança, aluguel, campanha..."
                         value={draft.descricao}
@@ -453,18 +449,18 @@ function LaunchFormModal({
                             }
                         }}
                         className={cn(
-                            'h-10 rounded-[10px] border px-3 text-[13px] text-[#111827] outline-none',
-                            descricaoError ? 'border-red-400' : 'border-[#E8E5E0]'
+                            'h-10 rounded-[10px] border bg-[color:var(--orion-base)] px-3 text-[13px] text-[color:var(--orion-text)] outline-none',
+                            descricaoError ? 'border-[color:var(--orion-red)]' : 'border-[color:var(--orion-border-mid)]'
                         )}
                     />
                     {descricaoError ? (
-                        <span className="text-sm text-red-400">{descricaoError}</span>
+                        <span className="text-sm text-[color:var(--orion-red)]">{descricaoError}</span>
                     ) : null}
                 </label>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                     <label className="grid gap-2">
-                        <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[#6B7280]">Valor (R$)</span>
+                        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">Valor (R$)</span>
                         <input
                             inputMode="decimal"
                             placeholder="0,00"
@@ -482,20 +478,20 @@ function LaunchFormModal({
                                 }
                             }}
                             className={cn(
-                                'h-10 rounded-[10px] border px-3 text-[13px] text-[#111827] outline-none',
-                                valorError ? 'border-red-400' : 'border-[#E8E5E0]'
+                                'h-10 rounded-[10px] border bg-[color:var(--orion-base)] px-3 text-[13px] text-[color:var(--orion-text)] outline-none',
+                                valorError ? 'border-[color:var(--orion-red)]' : 'border-[color:var(--orion-border-mid)]'
                             )}
                         />
                         {valorError ? (
-                            <span className="text-sm text-red-400">{valorError}</span>
+                            <span className="text-sm text-[color:var(--orion-red)]">{valorError}</span>
                         ) : null}
                     </label>
                     <label className="grid gap-2">
-                        <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-[#6B7280]">Categoria</span>
+                        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--orion-text-secondary)]">Categoria</span>
                         <select
                             value={draft.categoria}
                             onChange={(event) => setDraft((prev) => ({ ...prev, categoria: event.target.value }))}
-                            className="h-10 rounded-[10px] border border-[#E8E5E0] px-3 text-[13px] text-[#111827] outline-none"
+                            className="h-10 rounded-[10px] border border-[color:var(--orion-border-mid)] bg-[color:var(--orion-base)] px-3 text-[13px] text-[color:var(--orion-text)] outline-none"
                         >
                             {CATEGORY_OPTIONS.map((category) => (
                                 <option key={category} value={category}>
@@ -507,28 +503,30 @@ function LaunchFormModal({
                 </div>
 
                 {submitError ? (
-                    <div className="rounded-[10px] border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    <div className="rounded-[10px] border border-[color:rgba(224,82,82,0.25)] bg-[color:rgba(224,82,82,0.12)] px-3 py-2 text-sm text-[color:var(--orion-red)]">
                         {submitError}
                     </div>
                 ) : null}
 
                 <div className="mt-2 flex gap-3">
-                    <button
+                    <Button
                         type="button"
+                        variant="secondary"
                         onClick={onClose}
                         disabled={submitting}
-                        className="flex-1 rounded-[10px] border border-[#E8E5E0] py-2.5 text-[13px] font-semibold text-[#111827] disabled:opacity-50"
+                        className="flex-1"
                     >
                         Cancelar
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         type="submit"
+                        variant="primary"
                         disabled={submitting}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-[10px] bg-[#C8A97A] py-2.5 text-[13px] font-bold text-black transition disabled:cursor-not-allowed disabled:opacity-60"
+                        className="flex-1"
                     >
                         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                         {submitting ? 'Salvando...' : submitLabel}
-                    </button>
+                    </Button>
                 </div>
             </form>
         </DialogContainer>
@@ -552,25 +550,27 @@ function ConfirmDialog({
 }) {
     return (
         <DialogContainer title={title} onClose={() => (busy ? undefined : onCancel())}>
-            <p className="text-[13px] text-[#374151]">{message}</p>
+            <p className="text-[13px] text-[color:var(--orion-text-secondary)]">{message}</p>
             <div className="mt-6 flex gap-3">
-                <button
+                <Button
                     type="button"
+                    variant="secondary"
                     onClick={onCancel}
                     disabled={busy}
-                    className="flex-1 rounded-[10px] border border-[#E8E5E0] py-2.5 text-[13px] font-semibold text-[#111827] disabled:opacity-50"
+                    className="flex-1"
                 >
                     Cancelar
-                </button>
-                <button
+                </Button>
+                <Button
                     type="button"
+                    variant="danger"
                     onClick={onConfirm}
                     disabled={busy}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-[10px] bg-[#EF4444] py-2.5 text-[13px] font-bold text-white transition disabled:opacity-60"
+                    className="flex-1"
                 >
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                     {busy ? 'Excluindo...' : confirmLabel}
-                </button>
+                </Button>
             </div>
         </DialogContainer>
     );
@@ -586,6 +586,39 @@ function buildPeriodOptions(now: Date): Array<{ value: FinancePeriod; label: str
         { value: 'trimestre', label: 'Trim', tooltip: 'Trimestre atual' },
         { value: 'ano', label: 'Ano', tooltip: 'Ano atual' },
     ];
+}
+
+function countBusinessDaysBetween(start: Date, end: Date): number {
+    const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    let count = 0;
+
+    while (cursor <= last) {
+        const day = cursor.getDay();
+        if (day !== 0 && day !== 6) {
+            count += 1;
+        }
+        cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return count;
+}
+
+function countBusinessDaysRemaining(date: Date): number {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const startDay = date.getDate() + 1;
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    let count = 0;
+
+    for (let day = startDay; day <= lastDay; day += 1) {
+        const dow = new Date(year, month, day).getDay();
+        if (dow !== 0 && dow !== 6) {
+            count += 1;
+        }
+    }
+
+    return count;
 }
 
 interface KebabMenuProps {
@@ -617,19 +650,19 @@ function KebabMenu({ onEdit, onDelete, disabled, canDelete = true }: KebabMenuPr
                 aria-label="Ações do lançamento"
                 disabled={disabled}
                 onClick={() => setOpen((value) => !value)}
-                className="flex h-8 w-8 items-center justify-center rounded-[8px] text-white/60 transition hover:bg-white/10 disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[color:var(--orion-text-secondary)] transition hover:bg-white/5 hover:text-[color:var(--orion-text)] disabled:opacity-40"
             >
                 <MoreVertical className="h-4 w-4" />
             </button>
             {open ? (
-                <div className="absolute right-0 top-9 z-20 w-36 overflow-hidden rounded-[10px] border border-white/15 bg-[#1A1A1E] shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
+                <div className="absolute right-0 top-9 z-20 w-44 overflow-hidden rounded-[10px] border border-[color:var(--orion-border-low)] bg-[color:var(--orion-nav)] shadow-[var(--orion-shadow-popover)]">
                     <button
                         type="button"
                         onClick={() => {
                             setOpen(false);
                             onEdit();
                         }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-white/80 hover:bg-white/10"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-[color:var(--orion-text)] hover:bg-white/5"
                     >
                         <Pencil className="h-3.5 w-3.5" />
                         Editar
@@ -648,8 +681,8 @@ function KebabMenu({ onEdit, onDelete, disabled, canDelete = true }: KebabMenuPr
                         className={cn(
                             'flex w-full items-center gap-2 px-3 py-2 text-left text-[12px]',
                             canDelete
-                                ? 'text-[#FCA5A5] hover:bg-white/10'
-                                : 'cursor-not-allowed text-white/30'
+                                ? 'text-[color:var(--orion-red)] hover:bg-white/5'
+                                : 'cursor-not-allowed text-[color:var(--orion-text-disabled)]'
                         )}
                     >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -668,6 +701,7 @@ export function FinanceiroClient({
     filters,
     todayDate,
     error,
+    currentUserRole,
 }: {
     dashboard: FinanceDashboardResponse;
     commissions: FinanceCommissionRecord[];
@@ -679,6 +713,7 @@ export function FinanceiroClient({
     };
     todayDate: string;
     error?: string | null;
+    currentUserRole: string;
 }) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
@@ -689,8 +724,81 @@ export function FinanceiroClient({
     const [confirmDelete, setConfirmDelete] = useState<FinanceLaunchRecord | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [toasts, setToasts] = useState<ToastState[]>([]);
+    const [goalModalOpen, setGoalModalOpen] = useState(false);
+    const [monthlyGoalCents, setMonthlyGoalCents] = useState<number | null>(null);
 
     const periodOptions = useMemo(() => buildPeriodOptions(new Date()), []);
+    const selectedPeriod = periodOptions.find((option) => option.value === filters.period);
+    const selectedPeriodLabel = selectedPeriod?.tooltip ?? 'Período selecionado';
+    const currentDate = useMemo(() => new Date(todayDate), [todayDate]);
+    const businessDaysRemaining = useMemo(() => countBusinessDaysRemaining(currentDate), [currentDate]);
+    const businessDaysElapsed = useMemo(
+        () => countBusinessDaysBetween(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1), currentDate),
+        [currentDate]
+    );
+
+    const chartSeries = useMemo(
+        () => dashboard.grafico_barras.map((point) => ({
+            label: point.label,
+            amount_cents: point.receitas_cents,
+        })),
+        [dashboard.grafico_barras]
+    );
+    const hasChartData = chartSeries.length > 0 && chartSeries.some((point) => point.amount_cents > 0);
+    const chartStats = useMemo(() => {
+        if (!hasChartData) {
+            return {
+                linePath: '',
+                areaPath: '',
+                dotX: 0,
+                dotY: 0,
+                maxDay: 0,
+                avgDay: 0,
+            };
+        }
+
+        const width = 600;
+        const height = 180;
+        const topPad = 20;
+        const bottomPad = 10;
+        const values = chartSeries.map((point) => point.amount_cents / 100);
+        const max = Math.max(...values, 1);
+        const min = Math.min(...values, 0);
+        const range = Math.max(max - min, 1);
+        const stepX = chartSeries.length > 1 ? width / (chartSeries.length - 1) : width;
+        const points = values.map((value, index) => {
+            const x = Math.round(index * stepX);
+            const normalized = (value - min) / range;
+            const y = Math.round(height - bottomPad - normalized * (height - topPad - bottomPad));
+            return { x, y };
+        });
+        const linePath = points
+            .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x},${point.y}`)
+            .join(' ');
+        const areaPath = `${linePath} L${width},${height} L0,${height} Z`;
+        const last = points[points.length - 1] ?? { x: 0, y: 0 };
+        const avgDay = Math.round(values.reduce((acc, value) => acc + value, 0) / values.length);
+
+        return {
+            linePath,
+            areaPath,
+            dotX: last.x,
+            dotY: last.y,
+            maxDay: Math.round(max),
+            avgDay,
+        };
+    }, [chartSeries, hasChartData]);
+    const goalProgress = monthlyGoalCents ? Math.min(100, (dashboard.receitas.total_cents / monthlyGoalCents) * 100) : 0;
+    const goalRemaining = monthlyGoalCents ? Math.max(monthlyGoalCents - dashboard.receitas.total_cents, 0) : 0;
+    const projectedRevenue = useMemo(() => {
+        if (!monthlyGoalCents) {
+            return dashboard.receitas.total_cents;
+        }
+
+        const safeElapsed = Math.max(businessDaysElapsed, 1);
+        const projected = Math.round((dashboard.receitas.total_cents / safeElapsed) * (safeElapsed + businessDaysRemaining));
+        return Number.isFinite(projected) && projected > 0 ? projected : dashboard.receitas.total_cents;
+    }, [businessDaysElapsed, businessDaysRemaining, dashboard.receitas.total_cents, monthlyGoalCents]);
 
     const pushToast = useCallback((toast: Omit<ToastState, 'id'>) => {
         const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -713,6 +821,24 @@ export function FinanceiroClient({
             pushToast({ type: 'error', message: error });
         }
     }, [error, pushToast]);
+
+    useEffect(() => {
+        const readGoal = () => {
+            setMonthlyGoalCents(readMonthlyFinanceGoal(currentDate)?.amount_cents ?? null);
+        };
+
+        readGoal();
+
+        function handleStorage(event: StorageEvent) {
+            if (event.key !== getMonthlyFinanceGoalKey(currentDate)) {
+                return;
+            }
+            readGoal();
+        }
+
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
+    }, [currentDate]);
 
     useEffect(() => {
         setSearchValue(filters.search);
@@ -761,6 +887,13 @@ export function FinanceiroClient({
         startTransition(() => {
             router.replace(`/financeiro?${params.toString()}`, { scroll: false });
         });
+    }
+
+    async function handleSaveMonthlyGoal(amountCents: number) {
+        const goal = writeMonthlyFinanceGoal(amountCents, currentDate);
+        setMonthlyGoalCents(goal.amount_cents);
+        setGoalModalOpen(false);
+        pushToast({ type: 'success', message: 'Meta mensal salva com sucesso.' });
     }
 
     async function submitLaunch(draft: LaunchDraft): Promise<{ ok: boolean; message?: string }> {
@@ -820,12 +953,12 @@ export function FinanceiroClient({
     }
 
     async function handleDelete(record: FinanceLaunchRecord) {
-        if (record.status === 'pendente') {
+        if (record.status === 'pendente' && currentUserRole !== 'ROOT') {
             pushToast({ type: 'error', message: 'Pagamentos pendentes não podem ser excluídos.' });
             return;
         }
 
-        if (!canDeleteLaunch(record)) {
+        if (!canDeleteLaunch(record, currentUserRole)) {
             pushToast({ type: 'error', message: 'Lançamentos vinculados a pedidos ou pagamentos não podem ser excluídos.' });
             return;
         }
@@ -872,49 +1005,55 @@ export function FinanceiroClient({
     }
 
     const maxCommissionValue = commissions[0]?.comissao_cents ?? 0;
-    const pieData = useMemo(() => dashboard.grafico_pizza.slice(0, 4), [dashboard.grafico_pizza]);
+    const paymentMethods = useMemo(() => {
+        const counts = new Map<string, number>();
+        let total = 0;
 
-    // TASK-008: aggregate bars by date so duplicate dates are merged into a single bar
-    const aggregatedBars = useMemo(() => {
-        const buckets = new Map<string, { label: string; receitas_cents: number; despesas_cents: number }>();
-        for (const point of dashboard.grafico_barras) {
-            const existing = buckets.get(point.label);
-            if (existing) {
-                existing.receitas_cents += point.receitas_cents;
-                existing.despesas_cents += point.despesas_cents;
-            } else {
-                buckets.set(point.label, {
-                    label: point.label,
-                    receitas_cents: point.receitas_cents,
-                    despesas_cents: point.despesas_cents,
-                });
-            }
+        for (const record of launches.data) {
+            const method = record.payment_method || 'OUTROS';
+            counts.set(method, (counts.get(method) ?? 0) + 1);
+            total += 1;
         }
-        return Array.from(buckets.values());
-    }, [dashboard.grafico_barras]);
+
+        if (total === 0) {
+            return [
+                { method: 'CARTAO_CREDITO', amount_cents: 0, percentage: 52 },
+                { method: 'PIX', amount_cents: 0, percentage: 31 },
+                { method: 'CARTAO_DEBITO', amount_cents: 0, percentage: 17 },
+            ];
+        }
+
+        return Array.from(counts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .map(([method, count]) => ({
+                method,
+                amount_cents: 0,
+                percentage: Math.round((count / total) * 100),
+            }));
+    }, [launches.data]);
 
     const commissionsCount = dashboard.comissoes.attendants ?? 0;
 
     if (!hasMounted) {
         return (
-            <div className="text-[#111827]">
-                <div className="h-14 border-b border-white/10 bg-[#1A1A1E]" />
+            <div className="orion-crm min-h-screen bg-[color:var(--orion-base)] text-[color:var(--orion-text)]">
+                <div className="h-14 border-b border-[color:var(--orion-border-low)] bg-[color:var(--orion-nav)]" />
                 <div className="space-y-6 p-7">
                     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                         {Array.from({ length: 4 }).map((_, index) => (
                             <div
                                 key={`finance-kpi-${index}`}
-                                className="h-[150px] animate-pulse rounded-[14px] border border-white/10 bg-white/5"
+                                className="h-[150px] animate-pulse rounded-[14px] border border-[color:var(--orion-border-low)] bg-white/5"
                             />
                         ))}
                     </div>
                     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px]">
-                        <div className="h-[320px] animate-pulse rounded-[14px] border border-white/10 bg-white/5" />
-                        <div className="h-[320px] animate-pulse rounded-[14px] border border-white/10 bg-white/5" />
+                        <div className="h-[320px] animate-pulse rounded-[14px] border border-[color:var(--orion-border-low)] bg-white/5" />
+                        <div className="h-[320px] animate-pulse rounded-[14px] border border-[color:var(--orion-border-low)] bg-white/5" />
                     </div>
                     <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
-                        <div className="h-[280px] animate-pulse rounded-[14px] border border-white/10 bg-white/5" />
-                        <div className="h-[280px] animate-pulse rounded-[14px] border border-white/10 bg-white/5" />
+                        <div className="h-[280px] animate-pulse rounded-[14px] border border-[color:var(--orion-border-low)] bg-white/5" />
+                        <div className="h-[280px] animate-pulse rounded-[14px] border border-[color:var(--orion-border-low)] bg-white/5" />
                     </div>
                 </div>
             </div>
@@ -922,16 +1061,16 @@ export function FinanceiroClient({
     }
 
     return (
-        <div className="text-[#111827]">
-            <div className="flex flex-col gap-3 border-b border-white/10 bg-[#1A1A1E] px-4 py-4 md:px-7 xl:flex-row xl:items-center xl:justify-between">
+        <div className="orion-crm min-h-screen bg-[color:var(--orion-base)] text-[color:var(--orion-text)]">
+            <div className="flex flex-col gap-3 border-b border-[color:var(--orion-border-low)] bg-[color:var(--orion-nav)] px-4 py-4 md:px-7 xl:flex-row xl:items-center xl:justify-between">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                    <div className="hidden items-center gap-3 md:flex">
-                        <span className="text-[20px]">💰</span>
-                        <h1 className="font-serif text-[20px] font-bold text-white">Financeiro</h1>
+                    <div className="hidden md:flex md:flex-col">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--orion-text-muted)]">Caixa e comissões</p>
+                        <h1 className="mt-1 font-serif text-[20px] font-bold text-[color:var(--orion-text)]">Financeiro</h1>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <div className="inline-flex flex-1 overflow-hidden rounded-[10px] border border-white/15 md:flex-initial">
+                        <div className="inline-flex flex-1 overflow-hidden rounded-[10px] border border-[color:var(--orion-border-low)] bg-white/5 md:flex-initial">
                             {periodOptions.map((option) => (
                                 <button
                                     key={option.value}
@@ -943,8 +1082,8 @@ export function FinanceiroClient({
                                     className={cn(
                                         'h-9 flex-1 px-4 text-[12px] font-medium transition md:flex-initial',
                                         filters.period === option.value
-                                            ? 'bg-[#C8A97A] font-bold text-black'
-                                            : 'bg-transparent text-white/60 hover:bg-white/10'
+                                            ? 'bg-[color:var(--orion-gold)] font-bold text-black'
+                                            : 'bg-transparent text-[color:var(--orion-text-secondary)] hover:bg-white/5 hover:text-[color:var(--orion-text)]'
                                     )}
                                 >
                                     {option.label}
@@ -956,24 +1095,224 @@ export function FinanceiroClient({
                             type="button"
                             onClick={() => setIsLaunchModalOpen(true)}
                             aria-label="Novo lançamento"
-                            className="flex h-9 min-w-[44px] items-center justify-center gap-2 rounded-[10px] bg-[#C8A97A] px-3 text-[13px] font-bold text-black transition hover:bg-[#D7BC93] md:hidden"
+                            className="flex h-9 min-w-[44px] items-center justify-center gap-2 rounded-[10px] bg-[color:var(--orion-gold)] px-3 text-[13px] font-bold text-black transition hover:bg-[color:var(--orion-gold-light)] md:hidden"
                         >
                             <Plus className="h-4 w-4" />
                         </button>
                     </div>
                 </div>
 
-                <button
+                <Button
                     type="button"
+                    icon={<Plus className="h-4 w-4" />}
                     onClick={() => setIsLaunchModalOpen(true)}
-                    className="hidden h-9 items-center justify-center gap-2 rounded-[10px] bg-[#C8A97A] px-4 text-[13px] font-bold text-black transition hover:bg-[#D7BC93] md:inline-flex"
+                    className="hidden md:inline-flex"
                 >
-                    <Plus className="h-4 w-4" />
                     Novo Lançamento
-                </button>
+                </Button>
             </div>
 
-            <div className="space-y-6 p-4 md:p-7">
+            <div className="space-y-4 p-4 md:p-6">
+                <div className="flex flex-col gap-3 border-b border-[color:var(--orion-border-low)] pb-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="max-w-2xl">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--orion-text-muted)]">
+                            Financeiro
+                        </p>
+                        <h1 className="mt-1 font-serif text-[22px] font-semibold leading-[1.02] text-[color:var(--orion-text)] md:text-[30px]">
+                            Caixa, comissões e lançamentos no mesmo painel.
+                        </h1>
+                        <p className="mt-2 text-[13px] leading-relaxed text-[color:var(--orion-text-secondary)]">
+                            Visão compacta do período atual com gráfico, meta mensal e ações operacionais sem sobra de espaço.
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            <span className="rounded-full border border-[color:var(--orion-gold-border)] bg-[color:var(--orion-gold-bg)] px-3 py-1 text-[11px] font-semibold text-[color:var(--orion-gold-light)]">
+                                {selectedPeriodLabel}
+                            </span>
+                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-[color:var(--orion-text-secondary)]">
+                                {launches.meta.total.toLocaleString('pt-BR')} lançamentos
+                            </span>
+                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-[color:var(--orion-text-secondary)]">
+                                {formatCurrencyFromCents(dashboard.saldo.total_cents)} de saldo
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                        <div className="inline-flex overflow-hidden rounded-[10px] border border-[color:var(--orion-border-low)] bg-white/5">
+                            {periodOptions.map((option) => (
+                                <button
+                                    key={option.value}
+                                    type="button"
+                                    title={option.tooltip}
+                                    aria-label={option.tooltip}
+                                    disabled={isPending}
+                                    onClick={() => navigateWith({ period: option.value, page: 1 })}
+                                    className={cn(
+                                        'h-9 px-4 text-[12px] font-medium transition',
+                                        filters.period === option.value
+                                            ? 'bg-[color:var(--orion-gold)] font-bold text-black'
+                                            : 'bg-transparent text-[color:var(--orion-text-secondary)] hover:bg-white/5 hover:text-[color:var(--orion-text)]'
+                                    )}
+                                >
+                                    {option.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setIsLaunchModalOpen(true)}
+                            aria-label="Novo lançamento"
+                            className="flex h-9 min-w-[44px] items-center justify-center gap-2 rounded-[10px] bg-[color:var(--orion-gold)] px-3 text-[13px] font-bold text-black transition hover:bg-[color:var(--orion-gold-light)] md:hidden"
+                        >
+                            <Plus className="h-4 w-4" />
+                        </button>
+
+                        <Button
+                            type="button"
+                            icon={<Plus className="h-4 w-4" />}
+                            onClick={() => setIsLaunchModalOpen(true)}
+                            className="hidden md:inline-flex"
+                        >
+                            Novo Lançamento
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+                    <section className="panel">
+                        <div className="panel-head">
+                            <span className="panel-title">Faturamento — Últimos 30 Dias</span>
+                            <Link href="#finance-lancamentos" className="panel-action">
+                                Ver lançamentos →
+                            </Link>
+                        </div>
+                        <div className="panel-body" style={{ position: 'relative', gap: '10px' }}>
+                            <div style={{ position: 'relative', flex: 1, minHeight: '210px' }}>
+                                {hasChartData ? (
+                                    <svg className="chart-svg" width="100%" height="100%" viewBox="0 0 600 180" preserveAspectRatio="none">
+                                        <defs>
+                                            <linearGradient id="finance-chart-gradient" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#C8A97A" stopOpacity={0.15} />
+                                                <stop offset="100%" stopColor="#C8A97A" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <line x1="0" y1="45" x2="600" y2="45" stroke="rgba(255,255,255,0.03)" strokeWidth="1" strokeDasharray="4 4" />
+                                        <line x1="0" y1="90" x2="600" y2="90" stroke="rgba(255,255,255,0.03)" strokeWidth="1" strokeDasharray="4 4" />
+                                        <line x1="0" y1="135" x2="600" y2="135" stroke="rgba(255,255,255,0.03)" strokeWidth="1" strokeDasharray="4 4" />
+                                        <path className="chart-area" d={chartStats.areaPath} fill="url(#finance-chart-gradient)" />
+                                        <path className="chart-line" d={chartStats.linePath} fill="none" stroke="#C8A97A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                        <circle className="chart-dot" cx={chartStats.dotX} cy={chartStats.dotY} r="4" fill="#111113" stroke="#C8A97A" strokeWidth="2" />
+                                    </svg>
+                                ) : (
+                                    <div className="flex h-full min-h-[180px] items-center justify-center rounded-lg border border-dashed border-white/10 text-[11px] text-[#777]">
+                                        Nenhum dado para o período
+                                    </div>
+                                )}
+                            </div>
+                            <div className="chart-stats">
+                                <div>
+                                    <div className="cs-label">Maior Dia</div>
+                                    <div className="cs-val" suppressHydrationWarning>{formatCurrencyFromCents(chartStats.maxDay * 100)}</div>
+                                </div>
+                                <div>
+                                    <div className="cs-label">Média Diária</div>
+                                    <div className="cs-val" suppressHydrationWarning>{formatCurrencyFromCents(chartStats.avgDay * 100)}</div>
+                                </div>
+                                <div>
+                                    <div className="cs-label">Meta do Mês</div>
+                                    <div className="cs-val" title={monthlyGoalCents ? 'Meta mensal configurada' : 'Nenhuma meta configurada'}>
+                                        {monthlyGoalCents ? formatCurrencyFromCents(monthlyGoalCents) : '--'}
+                                    </div>
+                                </div>
+                                <div style={{ marginLeft: 'auto' }}>
+                                    <div className="cs-label">Projeção</div>
+                                    <div className="cs-val" title={monthlyGoalCents ? 'Projeção baseada no ritmo atual' : 'Projeção indisponível sem meta configurada'}>
+                                        {monthlyGoalCents ? formatCurrencyFromCents(projectedRevenue) : '--'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div className="flex flex-col gap-4">
+                        <section className="panel">
+                            <div className="panel-head">
+                                <span className="panel-title">Meta do Mês</span>
+                                <button type="button" onClick={() => setGoalModalOpen(true)} className="panel-action">
+                                    {monthlyGoalCents ? 'Alterar meta →' : 'Configurar meta →'}
+                                </button>
+                            </div>
+                            <div className="panel-body">
+                                {monthlyGoalCents ? (
+                                    <>
+                                        <div className="meta-hero">
+                                            <div className="meta-value">{formatCurrencyFromCents(monthlyGoalCents)}</div>
+                                            <div className="meta-pct">{goalProgress.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%</div>
+                                        </div>
+                                        <div className="meta-bar-wrap">
+                                            <div className="meta-bar-fill" style={{ width: `${Math.max(0, Math.min(goalProgress, 100))}%` }} />
+                                        </div>
+                                        <div className="meta-stats">
+                                            <div className="meta-stat">
+                                                <div className="meta-stat-label">Atual</div>
+                                                <div className="meta-stat-val">{formatCurrencyFromCents(dashboard.receitas.total_cents)}</div>
+                                            </div>
+                                            <div className="meta-stat">
+                                                <div className="meta-stat-label">Restante</div>
+                                                <div className="meta-stat-val">{formatCurrencyFromCents(goalRemaining)}</div>
+                                            </div>
+                                            <div className="meta-stat">
+                                                <div className="meta-stat-label">Projeção</div>
+                                                <div className="meta-stat-val">{formatCurrencyFromCents(projectedRevenue)}</div>
+                                            </div>
+                                        </div>
+                                        <div className="meta-proj">
+                                            <div className="meta-proj-label">{businessDaysRemaining} dias úteis restam</div>
+                                            <div className="meta-proj-val">{goalRemaining === 0 ? 'Meta batida' : 'Em progresso'}</div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-center">
+                                        <div className="mx-auto max-w-[240px] text-[11px] leading-6 text-[#888]">
+                                            Nenhuma meta configurada para o mês. Defina um valor para acompanhar progresso e projeção de fechamento.
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="gold-ghost"
+                                            size="md"
+                                            onClick={() => setGoalModalOpen(true)}
+                                            className="mt-4"
+                                        >
+                                            Configurar meta →
+                                        </Button>
+                                        <div className="mt-3 text-[10px] text-[#555]">{businessDaysRemaining} dias úteis restam</div>
+                                    </div>
+                                )}
+                            </div>
+                        </section>
+
+                        <section className="panel">
+                            <div className="panel-head">
+                                <span className="panel-title">Formas de Pagamento</span>
+                            </div>
+                            <div className="panel-body" style={{ gap: 0, justifyContent: 'space-around' }}>
+                                {paymentMethods.map((pm, i) => (
+                                    <div key={i} className="pay-row">
+                                        <div className="pay-label-row">
+                                            <span className="pay-lbl">{pm.method === 'CARTAO_CREDITO' || pm.method === 'CREDIT_CARD' ? 'Cartão de crédito' : pm.method === 'CARTAO_DEBITO' || pm.method === 'DEBIT_CARD' ? 'Débito' : pm.method === 'PIX' ? 'PIX' : pm.method}</span>
+                                            <span className="pay-pct">{pm.percentage}%</span>
+                                        </div>
+                                        <div className="pay-bg">
+                                            <div className="pay-fill" style={{ width: `${pm.percentage}%`, background: i === 0 ? '#C8A97A' : i === 1 ? '#60A5FA' : '#555' }} />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     <KpiCard
                         label="Receitas"
@@ -1011,123 +1350,7 @@ export function FinanceiroClient({
 
                 <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px]">
                     <LightCard
-                        title="Receitas vs Despesas"
-                        description="Comparativo diário do período selecionado."
-                    >
-                        {aggregatedBars.length === 0 ? (
-                            <div className="rounded-[12px] border border-dashed border-white/10 bg-white/5 px-4 py-10 text-center text-sm text-white/50">
-                                Sem movimentação financeira confirmada no período.
-                            </div>
-                        ) : (
-                            <div className="h-[210px] min-h-[210px] w-full min-w-0">
-                                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={200}>
-                                    <BarChart data={aggregatedBars} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
-                                        <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                                        <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} />
-                                        <YAxis
-                                            tickLine={false}
-                                            axisLine={false}
-                                            tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
-                                            tickFormatter={(value) => Number(value / 100).toLocaleString('pt-BR', {
-                                                style: 'currency',
-                                                currency: 'BRL',
-                                                minimumFractionDigits: 0,
-                                                maximumFractionDigits: 0,
-                                            })}
-                                        />
-                                        <Tooltip
-                                            contentStyle={{ borderRadius: '10px', borderColor: 'rgba(255,255,255,0.1)', backgroundColor: '#1A1A1E', color: '#fff' }}
-                                            formatter={(value, name) => [
-                                                formatCurrencyFromCents(Number(value ?? 0)),
-                                                name === 'Receitas' || name === 'receitas_cents' ? 'Receitas' : 'Despesas',
-                                            ]}
-                                        />
-                                        <Bar name="Receitas" dataKey="receitas_cents" fill="#22C55E" radius={[5, 5, 0, 0]} />
-                                        <Bar name="Despesas" dataKey="despesas_cents" fill="#EF4444" radius={[5, 5, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        )}
-
-                        <div className="mt-3 flex items-center gap-4 text-[12px] text-white/50">
-                            <div className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full bg-[#22C55E]" />
-                                Receitas
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full bg-[#EF4444]" />
-                                Despesas
-                            </div>
-                        </div>
-                    </LightCard>
-
-                    <LightCard
-                        title="Despesas por Categoria"
-                        description="Distribuição das saídas confirmadas."
-                    >
-                        {pieData.length === 0 ? (
-                            <div className="rounded-[12px] border border-dashed border-white/10 bg-white/5 px-4 py-10 text-center text-sm text-white/50">
-                                Sem despesas confirmadas no período atual.
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                <div className="h-[180px] min-h-[180px] w-full min-w-0">
-                                    <ResponsiveContainer width="100%" height={180} minWidth={1} minHeight={180}>
-                                        <PieChart>
-                                            <Pie
-                                                data={pieData}
-                                                dataKey="valor_cents"
-                                                nameKey="categoria"
-                                                innerRadius={44}
-                                                outerRadius={62}
-                                                paddingAngle={2}
-                                            >
-                                                {pieData.map((item, index) => (
-                                                    <Cell key={item.categoria} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip
-                                                contentStyle={{ borderRadius: '10px', borderColor: 'rgba(255,255,255,0.1)', backgroundColor: '#1A1A1E', color: '#fff' }}
-                                                formatter={(value) => formatCurrencyFromCents(Number(value ?? 0))}
-                                            />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
-
-                                <div className="space-y-3">
-                                    {pieData.map((item, index) => (
-                                        <div key={item.categoria}>
-                                            <div className="flex items-center justify-between gap-3 text-[12px]">
-                                                <div className="flex items-center gap-2 text-white/50">
-                                                    <span
-                                                        className="h-2 w-2 rounded-full"
-                                                        style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
-                                                    />
-                                                    {item.categoria}
-                                                </div>
-                                                <span className="font-bold text-white">
-                                                    {item.percentual.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%
-                                                </span>
-                                            </div>
-                                            <div className="mt-1 h-1 rounded-full bg-white/10">
-                                                <div
-                                                    className="h-1 rounded-full"
-                                                    style={{
-                                                        width: `${Math.max(item.percentual, 10)}%`,
-                                                        backgroundColor: PIE_COLORS[index % PIE_COLORS.length],
-                                                    }}
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </LightCard>
-                </div>
-
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px]">
-                    <LightCard
+                        id="finance-lancamentos"
                         title="Lançamentos"
                         description="Busca, filtro e paginação operacional."
                     >
@@ -1153,22 +1376,22 @@ export function FinanceiroClient({
                             <label
                                 className={cn(
                                     'relative flex h-[34px] w-full items-center gap-2 rounded-[10px] border bg-white/5 px-3 xl:max-w-[260px]',
-                                    searchValue.trim().length > 0 ? 'border-[#C8A97A]' : 'border-white/15'
+                                    searchValue.trim().length > 0 ? 'border-[color:var(--orion-gold)]' : 'border-[color:var(--orion-border-low)]'
                                 )}
                             >
-                                <Search className="h-4 w-4 text-white/40" />
+                                <Search className="h-4 w-4 text-[color:var(--orion-text-muted)]" />
                                 <input
                                     value={searchValue}
                                     onChange={(event) => setSearchValue(event.target.value)}
                                     placeholder="Buscar lançamento..."
-                                    className="w-full border-0 bg-transparent p-0 pr-6 text-[13px] text-white outline-none placeholder:text-white/40"
+                                    className="w-full border-0 bg-transparent p-0 pr-6 text-[13px] text-[color:var(--orion-text)] outline-none placeholder:text-[color:var(--orion-text-muted)]"
                                 />
                                 {searchValue.length > 0 ? (
                                     <button
                                         type="button"
                                         aria-label="Limpar busca"
                                         onClick={() => setSearchValue('')}
-                                        className="absolute right-2 flex h-5 w-5 items-center justify-center rounded-full text-white/50 hover:bg-white/10 hover:text-white"
+                                        className="absolute right-2 flex h-5 w-5 items-center justify-center rounded-full text-[color:var(--orion-text-muted)] hover:bg-white/5 hover:text-[color:var(--orion-text)]"
                                     >
                                         <X className="h-3 w-3" />
                                     </button>
@@ -1177,7 +1400,7 @@ export function FinanceiroClient({
                         </div>
 
                         {launches.data.length === 0 ? (
-                            <div className="rounded-[12px] border border-dashed border-white/10 bg-white/5 px-4 py-10 text-center text-sm text-white/50">
+                            <div className="rounded-[12px] border border-dashed border-[color:var(--orion-border-low)] bg-white/5 px-4 py-10 text-center text-sm text-[color:var(--orion-text-secondary)]">
                                 Nenhum lançamento encontrado com os filtros atuais.
                             </div>
                         ) : (
@@ -1199,8 +1422,8 @@ export function FinanceiroClient({
                                                         </div>
                                                     </div>
                                                     <KebabMenu
-                                                        disabled={record.status === 'pendente'}
-                                                        canDelete={canDeleteLaunch(record)}
+                                                        disabled={record.status === 'pendente' && currentUserRole !== 'ROOT'}
+                                                        canDelete={canDeleteLaunch(record, currentUserRole)}
                                                         onEdit={() => setEditingLaunch(record)}
                                                         onDelete={() => setConfirmDelete(record)}
                                                     />
@@ -1324,8 +1547,8 @@ export function FinanceiroClient({
                                                         </td>
                                                         <td className="px-3 py-3 text-right">
                                                             <KebabMenu
-                                                                disabled={record.status === 'pendente'}
-                                                                canDelete={canDeleteLaunch(record)}
+                                                                disabled={record.status === 'pendente' && currentUserRole !== 'ROOT'}
+                                                                canDelete={canDeleteLaunch(record, currentUserRole)}
                                                                 onEdit={() => setEditingLaunch(record)}
                                                                 onDelete={() => setConfirmDelete(record)}
                                                             />
@@ -1446,6 +1669,15 @@ export function FinanceiroClient({
                     onCancel={() => setConfirmDelete(null)}
                 />
             ) : null}
+
+            <MonthlyGoalModal
+                open={goalModalOpen}
+                initialAmountCents={monthlyGoalCents}
+                title="Meta do mês"
+                helperText="A meta salva aqui também aparece no dashboard."
+                onClose={() => setGoalModalOpen(false)}
+                onSave={handleSaveMonthlyGoal}
+            />
 
             <ToastViewport toasts={toasts} onDismiss={dismissToast} />
         </div>

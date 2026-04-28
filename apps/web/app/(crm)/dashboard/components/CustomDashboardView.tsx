@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { DashboardPayload } from '@/lib/api';
+import { MonthlyGoalModal } from '@/components/modules/finance/MonthlyGoalModal';
+import { getMonthlyFinanceGoalKey, readMonthlyFinanceGoal, writeMonthlyFinanceGoal } from '@/lib/finance-goal';
 import { formatCurrencyFromCents } from '@/lib/utils';
 import './DashboardTemplate.css';
 
@@ -33,6 +35,22 @@ function countBusinessDaysRemaining(date: Date): number {
     const dow = new Date(year, month, day).getDay();
     if (dow !== 0 && dow !== 6) count += 1;
   }
+  return count;
+}
+
+function countBusinessDaysBetween(start: Date, end: Date): number {
+  const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  let count = 0;
+
+  while (cursor <= last) {
+    const dow = cursor.getDay();
+    if (dow !== 0 && dow !== 6) {
+      count += 1;
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
   return count;
 }
 
@@ -141,10 +159,33 @@ export function CustomDashboardView({ data }: Props) {
   const [currentMonth, setCurrentMonth] = useState<Date | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [activeSection, setActiveSection] = useState<string>('section-financeiro');
+  const [monthlyGoalCents, setMonthlyGoalCents] = useState<number | null>(null);
+  const [goalModalOpen, setGoalModalOpen] = useState(false);
 
   useEffect(() => {
     setCurrentMonth(new Date());
   }, []);
+
+  useEffect(() => {
+    if (!currentMonth) return;
+    const goalKey = getMonthlyFinanceGoalKey(currentMonth ?? undefined);
+
+    const loadGoal = () => {
+      setMonthlyGoalCents(readMonthlyFinanceGoal(currentMonth ?? undefined)?.amount_cents ?? null);
+    };
+
+    loadGoal();
+
+    function handleStorage(event: StorageEvent) {
+      if (event.key !== goalKey) {
+        return;
+      }
+      loadGoal();
+    }
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [currentMonth]);
 
   /* TASK-015: Scrollspy na nav do Dashboard */
   useEffect(() => {
@@ -257,7 +298,17 @@ export function CustomDashboardView({ data }: Props) {
   const topClientsTotalCents = topClients.reduce((acc, c) => acc + c.total_cents, 0);
   const monthDate = currentMonth ?? new Date('2026-01-01T12:00:00-03:00');
   const businessDaysRemaining = countBusinessDaysRemaining(monthDate);
+  const businessDaysElapsed = countBusinessDaysBetween(new Date(monthDate.getFullYear(), monthDate.getMonth(), 1), monthDate);
   const todayLabel = monthDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', timeZone: 'America/Sao_Paulo' });
+  const monthRevenueCents = data?.kpis.month_in_cents ?? 0;
+  const goalProgress = monthlyGoalCents ? Math.min(100, monthRevenueCents / monthlyGoalCents * 100) : 0;
+  const goalRemaining = monthlyGoalCents ? Math.max(monthlyGoalCents - monthRevenueCents, 0) : 0;
+  const projectedRevenue = monthlyGoalCents
+    ? Math.max(
+        monthRevenueCents,
+        Math.round((monthRevenueCents / Math.max(businessDaysElapsed, 1)) * (businessDaysElapsed + businessDaysRemaining))
+      )
+    : monthRevenueCents;
 
   const chartSeries = useMemo(() => {
     const fallback = [
@@ -317,6 +368,13 @@ export function CustomDashboardView({ data }: Props) {
       avgDay,
     };
   }, [chartSeries, hasChartData]);
+
+  function handleSaveMonthlyGoal(amountCents: number) {
+    const anchorDate = currentMonth ?? new Date();
+    const goal = writeMonthlyFinanceGoal(amountCents, anchorDate);
+    setMonthlyGoalCents(goal.amount_cents);
+    setGoalModalOpen(false);
+  }
 
   const calendarCells = useMemo(() => {
     if (!currentMonth) return [];
@@ -618,19 +676,56 @@ export function CustomDashboardView({ data }: Props) {
         {/* Meta + Pagamentos */}
         <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
           <div className="panel anim-in" style={{flex:1}}>
-            <div className="panel-head"><span className="panel-title">Meta do Mês</span></div>
-            <div className="panel-body" style={{justifyContent:'center',alignItems:'center',gap:'10px',textAlign:'center',minHeight:'180px'}}>
-              <div style={{fontSize:'11px',color:'#888',lineHeight:1.6,maxWidth:'240px'}}>
-                Nenhuma meta configurada para o mês. Defina um valor para acompanhar progresso e projeção de fechamento.
-              </div>
-              <Link
-                href="/ajustes"
-                className="panel-action"
-                style={{fontSize:'12px',color:'#C8A97A',padding:'8px 14px',border:'1px solid rgba(200,169,122,0.3)',borderRadius:'6px',textDecoration:'none'}}
-              >
-                Configurar meta →
-              </Link>
-              <div style={{fontSize:'10px',color:'#555',marginTop:'4px'}}>{businessDaysRemaining} dias úteis restam</div>
+            <div className="panel-head">
+              <span className="panel-title">Meta do Mês</span>
+              <button type="button" className="panel-action" onClick={() => setGoalModalOpen(true)}>
+                {monthlyGoalCents ? 'Alterar meta →' : 'Configurar meta →'}
+              </button>
+            </div>
+            <div className="panel-body" style={{justifyContent:'center',gap:'10px'}}>
+              {monthlyGoalCents ? (
+                <>
+                  <div className="meta-hero">
+                    <div className="meta-value">{formatCurrencyFromCents(monthlyGoalCents)}</div>
+                    <div className="meta-pct">{goalProgress.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%</div>
+                  </div>
+                  <div className="meta-bar-wrap">
+                    <div className="meta-bar-fill" style={{width: `${Math.max(0, Math.min(goalProgress, 100))}%`}} />
+                  </div>
+                  <div className="meta-stats">
+                    <div className="meta-stat">
+                      <div className="meta-stat-label">Atual</div>
+                      <div className="meta-stat-val">{formatCurrencyFromCents(monthRevenueCents)}</div>
+                    </div>
+                    <div className="meta-stat">
+                      <div className="meta-stat-label">Restante</div>
+                      <div className="meta-stat-val">{formatCurrencyFromCents(goalRemaining)}</div>
+                    </div>
+                    <div className="meta-stat">
+                      <div className="meta-stat-label">Projeção</div>
+                      <div className="meta-stat-val">{formatCurrencyFromCents(projectedRevenue)}</div>
+                    </div>
+                  </div>
+                  <div className="meta-proj">
+                    <div className="meta-proj-label">{businessDaysRemaining} dias úteis restam</div>
+                    <div className="meta-proj-val">{goalRemaining === 0 ? 'Meta batida' : 'Em progresso'}</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{fontSize:'11px',color:'#888',lineHeight:1.6,maxWidth:'240px',textAlign:'center'}}>
+                    Nenhuma meta configurada para o mês. Defina um valor para acompanhar progresso e projeção de fechamento.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setGoalModalOpen(true)}
+                    className="rounded-[6px] border border-[color:rgba(200,169,122,0.3)] bg-[color:var(--orion-gold-bg)] px-3.5 py-2 text-[12px] text-[color:var(--orion-gold)] transition hover:bg-[color:rgba(191,160,106,0.14)]"
+                  >
+                    Configurar meta →
+                  </button>
+                  <div style={{fontSize:'10px',color:'#555',marginTop:'4px'}}>{businessDaysRemaining} dias úteis restam</div>
+                </>
+              )}
             </div>
           </div>
           <div className="panel anim-in">
@@ -932,6 +1027,15 @@ export function CustomDashboardView({ data }: Props) {
           </div>
         </div>
       </div>
+
+      <MonthlyGoalModal
+        open={goalModalOpen}
+        initialAmountCents={monthlyGoalCents}
+        title="Meta do mês"
+        helperText="A meta salva aqui aparece no dashboard e no financeiro."
+        onClose={() => setGoalModalOpen(false)}
+        onSave={handleSaveMonthlyGoal}
+      />
 
     </div>
   );
