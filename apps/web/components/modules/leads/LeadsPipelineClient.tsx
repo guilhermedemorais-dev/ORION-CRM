@@ -30,6 +30,14 @@ import { LeadsImportDialog } from './LeadsImportDialog';
 type PipelineViewMode = 'kanban' | 'list';
 type NoteSaveState = 'idle' | 'saving' | 'saved' | 'error';
 
+interface LeadSearchSuggestion {
+    id: string;
+    kind: 'lead' | 'customer';
+    title: string;
+    subtitle: string;
+    whatsapp_number?: string | null;
+}
+
 const WHATSAPP_REGEX = /^\+?[1-9]\d{9,14}$/;
 
 function normalizeWhatsAppInput(raw: string): string {
@@ -39,6 +47,41 @@ function normalizeWhatsAppInput(raw: string): string {
 function isValidWhatsApp(raw: string): boolean {
     const cleaned = normalizeWhatsAppInput(raw);
     return WHATSAPP_REGEX.test(cleaned);
+}
+
+function onlyDigits(value: string | null | undefined): string {
+    return (value ?? '').replace(/\D/g, '');
+}
+
+function normalizeText(value: string | null | undefined): string {
+    return (value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+}
+
+function scoreSuggestionMatch(searchTerm: string, suggestion: LeadSearchSuggestion): number {
+    const normalizedSearch = normalizeText(searchTerm);
+    const digitsSearch = onlyDigits(searchTerm);
+    const normalizedTitle = normalizeText(suggestion.title);
+    const normalizedSubtitle = normalizeText(suggestion.subtitle);
+    const suggestionDigits = `${onlyDigits(suggestion.whatsapp_number)} ${onlyDigits(suggestion.subtitle)}`.trim();
+
+    if (digitsSearch && suggestionDigits.includes(digitsSearch)) {
+        if (suggestionDigits.startsWith(digitsSearch)) return 0;
+        return 1;
+    }
+
+    if (normalizedTitle === normalizedSearch) return 2;
+    if (normalizedTitle.startsWith(normalizedSearch)) return 3;
+    if (normalizedTitle.includes(normalizedSearch)) return 4;
+    if (normalizedSubtitle.includes(normalizedSearch)) return 5;
+    return 6;
+}
+
+function isStrongSuggestionMatch(searchTerm: string, suggestion: LeadSearchSuggestion): boolean {
+    return scoreSuggestionMatch(searchTerm, suggestion) <= 2;
 }
 
 function initials(name: string | null | undefined): string {
@@ -141,6 +184,11 @@ export function LeadsPipelineClient({
     const [newStageColor, setNewStageColor] = useState('#3B82F6');
     const [showNewLeadForm, setShowNewLeadForm] = useState(false);
     const [newLeadInitialStage, setNewLeadInitialStage] = useState<string | null>(null);
+    const [newLeadName, setNewLeadName] = useState('');
+    const [newLeadWhatsapp, setNewLeadWhatsapp] = useState('');
+    const [newLeadSource, setNewLeadSource] = useState('WHATSAPP');
+    const [newLeadSearchResults, setNewLeadSearchResults] = useState<LeadSearchSuggestion[]>([]);
+    const [newLeadSearchLoading, setNewLeadSearchLoading] = useState(false);
     const [activeQuickFilter, setActiveQuickFilter] = useState<'ALL' | 'MINE' | 'WHATSAPP' | 'STALE' | 'HAS_TASKS'>('ALL');
     const [viewMode, setViewMode] = useState<PipelineViewMode>('kanban');
     const [hideEmptyStages, setHideEmptyStages] = useState(false);
@@ -190,7 +238,114 @@ export function LeadsPipelineClient({
     function openNewLeadModal(stageId: string | null) {
         setNewLeadInitialStage(stageId);
         setFormErrors({});
+        setNewLeadName('');
+        setNewLeadWhatsapp('');
+        setNewLeadSource('WHATSAPP');
+        setNewLeadSearchResults([]);
         setShowNewLeadForm(true);
+    }
+
+    useEffect(() => {
+        if (!showNewLeadForm) return;
+
+        const searchTerm = newLeadName.trim();
+        if (searchTerm.length < 2) {
+            setNewLeadSearchResults([]);
+            setNewLeadSearchLoading(false);
+            return;
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(async () => {
+            setNewLeadSearchLoading(true);
+            try {
+                const [customersRes, leadsRes] = await Promise.all([
+                    fetch(`/api/internal/customers?q=${encodeURIComponent(searchTerm)}&limit=5`, {
+                        signal: controller.signal,
+                        cache: 'no-store',
+                    }),
+                    fetch(`/api/internal/leads?q=${encodeURIComponent(searchTerm)}&limit=5`, {
+                        signal: controller.signal,
+                        cache: 'no-store',
+                    }),
+                ]);
+
+                const nextResults: LeadSearchSuggestion[] = [];
+
+                if (customersRes.ok) {
+                    const customersData = await customersRes.json() as {
+                        data?: Array<{ id: string; name: string; whatsapp_number: string; cpf: string | null; email: string | null }>;
+                    };
+                    for (const customer of customersData.data ?? []) {
+                        nextResults.push({
+                            id: customer.id,
+                            kind: 'customer',
+                            title: customer.name,
+                            subtitle: [customer.cpf ? `CPF: ${customer.cpf}` : null, customer.whatsapp_number, customer.email].filter(Boolean).join(' · '),
+                            whatsapp_number: customer.whatsapp_number,
+                        });
+                    }
+                }
+
+                if (leadsRes.ok) {
+                    const leadsData = await leadsRes.json() as {
+                        data?: Array<{ id: string; name: string | null; whatsapp_number: string; stage_name?: string | null; email?: string | null }>;
+                    };
+                    for (const lead of leadsData.data ?? []) {
+                        nextResults.push({
+                            id: lead.id,
+                            kind: 'lead',
+                            title: lead.name ?? 'Lead sem nome',
+                            subtitle: [lead.stage_name ?? 'Lead', lead.whatsapp_number, lead.email].filter(Boolean).join(' · '),
+                            whatsapp_number: lead.whatsapp_number,
+                        });
+                    }
+                }
+
+                nextResults.sort((a, b) => {
+                    const scoreDiff = scoreSuggestionMatch(searchTerm, a) - scoreSuggestionMatch(searchTerm, b);
+                    if (scoreDiff !== 0) return scoreDiff;
+                    if (a.kind !== b.kind) return a.kind === 'customer' ? -1 : 1;
+                    return a.title.localeCompare(b.title, 'pt-BR');
+                });
+
+                setNewLeadSearchResults(nextResults);
+            } catch (error) {
+                if (!(error instanceof DOMException && error.name === 'AbortError')) {
+                    setNewLeadSearchResults([]);
+                }
+            } finally {
+                setNewLeadSearchLoading(false);
+            }
+        }, 250);
+
+        return () => {
+            controller.abort();
+            clearTimeout(timeoutId);
+        };
+    }, [newLeadName, showNewLeadForm]);
+
+    function useCustomerSuggestion(suggestion: LeadSearchSuggestion) {
+        setNewLeadName(suggestion.title);
+        setNewLeadWhatsapp(suggestion.whatsapp_number ?? '');
+        setNewLeadSearchResults([]);
+        setFormErrors((prev) => ({ ...prev, name: undefined, whatsapp_number: undefined, submit: undefined }));
+        setInfoMessage(`Dados de ${suggestion.title} carregados para criar o lead.`);
+    }
+
+    function openExistingLeadSuggestion(suggestion: LeadSearchSuggestion) {
+        const existingLead = leads.find((lead) => lead.id === suggestion.id) ?? null;
+
+        if (existingLead) {
+            setQuickViewLead(existingLead);
+        } else {
+            window.location.href = `/leads/${suggestion.id}`;
+            return;
+        }
+
+        setShowNewLeadForm(false);
+        setNewLeadSearchResults([]);
+        setInfoMessage(`Lead existente encontrado: ${suggestion.title}.`);
     }
 
     useEffect(() => {
@@ -258,6 +413,51 @@ export function LeadsPipelineClient({
         }
         return grouped;
     }, [filteredLeads, stages]);
+
+    const primaryNewLeadSuggestion = useMemo(
+        () => newLeadSearchResults[0] ?? null,
+        [newLeadSearchResults]
+    );
+
+    const newLeadSubmitLabel = useMemo(() => {
+        const searchTerm = newLeadName.trim();
+        if (!searchTerm || searchTerm.length < 2 || !primaryNewLeadSuggestion) {
+            return 'Criar novo lead';
+        }
+
+        if (isStrongSuggestionMatch(searchTerm, primaryNewLeadSuggestion)) {
+            return primaryNewLeadSuggestion.kind === 'lead'
+                ? 'Abrir cadastro existente'
+                : 'Continuar com novo lead';
+        }
+
+        if (newLeadSearchResults.length > 0) {
+            return 'Continuar com novo lead';
+        }
+
+        return 'Criar novo lead';
+    }, [newLeadName, newLeadSearchResults, primaryNewLeadSuggestion]);
+
+    const newLeadSubmitHint = useMemo(() => {
+        const searchTerm = newLeadName.trim();
+        if (!searchTerm || searchTerm.length < 2 || !primaryNewLeadSuggestion) {
+            return null;
+        }
+
+        if (primaryNewLeadSuggestion.kind === 'lead' && isStrongSuggestionMatch(searchTerm, primaryNewLeadSuggestion)) {
+            return `Encontramos um lead muito parecido: ${primaryNewLeadSuggestion.title}.`;
+        }
+
+        if (primaryNewLeadSuggestion.kind === 'customer' && isStrongSuggestionMatch(searchTerm, primaryNewLeadSuggestion)) {
+            return `Encontramos um cliente muito parecido: ${primaryNewLeadSuggestion.title}.`;
+        }
+
+        if (newLeadSearchResults.length > 0) {
+            return 'Existem cadastros parecidos logo acima para conferência.';
+        }
+
+        return null;
+    }, [newLeadName, newLeadSearchResults, primaryNewLeadSuggestion]);
 
     const selectedLead = useMemo(
         () => leads.find((lead) => lead.id === selectedLeadId) ?? null,
@@ -438,10 +638,17 @@ export function LeadsPipelineClient({
         setInfoMessage(null);
         setFormErrors({});
 
-        const form = new FormData(event.currentTarget);
-        const name = String(form.get('name') ?? '').trim();
-        const whatsappRaw = String(form.get('whatsapp_number') ?? '').trim();
+        const name = newLeadName.trim();
+        const whatsappRaw = newLeadWhatsapp.trim();
         const whatsappCleaned = normalizeWhatsAppInput(whatsappRaw);
+        const strongSuggestion = primaryNewLeadSuggestion && isStrongSuggestionMatch(name, primaryNewLeadSuggestion)
+            ? primaryNewLeadSuggestion
+            : null;
+
+        if (strongSuggestion?.kind === 'lead') {
+            openExistingLeadSuggestion(strongSuggestion);
+            return true;
+        }
 
         // client-side validation (TASK-09)
         const errors: { name?: string; whatsapp_number?: string } = {};
@@ -463,7 +670,7 @@ export function LeadsPipelineClient({
         const payload = {
             name,
             whatsapp_number: whatsappCleaned.startsWith('+') ? whatsappCleaned : `+${whatsappCleaned}`,
-            source: String(form.get('source') ?? 'WHATSAPP'),
+            source: newLeadSource,
             pipeline_id: pipelineId,
             stage_id: newLeadInitialStage ?? undefined,
         };
@@ -489,7 +696,10 @@ export function LeadsPipelineClient({
         }
 
         setInfoMessage(data?.duplicate_prevented ? 'Lead já existia e foi reutilizado.' : 'Lead criado com sucesso.');
-        event.currentTarget.reset();
+        setNewLeadName('');
+        setNewLeadWhatsapp('');
+        setNewLeadSource('WHATSAPP');
+        setNewLeadSearchResults([]);
         return true;
     }
 
@@ -1106,17 +1316,72 @@ export function LeadsPipelineClient({
                             <div>
                                 <Input
                                     name="name"
-                                    placeholder="Nome do lead"
+                                    placeholder="Digite nome, CPF ou telefone"
+                                    value={newLeadName}
                                     aria-invalid={!!formErrors.name}
-                                    onChange={() => formErrors.name && setFormErrors((p) => ({ ...p, name: undefined }))}
+                                    onChange={(event) => {
+                                        setNewLeadName(event.target.value);
+                                        if (formErrors.name) setFormErrors((p) => ({ ...p, name: undefined }));
+                                    }}
                                     className={cn(
                                         'h-10 bg-[color:var(--orion-elevated)] text-[color:var(--orion-text)] placeholder:text-[color:var(--orion-text-disabled)]',
                                         formErrors.name ? 'border-rose-500/60 focus:border-rose-500' : 'border-white/10'
                                     )}
                                 />
+                                {!newLeadSearchLoading && newLeadName.trim().length < 2 ? (
+                                    <p className="mt-1 text-[10px] text-[color:var(--orion-text-muted)]">
+                                        Se a pessoa j&#225; existir, selecione abaixo para evitar cadastro duplicado.
+                                    </p>
+                                ) : null}
+                                {newLeadSearchLoading ? (
+                                    <p className="mt-1 text-[10px] text-[color:var(--orion-text-muted)]">Buscando por nome, CPF ou telefone...</p>
+                                ) : null}
                                 {formErrors.name && (
                                     <p className="mt-1 text-[11px] text-rose-400">{formErrors.name}</p>
                                 )}
+                                {!formErrors.name && newLeadName.trim().length >= 2 && newLeadSearchResults.length > 0 ? (
+                                    <div className="mt-2 rounded-md border border-white/10 bg-[color:var(--orion-elevated)]">
+                                        <div className="border-b border-white/5 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--orion-text-muted)]">
+                                            Cadastros encontrados
+                                        </div>
+                                        <div className="max-h-52 overflow-y-auto p-1">
+                                            {newLeadSearchResults.map((suggestion) => (
+                                                <button
+                                                    key={`${suggestion.kind}-${suggestion.id}`}
+                                                    type="button"
+                                                    onClick={() => suggestion.kind === 'lead'
+                                                        ? openExistingLeadSuggestion(suggestion)
+                                                        : useCustomerSuggestion(suggestion)}
+                                                    className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left transition hover:bg-white/5"
+                                                >
+                                                    <div className="min-w-0">
+                                                        <div className="truncate text-[12px] font-semibold text-[color:var(--orion-text)]">
+                                                            {suggestion.title}
+                                                        </div>
+                                                        <div className="truncate text-[11px] text-[color:var(--orion-text-secondary)]">
+                                                            {suggestion.subtitle}
+                                                        </div>
+                                                    </div>
+                                                    <span
+                                                        className={cn(
+                                                            'shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold',
+                                                            suggestion.kind === 'lead'
+                                                                ? 'border-brand-gold/30 bg-brand-gold/10 text-brand-gold'
+                                                                : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
+                                                        )}
+                                                    >
+                                                        {suggestion.kind === 'lead' ? 'Já existe' : 'Aproveitar'}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : null}
+                                {!formErrors.name && newLeadName.trim().length >= 2 && !newLeadSearchLoading && newLeadSearchResults.length === 0 ? (
+                                    <p className="mt-2 rounded-md border border-dashed border-white/10 px-3 py-2 text-[11px] text-[color:var(--orion-text-secondary)]">
+                                        Nenhum cadastro parecido encontrado. Voc&#234; pode continuar e criar um lead novo.
+                                    </p>
+                                ) : null}
                             </div>
                             <div>
                                 <Input
@@ -1124,8 +1389,12 @@ export function LeadsPipelineClient({
                                     type="tel"
                                     inputMode="tel"
                                     placeholder="+5511999999999"
+                                    value={newLeadWhatsapp}
                                     aria-invalid={!!formErrors.whatsapp_number}
-                                    onChange={() => formErrors.whatsapp_number && setFormErrors((p) => ({ ...p, whatsapp_number: undefined }))}
+                                    onChange={(event) => {
+                                        setNewLeadWhatsapp(event.target.value);
+                                        if (formErrors.whatsapp_number) setFormErrors((p) => ({ ...p, whatsapp_number: undefined }));
+                                    }}
                                     className={cn(
                                         'h-10 bg-[color:var(--orion-elevated)] text-[color:var(--orion-text)] placeholder:text-[color:var(--orion-text-disabled)]',
                                         formErrors.whatsapp_number ? 'border-rose-500/60 focus:border-rose-500' : 'border-white/10'
@@ -1140,7 +1409,8 @@ export function LeadsPipelineClient({
                             <select
                                 name="source"
                                 title="Origem do lead"
-                                defaultValue="WHATSAPP"
+                                value={newLeadSource}
+                                onChange={(event) => setNewLeadSource(event.target.value)}
                                 className="h-10 w-full rounded-md border border-white/10 bg-[color:var(--orion-elevated)] px-3 text-sm text-[color:var(--orion-text)] outline-none"
                             >
                                 <option value="WHATSAPP">WhatsApp</option>
@@ -1154,11 +1424,16 @@ export function LeadsPipelineClient({
                                     {formErrors.submit}
                                 </div>
                             )}
+                            {newLeadSubmitHint ? (
+                                <div className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-[color:var(--orion-text-secondary)]">
+                                    {newLeadSubmitHint}
+                                </div>
+                            ) : null}
                             <button
                                 type="submit"
                                 className="inline-flex h-10 w-full items-center justify-center rounded-md bg-brand-gold text-sm font-bold text-black transition hover:bg-brand-gold/80"
                             >
-                                Criar lead
+                                {newLeadSubmitLabel}
                             </button>
                         </form>
                     </div>

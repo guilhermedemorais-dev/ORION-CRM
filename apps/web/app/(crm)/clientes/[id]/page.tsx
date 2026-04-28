@@ -23,5 +23,5 @@ export default async function CustomerDetailPage({ params }: PageProps) {
     }
   }
 
-  return <ClientPanelShell customerId={id} initialCustomer={customer} />;
+  return <ClientPanelShell customerId={id} initialCustomer={customer} entityType="customer" />;
 }

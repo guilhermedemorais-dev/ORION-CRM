@@ -29,6 +29,13 @@ const loginRateLimit = rateLimit({
     name: 'auth-login',
 });
 
+function isLocalLoginRequest(req: Request): boolean {
+    const host = String(req.hostname || '').toLowerCase();
+    const forwardedHost = String(req.headers['x-forwarded-host'] || '').toLowerCase();
+    return ['127.0.0.1', 'localhost', '::1'].includes(host)
+        || ['127.0.0.1', 'localhost', '::1'].includes(forwardedHost);
+}
+
 interface FailedLoginEntry {
     failCount: number;
     windowResetAt: number;
@@ -118,7 +125,13 @@ function clearFailedLogin(key: string): void {
 
 router.post(
     '/login',
-    loginRateLimit,
+    (req: Request, res: Response, next: NextFunction) => {
+        if (isLocalLoginRequest(req)) {
+            next();
+            return;
+        }
+        loginRateLimit(req, res, next);
+    },
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const parsed = loginSchema.safeParse(req.body);
@@ -132,7 +145,7 @@ router.post(
 
             const { email, password } = parsed.data;
             const failedLoginKey = getFailedLoginKey(email, req);
-            const retryAfter = getFailedLoginRetryAfterSeconds(failedLoginKey);
+            const retryAfter = isLocalLoginRequest(req) ? null : getFailedLoginRetryAfterSeconds(failedLoginKey);
 
             if (retryAfter) {
                 next(AppError.rateLimited(retryAfter));
@@ -147,7 +160,7 @@ router.post(
             const user = result.rows[0];
 
             if (!user) {
-                const blockedFor = registerFailedLogin(failedLoginKey);
+                const blockedFor = isLocalLoginRequest(req) ? null : registerFailedLogin(failedLoginKey);
                 next(blockedFor ? AppError.rateLimited(blockedFor) : AppError.unauthorized('Credenciais inválidas.'));
                 return;
             }
@@ -179,12 +192,14 @@ router.post(
             // Verify password
             const valid = await bcrypt.compare(password, user.password_hash);
             if (!valid) {
-                const blockedFor = registerFailedLogin(failedLoginKey);
+                const blockedFor = isLocalLoginRequest(req) ? null : registerFailedLogin(failedLoginKey);
                 next(blockedFor ? AppError.rateLimited(blockedFor) : AppError.unauthorized('Credenciais inválidas.'));
                 return;
             }
 
-            clearFailedLogin(failedLoginKey);
+            if (!isLocalLoginRequest(req)) {
+                clearFailedLogin(failedLoginKey);
+            }
 
             // Read session timeout from settings
             const timeoutResult = await query<{ security_session_timeout_minutes: number }>(

@@ -2,11 +2,13 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { notify } from '@/lib/toast';
 import type { CustomerFull } from '../types';
 
 interface Props {
   customer: CustomerFull;
   customerId: string;
+  entityType: 'customer' | 'lead';
   onUpdate: (updated: Partial<CustomerFull>) => void;
 }
 
@@ -55,6 +57,60 @@ function FieldGroup({ label, children }: { label: string; children: React.ReactN
     </div>
   );
 }
+
+type FormState = {
+  name: string;
+  social_name: string;
+  cpf: string;
+  birth_date: string;
+  rg: string;
+  gender: string;
+  whatsapp_number: string;
+  email: string;
+  instagram: string;
+  phone_landline: string;
+  zip_code: string;
+  city: string;
+  state: string;
+  address_full: string;
+  cnpj: string;
+  company_name: string;
+  company_address: string;
+  preferred_metal: string;
+  ring_size: string;
+  preferred_channel: string;
+  special_dates: string;
+  remarketing_notes: string;
+};
+
+type FieldName = keyof FormState;
+
+const REQUIRED_FIELDS: FieldName[] = ['name', 'whatsapp_number'];
+
+const fieldLabels: Record<FieldName, string> = {
+  name: 'Nome completo',
+  social_name: 'Nome social',
+  cpf: 'CPF',
+  birth_date: 'Data de nascimento',
+  rg: 'RG',
+  gender: 'Gênero',
+  whatsapp_number: 'WhatsApp',
+  email: 'E-mail',
+  instagram: 'Instagram',
+  phone_landline: 'Telefone fixo',
+  zip_code: 'CEP',
+  city: 'Cidade',
+  state: 'Estado',
+  address_full: 'Endereço completo',
+  cnpj: 'CNPJ',
+  company_name: 'Razão social',
+  company_address: 'Endereço empresarial',
+  preferred_metal: 'Metal preferido',
+  ring_size: 'Tamanho do aro',
+  preferred_channel: 'Canal preferido',
+  special_dates: 'Datas especiais',
+  remarketing_notes: 'Observações para remarketing',
+};
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -106,7 +162,7 @@ function fmtDate(dateStr: string | null | undefined): string {
   }
 }
 
-export default function ClientFichaTab({ customer, customerId, onUpdate }: Props) {
+export default function ClientFichaTab({ customer, customerId, entityType, onUpdate }: Props) {
   const router = useRouter();
   const [form, setForm] = useState({
     name: customer.name ?? '',
@@ -131,14 +187,71 @@ export default function ClientFichaTab({ customer, customerId, onUpdate }: Props
     preferred_channel: customer.preferred_channel ?? '',
     special_dates: customer.special_dates ?? '',
     remarketing_notes: customer.remarketing_notes ?? '',
-  });
+  } satisfies FormState);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cepLoading, setCepLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldName, string>>>({});
+
+  function getFieldStyle(field: FieldName): React.CSSProperties {
+    return fieldErrors[field]
+      ? { ...inputStyle, border: '1px solid rgba(224,82,82,0.75)' }
+      : inputStyle;
+  }
+
+  function getTextareaFieldStyle(field: FieldName): React.CSSProperties {
+    return fieldErrors[field]
+      ? { ...textareaStyle, border: '1px solid rgba(224,82,82,0.75)' }
+      : textareaStyle;
+  }
+
+  function renderFieldError(field: FieldName) {
+    if (!fieldErrors[field]) return null;
+    return (
+      <div style={{ marginTop: '4px', fontSize: '11px', color: '#E05252' }}>
+        {fieldErrors[field]}
+      </div>
+    );
+  }
+
+  function validateForm(values: FormState): Partial<Record<FieldName, string>> {
+    const nextErrors: Partial<Record<FieldName, string>> = {};
+
+    for (const field of REQUIRED_FIELDS) {
+      if (!values[field].trim()) {
+        nextErrors[field] = `${fieldLabels[field]} é obrigatório.`;
+      }
+    }
+
+    if (values.whatsapp_number.trim() && !/^\+[1-9]\d{1,14}$/.test(values.whatsapp_number.trim())) {
+      nextErrors.whatsapp_number = 'Use o formato E.164. Exemplo: +5511999998888';
+    }
+
+    if (values.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) {
+      nextErrors.email = 'Informe um e-mail válido.';
+    }
+
+    const cpfDigits = values.cpf.replace(/\D/g, '');
+    if (values.cpf.trim() && cpfDigits.length !== 11) {
+      nextErrors.cpf = 'CPF deve ter 11 dígitos.';
+    }
+
+    if (values.state.trim() && values.state.trim().length !== 2) {
+      nextErrors.state = 'Estado deve ter 2 letras.';
+    }
+
+    return nextErrors;
+  }
 
   function handleChange(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      setFieldErrors((prev) => {
+        if (!prev[field]) return prev;
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
     };
   }
@@ -168,25 +281,42 @@ export default function ClientFichaTab({ customer, customerId, onUpdate }: Props
   async function handleSave() {
     setSaving(true);
     setError(null);
+    const nextFieldErrors = validateForm(form);
+    setFieldErrors(nextFieldErrors);
+
+    if (Object.keys(nextFieldErrors).length > 0) {
+      const firstMessage = Object.values(nextFieldErrors)[0] ?? 'Revise os campos obrigatórios.';
+      setError(`[VALIDATION] ${firstMessage}`);
+      notify.error('Revise a ficha do cliente', firstMessage);
+      setSaving(false);
+      return;
+    }
+
     try {
       let targetId = customerId;
 
-      if (customer.is_converted === false) {
+      let converted = false;
+      if (entityType === 'lead') {
         const convertRes = await fetch(`/api/internal/leads/${customerId}/convert`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
         });
         if (!convertRes.ok) {
-          setError(await readApiError(convertRes, 'CONVERT_FAILED'));
+          const msg = await readApiError(convertRes, 'CONVERT_FAILED');
+          setError(msg);
+          notify.error('Falha ao converter lead', msg);
           return;
         }
         const convertData = await convertRes.json();
         const newId = convertData?.customer?.id;
         if (!newId) {
-          setError('[CONVERT_NO_ID] Conversão concluída mas servidor não retornou o ID do cliente.');
+          const msg = '[CONVERT_NO_ID] Conversão concluída mas servidor não retornou o ID do cliente.';
+          setError(msg);
+          notify.error('Erro na conversão', msg);
           return;
         }
         targetId = newId;
+        converted = true;
       }
 
       const res = await fetch(`/api/internal/customers/${targetId}`, {
@@ -195,18 +325,30 @@ export default function ClientFichaTab({ customer, customerId, onUpdate }: Props
         body: JSON.stringify(form),
       });
       if (!res.ok) {
-        setError(await readApiError(res, 'PATCH_FAILED'));
+        const msg = await readApiError(res, 'PATCH_FAILED');
+        setError(msg);
+        notify.error('Falha ao salvar ficha', msg);
         return;
       }
       const data = await res.json();
-      onUpdate(data);
+      onUpdate({
+        ...form,
+        ...data,
+        id: targetId,
+      });
+
+      notify.success(
+        converted ? 'Lead convertido e ficha salva' : 'Ficha salva',
+        converted ? `${form.name} agora é cliente.` : 'Alterações gravadas com sucesso.',
+      );
 
       if (targetId !== customerId) {
         router.replace(`/clientes/${targetId}`);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erro desconhecido.';
-      setError(`[NETWORK_ERROR] ${msg}`);
+      const msg = `[NETWORK_ERROR] ${err instanceof Error ? err.message : 'Erro desconhecido.'}`;
+      setError(msg);
+      notify.error('Erro de rede', msg);
     } finally {
       setSaving(false);
     }
@@ -241,13 +383,15 @@ export default function ClientFichaTab({ customer, customerId, onUpdate }: Props
         <SectionTitle>Identificação</SectionTitle>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <FieldGroup label="Nome completo">
-            <input style={inputStyle} value={form.name} onChange={handleChange('name')} />
+            <input style={getFieldStyle('name')} value={form.name} onChange={handleChange('name')} />
+            {renderFieldError('name')}
           </FieldGroup>
           <FieldGroup label="Nome social">
             <input style={inputStyle} value={form.social_name} onChange={handleChange('social_name')} placeholder="Opcional" />
           </FieldGroup>
           <FieldGroup label="CPF">
-            <input style={inputStyle} value={form.cpf} onChange={handleChange('cpf')} placeholder="000.000.000-00" />
+            <input style={getFieldStyle('cpf')} value={form.cpf} onChange={handleChange('cpf')} placeholder="000.000.000-00" />
+            {renderFieldError('cpf')}
           </FieldGroup>
           <FieldGroup label="Data de nascimento">
             <input style={inputStyle} type="date" value={form.birth_date} onChange={handleChange('birth_date')} />
@@ -277,10 +421,12 @@ export default function ClientFichaTab({ customer, customerId, onUpdate }: Props
         <SectionTitle>Contatos</SectionTitle>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <FieldGroup label="WhatsApp">
-            <input style={inputStyle} value={form.whatsapp_number} onChange={handleChange('whatsapp_number')} placeholder="+55 11 99999-9999" />
+            <input style={getFieldStyle('whatsapp_number')} value={form.whatsapp_number} onChange={handleChange('whatsapp_number')} placeholder="+5511999999999" />
+            {renderFieldError('whatsapp_number')}
           </FieldGroup>
           <FieldGroup label="E-mail">
-            <input style={inputStyle} type="text" inputMode="email" autoComplete="off" value={form.email} onChange={handleChange('email')} placeholder="email@exemplo.com" />
+            <input style={getFieldStyle('email')} type="text" inputMode="email" autoComplete="off" value={form.email} onChange={handleChange('email')} placeholder="email@exemplo.com" />
+            {renderFieldError('email')}
           </FieldGroup>
           <FieldGroup label="Instagram">
             <input style={inputStyle} value={form.instagram} onChange={handleChange('instagram')} placeholder="@usuario" />
@@ -308,7 +454,8 @@ export default function ClientFichaTab({ customer, customerId, onUpdate }: Props
             <input style={inputStyle} value={form.city} onChange={handleChange('city')} />
           </FieldGroup>
           <FieldGroup label="Estado">
-            <input style={inputStyle} value={form.state} onChange={handleChange('state')} placeholder="SP" maxLength={2} />
+            <input style={getFieldStyle('state')} value={form.state} onChange={handleChange('state')} placeholder="SP" maxLength={2} />
+            {renderFieldError('state')}
           </FieldGroup>
           <div style={{ gridColumn: '1 / -1' }}>
             <FieldGroup label="Endereço completo">
@@ -368,7 +515,7 @@ export default function ClientFichaTab({ customer, customerId, onUpdate }: Props
           </FieldGroup>
           <div style={{ gridColumn: '1 / -1' }}>
             <FieldGroup label="Observações para remarketing">
-              <textarea style={textareaStyle} value={form.remarketing_notes} onChange={handleChange('remarketing_notes')} placeholder="Gostos, interesses, histórico de compras relevante..." />
+              <textarea style={getTextareaFieldStyle('remarketing_notes')} value={form.remarketing_notes} onChange={handleChange('remarketing_notes')} placeholder="Gostos, interesses, histórico de compras relevante..." />
             </FieldGroup>
           </div>
         </div>

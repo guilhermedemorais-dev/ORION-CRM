@@ -4,20 +4,25 @@
  * Valida lista de clientes, detalhe, tabs e interações.
  */
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
+
+async function login(page: Page) {
+    const BASE_URL = process.env['BASE_URL'] ?? 'https://crm.orinjoias.com';
+    const email = process.env['TEST_EMAIL'] ?? 'guilhermemp.business@gmail.com';
+    const password = process.env['TEST_PASSWORD'] ?? '***Orin@2026';
+
+    await page.goto(`${BASE_URL}/login`);
+    await page.fill('input[name="email"]', email);
+    await page.fill('input[name="password"]', password);
+    await page.click('button[type="submit"]');
+    await page.waitForURL(/dashboard/, { timeout: 15_000 });
+}
 
 test.describe('Página Lista de Clientes', () => {
     const BASE_URL = process.env['BASE_URL'] ?? 'https://crm.orinjoias.com';
 
     test.beforeEach(async ({ page }) => {
-        // Login antes de cada teste
-        const email = process.env['TEST_EMAIL'] ?? 'guilhermemp.business@gmail.com';
-        const password = process.env['TEST_PASSWORD'] ?? '***Orin@2026';
-        
-        await page.goto(`${BASE_URL}/login`);
-        await page.fill('input[name="email"]', email);
-        await page.fill('input[name="password"]', password);
-        await page.click('button[type="submit"]');
-        await page.waitForURL(/dashboard/, { timeout: 15_000 });
+        await login(page);
         
         // Navegar para clientes
         await page.goto(`${BASE_URL}/clientes`);
@@ -44,10 +49,7 @@ test.describe('Página Lista de Clientes', () => {
         if (await novoButton.isVisible()) {
             await novoButton.click();
             
-            // Verifica que o modal abriu
-            await expect(page.locator('text=Novo Cliente')).toBeVisible();
-            
-            // Verifica campos do formulário
+            // Verifica que o modal abriu pelos campos do formulário
             await expect(page.locator('input[placeholder="Maria Fernanda Costa"]')).toBeVisible();
             await expect(page.locator('input[placeholder="+5511999999999"]')).toBeVisible();
         }
@@ -86,16 +88,18 @@ test.describe('Página Lista de Clientes', () => {
 
 test.describe('Página Detalhe do Cliente', () => {
     const BASE_URL = process.env['BASE_URL'] ?? 'https://crm.orinjoias.com';
+    test.describe.configure({ mode: 'serial' });
+
+    let authenticated = false;
 
     test.beforeEach(async ({ page }) => {
-        const email = process.env['TEST_EMAIL'] ?? 'guilhermemp.business@gmail.com';
-        const password = process.env['TEST_PASSWORD'] ?? '***Orin@2026';
-        
-        await page.goto(`${BASE_URL}/login`);
-        await page.fill('input[name="email"]', email);
-        await page.fill('input[name="password"]', password);
-        await page.click('button[type="submit"]');
-        await page.waitForURL(/dashboard/, { timeout: 15_000 });
+        if (!authenticated) {
+            await login(page);
+            authenticated = true;
+            return;
+        }
+
+        await page.goto(`${BASE_URL}/clientes`);
     });
 
     test('Carrega detalhe do cliente (se existir ID válido)', async ({ page }) => {

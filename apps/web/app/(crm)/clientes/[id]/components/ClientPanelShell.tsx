@@ -20,9 +20,10 @@ import { LeadAppointmentsTab } from '@/app/(crm)/agenda/components/LeadAppointme
 interface Props {
   customerId: string;
   initialCustomer: CustomerFull;
+  entityType?: 'customer' | 'lead';
 }
 
-export default function ClientPanelShell({ customerId, initialCustomer }: Props) {
+export default function ClientPanelShell({ customerId, initialCustomer, entityType = 'customer' }: Props) {
   const [customer, setCustomer] = useState<CustomerFull>(initialCustomer);
   const [stats, setStats] = useState<CustomerStats | null>(null);
   const [stages, setStages] = useState<PipelineStage[]>([]);
@@ -171,6 +172,7 @@ export default function ClientPanelShell({ customerId, initialCustomer }: Props)
               <ClientFichaTab
                 customer={customer}
                 customerId={customerId}
+                entityType={entityType}
                 onUpdate={handleCustomerUpdate}
               />
             )}

@@ -90,9 +90,27 @@ router.get(
             }
 
             if (parsed.data.q) {
-                values.push(`%${parsed.data.q}%`);
+                const normalizedQuery = parsed.data.q.trim();
+                const digitsQuery = normalizedQuery.replace(/\D/g, '');
+
+                values.push(`%${normalizedQuery}%`);
                 const searchIndex = values.length;
-                filters.push(`(c.name ILIKE $${searchIndex} OR c.whatsapp_number ILIKE $${searchIndex} OR COALESCE(c.email, '') ILIKE $${searchIndex} OR COALESCE(c.cpf, '') ILIKE $${searchIndex})`);
+
+                const conditions = [
+                    `c.name ILIKE $${searchIndex}`,
+                    `c.whatsapp_number ILIKE $${searchIndex}`,
+                    `COALESCE(c.email, '') ILIKE $${searchIndex}`,
+                    `COALESCE(c.cpf, '') ILIKE $${searchIndex}`,
+                ];
+
+                if (digitsQuery.length >= 3) {
+                    values.push(`%${digitsQuery}%`);
+                    const digitsIndex = values.length;
+                    conditions.push(`regexp_replace(c.whatsapp_number, '\\D', '', 'g') ILIKE $${digitsIndex}`);
+                    conditions.push(`regexp_replace(COALESCE(c.cpf, ''), '\\D', '', 'g') ILIKE $${digitsIndex}`);
+                }
+
+                filters.push(`(${conditions.join(' OR ')})`);
             }
 
             const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
@@ -402,6 +420,7 @@ router.get(
 // ── PATCH /customers/:id ──────────────────────────────────────────────────────
 const patchCustomerSchema = z.object({
     name: z.string().trim().min(2).max(255).optional(),
+    whatsapp_number: z.string().regex(/^\+[1-9]\d{1,14}$/, 'WhatsApp deve estar em formato E.164').optional().nullable(),
     email: z.string().email().optional().nullable(),
     cpf: z.string().optional().nullable(),
     social_name: z.string().max(100).optional().nullable(),

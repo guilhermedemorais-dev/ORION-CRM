@@ -374,12 +374,25 @@ router.get(
             }
 
             if (q) {
-                values.push(`%${q}%`);
+                const normalizedQuery = q.trim();
+                const digitsQuery = normalizedQuery.replace(/\D/g, '');
+
+                values.push(`%${normalizedQuery}%`);
                 const searchIndex = values.length;
+                const conditions = [
+                    `COALESCE(l.name, '') ILIKE $${searchIndex}`,
+                    `l.whatsapp_number ILIKE $${searchIndex}`,
+                    `COALESCE(l.email, '') ILIKE $${searchIndex}`,
+                ];
+
+                if (digitsQuery.length >= 3) {
+                    values.push(`%${digitsQuery}%`);
+                    const digitsIndex = values.length;
+                    conditions.push(`regexp_replace(l.whatsapp_number, '\\D', '', 'g') ILIKE $${digitsIndex}`);
+                }
+
                 filters.push(`(
-                    COALESCE(l.name, '') ILIKE $${searchIndex}
-                    OR l.whatsapp_number ILIKE $${searchIndex}
-                    OR COALESCE(l.email, '') ILIKE $${searchIndex}
+                    ${conditions.join('\n                    OR ')}
                 )`);
             }
 

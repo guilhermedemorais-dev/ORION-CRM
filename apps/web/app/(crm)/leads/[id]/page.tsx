@@ -55,5 +55,5 @@ export default async function LeadDetailPage({
         assigned_to: lead.assigned_to,
     };
 
-    return <ClientPanelShell customerId={lead.id} initialCustomer={customer} />;
+    return <ClientPanelShell customerId={lead.id} initialCustomer={customer} entityType="lead" />;
 }
