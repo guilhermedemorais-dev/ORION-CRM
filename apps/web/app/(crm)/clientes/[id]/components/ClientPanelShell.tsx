@@ -39,8 +39,8 @@ export default function ClientPanelShell({ customerId, initialCustomer, entityTy
     async function checkDeliveryEligibility() {
       try {
         const [osRes, blocksRes] = await Promise.all([
-          fetch(`/api/internal/customers/${customerId}/service-orders`),
-          fetch(`/api/internal/customers/${customerId}/attendance-blocks`),
+          fetch(`/api/v1/customers/${customerId}/service-orders`),
+          fetch(`/api/v1/customers/${customerId}/attendance-blocks`),
         ]);
         const osData = osRes.ok ? await osRes.json() : { data: [] };
         const blocksData = blocksRes.ok ? await blocksRes.json() : { data: [] };
@@ -61,7 +61,7 @@ export default function ClientPanelShell({ customerId, initialCustomer, entityTy
 
   // Fetch stats
   useEffect(() => {
-    fetch(`/api/internal/customers/${customerId}/stats`)
+    fetch(`/api/v1/customers/${customerId}/stats`)
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) setStats(data); })
       .catch(() => {});
