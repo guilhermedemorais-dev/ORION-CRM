@@ -32,6 +32,52 @@ interface PendingSection {
 
 type TabKey = 'incidents' | 'debug' | 'timeline' | 'updates';
 
+function buildClientFacingSummary(entry: TimelineEntry): string {
+    const haystack = `${entry.version} ${entry.title} ${entry.items.join(' ')}`.toLowerCase();
+    const summaries: string[] = [];
+
+    const include = (message: string, keywords: string[]) => {
+        if (keywords.some((keyword) => haystack.includes(keyword)) && !summaries.includes(message)) {
+            summaries.push(message);
+        }
+    };
+
+    include(
+        'Melhoramos o cadastro e o acompanhamento do cliente para deixar as informações mais confiáveis no dia a dia.',
+        ['cliente', 'clientes', 'histórico', 'historico', 'whatsapp', 'ficha']
+    );
+    include(
+        'Reforçamos a estabilidade e a segurança do atendimento para reduzir falhas e evitar comportamentos indevidos.',
+        ['atendimento', 'xss', 'segurança', 'seguranca', 'html', 'inbox']
+    );
+    include(
+        'Ajustamos o pipeline para facilitar a operação comercial e reduzir dependência de suporte técnico.',
+        ['pipeline', 'lead', 'builder', 'etapa', 'stages', 'kanban']
+    );
+    include(
+        'A agenda ficou mais confiável e prática para organizar atendimentos e compromissos.',
+        ['agenda', 'calendário', 'calendario', 'agendamento', 'appointments']
+    );
+    include(
+        'O painel e os indicadores foram refinados para dar mais clareza na operação e na leitura dos dados.',
+        ['dashboard', 'kpi', 'gráfico', 'grafico', 'relatório', 'relatorio', 'financeiro']
+    );
+    include(
+        'A área de suporte ficou mais clara para acompanhar entregas, incidentes e evolução do sistema.',
+        ['suporte', 'chamado', 'chamados', 'timeline', 'atualizações', 'atualizacoes']
+    );
+    include(
+        'Também fizemos ajustes de estabilidade em produção para reduzir erros técnicos e melhorar a continuidade do serviço.',
+        ['deploy', 'produção', 'producao', 'docker', 'ssl', 'nginx', 'ci/cd', 'webhook']
+    );
+
+    if (summaries.length === 0) {
+        return 'Este pacote traz melhorias de estabilidade, usabilidade e organização para deixar o sistema mais confiável no uso diário.';
+    }
+
+    return summaries.slice(0, 2).join(' ');
+}
+
 // ---------- New Ticket Modal (preserved from original) ----------
 
 function NewTicketModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
@@ -616,6 +662,15 @@ function TimelineTab() {
                     </div>
 
                     <div style={{ flex: 1, minWidth: 0, background: '#0F0F11', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 24px' }}>
+                        <div style={{ marginBottom: '14px', borderRadius: '10px', border: '1px solid rgba(200,169,122,0.22)', background: 'rgba(200,169,122,0.08)', padding: '12px 14px' }}>
+                            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#C8A97A', marginBottom: '6px' }}>
+                                Resumo para cliente
+                            </div>
+                            <div style={{ fontSize: '12px', lineHeight: 1.6, color: '#E8E4DE' }}>
+                                {buildClientFacingSummary(entry)}
+                            </div>
+                        </div>
+
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '8px' }}>
                             <div style={{
                                 padding: '4px 10px',
@@ -757,6 +812,15 @@ function UpdatesTab() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {recent.map((entry, idx) => (
                             <div key={`${entry.version}-${idx}`} style={{ background: '#0F0F11', border: '1px solid rgba(63,184,122,0.18)', borderRadius: '12px', padding: '18px 20px' }}>
+                                <div style={{ marginBottom: '14px', borderRadius: '10px', border: '1px solid rgba(63,184,122,0.22)', background: 'rgba(63,184,122,0.08)', padding: '12px 14px' }}>
+                                    <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#3FB87A', marginBottom: '6px' }}>
+                                        Resumo para cliente
+                                    </div>
+                                    <div style={{ fontSize: '12px', lineHeight: 1.6, color: '#E8E4DE' }}>
+                                        {buildClientFacingSummary(entry)}
+                                    </div>
+                                </div>
+
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
                                     <div style={{
                                         padding: '3px 9px',
