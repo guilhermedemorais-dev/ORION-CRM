@@ -150,10 +150,12 @@ router.post(
                 isAutomated: true,
             });
 
+            // Retorna 202 sempre (idempotente), com indica??o de nova mensagem ou duplicata
             res.status(202).json({
                 accepted: true,
                 conversation_id: conversation.id,
                 message_id: message?.id ?? null,
+                is_new: message !== null,
             });
         } catch (error) {
             next(error);

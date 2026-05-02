@@ -47,6 +47,11 @@ function getScopedAssignedTo(req: Request): string | undefined {
         return undefined;
     }
 
+    // ROOT e ADMIN veem todos; ATENDENTE só os próprios
+    if (req.user.role === 'ROOT' || req.user.role === 'ADMIN') {
+        return undefined;
+    }
+
     return req.user.role === 'ATENDENTE' ? req.user.id : undefined;
 }
 
@@ -55,10 +60,17 @@ function assertCanAccessCustomer(req: Request, assignedTo: string | null): void 
         throw AppError.unauthorized();
     }
 
+    // ROOT sempre tem acesso
+    if (req.user.role === 'ROOT') {
+        return;
+    }
+
+    // ADMIN tem acesso a todos
     if (req.user.role === 'ADMIN') {
         return;
     }
 
+    // ATENDENTE só acessa clientes propios
     if (!assignedTo || assignedTo !== req.user.id) {
         throw AppError.forbidden('Acesso não autorizado para este cliente.');
     }
@@ -236,6 +248,14 @@ router.get(
             const limit = 20;
             const offset = (page - 1) * limit;
 
+            // Busca cliente para verificar acesso
+            const customerRes = await query<{ assigned_to: string | null }>(
+                'SELECT assigned_to FROM customers WHERE id = $1 LIMIT 1',
+                [customerId]
+            );
+            if (!customerRes.rows[0]) { next(AppError.notFound('Cliente não encontrado.')); return; }
+            assertCanAccessCustomer(req, customerRes.rows[0].assigned_to);
+
             const countRes = await query<{ total: string }>(
                 `SELECT COUNT(*)::text AS total FROM orders WHERE customer_id = $1`,
                 [customerId]
@@ -405,6 +425,9 @@ router.get(
             const customer = result.rows[0];
             if (!customer) { next(AppError.notFound('Cliente não encontrado.')); return; }
 
+            // Verifica acesso antes de retornar dados
+            assertCanAccessCustomer(req, customer.assigned_to);
+
             res.json({
                 ...customer,
                 lifetime_value_cents: Number.parseInt(customer.lifetime_value_cents, 10),
@@ -457,6 +480,14 @@ router.patch(
                 return;
             }
 
+            // Busca cliente para verificar acesso
+            const customerRes = await query<{ assigned_to: string | null }>(
+                'SELECT assigned_to FROM customers WHERE id = $1 LIMIT 1',
+                [req.params['id']]
+            );
+            if (!customerRes.rows[0]) { next(AppError.notFound('Cliente não encontrado.')); return; }
+            assertCanAccessCustomer(req, customerRes.rows[0].assigned_to);
+
             const fields = parsed.data as Record<string, unknown>;
             const sets: string[] = [];
             const values: unknown[] = [];
@@ -491,6 +522,15 @@ router.get(
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const id = req.params['id'] as string;
+
+            // Busca cliente para verificar acesso
+            const customerRes = await query<{ assigned_to: string | null }>(
+                'SELECT assigned_to FROM customers WHERE id = $1 LIMIT 1',
+                [id]
+            );
+            if (!customerRes.rows[0]) { next(AppError.notFound('Cliente não encontrado.')); return; }
+            assertCanAccessCustomer(req, customerRes.rows[0].assigned_to);
+
             const [ltvRes, osRes, lastIntRes, proposalRes] = await Promise.all([
                 query<{ ltv: string; orders_count: string }>(
                     `SELECT lifetime_value_cents::text AS ltv, (SELECT COUNT(*) FROM orders WHERE customer_id = $1)::text AS orders_count FROM customers WHERE id = $1`,
@@ -529,15 +569,61 @@ router.get(
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const id = req.params['id'] as string;
-            const type = String(req.query['type'] ?? 'log');
+            const requestedType = String(req.query['type'] ?? 'log');
+            const type = requestedType;
             const page = Math.max(1, Number.parseInt(String(req.query['page'] ?? '1'), 10));
-            const limit = 30;
+            const requestedLimit = Number.parseInt(String(req.query['limit'] ?? '30'), 10);
+            const limit = Number.isNaN(requestedLimit) ? 30 : Math.min(200, Math.max(1, requestedLimit));
+
+            // Busca cliente para verificar acesso
+            const customerRes = await query<{ assigned_to: string | null }>(
+                'SELECT assigned_to FROM customers WHERE id = $1 LIMIT 1',
+                [id]
+            );
+            if (!customerRes.rows[0]) { next(AppError.notFound('Cliente não encontrado.')); return; }
+            assertCanAccessCustomer(req, customerRes.rows[0].assigned_to);
+
             const offset = (page - 1) * limit;
 
-            if (type === 'log') {
+            if (type === 'log' || type === 'all') {
                 const result = await query(
-                    `SELECT al.id, al.action, al.entity_type, al.entity_id, al.new_value,
-                            al.created_at, u.name AS user_name
+                    `SELECT al.id,
+                            CASE
+                                WHEN al.entity_type = 'customer' AND al.action = 'CREATE' THEN 'created'
+                                WHEN al.entity_type = 'customer' AND al.action = 'UPDATE' THEN 'updated'
+                                WHEN al.entity_type = 'attendance_block' AND al.action = 'CREATE' THEN 'attendance_created'
+                                WHEN al.entity_type = 'attendance_block' AND al.action = 'UPDATE' THEN 'attendance_updated'
+                                WHEN al.entity_type = 'order' AND al.action = 'CREATE' THEN 'order_created'
+                                WHEN al.entity_type = 'order' AND al.action = 'UPDATE' THEN 'order_updated'
+                                WHEN al.entity_type = 'service_order' AND al.action = 'CREATE' THEN 'os_created'
+                                WHEN al.entity_type = 'service_order' AND al.action = 'UPDATE' THEN 'os_updated'
+                                WHEN al.entity_type = 'delivery' AND al.action = 'CREATE' THEN 'delivery_created'
+                                WHEN al.entity_type = 'delivery' AND al.action = 'UPDATE' THEN 'delivery_updated'
+                                WHEN al.entity_type = 'proposal' AND al.action = 'CREATE' THEN 'proposal_created'
+                                ELSE LOWER(al.entity_type)
+                            END AS type,
+                            CASE
+                                WHEN al.entity_type = 'customer' AND al.action = 'CREATE' THEN 'Cliente criado.'
+                                WHEN al.entity_type = 'customer' AND al.action = 'UPDATE' THEN 'Cadastro do cliente atualizado.'
+                                WHEN al.entity_type = 'attendance_block' AND al.action = 'CREATE' THEN 'Atendimento registrado.'
+                                WHEN al.entity_type = 'attendance_block' AND al.action = 'UPDATE' THEN 'Atendimento atualizado.'
+                                WHEN al.entity_type = 'order' AND al.action = 'CREATE' THEN 'Pedido criado.'
+                                WHEN al.entity_type = 'order' AND al.action = 'UPDATE' THEN 'Pedido atualizado.'
+                                WHEN al.entity_type = 'service_order' AND al.action = 'CREATE' THEN 'Ordem de serviço criada.'
+                                WHEN al.entity_type = 'service_order' AND al.action = 'UPDATE' THEN 'Ordem de serviço atualizada.'
+                                WHEN al.entity_type = 'delivery' AND al.action = 'CREATE' THEN 'Entrega criada.'
+                                WHEN al.entity_type = 'delivery' AND al.action = 'UPDATE' THEN 'Entrega atualizada.'
+                                WHEN al.entity_type = 'proposal' AND al.action = 'CREATE' THEN 'Proposta criada.'
+                                ELSE CONCAT(INITCAP(REPLACE(al.entity_type, '_', ' ')), ' ', LOWER(al.action), '.')
+                            END AS description,
+                            al.created_at,
+                            u.name AS user_name,
+                            jsonb_strip_nulls(jsonb_build_object(
+                                'action', al.action,
+                                'entity_type', al.entity_type,
+                                'entity_id', al.entity_id,
+                                'new_value', al.new_value
+                            )) AS metadata
                      FROM audit_logs al
                      LEFT JOIN users u ON u.id = al.user_id
                      WHERE al.entity_id = $1 OR al.entity_id IN (
@@ -550,17 +636,44 @@ router.get(
                 res.json({ data: result.rows, type });
             } else if (type === 'whatsapp') {
                 const result = await query(
-                    `SELECT m.id, m.direction, m.message_type, m.content, m.status,
-                            m.created_at, c.name AS contact_name
+                    `SELECT m.id,
+                            CASE
+                                WHEN m.direction = 'INBOUND' THEN 'inbound'
+                                ELSE 'outbound'
+                            END AS type,
+                            COALESCE(NULLIF(BTRIM(m.content), ''), '[Mensagem sem texto]') AS description,
+                            m.created_at,
+                            u.name AS user_name,
+                            jsonb_strip_nulls(jsonb_build_object(
+                                'direction', LOWER(m.direction::text),
+                                'message_type', LOWER(m.type::text),
+                                'status', LOWER(m.status::text),
+                                'conversation_id', m.conversation_id,
+                                'channel', cv.channel,
+                                'contact_name', cv.contact_name,
+                                'contact_phone', cv.contact_phone
+                            )) AS metadata
                      FROM messages m
                      JOIN conversations cv ON cv.id = m.conversation_id
-                     LEFT JOIN customers ct ON ct.whatsapp_number = cv.contact_phone
-                     LEFT JOIN contacts c ON c.id = cv.contact_id
-                     WHERE ct.id = $1
+                     LEFT JOIN users u ON u.id = m.sent_by
+                     WHERE cv.channel = 'whatsapp'
+                       AND (
+                           cv.customer_id = $1
+                           OR (
+                               cv.customer_id IS NULL
+                               AND EXISTS (
+                                   SELECT 1
+                                   FROM customers ct
+                                   WHERE ct.id = $1
+                                     AND ct.whatsapp_number IS NOT NULL
+                                     AND ct.whatsapp_number = cv.contact_phone
+                               )
+                           )
+                       )
                      ORDER BY m.created_at DESC
                      LIMIT $2 OFFSET $3`,
                     [id, limit, offset]
-                ).catch(() => ({ rows: [] }));
+                );
                 res.json({ data: result.rows, type });
             } else {
                 res.json({ data: [], type });

@@ -217,13 +217,17 @@ export async function buildIdentificationMessage(currentUser: CurrentUser): Prom
     );
 
     const companyName = settingsResult.rows[0]?.company_name?.trim() || 'ORION';
-    const roleLabel = currentUser.role === 'ADMIN' ? 'gestor' : 'atendente';
+    const roleLabel = currentUser.role === 'ROOT' || currentUser.role === 'ADMIN' ? 'gestor' : 'atendente';
 
     return `Olá! Sou ${currentUser.name}, ${roleLabel} da ${companyName}. Vou seguir com o seu atendimento por aqui.`;
 }
 
+function isInboxSuperUser(currentUser: CurrentUser): boolean {
+    return currentUser.role === 'ROOT' || currentUser.role === 'ADMIN';
+}
+
 function buildScopedConversationFilter(currentUser: CurrentUser, values: unknown[], alias = 'c'): string | null {
-    if (currentUser.role === 'ADMIN') {
+    if (isInboxSuperUser(currentUser)) {
         return null;
     }
 
@@ -234,7 +238,7 @@ function buildScopedConversationFilter(currentUser: CurrentUser, values: unknown
 }
 
 function assertConversationAccess(currentUser: CurrentUser, row: ConversationSummaryRow): void {
-    if (currentUser.role === 'ADMIN') {
+    if (isInboxSuperUser(currentUser)) {
         return;
     }
 
@@ -371,7 +375,7 @@ export async function listConversations(
         filters.push(`c.status = $${baseValues.length}`);
     }
 
-    if (params.assigned_to && currentUser.role === 'ADMIN') {
+    if (params.assigned_to && isInboxSuperUser(currentUser)) {
         baseValues.push(params.assigned_to);
         filters.push(`c.assigned_to = $${baseValues.length}`);
     }
@@ -693,6 +697,7 @@ export async function appendInboundMessage(input: {
     isAutomated?: boolean;
 }): Promise<InboxMessageView | null> {
     try {
+        // INSERT idempotente: ignora duplicata de meta_message_id sem erro
         const result = await query<MessageRow>(
             `INSERT INTO messages (
                 conversation_id,
@@ -708,6 +713,7 @@ export async function appendInboundMessage(input: {
                 is_automated,
                 is_quick_reply
               ) VALUES ($1, $2, $3, 'INBOUND', $4, $5, $6, $7, $8, 'READ', $9, false)
+              ON CONFLICT (meta_message_id) DO NOTHING
               RETURNING
                 id,
                 meta_message_id,
@@ -737,6 +743,12 @@ export async function appendInboundMessage(input: {
             ]
         );
 
+        // Se não inseriu (duplicata), sai antes de incrementar unread
+        if (result.rowCount === 0) {
+            return null;
+        }
+
+        // Incrementa unread APENAS se realmente inseriu mensagem nova
         await query(
             `UPDATE conversations
              SET
@@ -760,12 +772,7 @@ export async function appendInboundMessage(input: {
 
         return mapMessage(row);
     } catch (error) {
-        const databaseError = error as { code?: string };
-
-        if (databaseError.code === '23505') {
-            return null;
-        }
-
+        // Erro diferente de duplicata - propagate
         throw error;
     }
 }
@@ -865,7 +872,7 @@ export async function assignConversationToCurrentUser(
 
     let assignedTo = currentUser.id;
 
-    if (currentUser.role === 'ADMIN' && requestedAssignedTo && requestedAssignedTo !== currentUser.id) {
+    if (isInboxSuperUser(currentUser) && requestedAssignedTo && requestedAssignedTo !== currentUser.id) {
         const assigneeResult = await query<{ id: string }>(
             `SELECT id
              FROM users
@@ -902,7 +909,7 @@ export async function assignConversationToCurrentUser(
 
     return getConversationById(conversationId, {
         ...currentUser,
-        id: currentUser.role === 'ADMIN' ? currentUser.id : assignedTo,
+        id: isInboxSuperUser(currentUser) ? currentUser.id : assignedTo,
     });
 }
 
@@ -916,7 +923,7 @@ export async function closeConversation(
         throw AppError.notFound('Conversa não encontrada.');
     }
 
-    if (currentUser.role !== 'ADMIN' && row.assigned_user_id !== currentUser.id) {
+    if (!isInboxSuperUser(currentUser) && row.assigned_user_id !== currentUser.id) {
         throw AppError.forbidden('Você só pode encerrar conversas atribuídas a você.');
     }
 
@@ -948,7 +955,7 @@ export async function handoffConversation(
         throw AppError.notFound('Conversa não encontrada.');
     }
 
-    if (currentUser.role !== 'ADMIN' && row.assigned_user_id !== currentUser.id) {
+    if (!isInboxSuperUser(currentUser) && row.assigned_user_id !== currentUser.id) {
         throw AppError.forbidden('Você só pode devolver para a fila conversas atribuídas a você.');
     }
 
