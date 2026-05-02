@@ -6,6 +6,7 @@ import { AppError } from '../lib/errors.js';
 import { authenticate } from '../middleware/auth.js';
 import { createAuditLog } from '../middleware/audit.js';
 import { requireRole } from '../middleware/rbac.js';
+import { sanitizeAttendanceHtml } from './attendance-html.js';
 
 const router = Router();
 
@@ -28,57 +29,55 @@ const PIPELINE_STATUSES = ['ATENDIMENTO', 'PROPOSTA', 'PEDIDO', 'OS', 'ENTREGA']
 type PipelineStatus = typeof PIPELINE_STATUSES[number];
 
 // ── GET /api/v1/customers/:id/blocks ─────────────────────────────────────────
-router.get(
-    '/:customerId/blocks',
-    authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE', 'PRODUCAO']),
-    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        try {
-            const { customerId } = req.params as { customerId: string };
-            const page = Math.max(1, Number.parseInt(String(req.query['page'] ?? '1'), 10));
-            const limit = Math.min(50, Math.max(1, Number.parseInt(String(req.query['limit'] ?? '20'), 10)));
-            const offset = (page - 1) * limit;
+async function listCustomerBlocks(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+        const { customerId } = req.params as { customerId: string };
+        const page = Math.max(1, Number.parseInt(String(req.query['page'] ?? '1'), 10));
+        const limit = Math.min(50, Math.max(1, Number.parseInt(String(req.query['limit'] ?? '20'), 10)));
+        const offset = (page - 1) * limit;
 
-            // Optional filter: ?pipeline_status=ATENDIMENTO,PROPOSTA
-            const pipelineStatusParam = req.query['pipeline_status'];
-            let pipelineFilter = '';
-            const filterValues: unknown[] = [customerId];
-            if (pipelineStatusParam && typeof pipelineStatusParam === 'string') {
-                const statuses = pipelineStatusParam.split(',').map((s) => s.trim().toUpperCase());
-                const placeholders = statuses.map((_, i) => `$${i + 2}`).join(', ');
-                pipelineFilter = ` AND ab.pipeline_status IN (${placeholders})`;
-                filterValues.push(...statuses);
-            }
+        // Optional filter: ?pipeline_status=ATENDIMENTO,PROPOSTA
+        const pipelineStatusParam = req.query['pipeline_status'];
+        let pipelineFilter = '';
+        const filterValues: unknown[] = [customerId];
+        if (pipelineStatusParam && typeof pipelineStatusParam === 'string') {
+            const statuses = pipelineStatusParam.split(',').map((s) => s.trim().toUpperCase());
+            const placeholders = statuses.map((_, i) => `$${i + 2}`).join(', ');
+            pipelineFilter = ` AND ab.pipeline_status IN (${placeholders})`;
+            filterValues.push(...statuses);
+        }
 
-            const countParams = filterValues;
-            const countRes = await query<{ total: string }>(
-                `SELECT COUNT(*)::text AS total FROM attendance_blocks ab
-                 WHERE ab.customer_id = $1 AND ab.status != 'deleted'${pipelineFilter}`,
-                countParams
-            );
-            const total = Number.parseInt(countRes.rows[0]?.total ?? '0', 10);
+        const countParams = filterValues;
+        const countRes = await query<{ total: string }>(
+            `SELECT COUNT(*)::text AS total FROM attendance_blocks ab
+             WHERE ab.customer_id = $1 AND ab.status != 'deleted'${pipelineFilter}`,
+            countParams
+        );
+        const total = Number.parseInt(countRes.rows[0]?.total ?? '0', 10);
 
-            const dataParams = [...filterValues, limit, offset];
-            const result = await query(
-                `SELECT
-                   ab.*,
-                   u_created.name  AS created_by_name,
-                   u_designer.name AS designer_name,
-                   u_jeweler.name  AS jeweler_name
-                 FROM attendance_blocks ab
-                 LEFT JOIN users u_created  ON u_created.id  = ab.created_by
-                 LEFT JOIN users u_designer ON u_designer.id = ab.designer_id
-                 LEFT JOIN users u_jeweler  ON u_jeweler.id  = ab.jeweler_id
-                 WHERE ab.customer_id = $1 AND ab.status != 'deleted'${pipelineFilter}
-                 ORDER BY ab.created_at DESC
-                 LIMIT $${filterValues.length + 1} OFFSET $${filterValues.length + 2}`,
-                dataParams
-            );
+        const dataParams = [...filterValues, limit, offset];
+        const result = await query(
+            `SELECT
+               ab.*,
+               u_created.name  AS created_by_name,
+               u_designer.name AS designer_name,
+               u_jeweler.name  AS jeweler_name
+             FROM attendance_blocks ab
+             LEFT JOIN users u_created  ON u_created.id  = ab.created_by
+             LEFT JOIN users u_designer ON u_designer.id = ab.designer_id
+             LEFT JOIN users u_jeweler  ON u_jeweler.id  = ab.jeweler_id
+             WHERE ab.customer_id = $1 AND ab.status != 'deleted'${pipelineFilter}
+             ORDER BY ab.created_at DESC
+             LIMIT $${filterValues.length + 1} OFFSET $${filterValues.length + 2}`,
+            dataParams
+        );
 
-            res.json({ data: result.rows, meta: { total, page, limit } });
-        } catch (err) { next(err); }
-    }
-);
+        res.json({ data: result.rows, meta: { total, page, limit } });
+    } catch (err) { next(err); }
+}
+
+router.get('/:customerId/blocks', authenticate, requireRole(['ADMIN', 'ATENDENTE', 'GERENTE', 'PRODUCAO']), listCustomerBlocks);
+router.get('/:customerId/attendance-blocks', authenticate, requireRole(['ADMIN', 'ATENDENTE', 'GERENTE', 'PRODUCAO']), listCustomerBlocks);
 
 // ── POST /api/v1/customers/:id/blocks ────────────────────────────────────────
 const createBlockSchema = z.object({
@@ -127,6 +126,7 @@ router.post(
                 weight_grams, finish, engraving, prong_count, band_thickness, tech_notes,
                 designer_id, jeweler_id, deposit_cents, total_cents,
             } = parsed.data;
+            const sanitizedContent = sanitizeAttendanceHtml(content ?? '');
 
             const userId = req.user!.id;
 
@@ -156,7 +156,7 @@ router.post(
                  )
                  RETURNING *`,
                 [
-                    customerId, lead_id ?? null, title, block_type, content ?? null, status, priority, channel ?? null, userId,
+                    customerId, lead_id ?? null, title, block_type, sanitizedContent || null, status, priority, channel ?? null, userId,
                     pipeline_status, product_name ?? null, due_date ?? null, metal ?? null, stone ?? null, ring_size ?? null,
                     weight_grams ?? null, finish ?? null, engraving ?? null, prong_count ?? null, band_thickness ?? null, tech_notes ?? null,
                     designer_id ?? null, jeweler_id ?? null, deposit_cents, total_cents, soNumber, soApprovedAt,
@@ -178,7 +178,7 @@ router.post(
                 ).catch(() => {/* ignore if no linked SO */});
             }
 
-            await createAuditLog({ userId, action: 'CREATE', entityType: 'attendance_blocks', entityId: block.id, oldValue: null, newValue: { title, block_type, pipeline_status }, req });
+        await createAuditLog({ userId, action: 'CREATE', entityType: 'attendance_blocks', entityId: block.id, oldValue: null, newValue: { title, block_type, pipeline_status, content: sanitizedContent || null }, req });
 
             res.status(201).json(block);
         } catch (err) { next(err); }
@@ -224,6 +224,7 @@ async function patchBlock(req: Request, res: Response, next: NextFunction): Prom
             weight_grams, finish, engraving, prong_count, band_thickness, tech_notes,
             designer_id, jeweler_id, deposit_cents, total_cents,
         } = parsed.data;
+        const sanitizedContent = content !== undefined ? sanitizeAttendanceHtml(content) : undefined;
 
         // Fetch existing to check pipeline transition
         const existing = await query<{ pipeline_status: string; so_number: string | null; product_name: string | null; customer_id: string }>(
@@ -259,7 +260,7 @@ async function patchBlock(req: Request, res: Response, next: NextFunction): Prom
 
         if (title !== undefined) addSet('title', title);
         if (block_type !== undefined) addSet('block_type', block_type);
-        if (content !== undefined) addSet('content', content);
+        if (content !== undefined) addSet('content', sanitizedContent || null);
         if (status !== undefined) addSet('status', status);
         if (priority !== undefined) addSet('priority', priority);
         if (channel !== undefined) addSet('channel', channel);
@@ -307,7 +308,15 @@ async function patchBlock(req: Request, res: Response, next: NextFunction): Prom
             ).catch(() => {/* non-fatal */});
         }
 
-        await createAuditLog({ userId: req.user!.id, action: 'UPDATE', entityType: 'attendance_blocks', entityId: id, oldValue: null, newValue: parsed.data, req });
+        await createAuditLog({
+            userId: req.user!.id,
+            action: 'UPDATE',
+            entityType: 'attendance_blocks',
+            entityId: id,
+            oldValue: null,
+            newValue: sanitizedContent === undefined ? parsed.data : { ...parsed.data, content: sanitizedContent || null },
+            req,
+        });
         res.json(result.rows[0]);
     } catch (err) { next(err); }
 }

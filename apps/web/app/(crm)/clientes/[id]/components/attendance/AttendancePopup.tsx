@@ -5,7 +5,7 @@ import { Bold, Italic, Underline, List, ListOrdered, AtSign, Mic, MicOff, Messag
 import type { AttendanceBlock } from '../types';
 import AI3DSection from './AI3DSection';
 
-interface TeamUser { id: string; name: string; role: string; }
+interface TeamUser { id: string; name: string; role: string; status?: string; }
 
 interface Props {
   customerId: string;
@@ -53,6 +53,61 @@ const CHANNELS: { value: Channel; label: string }[] = [
 
 interface PhotoPreview { name: string; dataUrl: string; file: File }
 const MAX_PHOTOS = 5;
+const ALLOWED_ATTENDANCE_TAGS = new Set(['A', 'B', 'BR', 'DIV', 'EM', 'I', 'LI', 'OL', 'P', 'SPAN', 'STRONG', 'U', 'UL']);
+const REMOVE_WITH_CONTENT_TAGS = new Set(['BUTTON', 'EMBED', 'FORM', 'IFRAME', 'INPUT', 'MATH', 'OBJECT', 'OPTION', 'SCRIPT', 'SELECT', 'STYLE', 'SVG', 'TEXTAREA']);
+
+function sanitizeAttendanceHtml(html: string): string {
+  if (typeof window === 'undefined') return html;
+
+  const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
+  const container = doc.body.firstElementChild as HTMLDivElement | null;
+  if (!container) return '';
+
+  function sanitizeElement(element: Element): void {
+    Array.from(element.children).forEach(sanitizeElement);
+
+    const tag = element.tagName.toUpperCase();
+    if (REMOVE_WITH_CONTENT_TAGS.has(tag)) {
+      element.remove();
+      return;
+    }
+
+    if (!ALLOWED_ATTENDANCE_TAGS.has(tag)) {
+      element.replaceWith(...Array.from(element.childNodes));
+      return;
+    }
+
+    Array.from(element.attributes).forEach((attribute) => {
+      const name = attribute.name.toLowerCase();
+      if (tag === 'A' && name === 'href') {
+        const value = attribute.value.trim();
+        const normalized = value.toLowerCase();
+        const isSafeLink = value.length > 0 && (
+          normalized.startsWith('http://')
+          || normalized.startsWith('https://')
+          || normalized.startsWith('mailto:')
+          || normalized.startsWith('tel:')
+          || value.startsWith('/')
+          || value.startsWith('#')
+        );
+
+        if (!isSafeLink) {
+          element.removeAttribute(attribute.name);
+        } else {
+          element.setAttribute('href', value);
+          element.setAttribute('rel', 'noopener noreferrer');
+          element.setAttribute('target', '_blank');
+        }
+        return;
+      }
+
+      element.removeAttribute(attribute.name);
+    });
+  }
+
+  Array.from(container.children).forEach(sanitizeElement);
+  return container.innerHTML.trim();
+}
 
 function normalizeBlockType(raw: string | undefined | null): BlockType {
   const map: Record<string, BlockType> = {
@@ -145,7 +200,7 @@ export default function AttendancePopup({ customerId, block, onClose, onSaved, o
   // Restore content when editing
   useEffect(() => {
     if (editorRef.current && block?.content) {
-      editorRef.current.innerHTML = block.content;
+      editorRef.current.innerHTML = sanitizeAttendanceHtml(block.content);
     }
   }, [block?.content]);
 
@@ -192,10 +247,11 @@ export default function AttendancePopup({ customerId, block, onClose, onSaved, o
     document.execCommand('insertText', false, '@');
     if (mentionUsers.length === 0) {
       try {
-        const res = await fetch('/api/internal/users?role=ATENDENTE,ADMIN,MESTRE');
+        const res = await fetch('/api/internal/users?role=ROOT,ADMIN,GERENTE,ATENDENTE,PRODUCAO');
         if (res.ok) {
           const json = await res.json();
-          setMentionUsers(Array.isArray(json) ? json : (json.data ?? []));
+          const users = Array.isArray(json) ? json : (json.data ?? []);
+          setMentionUsers(users.filter((user: TeamUser) => user.status !== 'inactive'));
         }
       } catch { /* non-fatal */ }
     }
@@ -262,7 +318,7 @@ export default function AttendancePopup({ customerId, block, onClose, onSaved, o
     setError(null);
 
     try {
-      const content = editorRef.current?.innerHTML ?? '';
+      const content = sanitizeAttendanceHtml(editorRef.current?.innerHTML ?? '');
       const url = isNew
         ? `/api/internal/customers/${customerId}/blocks`
         : `/api/internal/blocks/${block!.id}`;

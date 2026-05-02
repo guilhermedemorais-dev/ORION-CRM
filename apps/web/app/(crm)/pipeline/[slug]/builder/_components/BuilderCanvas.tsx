@@ -442,7 +442,8 @@ export function BuilderCanvas({
     toggleAction,
     initialToast,
 }: BuilderCanvasProps) {
-    const initial = useMemo(() => flowToReact(initialFlow, stages), [initialFlow, stages]);
+    const [stageItems, setStageItems] = useState<PipelineStageRecord[]>(stages);
+    const initial = useMemo(() => flowToReact(initialFlow, stageItems), [initialFlow, stageItems]);
 
     const [activeTab, setActiveTab] = useState<'builder' | 'config' | 'json'>('builder');
     const [mode, setMode] = useState<'move' | 'connect' | 'pan'>('move');
@@ -455,6 +456,10 @@ export function BuilderCanvas({
     const [jsonError, setJsonError] = useState<string | null>(null);
 
     const toggleFormRef = useRef<HTMLFormElement | null>(null);
+
+    useEffect(() => {
+        setStageItems(stages);
+    }, [stages]);
 
     const onFlowChange = useCallback((flow: FlowJsonShape) => {
         setCurrentFlow(flow);
@@ -594,7 +599,7 @@ export function BuilderCanvas({
                                 <div className="relative flex flex-1 min-h-0">
                                     <div className="relative flex-1 min-w-0">
                                         <InnerCanvas
-                                            stages={stages}
+                                            stages={stageItems}
                                             initialNodes={initial.nodes}
                                             initialEdges={initial.edges}
                                             mode={mode}
@@ -605,7 +610,7 @@ export function BuilderCanvas({
                                         />
                                     </div>
 
-                                    <NodesPalette stages={stages} />
+                                    <NodesPalette stages={stageItems} />
                                 </div>
 
                                 {/* Save */}
@@ -625,7 +630,7 @@ export function BuilderCanvas({
                         ) : null}
 
                         {activeTab === 'config' ? (
-                            <ConfigTab pipeline={pipeline} stages={stages} />
+                            <ConfigTab pipeline={pipeline} stages={stageItems} onStagesChange={setStageItems} onToast={setToast} />
                         ) : null}
 
                         {activeTab === 'json' ? (
@@ -668,7 +673,7 @@ export function BuilderCanvas({
                         <aside className="hidden flex-col gap-4 overflow-y-auto bg-[color:var(--orion-surface)] p-5 lg:flex">
                             <SidePanel
                                 pipeline={pipeline}
-                                stages={stages}
+                                stages={stageItems}
                                 selectedNode={selectedNode}
                                 flowNodeCount={currentFlow.nodes.length}
                             />
@@ -802,7 +807,186 @@ function SidePanel({
     );
 }
 
-function ConfigTab({ pipeline, stages }: { pipeline: PipelineRecord; stages: PipelineStageRecord[] }) {
+function ConfigTab({
+    pipeline,
+    stages,
+    onStagesChange,
+    onToast,
+}: {
+    pipeline: PipelineRecord;
+    stages: PipelineStageRecord[];
+    onStagesChange: React.Dispatch<React.SetStateAction<PipelineStageRecord[]>>;
+    onToast: (toast: { kind: 'success' | 'error'; message: string } | null) => void;
+}) {
+    const [newStageName, setNewStageName] = useState('');
+    const [newStageColor, setNewStageColor] = useState('#C8A97A');
+    const [busyStageId, setBusyStageId] = useState<string | null>(null);
+    const [isCreatingStage, setIsCreatingStage] = useState(false);
+    const [stagesError, setStagesError] = useState<string | null>(null);
+
+    const normalizeStages = useCallback((items: PipelineStageRecord[]) => (
+        items.map((stage, index) => ({ ...stage, position: index + 1 }))
+    ), []);
+
+    const showError = (message: string) => {
+        setStagesError(message);
+        onToast({ kind: 'error', message });
+    };
+
+    const handleStageDraftChange = (stageId: string, patch: Partial<PipelineStageRecord>) => {
+        onStagesChange((current) => current.map((stage) => (
+            stage.id === stageId ? { ...stage, ...patch } : stage
+        )));
+    };
+
+    const persistStageOrder = async (nextStages: PipelineStageRecord[]) => {
+        const response = await fetch(`/api/internal/pipelines/${pipeline.id}/stages/reorder`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                stages: nextStages.map((stage, index) => ({ id: stage.id, position: index + 1 })),
+            }),
+        });
+
+        if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(body.message ?? 'Não foi possível reordenar as etapas.');
+        }
+
+        const json = await response.json();
+        onStagesChange(Array.isArray(json.data) ? json.data : []);
+    };
+
+    const moveStage = async (stageId: string, direction: -1 | 1) => {
+        const currentIndex = stages.findIndex((stage) => stage.id === stageId);
+        const targetIndex = currentIndex + direction;
+        if (currentIndex < 0 || targetIndex < 0 || targetIndex >= stages.length) return;
+
+        const previousStages = stages;
+        const nextStages = [...stages];
+        const [moved] = nextStages.splice(currentIndex, 1);
+        nextStages.splice(targetIndex, 0, moved);
+        const normalized = normalizeStages(nextStages);
+
+        setStagesError(null);
+        setBusyStageId(stageId);
+        onStagesChange(normalized);
+
+        try {
+            await persistStageOrder(normalized);
+            onToast({ kind: 'success', message: 'Ordem das etapas atualizada.' });
+        } catch (error) {
+            onStagesChange(previousStages);
+            showError(error instanceof Error ? error.message : 'Não foi possível reordenar as etapas.');
+        } finally {
+            setBusyStageId(null);
+        }
+    };
+
+    const saveStage = async (stage: PipelineStageRecord) => {
+        setStagesError(null);
+        setBusyStageId(stage.id);
+
+        try {
+            const response = await fetch(`/api/internal/pipelines/${pipeline.id}/stages/${stage.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: stage.name,
+                    color: stage.color,
+                    position: stage.position,
+                    is_won: stage.is_won,
+                    is_lost: stage.is_lost,
+                }),
+            });
+
+            const body = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(body.message ?? 'Não foi possível salvar a etapa.');
+            }
+
+            const updatedStage = body.data as PipelineStageRecord;
+            onStagesChange((current) => current.map((item) => (
+                item.id === updatedStage.id ? updatedStage : item
+            )));
+            onToast({ kind: 'success', message: `Etapa "${updatedStage.name}" atualizada.` });
+        } catch (error) {
+            showError(error instanceof Error ? error.message : 'Não foi possível salvar a etapa.');
+        } finally {
+            setBusyStageId(null);
+        }
+    };
+
+    const deleteStage = async (stage: PipelineStageRecord) => {
+        if (stage.is_won || stage.is_lost) {
+            showError('Etapas de ganho/perda não podem ser removidas.');
+            return;
+        }
+
+        setStagesError(null);
+        setBusyStageId(stage.id);
+
+        try {
+            const response = await fetch(`/api/internal/pipelines/${pipeline.id}/stages/${stage.id}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                const body = await response.json().catch(() => ({}));
+                throw new Error(body.message ?? 'Não foi possível remover a etapa.');
+            }
+
+            const remainingStages = normalizeStages(stages.filter((item) => item.id !== stage.id));
+            onStagesChange(remainingStages);
+            if (remainingStages.length > 0) {
+                await persistStageOrder(remainingStages);
+            }
+            onToast({ kind: 'success', message: `Etapa "${stage.name}" removida.` });
+        } catch (error) {
+            showError(error instanceof Error ? error.message : 'Não foi possível remover a etapa.');
+        } finally {
+            setBusyStageId(null);
+        }
+    };
+
+    const createStage = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!newStageName.trim()) {
+            showError('Informe o nome da nova etapa.');
+            return;
+        }
+
+        setStagesError(null);
+        setIsCreatingStage(true);
+
+        try {
+            const response = await fetch(`/api/internal/pipelines/${pipeline.id}/stages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: newStageName.trim(),
+                    color: newStageColor,
+                    position: stages.length + 1,
+                }),
+            });
+
+            const body = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(body.message ?? 'Não foi possível criar a etapa.');
+            }
+
+            const createdStage = body.data as PipelineStageRecord;
+            onStagesChange((current) => [...current, createdStage].sort((a, b) => a.position - b.position));
+            setNewStageName('');
+            setNewStageColor('#C8A97A');
+            onToast({ kind: 'success', message: `Etapa "${createdStage.name}" criada.` });
+        } catch (error) {
+            showError(error instanceof Error ? error.message : 'Não foi possível criar a etapa.');
+        } finally {
+            setIsCreatingStage(false);
+        }
+    };
+
     return (
         <div className="space-y-4 p-6">
             <div className="rounded-[14px] border border-white/10 bg-[color:var(--orion-elevated)] p-5">
@@ -835,26 +1019,120 @@ function ConfigTab({ pipeline, stages }: { pipeline: PipelineRecord; stages: Pip
                 <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[color:var(--orion-text-secondary)]">
                     Etapas vinculadas
                 </p>
-                <div className="mt-3 space-y-2">
+                <form className="mt-4 grid gap-3 rounded-[12px] border border-white/10 bg-[color:var(--orion-base)] p-4 md:grid-cols-[minmax(0,1fr)_120px_auto] md:items-end" onSubmit={createStage}>
+                    <label className="block text-[11px] text-[color:var(--orion-text-secondary)]">
+                        <span className="mb-1 block uppercase tracking-[0.1em] text-[color:var(--orion-text-muted)]">Nova etapa</span>
+                        <input
+                            value={newStageName}
+                            onChange={(event) => setNewStageName(event.target.value)}
+                            placeholder="Ex: Negociação VIP"
+                            className="h-10 w-full rounded-[8px] border border-white/10 bg-[color:var(--orion-surface)] px-3 text-sm text-[color:var(--orion-text)] outline-none focus:border-[color:var(--orion-gold)]"
+                        />
+                    </label>
+                    <label className="block text-[11px] text-[color:var(--orion-text-secondary)]">
+                        <span className="mb-1 block uppercase tracking-[0.1em] text-[color:var(--orion-text-muted)]">Cor</span>
+                        <input
+                            type="color"
+                            value={newStageColor}
+                            onChange={(event) => setNewStageColor(event.target.value)}
+                            className="h-10 w-full rounded-[8px] border border-white/10 bg-[color:var(--orion-surface)] px-2"
+                        />
+                    </label>
+                    <SubmitButton variant="primary" disabled={isCreatingStage}>
+                        {isCreatingStage ? 'Criando...' : 'Criar etapa'}
+                    </SubmitButton>
+                </form>
+                {stagesError ? (
+                    <p className="mt-3 rounded-[8px] border border-[rgba(224,82,82,0.35)] bg-[rgba(224,82,82,0.08)] px-3 py-2 text-[11px] text-[color:var(--orion-red)]">
+                        {stagesError}
+                    </p>
+                ) : null}
+                <div className="mt-3 space-y-3">
                     {stages.map((stage) => (
                         <div
                             key={stage.id}
-                            className="flex items-center justify-between rounded-lg border border-white/10 bg-[color:var(--orion-base)] px-3 py-2 text-sm text-[color:var(--orion-text)]"
+                            className="rounded-lg border border-white/10 bg-[color:var(--orion-base)] p-3 text-sm text-[color:var(--orion-text)]"
                         >
-                            <div className="flex items-center gap-2">
-                                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
-                                <span>{stage.name}</span>
+                            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_120px_auto] md:items-end">
+                                <label className="block text-[11px] text-[color:var(--orion-text-secondary)]">
+                                    <span className="mb-1 block uppercase tracking-[0.1em] text-[color:var(--orion-text-muted)]">Nome</span>
+                                    <input
+                                        value={stage.name}
+                                        onChange={(event) => handleStageDraftChange(stage.id, { name: event.target.value })}
+                                        className="h-10 w-full rounded-[8px] border border-white/10 bg-[color:var(--orion-surface)] px-3 text-sm text-[color:var(--orion-text)] outline-none focus:border-[color:var(--orion-gold)]"
+                                    />
+                                </label>
+                                <label className="block text-[11px] text-[color:var(--orion-text-secondary)]">
+                                    <span className="mb-1 block uppercase tracking-[0.1em] text-[color:var(--orion-text-muted)]">Cor</span>
+                                    <input
+                                        type="color"
+                                        value={stage.color}
+                                        onChange={(event) => handleStageDraftChange(stage.id, { color: event.target.value })}
+                                        className="h-10 w-full rounded-[8px] border border-white/10 bg-[color:var(--orion-surface)] px-2"
+                                    />
+                                </label>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => moveStage(stage.id, -1)}
+                                        disabled={busyStageId === stage.id || stage.position === 1}
+                                        className="inline-flex h-[34px] items-center rounded-[7px] border border-white/10 px-3 text-[12px] font-semibold text-[color:var(--orion-text-secondary)] hover:border-[color:var(--orion-gold)] hover:text-[color:var(--orion-gold)] disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Subir
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => moveStage(stage.id, 1)}
+                                        disabled={busyStageId === stage.id || stage.position === stages.length}
+                                        className="inline-flex h-[34px] items-center rounded-[7px] border border-white/10 px-3 text-[12px] font-semibold text-[color:var(--orion-text-secondary)] hover:border-[color:var(--orion-gold)] hover:text-[color:var(--orion-gold)] disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Descer
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => void saveStage(stage)}
+                                        disabled={busyStageId === stage.id}
+                                        className="inline-flex h-[34px] items-center rounded-[7px] bg-[color:var(--orion-gold)] px-3 text-[12px] font-semibold text-black hover:bg-[color:var(--orion-gold-light)] disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        {busyStageId === stage.id ? 'Salvando...' : 'Salvar'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => void deleteStage(stage)}
+                                        disabled={busyStageId === stage.id || stage.is_won || stage.is_lost}
+                                        className="inline-flex h-[34px] items-center rounded-[7px] border border-[rgba(224,82,82,0.4)] bg-[rgba(224,82,82,0.1)] px-3 text-[12px] font-semibold text-[color:var(--orion-red)] hover:bg-[rgba(224,82,82,0.2)] disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Remover
+                                    </button>
+                                </div>
                             </div>
-                            <span className="text-xs text-[color:var(--orion-text-muted)]">
-                                pos {stage.position}
-                                {stage.is_won ? ' · won' : ''}
-                                {stage.is_lost ? ' · lost' : ''}
-                            </span>
+                            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-[color:var(--orion-text-muted)]">
+                                <div className="flex items-center gap-3">
+                                    <span>pos {stage.position}</span>
+                                    <label className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={stage.is_won}
+                                            onChange={(event) => handleStageDraftChange(stage.id, { is_won: event.target.checked, is_lost: event.target.checked ? false : stage.is_lost })}
+                                        />
+                                        <span>Ganho</span>
+                                    </label>
+                                    <label className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={stage.is_lost}
+                                            onChange={(event) => handleStageDraftChange(stage.id, { is_lost: event.target.checked, is_won: event.target.checked ? false : stage.is_won })}
+                                        />
+                                        <span>Perda</span>
+                                    </label>
+                                </div>
+                                <span>{stage.is_won ? 'stage de ganho' : stage.is_lost ? 'stage de perda' : 'stage regular'}</span>
+                            </div>
                         </div>
                     ))}
                 </div>
                 <p className="mt-3 text-[11px] text-[color:var(--orion-text-muted)]">
-                    Para reordenar etapas use o módulo de Pipelines · Etapas (em outra tela).
+                    As alterações de etapas agora podem ser feitas direto no builder, sem depender de outra tela.
                 </p>
             </div>
         </div>

@@ -6,6 +6,17 @@
 
 ---
 
+## [v1.5.0] — 2026-05-02
+### Estabilização crítica de Clientes, Atendimento, Inbox e Pipeline
+- Histórico do cliente ajustado para exibir eventos reais e mensagens reais do WhatsApp
+- Contrato entre frontend e backend corrigido na aba Histórico/WhatsApp, sem mascarar erro de banco
+- Sanitização de HTML aplicada no atendimento para bloquear XSS persistente mantendo formatação básica
+- Painel do cliente corrigido para voltar a carregar blocos de atendimento sem queda silenciosa
+- Filtro de usuários por papel alinhado para menções e seleção operacional no atendimento
+- Inbox ajustado para que o perfil ROOT se comporte como superusuário de forma consistente
+- Builder de pipeline atualizado para permitir criar, editar, reordenar e remover etapas na própria tela
+- Testes e validações de typecheck executados para backend e frontend após as correções
+
 ## [v1.4.0] — 2026-04-28
 ### Clientes, Pipeline e Suporte sincronizados com commits recentes
 - Correção da ficha do cliente para não tentar converter lead novamente quando o registro já é cliente

@@ -12,9 +12,31 @@ import { requireRole } from '../middleware/rbac.js';
 import type { UserRole } from '../types/entities.js';
 
 const router = Router();
+const USER_ROLE_VALUES: UserRole[] = ['ROOT', 'ADMIN', 'GERENTE', 'VENDEDOR', 'ATENDENTE', 'PRODUCAO', 'FINANCEIRO'];
 
 const listUsersSchema = z.object({
     q: z.string().trim().min(1).max(120).optional(),
+    role: z.string().trim().optional().transform((value, ctx) => {
+        if (!value) {
+            return undefined;
+        }
+
+        const roles = value
+            .split(',')
+            .map((role) => role.trim().toUpperCase())
+            .filter((role) => role.length > 0);
+        const invalidRoles = roles.filter((role) => !USER_ROLE_VALUES.includes(role as UserRole));
+
+        if (invalidRoles.length > 0) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `Papéis inválidos: ${invalidRoles.join(', ')}`,
+            });
+            return z.NEVER;
+        }
+
+        return roles as UserRole[];
+    }),
 });
 
 const inviteUserSchema = z.object({
@@ -77,7 +99,7 @@ function generateTemporaryPassword(): string {
 router.get(
     '/',
     authenticate,
-    requireRole(['ADMIN', 'GERENTE']),
+    requireRole(['ADMIN', 'GERENTE', 'ATENDENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const parsed = listUsersSchema.safeParse(req.query);
@@ -89,14 +111,27 @@ router.get(
                 return;
             }
 
+            if (req.user?.role === 'ATENDENTE' && (!parsed.data.role || parsed.data.role.length === 0)) {
+                next(AppError.forbidden('Filtro por papel é obrigatório para este perfil.'));
+                return;
+            }
+
             const values: unknown[] = [];
-            let whereClause = '';
+            const whereClauses: string[] = [];
 
             if (parsed.data.q) {
                 values.push(`%${parsed.data.q}%`);
                 const index = values.length;
-                whereClause = `WHERE (u.name ILIKE $${index} OR u.email ILIKE $${index})`;
+                whereClauses.push(`(u.name ILIKE $${index} OR u.email ILIKE $${index})`);
             }
+
+            if (parsed.data.role && parsed.data.role.length > 0) {
+                const rolePlaceholders = parsed.data.role.map((_, index) => `$${values.length + index + 1}`).join(', ');
+                values.push(...parsed.data.role);
+                whereClauses.push(`u.role IN (${rolePlaceholders})`);
+            }
+
+            const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
             const result = await query<UserListRow>(
                 `SELECT

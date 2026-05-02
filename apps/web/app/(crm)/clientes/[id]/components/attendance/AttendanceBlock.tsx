@@ -7,6 +7,62 @@ interface Props {
   onEdit: (block: AttendanceBlockType) => void;
 }
 
+const ALLOWED_ATTENDANCE_TAGS = new Set(['A', 'B', 'BR', 'DIV', 'EM', 'I', 'LI', 'OL', 'P', 'SPAN', 'STRONG', 'U', 'UL']);
+const REMOVE_WITH_CONTENT_TAGS = new Set(['BUTTON', 'EMBED', 'FORM', 'IFRAME', 'INPUT', 'MATH', 'OBJECT', 'OPTION', 'SCRIPT', 'SELECT', 'STYLE', 'SVG', 'TEXTAREA']);
+
+function sanitizeAttendanceHtml(html: string): string {
+  if (typeof window === 'undefined') return html;
+
+  const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
+  const container = doc.body.firstElementChild as HTMLDivElement | null;
+  if (!container) return '';
+
+  function sanitizeElement(element: Element): void {
+    Array.from(element.children).forEach(sanitizeElement);
+
+    const tag = element.tagName.toUpperCase();
+    if (REMOVE_WITH_CONTENT_TAGS.has(tag)) {
+      element.remove();
+      return;
+    }
+
+    if (!ALLOWED_ATTENDANCE_TAGS.has(tag)) {
+      element.replaceWith(...Array.from(element.childNodes));
+      return;
+    }
+
+    Array.from(element.attributes).forEach((attribute) => {
+      const name = attribute.name.toLowerCase();
+      if (tag === 'A' && name === 'href') {
+        const value = attribute.value.trim();
+        const normalized = value.toLowerCase();
+        const isSafeLink = value.length > 0 && (
+          normalized.startsWith('http://')
+          || normalized.startsWith('https://')
+          || normalized.startsWith('mailto:')
+          || normalized.startsWith('tel:')
+          || value.startsWith('/')
+          || value.startsWith('#')
+        );
+
+        if (!isSafeLink) {
+          element.removeAttribute(attribute.name);
+        } else {
+          element.setAttribute('href', value);
+          element.setAttribute('rel', 'noopener noreferrer');
+          element.setAttribute('target', '_blank');
+        }
+        return;
+      }
+
+      element.removeAttribute(attribute.name);
+    });
+  }
+
+  Array.from(container.children).forEach(sanitizeElement);
+  return container.innerHTML.trim();
+}
+
 function fmtDate(d: string): string {
   try {
     return new Date(d).toLocaleDateString('pt-BR', {
@@ -130,7 +186,7 @@ export default function AttendanceBlockCard({ block, onEdit }: Props) {
       {/* Body */}
       {block.content && (
         <div
-          dangerouslySetInnerHTML={{ __html: block.content }}
+          dangerouslySetInnerHTML={{ __html: sanitizeAttendanceHtml(block.content) }}
           style={{ padding: '8px 14px', fontSize: '12px', color: '#C8C4BE', lineHeight: 1.6, maxHeight: '120px', overflow: 'hidden' }}
         />
       )}

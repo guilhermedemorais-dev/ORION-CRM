@@ -51,6 +51,18 @@ const pipelineStageCreateSchema = z.object({
     message: 'Uma etapa não pode ser de ganho e perda ao mesmo tempo.',
 });
 
+const pipelineStageUpdateSchema = z.object({
+    name: z.string().trim().min(2).max(100).optional(),
+    color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+    position: z.coerce.number().int().min(1).optional(),
+    is_won: z.boolean().optional(),
+    is_lost: z.boolean().optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+    message: 'Nenhum campo informado para atualizar a etapa.',
+}).refine((data) => !(data.is_won && data.is_lost), {
+    message: 'Uma etapa não pode ser de ganho e perda ao mesmo tempo.',
+});
+
 const pipelineStageReorderSchema = z.object({
     stages: z.array(z.object({
         id: z.string().uuid(),
@@ -653,6 +665,74 @@ router.put(
             );
 
             res.json({ data: result.rows.map(mapPipelineStage) });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+router.patch(
+    '/:id/stages/:stageId',
+    requireRole(['ADMIN']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const params = pipelineStageParamsSchema.safeParse(req.params);
+            const body = pipelineStageUpdateSchema.safeParse(req.body);
+            if (!params.success || !body.success) {
+                next(AppError.badRequest('Etapa inválida.'));
+                return;
+            }
+
+            const existingStage = await query<{ id: string }>(
+                `SELECT id
+                 FROM pipeline_stages
+                 WHERE id = $1 AND pipeline_id = $2
+                 LIMIT 1`,
+                [params.data.stageId, params.data.id]
+            );
+
+            if (!existingStage.rows[0]) {
+                next(AppError.notFound('Etapa não encontrada.'));
+                return;
+            }
+
+            if (body.data.is_won) {
+                await query('UPDATE pipeline_stages SET is_won = false WHERE pipeline_id = $1 AND id <> $2 AND is_won = true', [params.data.id, params.data.stageId]);
+            }
+            if (body.data.is_lost) {
+                await query('UPDATE pipeline_stages SET is_lost = false WHERE pipeline_id = $1 AND id <> $2 AND is_lost = true', [params.data.id, params.data.stageId]);
+            }
+
+            const fields: string[] = [];
+            const values: unknown[] = [];
+            const addField = (column: string, value: unknown) => {
+                values.push(value);
+                fields.push(`${column} = $${values.length}`);
+            };
+
+            if (body.data.name !== undefined) addField('name', body.data.name);
+            if (body.data.color !== undefined) addField('color', body.data.color);
+            if (body.data.position !== undefined) addField('position', body.data.position);
+            if (body.data.is_won !== undefined) addField('is_won', body.data.is_won);
+            if (body.data.is_lost !== undefined) addField('is_lost', body.data.is_lost);
+
+            values.push(params.data.stageId, params.data.id);
+            const result = await query<PipelineStageRow>(
+                `UPDATE pipeline_stages
+                 SET ${fields.join(', ')}
+                 WHERE id = $${values.length - 1}
+                   AND pipeline_id = $${values.length}
+                 RETURNING id, pipeline_id, name, color, position, is_won, is_lost, created_at`,
+                values
+            );
+
+            const updatedStage = result.rows[0];
+            if (!updatedStage) {
+                next(AppError.notFound('Etapa não encontrada.'));
+                return;
+            }
+
+            res.json({ data: mapPipelineStage(updatedStage) });
         } catch (error) {
             next(error);
         }

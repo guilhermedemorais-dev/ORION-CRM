@@ -425,7 +425,7 @@ export default function ClientHistoricoTab({ customerId }: Props) {
         const data = await res.json();
         setItems(Array.isArray(data) ? data : (data.data ?? []));
       } else if (subTab === 'timeline') {
-        const res = await fetch(`/api/internal/customers/${customerId}/history?type=all&limit=200`);
+        const res = await fetch(`/api/internal/customers/${customerId}/history?type=log&limit=200`);
         if (!res.ok) throw new Error('Erro');
         const data = await res.json();
         setItems(Array.isArray(data) ? data : (data.data ?? []));
