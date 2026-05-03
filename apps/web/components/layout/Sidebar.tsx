@@ -9,6 +9,7 @@ import {
     Circle,
     DollarSign,
     Gem,
+    GitBranch,
     LayoutDashboard,
     LogOut,
     MessageCircle,
@@ -32,6 +33,7 @@ const navGroups = [
             { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
             { icon: MessageCircle, label: 'Inbox', href: '/inbox' },
             { icon: UserCheck, label: 'Clientes', href: '/clientes' },
+            { icon: GitBranch, label: 'Pipeline', href: '/leads' },
         ],
     },
     {

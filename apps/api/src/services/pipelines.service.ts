@@ -49,7 +49,7 @@ export function assertPublishablePipelineFlow(flow: unknown): PipelineFlowShape 
 }
 
 export function isPipelineVisibleForRole(isActive: boolean, role: string): boolean {
-    if (role === 'ADMIN') {
+    if (role === 'ADMIN' || role === 'ROOT') {
         return true;
     }
 

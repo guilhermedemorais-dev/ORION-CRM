@@ -1,26 +1,5 @@
-import createDOMPurify from 'dompurify';
-import { JSDOM } from 'jsdom';
-
-const window = new JSDOM('').window;
-const DOMPurify = createDOMPurify(window as unknown as Window);
-
-// Allowed tags for attendance content (minimal set for safety)
-const ALLOWED_TAGS = [
-    'a', 'b', 'br', 'div', 'em', 'i', 'li', 'ol', 'p', 'span', 'strong', 'u', 'ul',
-];
-
-// Allowed attributes for attendance content
-const ALLOWED_ATTRS = ['href', 'target', 'rel'];
-
-// Configure DOMPurify with strict settings for attendance
-const purify = DOMPurify.extend({
-    ALLOWED_TAGS,
-    ALLOWED_ATTRS,
-    ALLOW_DATA_ATTR: false,
-    ADD_ATTR: ['target', 'rel'],
-    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'svg', 'math', 'form', 'input', 'button', 'textarea', 'select', 'option', 'link', 'meta'],
-    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'autofocus', 'oninput'],
-});
+const ALLOWED_ATTENDANCE_HTML_TAGS = new Set(['a', 'b', 'br', 'div', 'em', 'i', 'li', 'ol', 'p', 'span', 'strong', 'u', 'ul']);
+const ATTENDANCE_DROP_TAGS = ['script', 'style', 'iframe', 'object', 'embed', 'svg', 'math', 'form', 'input', 'button', 'textarea', 'select', 'option'];
 
 function escapeHtmlAttribute(value: string): string {
     return value
@@ -35,39 +14,50 @@ export function sanitizeAttendanceHtml(content: string): string {
         return '';
     }
 
-    // Remove null bytes and comments first
     let sanitized = content.replaceAll('\u0000', '').replace(/<!--[\s\S]*?-->/g, '');
 
-    // Use DOMPurify for XSS protection
-    sanitized = purify.sanitize(sanitized, {
-        RETURN_TRUSTED_TYPE: false,
-    }) as string;
+    for (const tag of ATTENDANCE_DROP_TAGS) {
+        const pairedTagPattern = new RegExp(`<${tag}\\b[^>]*>[\\s\\S]*?<\\/${tag}>`, 'gi');
+        const singleTagPattern = new RegExp(`<${tag}\\b[^>]*\\/?>`, 'gi');
+        sanitized = sanitized.replace(pairedTagPattern, '');
+        sanitized = sanitized.replace(singleTagPattern, '');
+    }
 
-    // Post-process: validate link hrefs (DOMPurify may allow unsafe protocols)
-    sanitized = sanitized.replace(
-        /<a\s+href="([^"]*)"[^>]*>/gi,
-        (_match, href: string) => {
-            const normalizedHref = (href || '').toLowerCase().trim();
-            const isSafeHref = normalizedHref.length > 0 && (
-                normalizedHref.startsWith('http://') ||
-                normalizedHref.startsWith('https://') ||
-                normalizedHref.startsWith('mailto:') ||
-                normalizedHref.startsWith('tel:') ||
-                normalizedHref.startsWith('/') ||
-                normalizedHref.startsWith('#')
-            );
-
-            if (isSafeHref) {
-                const safeRel = 'noopener noreferrer';
-                const safeTarget = normalizedHref.startsWith('/') || normalizedHref.startsWith('#')
-                    ? ''
-                    : ' target="_blank" rel="noopener noreferrer"';
-                return `<a href="${escapeHtmlAttribute(href)}"${safeTarget}>`;
-            }
-
-            return '<a>';
+    sanitized = sanitized.replace(/<\s*(\/?)\s*([a-z0-9-]+)([^>]*)>/gi, (_match, closingSlash: string, rawTag: string, rawAttributes: string) => {
+        const tag = rawTag.toLowerCase();
+        if (!ALLOWED_ATTENDANCE_HTML_TAGS.has(tag)) {
+            return '';
         }
-    );
+
+        if (closingSlash) {
+            return tag === 'br' ? '' : `</${tag}>`;
+        }
+
+        if (tag === 'br') {
+            return '<br>';
+        }
+
+        if (tag === 'a') {
+            const hrefMatch = rawAttributes.match(/\shref\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/i);
+            const href = (hrefMatch?.[2] ?? hrefMatch?.[3] ?? hrefMatch?.[4] ?? '').trim();
+            const normalizedHref = href.toLowerCase();
+            const isSafeHref = href.length > 0
+                && (
+                    normalizedHref.startsWith('http://')
+                    || normalizedHref.startsWith('https://')
+                    || normalizedHref.startsWith('mailto:')
+                    || normalizedHref.startsWith('tel:')
+                    || href.startsWith('/')
+                    || href.startsWith('#')
+                );
+
+            return isSafeHref
+                ? `<a href="${escapeHtmlAttribute(href)}" rel="noopener noreferrer" target="_blank">`
+                : '<a>';
+        }
+
+        return `<${tag}>`;
+    });
 
     return sanitized.trim();
 }

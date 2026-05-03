@@ -260,6 +260,14 @@ samp {
   color: var(--orion-text-secondary) !important;
 }
 
+.text-\[color\:var\(--orion-text-disabled\)\] {
+  color: #9f9f9f !important;
+}
+
+.text-\[color\:var\(--orion-text-muted\)\] {
+  color: #9f9f9f !important;
+}
+
 .orion-crm .border-canvas-border,
 .orion-crm .divide-canvas-border > :not([hidden]) ~ :not([hidden]) {
   border-color: var(--orion-border-low) !important;
@@ -379,4 +387,3 @@ input:-webkit-autofill:active {
 .kanban-board::-webkit-scrollbar-thumb:hover {
   background: rgba(200, 169, 122, 0.7);
 }
-
