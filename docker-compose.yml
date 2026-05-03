@@ -63,6 +63,8 @@ services:
       N8N_URL: ${N8N_URL:-http://n8n:5678}
       N8N_API_KEY: ${N8N_API_KEY:-}
       N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://n8n:5678/webhook/orion-lead-captured}
+      META_WEBHOOK_VERIFY_TOKEN: ${META_WEBHOOK_VERIFY_TOKEN:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
     expose:
       - "4000"
     depends_on:
