@@ -65,6 +65,19 @@ export function Topbar({
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    useEffect(() => {
+        const openHelpPanel = () => setHelpOpen(true);
+        const toggleNotifications = () => setNotifOpen((prev) => !prev);
+
+        window.addEventListener('open-help-panel', openHelpPanel);
+        window.addEventListener('toggle-topbar-notifications', toggleNotifications);
+
+        return () => {
+            window.removeEventListener('open-help-panel', openHelpPanel);
+            window.removeEventListener('toggle-topbar-notifications', toggleNotifications);
+        };
+    }, []);
+
     /* TASK-007: Close notification panel on outside click */
     useEffect(() => {
         if (!notifOpen) return;
@@ -79,56 +92,70 @@ export function Topbar({
 
     return (
         <>
-        <header className="sticky top-0 z-20 flex h-[52px] items-center justify-between border-b border-[color:var(--orion-border-low)] bg-[color:var(--orion-nav)] px-6 lg:px-7 gap-4">
-            {/* Left: section + page label */}
-            <div className="flex min-w-0 flex-1">
-                <button
-                    type="button"
-                    onClick={onMenuClick}
-                    className="mr-3 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-[color:var(--orion-border-low)] bg-white/5 text-[color:var(--orion-text-secondary)] outline-none transition-colors duration-120 hover:border-[color:var(--orion-border-mid)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)] lg:hidden"
-                    aria-label="Abrir menu de navegação"
-                >
-                    <Menu className="h-4 w-4" />
-                </button>
-                <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--orion-text-muted)]">
-                        {meta.section}
-                    </p>
-                    <p className="truncate text-[12px] font-medium text-[color:var(--orion-text)]">{meta.label}</p>
-                </div>
-            </div>
+        <header className="sticky top-0 z-20 border-b border-[color:var(--orion-border-low)] bg-[color:var(--orion-nav)]">
+            <div className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:px-7 lg:py-0 lg:h-[52px]">
+                <div className="flex items-center gap-3 lg:flex-1 lg:min-w-0">
+                    <button
+                        type="button"
+                        onClick={onMenuClick}
+                        className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-[color:var(--orion-border-low)] bg-white/5 text-[color:var(--orion-text-secondary)] outline-none transition-colors duration-120 hover:border-[color:var(--orion-border-mid)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)] lg:hidden"
+                        aria-label="Abrir menu de navegação"
+                    >
+                        <Menu className="h-4 w-4" />
+                    </button>
 
-            {/* Center: search bar */}
-            <div className="flex flex-[2] items-center justify-center">
-                <button
-                    type="button"
-                    onClick={() => setSearchOpen(true)}
-                    className="flex h-9 w-full max-w-2xl items-center gap-3 rounded-md border border-[color:var(--orion-border-sub)] bg-[color:var(--orion-base)] px-3 text-[12px] text-[color:var(--orion-text-secondary)] outline-none transition-colors hover:bg-[color:var(--orion-hover)]"
-                    title="Busca global (Cmd+K)"
-                >
-                    <LayoutGrid className="h-4 w-4 text-[color:var(--orion-text-muted)]" />
-                    <span className="flex-1 text-left text-[12px] font-medium">Pesquise no sistema</span>
-                    <div className="flex items-center text-[color:var(--orion-text-secondary)]">
-                        <Search className="h-4 w-4" />
+                    <div className="hidden min-w-0 lg:block">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--orion-text-muted)]">
+                            {meta.section}
+                        </p>
+                        <p className="truncate text-[12px] font-medium text-[color:var(--orion-text)]">{meta.label}</p>
                     </div>
-                </button>
-            </div>
 
-            {/* Right: actions */}
-            <div className="flex flex-1 items-center justify-end gap-2">
+                    <div className="flex min-w-0 flex-1 items-center justify-center lg:hidden">
+                        <button
+                            type="button"
+                            onClick={() => setSearchOpen(true)}
+                            className="flex h-10 w-full items-center gap-3 rounded-md border border-[color:var(--orion-border-sub)] bg-[color:var(--orion-base)] px-3 text-[12px] text-[color:var(--orion-text-secondary)] outline-none transition-colors hover:bg-[color:var(--orion-hover)]"
+                            title="Busca global (Cmd+K)"
+                        >
+                            <LayoutGrid className="h-4 w-4 text-[color:var(--orion-text-muted)]" />
+                            <span className="flex-1 text-left text-[12px] font-medium">Pesquise no sistema</span>
+                            <div className="flex items-center text-[color:var(--orion-text-secondary)]">
+                                <Search className="h-4 w-4" />
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div className="hidden flex-[2] items-center justify-center lg:flex">
+                    <button
+                        type="button"
+                        onClick={() => setSearchOpen(true)}
+                        className="flex h-9 w-full max-w-2xl items-center gap-3 rounded-md border border-[color:var(--orion-border-sub)] bg-[color:var(--orion-base)] px-3 text-[12px] text-[color:var(--orion-text-secondary)] outline-none transition-colors hover:bg-[color:var(--orion-hover)]"
+                        title="Busca global (Cmd+K)"
+                    >
+                        <LayoutGrid className="h-4 w-4 text-[color:var(--orion-text-muted)]" />
+                        <span className="flex-1 text-left text-[12px] font-medium">Pesquise no sistema</span>
+                        <div className="flex items-center text-[color:var(--orion-text-secondary)]">
+                            <Search className="h-4 w-4" />
+                        </div>
+                    </button>
+                </div>
+
+                <div className="hidden flex-1 items-center justify-end gap-2 lg:flex">
                 {/* Help button */}
                 <button
                     type="button"
                     onClick={() => setHelpOpen(true)}
                     title="Ajuda"
-                    className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-[color:var(--orion-border-low)] bg-white/5 text-[color:var(--orion-text-secondary)] outline-none transition-colors duration-120 hover:border-[color:var(--orion-border-mid)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)] lg:h-8 lg:w-8 lg:min-h-0 lg:min-w-0"
+                    className="hidden min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-[color:var(--orion-border-low)] bg-white/5 text-[color:var(--orion-text-secondary)] outline-none transition-colors duration-120 hover:border-[color:var(--orion-border-mid)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)] lg:flex lg:h-8 lg:w-8 lg:min-h-0 lg:min-w-0"
                     aria-label="Ajuda"
                 >
                     <HelpCircle className="h-4 w-4" />
                 </button>
 
                 {/* TASK-007: Notifications with dropdown panel */}
-                <div className="relative" ref={notifRef}>
+                <div className="relative hidden lg:block" ref={notifRef}>
                     <button
                         type="button"
                         onClick={() => setNotifOpen((prev) => !prev)}
@@ -167,7 +194,7 @@ export function Topbar({
                 </div>
 
                 {/* TASK-009: AI Assistant with maintenance badge when unavailable */}
-                <div className="relative ml-1">
+                <div className="relative ml-1 hidden lg:block">
                     <button
                         type="button"
                         onClick={() => {
@@ -193,6 +220,13 @@ export function Topbar({
                     )}
                 </div>
             </div>
+            <div className="min-w-0 lg:hidden">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--orion-text-muted)]">
+                    {meta.section}
+                </p>
+                <p className="truncate text-[12px] font-medium text-[color:var(--orion-text)]">{meta.label}</p>
+            </div>
+        </div>
         </header>
         {helpOpen && <HelpPanel context={helpContext} onClose={() => setHelpOpen(false)} />}
         <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} />

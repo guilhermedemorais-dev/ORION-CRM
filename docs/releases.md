@@ -6,6 +6,16 @@
 
 ---
 
+## [v1.5.1] — 2026-05-02
+### Topbar mobile reorganizada + atalhos flutuantes
+- Topbar mobile reorganizada em 2 linhas para reduzir aperto visual no header
+- Busca global ganhou prioridade no mobile com layout `menu + busca` na primeira linha
+- Contexto da rota atual (`seção` + `página`) foi movido para uma segunda linha mais legível
+- Botão `Pergunte` saiu do header mobile e virou ação flutuante persistente no canto inferior direito
+- `Ajuda` e `Notificações` também saíram do header mobile e passaram a usar atalhos flutuantes dedicados
+- Desktop preservado com a topbar existente e sem alteração do fluxo principal de ações
+- Publicação executada no serviço canônico `web` do Docker Compose para refletir a mudança em `127.0.0.1`
+
 ## [v1.5.0] — 2026-05-02
 ### Estabilização crítica de Clientes, Atendimento, Inbox e Pipeline
 - Histórico do cliente ajustado para exibir eventos reais e mensagens reais do WhatsApp
