@@ -6,6 +6,13 @@
 
 ---
 
+## [v1.5.2] — 2026-05-02
+### Correção de navegação de Leads + scroll do kanban
+- Dashboard deixou de depender do slug hardcoded `/pipeline/leads` e voltou a entrar pelo atalho `/leads`
+- Rota `/leads` passou a resolver o pipeline correto dinamicamente, priorizando slug `leads`, depois o pipeline padrão, depois o primeiro disponível
+- Kanban de Leads deixou de usar `preventDefault()` em `onWheel` React passivo e passou a usar listener nativo com `passive: false`
+- Erro repetitivo `Unable to preventDefault inside passive event listener invocation` removido da interação de scroll horizontal do pipeline
+
 ## [v1.5.1] — 2026-05-02
 ### Topbar mobile reorganizada + atalhos flutuantes
 - Topbar mobile reorganizada em 2 linhas para reduzir aperto visual no header

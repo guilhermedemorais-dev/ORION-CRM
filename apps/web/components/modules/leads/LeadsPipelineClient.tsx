@@ -349,19 +349,48 @@ export function LeadsPipelineClient({
     }
 
     useEffect(() => {
+        const board = boardRef.current;
+        if (!board) return;
+
         const handler = (event: WheelEvent) => {
-            if (!event.shiftKey) return;
-            const board = boardRef.current;
-            if (!board) return;
-            const delta = event.deltaY !== 0 ? event.deltaY : event.deltaX;
+            const currentBoard = boardRef.current;
+            if (!currentBoard) return;
+
+            if (event.shiftKey) {
+                const delta = event.deltaY !== 0 ? event.deltaY : event.deltaX;
+                if (delta !== 0) {
+                    currentBoard.scrollLeft += delta;
+                    event.preventDefault();
+                }
+                return;
+            }
+
+            const target = event.target as HTMLElement | null;
+            const columnBody = target?.closest('[data-col-body="true"]') as HTMLElement | null;
+            const canScrollColumn =
+                !!columnBody && columnBody.scrollHeight > columnBody.clientHeight;
+
+            if (canScrollColumn && Math.abs(event.deltaY) >= Math.abs(event.deltaX)) {
+                const atTop = columnBody.scrollTop <= 0;
+                const atBottom =
+                    columnBody.scrollTop + columnBody.clientHeight >=
+                    columnBody.scrollHeight - 1;
+                const scrollingDown = event.deltaY > 0;
+
+                if ((scrollingDown && !atBottom) || (!scrollingDown && !atTop)) {
+                    return;
+                }
+            }
+
+            const delta = Math.abs(event.deltaX) > 0 ? event.deltaX : event.deltaY;
             if (delta !== 0) {
-                board.scrollLeft += delta;
+                currentBoard.scrollLeft += delta;
                 event.preventDefault();
             }
         };
 
-        window.addEventListener('wheel', handler, { passive: false });
-        return () => window.removeEventListener('wheel', handler);
+        board.addEventListener('wheel', handler, { passive: false });
+        return () => board.removeEventListener('wheel', handler);
     }, []);
 
     const filteredLeads = useMemo(() => {
@@ -1025,42 +1054,6 @@ export function LeadsPipelineClient({
                 <div
                     ref={boardRef}
                     className="kanban-board flex-1 min-h-0 min-w-0 overflow-x-scroll overflow-y-hidden px-5 pb-5 pt-3 [scrollbar-gutter:stable] overscroll-x-contain"
-                    onWheel={(event) => {
-                        const board = boardRef.current;
-                        if (!board) return;
-
-                        if (event.shiftKey) {
-                            const delta = event.deltaY !== 0 ? event.deltaY : event.deltaX;
-                            if (delta !== 0) {
-                                board.scrollLeft += delta;
-                                event.preventDefault();
-                            }
-                            return;
-                        }
-
-                        const target = event.target as HTMLElement | null;
-                        const columnBody = target?.closest('[data-col-body=\"true\"]') as HTMLElement | null;
-                        const canScrollColumn =
-                            !!columnBody && columnBody.scrollHeight > columnBody.clientHeight;
-
-                        if (canScrollColumn && Math.abs(event.deltaY) >= Math.abs(event.deltaX)) {
-                            const atTop = columnBody!.scrollTop <= 0;
-                            const atBottom =
-                                columnBody!.scrollTop + columnBody!.clientHeight >=
-                                columnBody!.scrollHeight - 1;
-                            const scrollingDown = event.deltaY > 0;
-
-                            if ((scrollingDown && !atBottom) || (!scrollingDown && !atTop)) {
-                                return;
-                            }
-                        }
-
-                        const delta = Math.abs(event.deltaX) > 0 ? event.deltaX : event.deltaY;
-                        if (delta !== 0) {
-                            board.scrollLeft += delta;
-                            event.preventDefault();
-                        }
-                    }}
                 >
                     <div ref={contentRef} className="inline-flex h-full min-w-max w-max items-start gap-3">
                         {stages

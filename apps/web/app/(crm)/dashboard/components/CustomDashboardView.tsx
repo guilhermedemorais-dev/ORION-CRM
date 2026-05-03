@@ -616,7 +616,7 @@ export function CustomDashboardView({ data }: Props) {
           <div className="kpi-footer"><span className="delta up">↑ +{pdvOrdersToday > 4 ? pdvOrdersToday - 4 : pdvOrdersToday}</span><span className="delta-sub">vs ontem</span></div>
         </div>
         {/* Leads */}
-        <div className="kpi-card anim-in" onClick={() => router.push('/pipeline/leads')} role="link" tabIndex={0} title="Ver Pipeline">
+        <div className="kpi-card anim-in" onClick={() => router.push('/leads')} role="link" tabIndex={0} title="Ver Pipeline">
           <div className="kpi-top"><div className="kpi-label">Leads — Pipeline</div><div className="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#C8A97A" strokeWidth="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div></div>
           <div className="kpi-value" suppressHydrationWarning>{leadsToday}</div>
           <div className="kpi-sub">Novos hoje</div>
