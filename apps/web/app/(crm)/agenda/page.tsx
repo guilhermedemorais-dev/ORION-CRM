@@ -45,7 +45,7 @@ export default async function AgendaPage({
     const closeHref = `/agenda?view=${view}${searchParams.date ? `&date=${searchParams.date}` : ''}`;
 
     return (
-        <div className="h-[calc(100vh-60px)] flex flex-col pt-4 overflow-hidden relative">
+        <div className="flex-1 min-h-0 flex flex-col pt-4 overflow-hidden relative">
             <PageHeader
                 title="Agenda"
                 description="Gerencie seus agendamentos e horários para visitas e reuniões."

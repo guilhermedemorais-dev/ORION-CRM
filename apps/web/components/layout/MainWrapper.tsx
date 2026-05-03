@@ -12,8 +12,8 @@ export function MainWrapper({ children }: { children: ReactNode }) {
         pathname.startsWith('/leads/') ||
         pathname === '/dashboard';
 
-    // Inbox manages its own internal scroll — prevent main from scrolling
-    const isNoScroll = pathname === '/inbox';
+    // Inbox and Agenda manage their own internal scroll — prevent main from scrolling
+    const isNoScroll = pathname === '/inbox' || pathname === '/agenda';
 
     return (
         <main className={`flex-1 overflow-x-hidden ${isNoScroll ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'} ${isFullBleed ? 'p-0' : 'p-6'}`}>
