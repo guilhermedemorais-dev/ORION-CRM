@@ -16,7 +16,7 @@ export function MainWrapper({ children }: { children: ReactNode }) {
     const isNoScroll = pathname === '/inbox' || pathname === '/agenda';
 
     return (
-        <main className={`flex-1 overflow-x-hidden ${isNoScroll ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'} ${isFullBleed ? 'p-0' : 'p-6'}`}>
+        <main className={`min-h-0 flex-1 overflow-x-hidden ${isNoScroll ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'} ${isFullBleed ? 'p-0' : 'p-6'}`}>
             {children}
         </main>
     );
