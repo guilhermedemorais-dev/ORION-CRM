@@ -4,9 +4,13 @@ import { z } from 'zod';
 import { query, transaction } from '../db/pool.js';
 import { AppError } from '../lib/errors.js';
 import { authenticate } from '../middleware/auth.js';
+import { createAuditLog } from '../middleware/audit.js';
+import { requirePermission } from '../middleware/permissions.js';
 import { requireRole } from '../middleware/rbac.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import type { LeadSource, LeadStage } from '../types/entities.js';
+import pipelineRulesRoutes from './pipeline-rules.routes.js';
+import { getBuilderOrganizationId } from '../services/pipeline-rules.service.js';
 import {
     assertPublishablePipelineFlow,
     isPipelineVisibleForRole,
@@ -75,6 +79,19 @@ const pipelineStageParamsSchema = z.object({
     stageId: z.string().uuid(),
 });
 
+const stageDefaultsSchema = z.object({
+    sla_value: z.coerce.number().int().min(1).nullable().optional(),
+    sla_unit: z.enum(['minutes', 'hours', 'days']).nullable().optional(),
+    default_assignee_id: z.string().uuid().nullable().optional(),
+    max_cards: z.coerce.number().int().min(1).nullable().optional(),
+    checklist_default: z.array(z.string().trim().min(1).max(200)).optional(),
+    required_fields_enter: z.array(z.string().trim().min(1).max(80)).optional(),
+    required_fields_exit: z.array(z.string().trim().min(1).max(80)).optional(),
+    min_role_to_move: z.enum(['ROOT', 'ADMIN', 'GERENTE', 'VENDEDOR', 'ATENDENTE', 'PRODUCAO', 'FINANCEIRO']).nullable().optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+    message: 'Nenhum campo informado para atualizar os defaults.',
+});
+
 const pipelineLeadsQuerySchema = z.object({
     stage_id: z.string().uuid().optional(),
     assigned_to: z.string().uuid().optional(),
@@ -107,6 +124,25 @@ interface PipelineStageRow {
     is_won: boolean;
     is_lost: boolean;
     created_at: Date;
+}
+
+interface PipelineStageSettingsRow {
+    id: string;
+    organization_id: string;
+    pipeline_id: string;
+    stage_id: string;
+    sla_value: number | null;
+    sla_unit: string | null;
+    default_assignee_id: string | null;
+    max_cards: number | null;
+    checklist_default: string[];
+    required_fields_enter: string[];
+    required_fields_exit: string[];
+    min_role_to_move: string | null;
+    created_by: string | null;
+    updated_by: string | null;
+    created_at: Date;
+    updated_at: Date;
 }
 
 interface LeadBoardRow {
@@ -174,6 +210,27 @@ function mapPipelineStage(row: PipelineStageRow) {
     };
 }
 
+function mapPipelineStageSettings(row: PipelineStageSettingsRow) {
+    return {
+        id: row.id,
+        organization_id: row.organization_id,
+        pipeline_id: row.pipeline_id,
+        stage_id: row.stage_id,
+        sla_value: row.sla_value,
+        sla_unit: row.sla_unit,
+        default_assignee_id: row.default_assignee_id,
+        max_cards: row.max_cards,
+        checklist_default: row.checklist_default ?? [],
+        required_fields_enter: row.required_fields_enter ?? [],
+        required_fields_exit: row.required_fields_exit ?? [],
+        min_role_to_move: row.min_role_to_move,
+        created_by: row.created_by,
+        updated_by: row.updated_by,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+    };
+}
+
 function mapLead(row: LeadBoardRow) {
     return {
         id: row.id,
@@ -235,6 +292,20 @@ async function assertPipelineAccess(req: Request, pipeline: PipelineRow): Promis
 
     if (!isPipelineVisibleForRole(pipeline.is_active, req.user.role)) {
         throw AppError.forbidden('Você não pode acessar este pipeline.');
+    }
+}
+
+async function assertStageBelongsToPipeline(stageId: string, pipelineId: string): Promise<void> {
+    const result = await query<{ id: string }>(
+        `SELECT id
+         FROM pipeline_stages
+         WHERE id = $1 AND pipeline_id = $2
+         LIMIT 1`,
+        [stageId, pipelineId]
+    );
+
+    if (!result.rows[0]) {
+        throw AppError.badRequest('Etapa não pertence ao pipeline informado.');
     }
 }
 
@@ -794,6 +865,118 @@ router.delete(
         }
     }
 );
+
+router.get(
+    '/:id/stages/:stageId/defaults',
+    requirePermission('pipeline.configure'),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const parsed = pipelineStageParamsSchema.safeParse(req.params);
+            if (!parsed.success) {
+                next(AppError.badRequest('Etapa inválida.'));
+                return;
+            }
+
+            await assertStageBelongsToPipeline(parsed.data.stageId, parsed.data.id);
+            const organizationId = await getBuilderOrganizationId();
+            const result = await query<PipelineStageSettingsRow>(
+                `SELECT id, organization_id, pipeline_id, stage_id, sla_value, sla_unit,
+                        default_assignee_id, max_cards, checklist_default,
+                        required_fields_enter, required_fields_exit, min_role_to_move,
+                        created_by, updated_by, created_at, updated_at
+                 FROM pipeline_stage_settings
+                 WHERE organization_id = $1
+                   AND pipeline_id = $2
+                   AND stage_id = $3
+                 LIMIT 1`,
+                [organizationId, parsed.data.id, parsed.data.stageId]
+            );
+
+            res.json({ data: result.rows[0] ? mapPipelineStageSettings(result.rows[0]) : null });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+router.patch(
+    '/:id/stages/:stageId/defaults',
+    requirePermission('pipeline.configure'),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const params = pipelineStageParamsSchema.safeParse(req.params);
+            const body = stageDefaultsSchema.safeParse(req.body);
+            if (!params.success || !body.success) {
+                next(AppError.badRequest('Defaults de etapa inválidos.'));
+                return;
+            }
+
+            await assertStageBelongsToPipeline(params.data.stageId, params.data.id);
+            const organizationId = await getBuilderOrganizationId();
+            const result = await query<PipelineStageSettingsRow>(
+                `INSERT INTO pipeline_stage_settings
+                    (organization_id, pipeline_id, stage_id, sla_value, sla_unit,
+                     default_assignee_id, max_cards, checklist_default,
+                     required_fields_enter, required_fields_exit, min_role_to_move,
+                     created_by, updated_by)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,$10::jsonb,$11,$12,$12)
+                 ON CONFLICT (stage_id)
+                 DO UPDATE SET
+                    sla_value = EXCLUDED.sla_value,
+                    sla_unit = EXCLUDED.sla_unit,
+                    default_assignee_id = EXCLUDED.default_assignee_id,
+                    max_cards = EXCLUDED.max_cards,
+                    checklist_default = EXCLUDED.checklist_default,
+                    required_fields_enter = EXCLUDED.required_fields_enter,
+                    required_fields_exit = EXCLUDED.required_fields_exit,
+                    min_role_to_move = EXCLUDED.min_role_to_move,
+                    updated_by = EXCLUDED.updated_by,
+                    updated_at = NOW()
+                 RETURNING id, organization_id, pipeline_id, stage_id, sla_value, sla_unit,
+                           default_assignee_id, max_cards, checklist_default,
+                           required_fields_enter, required_fields_exit, min_role_to_move,
+                           created_by, updated_by, created_at, updated_at`,
+                [
+                    organizationId,
+                    params.data.id,
+                    params.data.stageId,
+                    body.data.sla_value ?? null,
+                    body.data.sla_unit ?? null,
+                    body.data.default_assignee_id ?? null,
+                    body.data.max_cards ?? null,
+                    JSON.stringify(body.data.checklist_default ?? []),
+                    JSON.stringify(body.data.required_fields_enter ?? []),
+                    JSON.stringify(body.data.required_fields_exit ?? []),
+                    body.data.min_role_to_move ?? null,
+                    req.user?.id ?? null,
+                ]
+            );
+
+            const settings = result.rows[0];
+            if (!settings) {
+                throw AppError.internal(req.requestId);
+            }
+
+            if (req.user) {
+                await createAuditLog({
+                    userId: req.user.id,
+                    action: 'UPSERT_PIPELINE_STAGE_DEFAULTS',
+                    entityType: 'pipeline_stage_settings',
+                    entityId: settings.id,
+                    oldValue: null,
+                    newValue: mapPipelineStageSettings(settings),
+                    req,
+                });
+            }
+
+            res.json({ data: mapPipelineStageSettings(settings) });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+router.use('/:id/rules', pipelineRulesRoutes);
 
 router.get(
     '/:id/leads',

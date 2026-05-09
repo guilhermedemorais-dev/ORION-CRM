@@ -9,7 +9,6 @@ import {
     Circle,
     DollarSign,
     Gem,
-    GitBranch,
     LayoutDashboard,
     LogOut,
     MessageCircle,
@@ -33,7 +32,6 @@ const navGroups = [
             { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
             { icon: MessageCircle, label: 'Inbox', href: '/inbox' },
             { icon: UserCheck, label: 'Clientes', href: '/clientes' },
-            { icon: GitBranch, label: 'Pipeline', href: '/leads' },
         ],
     },
     {
@@ -179,10 +177,10 @@ export function Sidebar({
                                         </Link>
                                         {userRole === 'ROOT' ? (
                                             <Link
-                                                href={`/pipeline/${pipeline.slug}/builder`}
+                                                href={`/pipeline/${pipeline.slug}/builder-v2`}
                                                 onClick={onCloseMobile}
                                                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[color:var(--orion-border-mid)] bg-white/5 text-[color:var(--orion-text-secondary)] transition-colors hover:border-[color:var(--orion-border-strong)] hover:text-[color:var(--orion-text)]"
-                                                aria-label={`Abrir builder do pipeline ${pipeline.name}`}
+                                                aria-label={`Abrir Builder V2 do pipeline ${pipeline.name}`}
                                             >
                                                 <PencilLine className="h-3.5 w-3.5" />
                                             </Link>

@@ -7,10 +7,12 @@ import { z } from 'zod';
 import { env } from '../config/env.js';
 import { query, transaction } from '../db/pool.js';
 import { AppError } from '../lib/errors.js';
+import { logger } from '../lib/logger.js';
 import { authenticate } from '../middleware/auth.js';
 import { createAuditLog } from '../middleware/audit.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { requireRole } from '../middleware/rbac.js';
+import { executePipelineRulesForStageEntry } from '../services/pipeline-rules.service.js';
 import type { LeadSource, LeadStage } from '../types/entities.js';
 
 const router = Router();
@@ -113,6 +115,7 @@ interface LeadRow {
 
 interface StageRow {
     id: string;
+    pipeline_id: string;
     name: string;
     color: string;
     is_won: boolean;
@@ -268,10 +271,11 @@ async function createLeadTimelineEvent(params: {
     body?: string | null;
     metadata?: Record<string, unknown> | null;
     createdBy?: string | null;
-}): Promise<void> {
-    await query(
+}): Promise<string> {
+    const result = await query<{ id: string }>(
         `INSERT INTO lead_timeline (lead_id, type, title, body, metadata, created_by)
-         VALUES ($1, $2, $3, $4, $5::jsonb, $6)`,
+         VALUES ($1, $2, $3, $4, $5::jsonb, $6)
+         RETURNING id`,
         [
             params.leadId,
             params.type,
@@ -281,6 +285,11 @@ async function createLeadTimelineEvent(params: {
             params.createdBy ?? null,
         ]
     );
+    const eventId = result.rows[0]?.id;
+    if (!eventId) {
+        throw new Error('Lead timeline event was not created.');
+    }
+    return eventId;
 }
 
 async function resolveDefaultPipelineId(): Promise<string> {
@@ -620,7 +629,7 @@ router.patch(
 
             if (parsed.data.stageId) {
                 const stageResult = await query<StageRow>(
-                    `SELECT id, name, color, is_won, is_lost
+                    `SELECT id, pipeline_id, name, color, is_won, is_lost
                      FROM pipeline_stages
                      WHERE id = $1
                      LIMIT 1`,
@@ -633,14 +642,21 @@ router.patch(
                     return;
                 }
 
+                if (stage.pipeline_id !== currentLead.pipeline_id) {
+                    next(AppError.badRequest('Etapa não pertence ao pipeline atual do lead.'));
+                    return;
+                }
+
                 nextStageId = stage.id;
                 nextLegacyStage = mapStageToLegacy(stage, currentLead.stage);
                 nextStageName = stage.name;
             } else if (parsed.data.stage) {
                 nextLegacyStage = parsed.data.stage;
                 const stagesResult = await query<StageRow>(
-                    `SELECT id, name, color, is_won, is_lost
-                     FROM pipeline_stages`
+                    `SELECT id, pipeline_id, name, color, is_won, is_lost
+                     FROM pipeline_stages
+                     WHERE pipeline_id = $1`,
+                    [currentLead.pipeline_id]
                 );
                 const expected = normalize(stageNameToLegacy(parsed.data.stage).replaceAll('_', ' '));
                 const matched = stagesResult.rows.find((stage) => normalize(stage.name) === expected) ?? null;
@@ -655,8 +671,9 @@ router.patch(
                 [nextLegacyStage, nextStageId, leadId]
             );
 
+            let stageChangeEventId: string | null = null;
             if (req.user) {
-                await createLeadTimelineEvent({
+                stageChangeEventId = await createLeadTimelineEvent({
                     leadId,
                     type: 'STAGE_CHANGED',
                     title: 'Etapa atualizada',
@@ -679,6 +696,20 @@ router.patch(
                     newValue: { stage: nextLegacyStage, stage_id: nextStageId },
                     req,
                 });
+            }
+
+            if (nextStageId && nextStageId !== currentLead.stage_id) {
+                try {
+                    await executePipelineRulesForStageEntry({
+                        leadId,
+                        sourcePipelineId: currentLead.pipeline_id,
+                        sourceStageId: nextStageId,
+                        occurrenceToken: stageChangeEventId,
+                        userId: req.user?.id ?? null,
+                    });
+                } catch (ruleError) {
+                    logger.error({ err: ruleError, leadId, stageId: nextStageId }, 'Pipeline rule executor failed after lead stage update');
+                }
             }
 
             const updatedLead = await fetchLeadById(leadId);

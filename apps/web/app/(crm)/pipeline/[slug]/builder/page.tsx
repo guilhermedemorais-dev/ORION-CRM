@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -170,6 +171,22 @@ export default async function PipelineBuilderPage({
 
     return (
         <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-[color:var(--orion-gold-border)] bg-[color:var(--orion-gold-bg)] px-4 py-3">
+                <div>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--orion-gold)]">
+                        Builder visual legado
+                    </p>
+                    <p className="mt-1 text-sm text-[color:var(--orion-text-secondary)]">
+                        A configuração principal de regras do pipeline agora fica no Builder V2.
+                    </p>
+                </div>
+                <Link
+                    href={`/pipeline/${pipeline.slug}/builder-v2`}
+                    className="inline-flex h-9 items-center rounded-[8px] bg-[color:var(--orion-gold)] px-4 text-[12px] font-bold text-black hover:bg-[color:var(--orion-gold-light)]"
+                >
+                    Abrir Builder V2
+                </Link>
+            </div>
             <BuilderCanvas
                 pipeline={pipeline}
                 stages={stagesResponse.data}

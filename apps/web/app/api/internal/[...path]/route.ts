@@ -93,14 +93,23 @@ async function forward(request: Request, params: { path: string[] }) {
         return NextResponse.json({ message: 'Falha ao conectar com a API.' }, { status: 503 });
     }
 
-    const payload = await response.text();
-    const responseContentType = response.headers.get('content-type') ?? 'application/json';
-
     const forwardHeaders = new Headers();
-    forwardHeaders.set('content-type', responseContentType);
     const retryAfter = response.headers.get('retry-after');
     if (retryAfter) {
         forwardHeaders.set('retry-after', retryAfter);
+    }
+
+    if (response.status === 204 || response.status === 304) {
+        return new NextResponse(null, {
+            status: response.status,
+            headers: forwardHeaders,
+        });
+    }
+
+    const payload = await response.text();
+    const responseContentType = response.headers.get('content-type');
+    if (responseContentType) {
+        forwardHeaders.set('content-type', responseContentType);
     }
 
     return new NextResponse(payload, {

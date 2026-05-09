@@ -53,7 +53,7 @@ export async function createPipelineAction(formData: FormData) {
 
         revalidatePath('/pipeline/novo/builder');
         revalidatePath('/leads');
-        redirect(`/pipeline/${pipeline.slug}/builder`);
+        redirect(`/pipeline/${pipeline.slug}/builder-v2`);
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Falha ao criar pipeline.';
         redirect(`/pipeline/novo/builder?error=${encodeURIComponent(message)}`);

@@ -10,6 +10,24 @@ import {
     useState,
 } from 'react';
 import {
+    ArrowDown,
+    ArrowUp,
+    FileJson2,
+    GitBranch,
+    Hand,
+    Link2,
+    MousePointer2,
+    PanelRightClose,
+    PanelRightOpen,
+    Plus,
+    Rocket,
+    Save,
+    Settings2,
+    Trash2,
+    Workflow,
+    Zap,
+} from 'lucide-react';
+import {
     addEdge,
     Background,
     BackgroundVariant,
@@ -202,10 +220,12 @@ function newNodeId(kind: BuilderNodeKind, existing: BuilderRFNode[]): string {
 
 function SubmitButton({
     children,
+    icon,
     variant = 'primary',
     disabled,
 }: {
     children: React.ReactNode;
+    icon?: React.ReactNode;
     variant?: 'primary' | 'ghost' | 'danger';
     disabled?: boolean;
 }) {
@@ -223,6 +243,8 @@ function SubmitButton({
         <button type="submit" disabled={pending || disabled} className={`${base} ${variants[variant]}`}>
             {pending ? (
                 <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : icon ? (
+                <span className="inline-flex h-3.5 w-3.5 items-center justify-center">{icon}</span>
             ) : null}
             {children}
         </button>
@@ -496,30 +518,38 @@ export function BuilderCanvas({
                 onCancel={() => setShowDeactivateModal(false)}
                 onConfirm={confirmDeactivate}
             />
-
-            <section className="overflow-hidden rounded-2xl border border-white/10 bg-[color:var(--orion-surface)] shadow-[var(--orion-shadow-card)]">
+            <section className="overflow-hidden rounded-[18px] border border-white/10 bg-[#111114] shadow-[var(--orion-shadow-card)]">
                 {/* Header */}
-                <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3 border-b border-white/10 px-6 py-3">
-                    <div className="flex items-center gap-3">
-                        <span className="text-lg">🔀</span>
-                        <h1 className="font-editorial text-[17px] font-bold text-[color:var(--orion-text)]">
-                            {pipeline.name}
-                        </h1>
-                        <span className="rounded-full border border-[color:var(--orion-gold-border)] bg-[color:var(--orion-gold-bg)] px-3 py-1 text-[11px] font-semibold text-[color:var(--orion-gold)]">
-                            {pipeline.is_active ? 'Ativo' : 'Inativo'}
+                <div className="flex min-h-[58px] flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[#151517] px-5 py-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-[color:var(--orion-gold-border)] bg-[color:var(--orion-gold-bg)] text-[color:var(--orion-gold)]">
+                            <Workflow className="h-4 w-4" />
                         </span>
-                        <span className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold text-[color:var(--orion-text-secondary)]">
-                            {pipeline.published_at ? 'Publicado' : 'Não publicado'}
-                        </span>
+                        <div className="min-w-0">
+                            <div className="flex min-w-0 items-center gap-2">
+                                <h1 className="truncate font-editorial text-[17px] font-bold text-[color:var(--orion-text)]">
+                                    {pipeline.name}
+                                </h1>
+                                <span className="rounded-full border border-[color:var(--orion-gold-border)] bg-[color:var(--orion-gold-bg)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[color:var(--orion-gold)]">
+                                    {pipeline.is_active ? 'Ativo' : 'Inativo'}
+                                </span>
+                            </div>
+                            <p className="mt-0.5 truncate text-[11px] text-[color:var(--orion-text-secondary)]">
+                                {pipeline.slug} · {pipeline.published_at ? 'Publicado' : 'Rascunho não publicado'} · {stageItems.length} etapas
+                            </p>
+                        </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={() => setShowSidePanel((v) => !v)}
-                            className="inline-flex h-[34px] items-center rounded-[7px] border border-white/10 px-3 text-[12px] font-semibold text-[color:var(--orion-text-secondary)] hover:border-[color:var(--orion-gold)] hover:text-[color:var(--orion-gold)] lg:hidden"
-                        >
-                            {showSidePanel ? 'Esconder painel' : 'Mostrar painel'}
-                        </button>
+                        {activeTab === 'builder' ? (
+                            <button
+                                type="button"
+                                onClick={() => setShowSidePanel((v) => !v)}
+                                className="inline-flex h-[34px] items-center gap-2 rounded-[8px] border border-white/10 px-3 text-[12px] font-semibold text-[color:var(--orion-text-secondary)] hover:border-[color:var(--orion-gold)] hover:text-[color:var(--orion-gold)] lg:hidden"
+                            >
+                                {showSidePanel ? <PanelRightClose className="h-3.5 w-3.5" /> : <PanelRightOpen className="h-3.5 w-3.5" />}
+                                {showSidePanel ? 'Esconder painel' : 'Mostrar painel'}
+                            </button>
+                        ) : null}
                         <form
                             ref={toggleFormRef}
                             action={toggleAction}
@@ -528,35 +558,36 @@ export function BuilderCanvas({
                             <input type="hidden" name="pipeline_id" value={pipeline.id} />
                             <input type="hidden" name="slug" value={pipeline.slug} />
                             <input type="hidden" name="is_active" value={pipeline.is_active ? 'false' : 'true'} />
-                            <SubmitButton variant={pipeline.is_active ? 'danger' : 'ghost'}>
+                            <SubmitButton variant={pipeline.is_active ? 'danger' : 'ghost'} icon={<Zap className="h-3.5 w-3.5" />}>
                                 {pipeline.is_active ? 'Desativar' : 'Ativar'}
                             </SubmitButton>
                         </form>
                         <form action={publishAction}>
                             <input type="hidden" name="pipeline_id" value={pipeline.id} />
                             <input type="hidden" name="slug" value={pipeline.slug} />
-                            <SubmitButton variant="primary">Publicar pipeline</SubmitButton>
+                            <SubmitButton variant="primary" icon={<Rocket className="h-3.5 w-3.5" />}>Publicar pipeline</SubmitButton>
                         </form>
                     </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-white/10 bg-[color:var(--orion-base)] px-6">
+                <div className="flex border-b border-white/10 bg-[#0f0f11] px-4">
                     {([
-                        ['builder', 'Builder visual'],
-                        ['config', 'Configuração'],
-                        ['json', 'JSON'],
-                    ] as const).map(([tab, label]) => (
+                        ['builder', 'Builder visual', <GitBranch key="builder" className="h-3.5 w-3.5" />],
+                        ['config', 'Configuração', <Settings2 key="config" className="h-3.5 w-3.5" />],
+                        ['json', 'JSON', <FileJson2 key="json" className="h-3.5 w-3.5" />],
+                    ] as const).map(([tab, label, icon]) => (
                         <button
                             key={tab}
                             type="button"
                             onClick={() => setActiveTab(tab)}
-                            className={`px-4 py-3 text-[13px] font-medium transition ${
+                            className={`inline-flex h-11 items-center gap-2 border-b-2 px-4 text-[12px] font-semibold transition ${
                                 activeTab === tab
-                                    ? 'border-b-2 border-[color:var(--orion-gold)] text-[color:var(--orion-gold)]'
-                                    : 'border-b-2 border-transparent text-[color:var(--orion-text-secondary)] hover:text-[color:var(--orion-text)]'
+                                    ? 'border-[color:var(--orion-gold)] text-[color:var(--orion-gold)]'
+                                    : 'border-transparent text-[color:var(--orion-text-secondary)] hover:text-[color:var(--orion-text)]'
                             }`}
                         >
+                            {icon}
                             {label}
                         </button>
                     ))}
@@ -564,8 +595,8 @@ export function BuilderCanvas({
 
                 {/* Body */}
                 <div
-                    className={`grid h-[calc(100vh-260px)] min-h-[560px] ${
-                        showSidePanel ? 'lg:grid-cols-[minmax(0,1fr)_320px]' : ''
+                    className={`grid h-[calc(100vh-230px)] min-h-[620px] ${
+                        showSidePanel && activeTab === 'builder' ? 'lg:grid-cols-[minmax(0,1fr)_320px]' : ''
                     }`}
                 >
                     {/* Left side */}
@@ -573,20 +604,25 @@ export function BuilderCanvas({
                         {activeTab === 'builder' ? (
                             <>
                                 {/* Toolbar */}
-                                <div className="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-2">
-                                    <div className="flex gap-2">
-                                        {(['move', 'connect', 'pan'] as const).map((m) => (
+                                <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-[#111114] px-4 py-2">
+                                    <div className="flex gap-1.5 rounded-[10px] border border-white/10 bg-[#0b0b0d] p-1">
+                                        {([
+                                            ['move', 'Mover', <MousePointer2 key="move" className="h-3.5 w-3.5" />],
+                                            ['connect', 'Conectar', <Link2 key="connect" className="h-3.5 w-3.5" />],
+                                            ['pan', 'Pan', <Hand key="pan" className="h-3.5 w-3.5" />],
+                                        ] as const).map(([m, label, icon]) => (
                                             <button
                                                 key={m}
                                                 type="button"
                                                 onClick={() => setMode(m)}
-                                                className={`inline-flex h-8 items-center rounded-[7px] border px-3 text-[11px] font-semibold transition ${
+                                                className={`inline-flex h-7 items-center gap-2 rounded-[7px] px-2.5 text-[11px] font-semibold transition ${
                                                     mode === m
-                                                        ? 'border-[color:var(--orion-gold)] bg-[color:var(--orion-gold)] text-black'
-                                                        : 'border-white/10 bg-[color:var(--orion-elevated)] text-[color:var(--orion-text-secondary)] hover:text-[color:var(--orion-text)]'
+                                                        ? 'bg-[color:var(--orion-gold)] text-black'
+                                                        : 'text-[color:var(--orion-text-secondary)] hover:bg-white/5 hover:text-[color:var(--orion-text)]'
                                                 }`}
                                             >
-                                                {m === 'move' ? 'Mover' : m === 'connect' ? 'Conectar' : 'Pan'}
+                                                {icon}
+                                                {label}
                                             </button>
                                         ))}
                                     </div>
@@ -669,7 +705,7 @@ export function BuilderCanvas({
                     </div>
 
                     {/* Side panel */}
-                    {showSidePanel ? (
+                    {showSidePanel && activeTab === 'builder' ? (
                         <aside className="hidden flex-col gap-4 overflow-y-auto bg-[color:var(--orion-surface)] p-5 lg:flex">
                             <SidePanel
                                 pipeline={pipeline}
@@ -696,7 +732,7 @@ function NodesPalette({ stages }: { stages: PipelineStageRecord[] }) {
     };
 
     return (
-        <div className="absolute right-3 top-3 z-10 w-[180px] rounded-[10px] border border-white/10 bg-[color:var(--orion-surface)] p-3 shadow-[var(--orion-shadow-popover)]">
+        <div className="absolute left-3 top-3 z-10 max-h-[calc(100%-88px)] w-[180px] overflow-y-auto rounded-[10px] border border-white/10 bg-[color:var(--orion-surface)] p-3 shadow-[var(--orion-shadow-popover)]">
             <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-[color:var(--orion-text-secondary)]">
                 Nodes
             </p>
@@ -722,7 +758,7 @@ function NodesPalette({ stages }: { stages: PipelineStageRecord[] }) {
                     <p className="mb-2 mt-3 text-[9px] font-bold uppercase tracking-[0.12em] text-[color:var(--orion-text-secondary)]">
                         Stages reais
                     </p>
-                    <div className="max-h-[180px] space-y-1 overflow-y-auto pr-1">
+                    <div className="space-y-1 pr-1">
                         {stages.map((stage) => (
                             <div
                                 key={stage.id}
@@ -988,152 +1024,190 @@ function ConfigTab({
     };
 
     return (
-        <div className="space-y-4 p-6">
-            <div className="rounded-[14px] border border-white/10 bg-[color:var(--orion-elevated)] p-5">
-                <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[color:var(--orion-text-secondary)]">
-                    Pipeline
-                </p>
-                <h2 className="mt-2 text-lg font-bold text-[color:var(--orion-text)]">{pipeline.name}</h2>
-                <p className="text-sm text-[color:var(--orion-text-secondary)]">{pipeline.description ?? 'Sem descrição'}</p>
-                <dl className="mt-4 grid grid-cols-2 gap-3 text-xs text-[color:var(--orion-text-secondary)]">
-                    <div>
-                        <dt className="uppercase tracking-[0.1em] text-[color:var(--orion-text-muted)]">Slug</dt>
-                        <dd className="mt-0.5 text-[color:var(--orion-text)]">{pipeline.slug}</dd>
-                    </div>
-                    <div>
-                        <dt className="uppercase tracking-[0.1em] text-[color:var(--orion-text-muted)]">Ícone</dt>
-                        <dd className="mt-0.5 text-[color:var(--orion-text)]">{pipeline.icon}</dd>
-                    </div>
-                    <div>
-                        <dt className="uppercase tracking-[0.1em] text-[color:var(--orion-text-muted)]">Default</dt>
-                        <dd className="mt-0.5 text-[color:var(--orion-text)]">{pipeline.is_default ? 'Sim' : 'Não'}</dd>
-                    </div>
-                    <div>
-                        <dt className="uppercase tracking-[0.1em] text-[color:var(--orion-text-muted)]">Etapas</dt>
-                        <dd className="mt-0.5 text-[color:var(--orion-text)]">{stages.length}</dd>
-                    </div>
-                </dl>
-            </div>
+        <div className="flex h-full min-h-0 flex-col bg-[#0f0f11]">
+            <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+                <aside className="space-y-3">
+                    <section className="rounded-[14px] border border-white/10 bg-[#171719] p-4">
+                        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-text-secondary)]">
+                            <Workflow className="h-3.5 w-3.5 text-[color:var(--orion-gold)]" />
+                            Pipeline
+                        </div>
+                        <h2 className="mt-3 truncate text-lg font-bold text-[color:var(--orion-text)]">{pipeline.name}</h2>
+                        <p className="mt-1 line-clamp-3 text-[12px] leading-5 text-[color:var(--orion-text-secondary)]">
+                            {pipeline.description ?? 'Sem descrição operacional.'}
+                        </p>
+                        <dl className="mt-4 divide-y divide-white/5 rounded-[10px] border border-white/10 bg-[#101012] text-xs">
+                            {[
+                                ['Slug', pipeline.slug],
+                                ['Ícone', pipeline.icon],
+                                ['Default', pipeline.is_default ? 'Sim' : 'Não'],
+                                ['Etapas', String(stages.length)],
+                            ].map(([label, value]) => (
+                                <div key={label} className="flex items-center justify-between gap-3 px-3 py-2">
+                                    <dt className="text-[10px] uppercase tracking-[0.12em] text-[color:var(--orion-text-muted)]">{label}</dt>
+                                    <dd className="truncate font-semibold text-[color:var(--orion-text)]">{value}</dd>
+                                </div>
+                            ))}
+                        </dl>
+                    </section>
 
-            <div className="rounded-[14px] border border-white/10 bg-[color:var(--orion-elevated)] p-5">
-                <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[color:var(--orion-text-secondary)]">
-                    Etapas vinculadas
-                </p>
-                <form className="mt-4 grid gap-3 rounded-[12px] border border-white/10 bg-[color:var(--orion-base)] p-4 md:grid-cols-[minmax(0,1fr)_120px_auto] md:items-end" onSubmit={createStage}>
-                    <label className="block text-[11px] text-[color:var(--orion-text-secondary)]">
-                        <span className="mb-1 block uppercase tracking-[0.1em] text-[color:var(--orion-text-muted)]">Nova etapa</span>
-                        <input
-                            value={newStageName}
-                            onChange={(event) => setNewStageName(event.target.value)}
-                            placeholder="Ex: Negociação VIP"
-                            className="h-10 w-full rounded-[8px] border border-white/10 bg-[color:var(--orion-surface)] px-3 text-sm text-[color:var(--orion-text)] outline-none focus:border-[color:var(--orion-gold)]"
-                        />
-                    </label>
-                    <label className="block text-[11px] text-[color:var(--orion-text-secondary)]">
-                        <span className="mb-1 block uppercase tracking-[0.1em] text-[color:var(--orion-text-muted)]">Cor</span>
-                        <input
-                            type="color"
-                            value={newStageColor}
-                            onChange={(event) => setNewStageColor(event.target.value)}
-                            className="h-10 w-full rounded-[8px] border border-white/10 bg-[color:var(--orion-surface)] px-2"
-                        />
-                    </label>
-                    <SubmitButton variant="primary" disabled={isCreatingStage}>
-                        {isCreatingStage ? 'Criando...' : 'Criar etapa'}
-                    </SubmitButton>
-                </form>
-                {stagesError ? (
-                    <p className="mt-3 rounded-[8px] border border-[rgba(224,82,82,0.35)] bg-[rgba(224,82,82,0.08)] px-3 py-2 text-[11px] text-[color:var(--orion-red)]">
-                        {stagesError}
-                    </p>
-                ) : null}
-                <div className="mt-3 space-y-3">
-                    {stages.map((stage) => (
-                        <div
-                            key={stage.id}
-                            className="rounded-lg border border-white/10 bg-[color:var(--orion-base)] p-3 text-sm text-[color:var(--orion-text)]"
-                        >
-                            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_120px_auto] md:items-end">
+                    <section className="rounded-[14px] border border-white/10 bg-[#171719] p-4">
+                        <div className="flex items-center justify-between gap-3">
+                            <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-text-secondary)]">
+                                Ordem atual
+                            </p>
+                            <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-bold text-[color:var(--orion-text-secondary)]">
+                                {stages.length}
+                            </span>
+                        </div>
+                        <div className="mt-3 space-y-1.5">
+                            {stages.map((stage) => (
+                                <div key={stage.id} className="flex items-center gap-2 rounded-[9px] border border-white/10 bg-[#101012] px-3 py-2">
+                                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
+                                    <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[color:var(--orion-text)]">{stage.name}</span>
+                                    <span className="text-[10px] text-[color:var(--orion-text-muted)]">#{stage.position}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                </aside>
+
+                <section className="min-w-0 rounded-[14px] border border-white/10 bg-[#151517]">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+                        <div>
+                            <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-text-secondary)]">
+                                <GitBranch className="h-3.5 w-3.5 text-[color:var(--orion-gold)]" />
+                                Etapas vinculadas
+                            </div>
+                            <p className="mt-1 text-[12px] text-[color:var(--orion-text-secondary)]">
+                                Crie, ordene e marque etapas sem sair do builder.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form
+                        className="grid gap-3 border-b border-white/10 bg-[#101012] px-4 py-3 md:grid-cols-[minmax(220px,1fr)_112px_auto] md:items-end"
+                        onSubmit={createStage}
+                    >
+                        <label className="block text-[11px] text-[color:var(--orion-text-secondary)]">
+                            <span className="mb-1.5 block uppercase tracking-[0.12em] text-[color:var(--orion-text-muted)]">Nova etapa</span>
+                            <input
+                                value={newStageName}
+                                onChange={(event) => setNewStageName(event.target.value)}
+                                placeholder="Ex: Negociação VIP"
+                                className="h-10 w-full rounded-[9px] border border-white/10 bg-[#171719] px-3 text-sm text-[color:var(--orion-text)] outline-none focus:border-[color:var(--orion-gold)]"
+                            />
+                        </label>
+                        <label className="block text-[11px] text-[color:var(--orion-text-secondary)]">
+                            <span className="mb-1.5 block uppercase tracking-[0.12em] text-[color:var(--orion-text-muted)]">Cor</span>
+                            <input
+                                type="color"
+                                value={newStageColor}
+                                onChange={(event) => setNewStageColor(event.target.value)}
+                                className="h-10 w-full rounded-[9px] border border-white/10 bg-[#171719] px-2"
+                            />
+                        </label>
+                        <SubmitButton variant="primary" disabled={isCreatingStage} icon={<Plus className="h-3.5 w-3.5" />}>
+                            {isCreatingStage ? 'Criando...' : 'Criar etapa'}
+                        </SubmitButton>
+                    </form>
+
+                    {stagesError ? (
+                        <p className="mx-4 mt-3 rounded-[9px] border border-[rgba(224,82,82,0.35)] bg-[rgba(224,82,82,0.08)] px-3 py-2 text-[11px] text-[color:var(--orion-red)]">
+                            {stagesError}
+                        </p>
+                    ) : null}
+
+                    <div className="divide-y divide-white/5 px-4 py-2">
+                        {stages.map((stage) => (
+                            <div key={stage.id} className="grid gap-3 py-3 xl:grid-cols-[minmax(220px,1fr)_104px_160px_260px] xl:items-center">
                                 <label className="block text-[11px] text-[color:var(--orion-text-secondary)]">
-                                    <span className="mb-1 block uppercase tracking-[0.1em] text-[color:var(--orion-text-muted)]">Nome</span>
-                                    <input
-                                        value={stage.name}
-                                        onChange={(event) => handleStageDraftChange(stage.id, { name: event.target.value })}
-                                        className="h-10 w-full rounded-[8px] border border-white/10 bg-[color:var(--orion-surface)] px-3 text-sm text-[color:var(--orion-text)] outline-none focus:border-[color:var(--orion-gold)]"
-                                    />
+                                    <span className="sr-only">Nome</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] border border-white/10 bg-[#101012] text-[11px] font-black text-[color:var(--orion-text-secondary)]">
+                                            {stage.position}
+                                        </span>
+                                        <input
+                                            value={stage.name}
+                                            onChange={(event) => handleStageDraftChange(stage.id, { name: event.target.value })}
+                                            className="h-10 min-w-0 flex-1 rounded-[9px] border border-white/10 bg-[#101012] px-3 text-sm font-semibold text-[color:var(--orion-text)] outline-none focus:border-[color:var(--orion-gold)]"
+                                        />
+                                    </div>
                                 </label>
-                                <label className="block text-[11px] text-[color:var(--orion-text-secondary)]">
-                                    <span className="mb-1 block uppercase tracking-[0.1em] text-[color:var(--orion-text-muted)]">Cor</span>
+
+                                <label className="flex items-center gap-2 text-[11px] text-[color:var(--orion-text-secondary)]">
+                                    <span className="sr-only">Cor</span>
                                     <input
                                         type="color"
                                         value={stage.color}
                                         onChange={(event) => handleStageDraftChange(stage.id, { color: event.target.value })}
-                                        className="h-10 w-full rounded-[8px] border border-white/10 bg-[color:var(--orion-surface)] px-2"
+                                        className="h-9 w-full rounded-[9px] border border-white/10 bg-[#101012] px-2"
                                     />
                                 </label>
-                                <div className="flex flex-wrap gap-2">
+
+                                <div className="flex flex-wrap gap-2 text-[11px] text-[color:var(--orion-text-secondary)]">
+                                    <label className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-white/10 bg-[#101012] px-2.5">
+                                        <input
+                                            type="checkbox"
+                                            checked={stage.is_won}
+                                            onChange={(event) => handleStageDraftChange(stage.id, { is_won: event.target.checked, is_lost: event.target.checked ? false : stage.is_lost })}
+                                            className="accent-[#C8A97A]"
+                                        />
+                                        Ganho
+                                    </label>
+                                    <label className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-white/10 bg-[#101012] px-2.5">
+                                        <input
+                                            type="checkbox"
+                                            checked={stage.is_lost}
+                                            onChange={(event) => handleStageDraftChange(stage.id, { is_lost: event.target.checked, is_won: event.target.checked ? false : stage.is_won })}
+                                            className="accent-[#C8A97A]"
+                                        />
+                                        Perda
+                                    </label>
+                                </div>
+
+                                <div className="flex flex-wrap justify-start gap-2 xl:justify-end">
                                     <button
                                         type="button"
                                         onClick={() => moveStage(stage.id, -1)}
                                         disabled={busyStageId === stage.id || stage.position === 1}
-                                        className="inline-flex h-[34px] items-center rounded-[7px] border border-white/10 px-3 text-[12px] font-semibold text-[color:var(--orion-text-secondary)] hover:border-[color:var(--orion-gold)] hover:text-[color:var(--orion-gold)] disabled:cursor-not-allowed disabled:opacity-50"
+                                        title="Subir etapa"
+                                        className="inline-flex h-9 w-9 items-center justify-center rounded-[8px] border border-white/10 text-[color:var(--orion-text-secondary)] hover:border-[color:var(--orion-gold)] hover:text-[color:var(--orion-gold)] disabled:cursor-not-allowed disabled:opacity-50"
                                     >
-                                        Subir
+                                        <ArrowUp className="h-4 w-4" />
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => moveStage(stage.id, 1)}
                                         disabled={busyStageId === stage.id || stage.position === stages.length}
-                                        className="inline-flex h-[34px] items-center rounded-[7px] border border-white/10 px-3 text-[12px] font-semibold text-[color:var(--orion-text-secondary)] hover:border-[color:var(--orion-gold)] hover:text-[color:var(--orion-gold)] disabled:cursor-not-allowed disabled:opacity-50"
+                                        title="Descer etapa"
+                                        className="inline-flex h-9 w-9 items-center justify-center rounded-[8px] border border-white/10 text-[color:var(--orion-text-secondary)] hover:border-[color:var(--orion-gold)] hover:text-[color:var(--orion-gold)] disabled:cursor-not-allowed disabled:opacity-50"
                                     >
-                                        Descer
+                                        <ArrowDown className="h-4 w-4" />
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => void saveStage(stage)}
                                         disabled={busyStageId === stage.id}
-                                        className="inline-flex h-[34px] items-center rounded-[7px] bg-[color:var(--orion-gold)] px-3 text-[12px] font-semibold text-black hover:bg-[color:var(--orion-gold-light)] disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="inline-flex h-9 items-center gap-2 rounded-[8px] bg-[color:var(--orion-gold)] px-3 text-[12px] font-semibold text-black hover:bg-[color:var(--orion-gold-light)] disabled:cursor-not-allowed disabled:opacity-60"
                                     >
-                                        {busyStageId === stage.id ? 'Salvando...' : 'Salvar'}
+                                        <Save className="h-3.5 w-3.5" />
+                                        {busyStageId === stage.id ? 'Salvando' : 'Salvar'}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => void deleteStage(stage)}
                                         disabled={busyStageId === stage.id || stage.is_won || stage.is_lost}
-                                        className="inline-flex h-[34px] items-center rounded-[7px] border border-[rgba(224,82,82,0.4)] bg-[rgba(224,82,82,0.1)] px-3 text-[12px] font-semibold text-[color:var(--orion-red)] hover:bg-[rgba(224,82,82,0.2)] disabled:cursor-not-allowed disabled:opacity-50"
+                                        title={stage.is_won || stage.is_lost ? 'Etapas finais não podem ser removidas' : 'Remover etapa'}
+                                        className="inline-flex h-9 w-9 items-center justify-center rounded-[8px] border border-[rgba(224,82,82,0.4)] bg-[rgba(224,82,82,0.1)] text-[color:var(--orion-red)] hover:bg-[rgba(224,82,82,0.2)] disabled:cursor-not-allowed disabled:opacity-50"
                                     >
-                                        Remover
+                                        <Trash2 className="h-4 w-4" />
                                     </button>
                                 </div>
                             </div>
-                            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-[color:var(--orion-text-muted)]">
-                                <div className="flex items-center gap-3">
-                                    <span>pos {stage.position}</span>
-                                    <label className="flex items-center gap-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={stage.is_won}
-                                            onChange={(event) => handleStageDraftChange(stage.id, { is_won: event.target.checked, is_lost: event.target.checked ? false : stage.is_lost })}
-                                        />
-                                        <span>Ganho</span>
-                                    </label>
-                                    <label className="flex items-center gap-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={stage.is_lost}
-                                            onChange={(event) => handleStageDraftChange(stage.id, { is_lost: event.target.checked, is_won: event.target.checked ? false : stage.is_won })}
-                                        />
-                                        <span>Perda</span>
-                                    </label>
-                                </div>
-                                <span>{stage.is_won ? 'stage de ganho' : stage.is_lost ? 'stage de perda' : 'stage regular'}</span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <p className="mt-3 text-[11px] text-[color:var(--orion-text-muted)]">
-                    As alterações de etapas agora podem ser feitas direto no builder, sem depender de outra tela.
-                </p>
+                        ))}
+                    </div>
+                </section>
             </div>
         </div>
     );
