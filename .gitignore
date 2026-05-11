@@ -9,3 +9,13 @@ coverage/
 apps/api/dist/
 uploads/
 *.log
+
+# Agent / IDE local artifacts — não pertencem ao repo do CRM
+.codex/
+.codex.empty.bak
+.opencode/
+.claude/
+.playwright-mcp/
+
+# Screenshots soltos na raiz (capturas manuais durante testes)
+/*.png
