@@ -1,14 +1,20 @@
 import { notFound, redirect } from 'next/navigation';
 import type { LeadRecord } from '@/lib/api';
 import { apiRequest } from '@/lib/api';
+import { requireSession } from '@/lib/auth';
 import ClientPanelShell from '@/app/(crm)/clientes/[id]/components/ClientPanelShell';
 import type { CustomerFull } from '@/app/(crm)/clientes/[id]/components/types';
+
+interface MeInfo {
+    custom_permissions?: Record<string, boolean> | null;
+}
 
 export default async function LeadDetailPage({
     params,
 }: {
     params: { id: string };
 }) {
+    const session = requireSession();
     const lead = await apiRequest<LeadRecord>(`/leads/${params.id}`).catch(() => null);
     if (!lead) notFound();
 
@@ -55,5 +61,21 @@ export default async function LeadDetailPage({
         assigned_to: lead.assigned_to,
     };
 
-    return <ClientPanelShell customerId={lead.id} initialCustomer={customer} entityType="lead" />;
+    let customPermissions: Record<string, boolean> = {};
+    try {
+        const me = await apiRequest<MeInfo>('/users/me');
+        if (me?.custom_permissions) customPermissions = me.custom_permissions;
+    } catch {
+        customPermissions = {};
+    }
+
+    return (
+        <ClientPanelShell
+            customerId={lead.id}
+            initialCustomer={customer}
+            entityType="lead"
+            userRole={session.user.role}
+            customPermissions={customPermissions}
+        />
+    );
 }

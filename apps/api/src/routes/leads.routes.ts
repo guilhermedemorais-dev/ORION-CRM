@@ -513,8 +513,9 @@ router.post(
                 `SELECT id
                  FROM leads
                  WHERE whatsapp_number = $1
+                   AND pipeline_id = $2
                  LIMIT 1`,
-                [parsed.data.whatsapp_number]
+                [parsed.data.whatsapp_number, pipelineId]
             );
 
             if (duplicate.rows[0]) {

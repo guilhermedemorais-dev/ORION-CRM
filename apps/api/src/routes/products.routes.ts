@@ -21,6 +21,8 @@ const upload = multer({
 const listProductsSchema = z.object({
     q: z.string().trim().min(1).max(100).optional(),
     category: z.string().trim().min(1).max(100).optional(),
+    category_id: z.string().uuid().optional(),
+    is_raw_material: z.coerce.boolean().optional(),
     low_stock: z.coerce.boolean().optional(),
     inStock: z.coerce.boolean().optional(),
     active_only: z.coerce.boolean().optional(),
@@ -44,6 +46,7 @@ const createProductSchema = z.object({
     stock_quantity: z.coerce.number().int().min(0).default(0),
     minimum_stock: z.coerce.number().int().min(0).default(0),
     category: z.string().trim().max(100).optional(),
+    category_id: z.string().uuid().optional(),
     collection: z.string().trim().max(100).optional(),
     metal: z.string().trim().max(50).optional(),
     weight_grams: z.coerce.number().positive().optional(),
@@ -53,6 +56,7 @@ const createProductSchema = z.object({
     is_active: z.coerce.boolean().optional().default(true),
     pdv_enabled: z.coerce.boolean().optional().default(true),
     requires_production: z.coerce.boolean().optional().default(false),
+    is_raw_material: z.coerce.boolean().optional().default(false),
 });
 
 const updateProductSchema = createProductSchema.partial().refine(
@@ -84,6 +88,7 @@ interface ProductRow {
     stock_quantity: number;
     minimum_stock: number;
     category: string | null;
+    category_id: string | null;
     collection: string | null;
     metal: string | null;
     weight_grams: number | null;
@@ -95,6 +100,7 @@ interface ProductRow {
     is_active: boolean;
     pdv_enabled: boolean;
     requires_production: boolean;
+    is_raw_material: boolean;
     created_at: Date;
     updated_at: Date;
 }
@@ -132,6 +138,7 @@ async function fetchProduct(productId: string): Promise<ProductRow | null> {
             stock_quantity,
             minimum_stock,
             category,
+            category_id,
             collection,
             metal,
             weight_grams,
@@ -143,6 +150,7 @@ async function fetchProduct(productId: string): Promise<ProductRow | null> {
             is_active,
             COALESCE(pdv_enabled, true) AS pdv_enabled,
             COALESCE(requires_production, false) AS requires_production,
+            is_raw_material,
             created_at,
             updated_at
          FROM products
@@ -218,6 +226,7 @@ async function applyStockMovement(
                 stock_quantity,
                 minimum_stock,
                 category,
+                category_id,
                 collection,
                 metal,
                 weight_grams,
@@ -229,6 +238,7 @@ async function applyStockMovement(
                 is_active,
                 COALESCE(pdv_enabled, true) AS pdv_enabled,
                 COALESCE(requires_production, false) AS requires_production,
+                is_raw_material,
                 created_at,
                 updated_at
              FROM products
@@ -306,6 +316,7 @@ async function applyStockMovement(
                 stock_quantity,
                 minimum_stock,
                 category,
+                category_id,
                 collection,
                 metal,
                 weight_grams,
@@ -317,6 +328,7 @@ async function applyStockMovement(
                 is_active,
                 COALESCE(pdv_enabled, true) AS pdv_enabled,
                 COALESCE(requires_production, false) AS requires_production,
+                is_raw_material,
                 created_at,
                 updated_at
              FROM products
@@ -631,6 +643,16 @@ router.get(
                 filters.push(`p.category = $${values.length}`);
             }
 
+            if (parsed.data.category_id) {
+                values.push(parsed.data.category_id);
+                filters.push(`p.category_id = $${values.length}`);
+            }
+
+            if (parsed.data.is_raw_material !== undefined) {
+                values.push(parsed.data.is_raw_material);
+                filters.push(`p.is_raw_material = $${values.length}`);
+            }
+
             if (parsed.data.active_only) {
                 filters.push('p.is_active = true');
             }
@@ -687,6 +709,7 @@ router.get(
                     p.stock_quantity,
                     p.minimum_stock,
                     p.category,
+                    p.category_id,
                     p.collection,
                     p.metal,
                     p.weight_grams,
@@ -698,6 +721,7 @@ router.get(
                     p.is_active,
                     COALESCE(p.pdv_enabled, true) AS pdv_enabled,
                     COALESCE(p.requires_production, false) AS requires_production,
+                    p.is_raw_material,
                     p.created_at,
                     p.updated_at
                  FROM products p
@@ -754,6 +778,7 @@ router.post(
                     stock_quantity,
                     minimum_stock,
                     category,
+                    category_id,
                     collection,
                     metal,
                     weight_grams,
@@ -762,8 +787,9 @@ router.post(
                     stones,
                     is_active,
                     pdv_enabled,
-                    requires_production
-                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                    requires_production,
+                    is_raw_material
+                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
                   RETURNING
                     id,
                     code,
@@ -774,6 +800,7 @@ router.post(
                     stock_quantity,
                     minimum_stock,
                     category,
+                    category_id,
                     collection,
                     metal,
                     weight_grams,
@@ -785,6 +812,7 @@ router.post(
                     is_active,
                     COALESCE(pdv_enabled, true) AS pdv_enabled,
                     COALESCE(requires_production, false) AS requires_production,
+                    is_raw_material,
                     created_at,
                     updated_at`,
                 [
@@ -796,6 +824,7 @@ router.post(
                     data.stock_quantity,
                     data.minimum_stock,
                     data.category ?? null,
+                    data.category_id ?? null,
                     data.collection ?? null,
                     data.metal ?? null,
                     data.weight_grams ?? null,
@@ -805,6 +834,7 @@ router.post(
                     data.is_active,
                     data.pdv_enabled,
                     data.requires_production,
+                    data.is_raw_material,
                 ]
             );
 
@@ -941,6 +971,10 @@ router.patch(
                 values.push(data.category || null);
                 updates.push(`category = $${values.length}`);
             }
+            if (data.category_id !== undefined) {
+                values.push(data.category_id || null);
+                updates.push(`category_id = $${values.length}`);
+            }
             if (data.collection !== undefined) {
                 values.push(data.collection || null);
                 updates.push(`collection = $${values.length}`);
@@ -977,6 +1011,10 @@ router.patch(
                 values.push(data.requires_production);
                 updates.push(`requires_production = $${values.length}`);
             }
+            if (data.is_raw_material !== undefined) {
+                values.push(data.is_raw_material);
+                updates.push(`is_raw_material = $${values.length}`);
+            }
 
             updates.push('updated_at = NOW()');
 
@@ -994,6 +1032,7 @@ router.patch(
                     stock_quantity,
                     minimum_stock,
                     category,
+                    category_id,
                     collection,
                     metal,
                     weight_grams,
@@ -1005,6 +1044,7 @@ router.patch(
                     is_active,
                     COALESCE(pdv_enabled, true) AS pdv_enabled,
                     COALESCE(requires_production, false) AS requires_production,
+                    is_raw_material,
                     created_at,
                     updated_at`,
                 values

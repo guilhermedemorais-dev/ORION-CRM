@@ -244,6 +244,11 @@ interface LeadExecutionRow extends pg.QueryResultRow {
     pipeline_id: string;
     stage_id: string | null;
     converted_customer_id: string | null;
+    whatsapp_number: string;
+    name: string | null;
+    email: string | null;
+    estimated_value: number;
+    notes: string | null;
 }
 
 interface TargetStageRow extends pg.QueryResultRow {
@@ -355,7 +360,8 @@ async function executeRule(rule: AutomationRuleRow, params: ExecutePipelineRules
 
     await transaction(async (client) => {
         const leadResult = await client.query<LeadExecutionRow>(
-            `SELECT id, stage, pipeline_id, stage_id, converted_customer_id
+            `SELECT id, stage, pipeline_id, stage_id, converted_customer_id,
+                    whatsapp_number, name, email, estimated_value, notes
              FROM leads
              WHERE id = $1
              LIMIT 1`,
@@ -416,18 +422,101 @@ async function executeRule(rule: AutomationRuleRow, params: ExecutePipelineRules
                 return;
             }
 
+            // CREATE_LINKED_CARD / MIRROR_CARD_TO_PIPELINE: criar card real no
+            // pipeline destino (lead novo com mesmo whatsapp/cliente). Idempotente
+            // por (rule_id, source_lead_id, target_pipeline_id, target_stage_id).
+
+            const existingLink = await client.query<{ target_lead_id: string | null }>(
+                `SELECT target_lead_id FROM pipeline_card_links
+                 WHERE rule_id = $1 AND source_lead_id = $2
+                   AND target_pipeline_id = $3 AND target_stage_id = $4
+                 LIMIT 1`,
+                [rule.id, lead.id, rule.target_pipeline_id, rule.target_stage_id]
+            );
+
+            if (existingLink.rows[0]?.target_lead_id) {
+                await markExecutionFinished({
+                    client,
+                    executionId,
+                    status: 'skipped',
+                    targetLeadId: existingLink.rows[0].target_lead_id,
+                    payload: { reason: 'already_linked', order_id: orderId },
+                });
+                return;
+            }
+
+            const targetStageCheck = await client.query<TargetStageRow>(
+                `SELECT id, name, is_won, is_lost
+                 FROM pipeline_stages
+                 WHERE id = $1 AND pipeline_id = $2
+                 LIMIT 1`,
+                [rule.target_stage_id, rule.target_pipeline_id]
+            );
+            const targetStage = targetStageCheck.rows[0];
+            if (!targetStage) {
+                await markExecutionFinished({
+                    client,
+                    executionId,
+                    status: 'failed',
+                    errorMessage: 'Stage destino não encontrada.',
+                });
+                return;
+            }
+
+            const targetLegacyStage = mapPipelineStageToLegacyLeadStage(targetStage, 'NOVO');
+            const originNote = `Card gerado automaticamente pela regra "${rule.id}" a partir do lead ${lead.id}.`;
+            const mergedNotes = lead.notes ? `${originNote}\n\n${lead.notes}` : originNote;
+
+            const createdLead = await client.query<{ id: string }>(
+                `INSERT INTO leads (
+                    whatsapp_number, name, email, stage, pipeline_id, stage_id,
+                    source, notes, estimated_value, converted_customer_id,
+                    last_interaction_at
+                 )
+                 VALUES ($1, $2, $3, $4::lead_stage, $5, $6,
+                         'OUTRO'::lead_source, $7, $8, $9,
+                         NOW())
+                 ON CONFLICT (whatsapp_number, pipeline_id) DO UPDATE
+                   SET last_interaction_at = NOW(),
+                       updated_at = NOW()
+                 RETURNING id`,
+                [
+                    lead.whatsapp_number,
+                    lead.name,
+                    lead.email,
+                    targetLegacyStage,
+                    rule.target_pipeline_id,
+                    rule.target_stage_id,
+                    mergedNotes,
+                    lead.estimated_value,
+                    lead.converted_customer_id,
+                ]
+            );
+
+            const targetLeadId = createdLead.rows[0]?.id;
+            if (!targetLeadId) {
+                await markExecutionFinished({
+                    client,
+                    executionId,
+                    status: 'failed',
+                    errorMessage: 'Falha ao criar lead no pipeline destino.',
+                });
+                return;
+            }
+
             await client.query(
                 `INSERT INTO pipeline_card_links
                     (organization_id, rule_id, source_lead_id, target_lead_id, customer_id,
                      order_id, source_pipeline_id, source_stage_id, target_pipeline_id,
                      target_stage_id, link_strategy, created_by)
-                 VALUES ($1,$2,$3,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
                  ON CONFLICT (rule_id, source_lead_id, target_pipeline_id, target_stage_id)
                  DO NOTHING`,
                 [
                     rule.organization_id,
                     rule.id,
                     lead.id,
+                    targetLeadId,
                     lead.converted_customer_id,
                     orderId,
                     rule.source_pipeline_id,
@@ -443,8 +532,8 @@ async function executeRule(rule: AutomationRuleRow, params: ExecutePipelineRules
                 client,
                 executionId,
                 status: 'success',
-                targetLeadId: lead.id,
-                payload: { linked: true, order_id: orderId },
+                targetLeadId,
+                payload: { linked: true, created_target_lead: true, order_id: orderId },
             });
         } catch (error) {
             await markExecutionFinished({

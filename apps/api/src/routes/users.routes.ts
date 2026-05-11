@@ -47,6 +47,7 @@ const inviteUserSchema = z.object({
     commission_rate: z.coerce.number().min(0).max(100).default(0),
     password: z.string().min(6).max(128).optional(),
     password_confirm: z.string().min(6).max(128).optional(),
+    custom_permissions: z.record(z.boolean()).optional(),
 }).refine((data) => {
     if (data.password && data.password !== data.password_confirm) return false;
     return true;
@@ -58,6 +59,7 @@ const updateUserSchema = z.object({
     role: z.enum(['ROOT', 'ADMIN', 'GERENTE', 'VENDEDOR', 'ATENDENTE', 'PRODUCAO', 'FINANCEIRO']).optional(),
     personal_whatsapp: z.string().trim().min(8).max(25).nullable().optional(),
     commission_rate: z.coerce.number().min(0).max(100).optional(),
+    custom_permissions: z.record(z.boolean()).optional(),
 });
 
 const toggleStatusSchema = z.object({
@@ -75,6 +77,7 @@ interface UserListRow {
     created_at: Date;
     updated_at: Date;
     last_login_at: Date | null;
+    custom_permissions?: Record<string, boolean> | null;
 }
 
 function mapUser(row: UserListRow) {
@@ -89,12 +92,45 @@ function mapUser(row: UserListRow) {
         created_at: row.created_at,
         updated_at: row.updated_at,
         last_login_at: row.last_login_at,
+        custom_permissions: row.custom_permissions ?? {},
     };
 }
 
 function generateTemporaryPassword(): string {
     return crypto.randomBytes(9).toString('base64url');
 }
+
+// GET /me — retorna o próprio usuário autenticado, incluindo custom_permissions.
+// Usado pelo frontend para resolver visibilidade dos blocos da ficha do cliente
+// e outros toggles dependentes do usuário (não apenas do role).
+router.get(
+    '/me',
+    authenticate,
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            if (!req.user) {
+                next(AppError.unauthorized());
+                return;
+            }
+            const result = await query<UserListRow>(
+                `SELECT id, name, email, role, status, commission_rate, personal_whatsapp,
+                        created_at, updated_at, last_login_at, custom_permissions
+                 FROM users
+                 WHERE id = $1
+                 LIMIT 1`,
+                [req.user.id]
+            );
+            const row = result.rows[0];
+            if (!row) {
+                next(AppError.notFound('Usuário não encontrado.'));
+                return;
+            }
+            res.json(mapUser(row));
+        } catch (err) {
+            next(err);
+        }
+    }
+);
 
 router.get(
     '/',
@@ -144,7 +180,8 @@ router.get(
                     u.personal_whatsapp,
                     u.created_at,
                     u.updated_at,
-                    u.last_login_at
+                    u.last_login_at,
+                    u.custom_permissions
                  FROM users u
                  ${whereClause}
                  ORDER BY u.created_at DESC`,
@@ -193,8 +230,8 @@ router.post(
             const passwordHash = await bcrypt.hash(finalPassword, 10);
 
             const insertResult = await query<UserListRow>(
-                `INSERT INTO users (name, email, password_hash, role, status, commission_rate, personal_whatsapp)
-                 VALUES ($1, $2, $3, $4, 'active', $5, $6)
+                `INSERT INTO users (name, email, password_hash, role, status, commission_rate, personal_whatsapp, custom_permissions)
+                 VALUES ($1, $2, $3, $4, 'active', $5, $6, COALESCE($7::jsonb, '{}'::jsonb))
                  RETURNING
                     id,
                     name,
@@ -205,7 +242,8 @@ router.post(
                     personal_whatsapp,
                     created_at,
                     updated_at,
-                    last_login_at`,
+                    last_login_at,
+                    custom_permissions`,
                 [
                     parsed.data.name,
                     parsed.data.email,
@@ -213,6 +251,7 @@ router.post(
                     parsed.data.role,
                     parsed.data.commission_rate,
                     parsed.data.personal_whatsapp ?? null,
+                    parsed.data.custom_permissions ? JSON.stringify(parsed.data.custom_permissions) : null,
                 ]
             );
 
@@ -283,7 +322,8 @@ router.patch(
                     personal_whatsapp,
                     created_at,
                     updated_at,
-                    last_login_at
+                    last_login_at,
+                    custom_permissions
                  FROM users
                  WHERE id = $1
                  LIMIT 1`,
@@ -330,7 +370,8 @@ router.patch(
                     personal_whatsapp,
                     created_at,
                     updated_at,
-                    last_login_at`,
+                    last_login_at,
+                    custom_permissions`,
                 values
             );
 
@@ -391,7 +432,8 @@ router.patch(
                     personal_whatsapp,
                     created_at,
                     updated_at,
-                    last_login_at
+                    last_login_at,
+                    custom_permissions
                  FROM users
                  WHERE id = $1
                  LIMIT 1`,
@@ -427,7 +469,8 @@ router.patch(
                     personal_whatsapp,
                     created_at,
                     updated_at,
-                    last_login_at`,
+                    last_login_at,
+                    custom_permissions`,
                 [nextStatus, targetUser.id]
             );
 

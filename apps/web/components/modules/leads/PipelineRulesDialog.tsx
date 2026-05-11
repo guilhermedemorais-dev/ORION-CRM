@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
     FlaskConical,
+    HelpCircle,
     Pencil,
     Plus,
     Power,
@@ -53,12 +54,25 @@ interface PipelineRulesDialogProps {
     sourceStages: PipelineStageRecord[];
     onClose: () => void;
     onToast: (toast: { kind: 'success' | 'error'; message: string } | null) => void;
+    embedded?: boolean;
 }
 
-const ACTION_OPTIONS: Array<{ value: RuleActionType; label: string }> = [
-    { value: 'CREATE_LINKED_CARD', label: 'Criar card vinculado' },
-    { value: 'MOVE_CARD_TO_PIPELINE', label: 'Mover card' },
-    { value: 'MIRROR_CARD_TO_PIPELINE', label: 'Espelhar card' },
+const ACTION_OPTIONS: Array<{ value: RuleActionType; label: string; description: string }> = [
+    {
+        value: 'CREATE_LINKED_CARD',
+        label: 'Gerar card no setor destino (recomendado)',
+        description: 'Mantém o card aqui como histórico e cria um novo card vinculado no pipeline destino.',
+    },
+    {
+        value: 'MOVE_CARD_TO_PIPELINE',
+        label: 'Mover card (sai daqui)',
+        description: 'O card é transferido para o destino e some deste pipeline.',
+    },
+    {
+        value: 'MIRROR_CARD_TO_PIPELINE',
+        label: 'Espelhar card (sincronizado)',
+        description: 'Cria uma cópia sincronizada no destino. Alterações refletem nos dois.',
+    },
 ];
 
 const LINK_STRATEGY_OPTIONS: Array<{ value: RuleLinkStrategy; label: string }> = [
@@ -146,6 +160,7 @@ export function PipelineRulesDialog({
     sourceStages,
     onClose,
     onToast,
+    embedded = false,
 }: PipelineRulesDialogProps) {
     const [rules, setRules] = useState<PipelineAutomationRule[]>([]);
     const [pipelines, setPipelines] = useState<PipelineRecord[]>([pipeline]);
@@ -160,6 +175,7 @@ export function PipelineRulesDialog({
     const [isSaving, setIsSaving] = useState(false);
     const [busyRuleId, setBusyRuleId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [showHelp, setShowHelp] = useState(false);
 
     const targetStages = stagesByPipeline[draft.target_pipeline_id] ?? [];
 
@@ -382,14 +398,19 @@ export function PipelineRulesDialog({
         }
     };
 
-    if (!open) return null;
+    if (!open && !embedded) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="pipeline-rules-title">
-            <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[16px] border border-white/10 bg-[#111114] shadow-[var(--orion-shadow-dialog)]">
-                <header className="flex items-center justify-between gap-3 border-b border-white/10 bg-[#151517] px-5 py-4">
+        <div
+            className={embedded ? 'contents' : 'fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm'}
+            role={embedded ? undefined : 'dialog'}
+            aria-modal={embedded ? undefined : true}
+            aria-labelledby="pipeline-rules-title"
+        >
+            <div className={embedded ? 'flex w-full flex-col overflow-hidden rounded-[12px] border border-white/10 bg-[#111114]' : 'flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[16px] border border-white/10 bg-[#111114] shadow-[var(--orion-shadow-dialog)]'}>
+                <header className={embedded ? 'hidden' : 'flex items-center justify-between gap-3 border-b border-white/10 bg-[#151517] px-5 py-4'}>
                     <div className="min-w-0">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-gold)]">Builder V2</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-gold)]">Kanban</p>
                         <h2 id="pipeline-rules-title" className="truncate text-lg font-bold text-[color:var(--orion-text)]">
                             Regras de pipeline
                         </h2>
@@ -414,16 +435,64 @@ export function PipelineRulesDialog({
                                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--orion-text-muted)]">Regras existentes</p>
                                 <p className="mt-1 text-xs text-[color:var(--orion-text-secondary)]">{rules.length} regra(s) configurada(s)</p>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => void loadRules()}
-                                disabled={isLoading}
-                                className="inline-flex h-9 items-center gap-2 rounded-[8px] border border-white/10 px-3 text-[12px] font-semibold text-[color:var(--orion-text)] hover:border-[color:var(--orion-gold)] disabled:opacity-60"
-                            >
-                                <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                                Atualizar
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowHelp((current) => !current)}
+                                    aria-expanded={showHelp}
+                                    title="Como funcionam as regras"
+                                    className={`inline-flex h-9 w-9 items-center justify-center rounded-[8px] border text-[color:var(--orion-text)] hover:border-[color:var(--orion-gold)] hover:text-[color:var(--orion-gold)] ${
+                                        showHelp
+                                            ? 'border-[color:var(--orion-gold)] text-[color:var(--orion-gold)]'
+                                            : 'border-white/10 text-[color:var(--orion-text-secondary)]'
+                                    }`}
+                                >
+                                    <HelpCircle className="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => void loadRules()}
+                                    disabled={isLoading}
+                                    className="inline-flex h-9 items-center gap-2 rounded-[8px] border border-white/10 px-3 text-[12px] font-semibold text-[color:var(--orion-text)] hover:border-[color:var(--orion-gold)] disabled:opacity-60"
+                                >
+                                    <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                                    Atualizar
+                                </button>
+                            </div>
                         </div>
+
+                        {showHelp ? (
+                            <div className="mb-3 rounded-[12px] border border-[color:var(--orion-gold)]/30 bg-[rgba(200,169,122,0.05)] p-4 text-xs leading-relaxed text-[color:var(--orion-text-secondary)]">
+                                <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[color:var(--orion-gold)]">
+                                    Como funcionam as regras
+                                </p>
+                                <p className="mb-2">
+                                    Cada pipeline é um <strong className="text-[color:var(--orion-text)]">setor</strong> da sua operação (Comercial, Produção, Entrega). Regras automatizam o
+                                    {' '}<strong className="text-[color:var(--orion-text)]">handoff</strong> entre setores.
+                                </p>
+                                <p className="mb-2">
+                                    <strong className="text-[color:var(--orion-text)]">Exemplo prático:</strong> quando um lead em <em>Comercial</em> entrar na etapa <em>Convertido</em>,
+                                    crie automaticamente um card vinculado em <em>Produção / Backlog</em>. O card original
+                                    fica como histórico do atendimento e o setor de Produção recebe a tarefa.
+                                </p>
+                                <ul className="mt-3 space-y-1.5">
+                                    <li>
+                                        <strong className="text-[color:var(--orion-text)]">Gerar card no setor destino:</strong> mantém o card aqui e cria um novo no destino.
+                                        Indicado para handoff entre setores.
+                                    </li>
+                                    <li>
+                                        <strong className="text-[color:var(--orion-text)]">Mover card:</strong> o card sai daqui e vai para o destino. Use quando o card só faz
+                                        sentido em um lugar de cada vez.
+                                    </li>
+                                    <li>
+                                        <strong className="text-[color:var(--orion-text)]">Espelhar card:</strong> cópia sincronizada. Alterações refletem nos dois cards.
+                                    </li>
+                                </ul>
+                                <p className="mt-3 text-[10px] text-[color:var(--orion-text-muted)]">
+                                    A regra dispara quando um card <strong>entra</strong> na etapa de origem. Mover um card já existente para a etapa também dispara.
+                                </p>
+                            </div>
+                        ) : null}
 
                         {error ? (
                             <p className="mb-3 rounded-[9px] border border-[rgba(224,82,82,0.35)] bg-[rgba(224,82,82,0.08)] px-3 py-2 text-xs text-[color:var(--orion-red)]">
@@ -552,13 +621,23 @@ export function PipelineRulesDialog({
                             </div>
 
                             <label className="block text-[11px] text-[color:var(--orion-text-secondary)]">
-                                <span className="mb-1.5 block uppercase tracking-[0.12em] text-[color:var(--orion-text-muted)]">Nome</span>
+                                <span className="mb-1.5 block uppercase tracking-[0.12em] text-[color:var(--orion-text-muted)]">
+                                    Nome <span className="text-[color:var(--orion-red)]">*</span>
+                                </span>
                                 <input
                                     value={draft.name}
                                     onChange={(event) => updateDraft('name', event.target.value)}
                                     placeholder="Ex: Enviar proposta para produção"
-                                    className="h-10 w-full rounded-[9px] border border-white/10 bg-[#171719] px-3 text-sm text-[color:var(--orion-text)] outline-none focus:border-[color:var(--orion-gold)]"
+                                    required
+                                    aria-required="true"
+                                    aria-invalid={draft.name.trim().length === 0}
+                                    className="h-10 w-full rounded-[9px] border border-white/10 bg-[#171719] px-3 text-sm text-[color:var(--orion-text)] outline-none focus:border-[color:var(--orion-gold)] aria-[invalid=true]:border-[color:var(--orion-red)]/60"
                                 />
+                                {draft.name.trim().length === 0 ? (
+                                    <span className="mt-1 block text-[10px] font-semibold text-[color:var(--orion-red)]">
+                                        Informe um nome para a regra.
+                                    </span>
+                                ) : null}
                             </label>
 
                             <label className="block text-[11px] text-[color:var(--orion-text-secondary)]">
@@ -611,6 +690,9 @@ export function PipelineRulesDialog({
                                                 <option key={option.value} value={option.value}>{option.label}</option>
                                             ))}
                                         </select>
+                                        <span className="mt-1.5 block text-[10px] leading-snug text-[color:var(--orion-text-muted)]">
+                                            {ACTION_OPTIONS.find((option) => option.value === draft.action_type)?.description}
+                                        </span>
                                     </label>
                                     <label className="block text-[11px] text-[color:var(--orion-text-secondary)]">
                                         <span className="mb-1.5 block uppercase tracking-[0.12em] text-[color:var(--orion-text-muted)]">Pipeline destino</span>
@@ -661,14 +743,32 @@ export function PipelineRulesDialog({
                                 Regra ativa
                             </label>
 
-                            <button
-                                type="submit"
-                                disabled={isSaving}
-                                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[9px] bg-[color:var(--orion-gold)] px-4 text-[12px] font-bold text-black hover:bg-[color:var(--orion-gold-light)] disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                <Plus className="h-3.5 w-3.5" />
-                                {isSaving ? 'Salvando...' : editingRuleId ? 'Salvar alterações' : 'Criar regra'}
-                            </button>
+                            {(() => {
+                                const missing: string[] = [];
+                                if (!draft.name.trim()) missing.push('nome');
+                                if (!draft.source_stage_id) missing.push('stage origem');
+                                if (!draft.target_pipeline_id) missing.push('pipeline destino');
+                                if (!draft.target_stage_id) missing.push('stage destino');
+                                const isFormInvalid = missing.length > 0;
+                                return (
+                                    <>
+                                        <button
+                                            type="submit"
+                                            disabled={isSaving || isFormInvalid}
+                                            title={isFormInvalid ? `Preencha: ${missing.join(', ')}` : undefined}
+                                            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[9px] bg-[color:var(--orion-gold)] px-4 text-[12px] font-bold text-black hover:bg-[color:var(--orion-gold-light)] disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            <Plus className="h-3.5 w-3.5" />
+                                            {isSaving ? 'Salvando...' : editingRuleId ? 'Salvar alterações' : 'Criar regra'}
+                                        </button>
+                                        {isFormInvalid ? (
+                                            <p className="mt-2 text-center text-[10px] text-[color:var(--orion-text-muted)]">
+                                                Para habilitar o botão, preencha: <strong className="text-[color:var(--orion-text-secondary)]">{missing.join(', ')}</strong>.
+                                            </p>
+                                        ) : null}
+                                    </>
+                                );
+                            })()}
                         </form>
                     </aside>
                 </div>

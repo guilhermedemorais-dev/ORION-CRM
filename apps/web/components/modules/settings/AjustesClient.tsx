@@ -77,6 +77,7 @@ interface PermissionModule {
 const FIXED_PERMISSION_MODULES: PermissionModule[] = [
     { key: 'leads', label: 'Leads & Pipeline', icon: '📊' },
     { key: 'clientes', label: 'Clientes', icon: '👤' },
+    { key: 'clientes_outros', label: 'Editar clientes de outros atendentes', icon: '🔓' },
     { key: 'pedidos', label: 'Pedidos', icon: '📦' },
     { key: 'producao', label: 'Produção', icon: '⚙️' },
     { key: 'pdv', label: 'PDV', icon: '🏪' },
@@ -87,14 +88,63 @@ const FIXED_PERMISSION_MODULES: PermissionModule[] = [
     { key: 'assistente_ia', label: 'Assistente IA', icon: '🤖' },
 ];
 
+// Toggles separados que controlam a visibilidade dos blocos/abas dentro da
+// ficha do cliente. Cada chave bate com `ficha.X.view` no backend.
+const FICHA_PERMISSION_MODULES: PermissionModule[] = [
+    { key: 'ficha.agenda.view', label: 'Agenda', icon: '📅' },
+    { key: 'ficha.dados.view', label: 'Ficha (dados do cliente)', icon: '📇' },
+    { key: 'ficha.atendimento.view', label: 'Atendimento', icon: '💬' },
+    { key: 'ficha.proposta.view', label: 'Proposta', icon: '📝' },
+    { key: 'ficha.pedidos.view', label: 'Pedidos', icon: '📦' },
+    { key: 'ficha.os.view', label: 'OS (ordens de serviço)', icon: '⚙️' },
+    { key: 'ficha.entrega.view', label: 'Entrega', icon: '🚚' },
+    { key: 'ficha.caixa.view', label: 'Caixa (PDV embutido)', icon: '💵' },
+    { key: 'ficha.historico.view', label: 'Histórico', icon: '🕒' },
+];
+
+// Defaults: clientes_outros é OFF por padrão para perfis não-admin.
+// Habilitado apenas para ROOT/ADMIN; demais cargos só ganham se o ADMIN
+// ligar manualmente o toggle no painel.
+// Defaults dos blocos da ficha por role.
+const FICHA_DEFAULTS: Record<UserRoleKey, string[]> = {
+    ROOT: FICHA_PERMISSION_MODULES.map(m => m.key),
+    ADMIN: FICHA_PERMISSION_MODULES.map(m => m.key),
+    GERENTE: FICHA_PERMISSION_MODULES.map(m => m.key),
+    VENDEDOR: ['ficha.agenda.view', 'ficha.dados.view', 'ficha.atendimento.view', 'ficha.proposta.view', 'ficha.pedidos.view', 'ficha.caixa.view', 'ficha.historico.view'],
+    ATENDENTE: ['ficha.agenda.view', 'ficha.dados.view', 'ficha.atendimento.view', 'ficha.proposta.view', 'ficha.pedidos.view', 'ficha.os.view', 'ficha.entrega.view', 'ficha.caixa.view', 'ficha.historico.view'],
+    PRODUCAO: ['ficha.dados.view', 'ficha.os.view', 'ficha.entrega.view'],
+    FINANCEIRO: ['ficha.dados.view', 'ficha.pedidos.view', 'ficha.caixa.view', 'ficha.historico.view'],
+};
+
 const DEFAULT_PERMS_BY_ROLE: Record<UserRoleKey, Record<string, boolean>> = {
-    ROOT: Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, true])),
-    ADMIN: Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, true])),
-    GERENTE: Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['leads', 'clientes', 'pedidos', 'producao', 'pdv', 'estoque', 'analytics', 'assistente_ia'].includes(m.key)])),
-    VENDEDOR: Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['leads', 'clientes', 'pedidos', 'pdv', 'assistente_ia'].includes(m.key)])),
-    ATENDENTE: Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['leads', 'clientes', 'pedidos', 'assistente_ia'].includes(m.key)])),
-    PRODUCAO: Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['producao', 'estoque', 'pedidos'].includes(m.key)])),
-    FINANCEIRO: Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['financeiro', 'pedidos', 'analytics'].includes(m.key)])),
+    ROOT: {
+        ...Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, true])),
+        ...Object.fromEntries(FICHA_PERMISSION_MODULES.map(m => [m.key, true])),
+    },
+    ADMIN: {
+        ...Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, true])),
+        ...Object.fromEntries(FICHA_PERMISSION_MODULES.map(m => [m.key, true])),
+    },
+    GERENTE: {
+        ...Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['leads', 'clientes', 'pedidos', 'producao', 'pdv', 'estoque', 'analytics', 'assistente_ia'].includes(m.key)])),
+        ...Object.fromEntries(FICHA_PERMISSION_MODULES.map(m => [m.key, FICHA_DEFAULTS.GERENTE.includes(m.key)])),
+    },
+    VENDEDOR: {
+        ...Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['leads', 'clientes', 'pedidos', 'pdv', 'assistente_ia'].includes(m.key)])),
+        ...Object.fromEntries(FICHA_PERMISSION_MODULES.map(m => [m.key, FICHA_DEFAULTS.VENDEDOR.includes(m.key)])),
+    },
+    ATENDENTE: {
+        ...Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['leads', 'clientes', 'pedidos', 'assistente_ia'].includes(m.key)])),
+        ...Object.fromEntries(FICHA_PERMISSION_MODULES.map(m => [m.key, FICHA_DEFAULTS.ATENDENTE.includes(m.key)])),
+    },
+    PRODUCAO: {
+        ...Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['producao', 'estoque', 'pedidos'].includes(m.key)])),
+        ...Object.fromEntries(FICHA_PERMISSION_MODULES.map(m => [m.key, FICHA_DEFAULTS.PRODUCAO.includes(m.key)])),
+    },
+    FINANCEIRO: {
+        ...Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['financeiro', 'pedidos', 'analytics'].includes(m.key)])),
+        ...Object.fromEntries(FICHA_PERMISSION_MODULES.map(m => [m.key, FICHA_DEFAULTS.FINANCEIRO.includes(m.key)])),
+    },
 };
 
 const ROLE_LABELS: Record<UserRoleKey, string> = {
@@ -1028,6 +1078,7 @@ export function AjustesClient({
                 role: values.role,
                 personal_whatsapp: values.personal_whatsapp?.trim() || null,
                 commission_rate: values.commission_rate,
+                custom_permissions: invitePerms,
             };
             if (values.password && values.password.length >= 6) {
                 body.password = values.password;
@@ -1082,6 +1133,7 @@ export function AjustesClient({
                 role: values.role,
                 personal_whatsapp: values.personal_whatsapp?.trim() || null,
                 commission_rate: values.commission_rate,
+                custom_permissions: editPerms,
             };
             if (values.password && values.password.length >= 6) {
                 body.password = values.password;
@@ -1377,7 +1429,10 @@ export function AjustesClient({
                 personal_whatsapp: editingUser.personal_whatsapp ?? '',
                 commission_rate: Number(editingUser.commission_rate || 0),
             });
-            setEditPerms({...DEFAULT_PERMS_BY_ROLE[role]});
+            // Mescla defaults do role com overrides salvos do usuário (custom_permissions),
+            // para que o toggle reflita o estado real persistido.
+            const stored = (editingUser as { custom_permissions?: Record<string, boolean> }).custom_permissions ?? {};
+            setEditPerms({ ...DEFAULT_PERMS_BY_ROLE[role], ...stored });
         }
     }, [editingUser, editForm]);
 
@@ -2350,6 +2405,35 @@ export function AjustesClient({
                                         </label>
                                     ))}
                                 </div>
+
+                                {/* Visibilidade da Ficha do Cliente */}
+                                <div className="mt-5 flex items-center gap-3">
+                                    <div className="flex-1 h-px bg-white/5" />
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-gold)]">
+                                        Visibilidade da Ficha do Cliente
+                                    </span>
+                                    <div className="flex-1 h-px bg-white/5" />
+                                </div>
+                                <p className="text-center text-[11px] text-[color:var(--orion-text-muted)]">
+                                    Controla quais abas/blocos aparecem dentro da ficha do cliente para este usuário.
+                                </p>
+                                <div className="grid gap-2 md:grid-cols-2">
+                                    {FICHA_PERMISSION_MODULES.map(mod => (
+                                        <label key={mod.key} className="flex items-center gap-3 rounded-xl border border-white/5 bg-[#0D0D0F] px-4 py-3 cursor-pointer hover:border-white/10 transition">
+                                            <span className="text-base">{mod.icon}</span>
+                                            <span className="flex-1 text-sm text-[color:var(--orion-text)]">{mod.label}</span>
+                                            <div
+                                                className={cn('relative h-5 w-9 rounded-full transition-colors cursor-pointer', invitePerms[mod.key] ? 'bg-[#C9A55C]' : 'bg-white/10')}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    setInvitePerms(prev => ({ ...prev, [mod.key]: !prev[mod.key] }));
+                                                }}
+                                            >
+                                                <div className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform', invitePerms[mod.key] ? 'translate-x-4' : 'translate-x-0.5')} />
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
                             </div>
                             {/* Footer */}
                             <div className="flex items-center justify-end gap-3 pt-2 border-t border-white/5">
@@ -2439,6 +2523,35 @@ export function AjustesClient({
                                 </div>
                                 <div className="grid gap-2 md:grid-cols-2">
                                     {[...FIXED_PERMISSION_MODULES, ...pipelinesForPerms.map(p => ({ key: `pipeline_${p.id}`, label: p.name, icon: '🔀' }))].map(mod => (
+                                        <label key={mod.key} className="flex items-center gap-3 rounded-xl border border-white/5 bg-[#0D0D0F] px-4 py-3 cursor-pointer hover:border-white/10 transition">
+                                            <span className="text-base">{mod.icon}</span>
+                                            <span className="flex-1 text-sm text-[color:var(--orion-text)]">{mod.label}</span>
+                                            <div
+                                                className={cn('relative h-5 w-9 rounded-full transition-colors cursor-pointer', editPerms[mod.key] ? 'bg-[#C9A55C]' : 'bg-white/10')}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    setEditPerms(prev => ({ ...prev, [mod.key]: !prev[mod.key] }));
+                                                }}
+                                            >
+                                                <div className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform', editPerms[mod.key] ? 'translate-x-4' : 'translate-x-0.5')} />
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+
+                                {/* Visibilidade da Ficha do Cliente */}
+                                <div className="mt-5 flex items-center gap-3">
+                                    <div className="flex-1 h-px bg-white/5" />
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-gold)]">
+                                        Visibilidade da Ficha do Cliente
+                                    </span>
+                                    <div className="flex-1 h-px bg-white/5" />
+                                </div>
+                                <p className="text-center text-[11px] text-[color:var(--orion-text-muted)]">
+                                    Controla quais abas/blocos aparecem dentro da ficha do cliente para este usuário.
+                                </p>
+                                <div className="grid gap-2 md:grid-cols-2">
+                                    {FICHA_PERMISSION_MODULES.map(mod => (
                                         <label key={mod.key} className="flex items-center gap-3 rounded-xl border border-white/5 bg-[#0D0D0F] px-4 py-3 cursor-pointer hover:border-white/10 transition">
                                             <span className="text-base">{mod.icon}</span>
                                             <span className="flex-1 text-sm text-[color:var(--orion-text)]">{mod.label}</span>

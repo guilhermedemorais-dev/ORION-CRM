@@ -6,6 +6,27 @@
 
 ---
 
+## [v1.6.0] — 2026-05-11
+### Pipeline configurável, regras de handoff, permissões da ficha, central de ajuda e categorias de estoque
+- Modal único de configuração do pipeline com abas **Etapas** e **Regras** (substitui o builder React Flow antigo e o builder-v2 do Codex; ambos descontinuados)
+- Regras de pipeline funcionais ponta a ponta: ação **Criar card vinculado** agora cria de fato um lead novo no pipeline destino com mesmo cliente, idempotente por `(rule_id, source_lead_id)`
+- Migration `049` permite mesmo cliente em pipelines diferentes (`UNIQUE (whatsapp_number, pipeline_id)`) — habilita handoff Comercial → Produção → Entrega sem duplicar cliente
+- Toda criação/atualização de lead via WhatsApp, formulário público, n8n e POST manual passou a escopar dedup por pipeline
+- UI das ações renomeada e com descrição inline: "Gerar card no setor destino", "Mover card", "Espelhar card"
+- Botão `?` no modal de regras abre painel de ajuda contextual com exemplo prático
+- Validação visual no formulário de regra: campo Nome marcado obrigatório, botão desabilitado enquanto faltar dado, mensagem explicando o que falta
+- 9 permissões `ficha.X.view` controlam visibilidade de cada bloco da ficha do cliente (agenda, dados, atendimento, proposta, pedidos, OS, entrega, caixa, histórico)
+- Defaults por cargo aplicados (ATENDENTE vê tudo, PRODUÇÃO só vê dados/OS/entrega, FINANCEIRO só vê dados/pedidos/caixa/histórico) — ajustáveis por usuário em Ajustes
+- Endpoint `GET /api/v1/users/me` retorna `custom_permissions` do próprio usuário (sem precisar de role para consultar a si mesmo)
+- Aba **Caixa** adicionada à ficha do cliente com placeholder informando integração futura com motor do PDV
+- Central de Ajuda em `/ajuda` com sidebar de navegação, busca e renderer markdown próprio (sem dep externa)
+- 5 seções iniciais documentadas: Bem-vindo, Pipelines, Regras de handoff, Estoque e categorias, Permissões da ficha
+- Migration `050` adicionou `product_categories` com hierarquia (`parent_id`) e flag `products.is_raw_material`
+- CRUD de categorias diretamente em **Estoque** (botão **Categorias** no header) — suporta subcategorias, renomear, excluir com proteção contra exclusão em uso
+- Formulário de produto: select dinâmico de categoria com agrupamento de subcategorias + toggle "Matéria-prima"
+- Badge **MP** dourado em produtos matéria-prima na lista do estoque e nos cards do PDV
+- Memória do agente registrada em `~/.claude/projects/.../memory/` para preservar decisões da Fase C entre sessões
+
 ## [v1.5.2] — 2026-05-02
 ### Correção de navegação de Leads + scroll do kanban
 - Dashboard deixou de depender do slug hardcoded `/pipeline/leads` e voltou a entrar pelo atalho `/leads`

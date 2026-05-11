@@ -4,13 +4,14 @@ import { apiRequest } from '@/lib/api';
 
 interface ProductRecord {
   id: string; code: string; name: string;
-  category: string | null; collection: string | null; description: string | null;
+  category: string | null; category_id: string | null;
+  collection: string | null; description: string | null;
   price_cents: number; cost_price_cents: number;
   stock_quantity: number; minimum_stock: number;
   metal: string | null; weight_grams: number | null;
   location: string | null; size_info: string | null; stones: string | null;
   photo_url: string | null; is_active: boolean; pdv_enabled: boolean;
-  requires_production: boolean; is_low_stock: boolean;
+  requires_production: boolean; is_raw_material: boolean; is_low_stock: boolean;
   created_at: string; updated_at: string;
 }
 

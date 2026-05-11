@@ -386,7 +386,7 @@ router.post(
             const result = await query<{ id: string; stage: string }>(
                 `INSERT INTO leads (whatsapp_number, stage, pipeline_id, stage_id, notes, last_interaction_at)
                  VALUES ($1, $2::lead_stage, $3, $4, $5, NOW())
-                 ON CONFLICT (whatsapp_number) DO UPDATE
+                 ON CONFLICT (whatsapp_number, pipeline_id) DO UPDATE
                    SET stage = EXCLUDED.stage,
                        stage_id = EXCLUDED.stage_id,
                        notes = CASE
@@ -735,7 +735,7 @@ router.post(
                 const leadUpsert = await client.query<{ id: string }>(
                     `INSERT INTO leads (whatsapp_number, stage, pipeline_id, last_interaction_at)
                      VALUES ($1, 'NOVO'::lead_stage, $2, NOW())
-                     ON CONFLICT (whatsapp_number) DO UPDATE
+                     ON CONFLICT (whatsapp_number, pipeline_id) DO UPDATE
                        SET last_interaction_at = NOW(), updated_at = NOW()
                      RETURNING id`,
                     [number, pipelineId]

@@ -20,7 +20,8 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
-import type { LeadRecord, PipelineStageRecord } from '@/lib/api';
+import { PipelineRulesDialog } from './PipelineRulesDialog';
+import type { LeadRecord, PipelineRecord, PipelineStageRecord } from '@/lib/api';
 import { cn, formatCurrencyFromCents, formatDate } from '@/lib/utils';
 import { LeadCardMenu } from './LeadCardMenu';
 import { LeadsListView } from './LeadsListView';
@@ -147,20 +148,24 @@ function getStageHeaderStyle(index: number, total: number) {
 interface LeadsPipelineClientProps {
     initialLeads: LeadRecord[];
     initialStages: PipelineStageRecord[];
+    pipeline: PipelineRecord;
     pipelineId: string;
     pipelineName: string;
     canManagePipeline: boolean;
     currentUserId: string;
+    initialConfigOpen?: boolean;
     initialQuery?: string;
 }
 
 export function LeadsPipelineClient({
     initialLeads,
     initialStages,
+    pipeline,
     pipelineId,
     pipelineName,
     canManagePipeline,
     currentUserId,
+    initialConfigOpen = false,
     initialQuery = '',
 }: LeadsPipelineClientProps) {
     const [hasMounted, setHasMounted] = useState(false);
@@ -177,8 +182,10 @@ export function LeadsPipelineClient({
     const [highlightStageId, setHighlightStageId] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [infoMessage, setInfoMessage] = useState<string | null>(null);
-    const [showPipelineConfig, setShowPipelineConfig] = useState(false);
+    const [showPipelineConfig, setShowPipelineConfig] = useState(initialConfigOpen);
+    const [configTab, setConfigTab] = useState<'stages' | 'rules'>('stages');
     const [savingOrder, setSavingOrder] = useState(false);
+    const [savingStageId, setSavingStageId] = useState<string | null>(null);
     const [creatingStage, setCreatingStage] = useState(false);
     const [newStageName, setNewStageName] = useState('');
     const [newStageColor, setNewStageColor] = useState('#3B82F6');
@@ -215,6 +222,10 @@ export function LeadsPipelineClient({
             if (hideEmpty === '1') setHideEmptyStages(true);
         } catch { /* localStorage unavailable */ }
     }, []);
+
+    useEffect(() => {
+        if (initialConfigOpen) setShowPipelineConfig(true);
+    }, [initialConfigOpen]);
 
     function applyViewMode(next: PipelineViewMode) {
         setViewMode(next);
@@ -749,6 +760,46 @@ export function LeadsPipelineClient({
                 position: idx + 1,
             }));
         });
+    }
+
+    function updateStageLocal(stageId: string, patch: Partial<PipelineStageRecord>) {
+        setStages((current) => current.map((stage) => {
+            if (stage.id !== stageId) return stage;
+            const next = { ...stage, ...patch };
+            if (patch.is_won === true) next.is_lost = false;
+            if (patch.is_lost === true) next.is_won = false;
+            return next;
+        }));
+    }
+
+    async function saveStage(stage: PipelineStageRecord) {
+        setSavingStageId(stage.id);
+        setErrorMessage(null);
+
+        const response = await fetch(`/api/internal/pipelines/${pipelineId}/stages/${stage.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: stage.name,
+                color: stage.color,
+                position: stage.position,
+                is_won: stage.is_won,
+                is_lost: stage.is_lost,
+            }),
+        });
+
+        setSavingStageId(null);
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            setErrorMessage(typeof data.message === 'string' ? data.message : 'Falha ao salvar etapa.');
+            await refreshFromApi();
+            return;
+        }
+
+        const data = await response.json() as { data: PipelineStageRecord };
+        setStages((current) => current.map((item) => item.id === data.data.id ? data.data : item).sort((a, b) => a.position - b.position));
+        setInfoMessage('Etapa salva.');
     }
 
     async function saveStageOrder() {
@@ -1464,99 +1515,190 @@ export function LeadsPipelineClient({
             )}
 
             {showPipelineConfig && canManagePipeline ? (
-                <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/55 p-4">
-                    <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-[color:var(--orion-surface)] p-6 shadow-[0_32px_80px_rgba(0,0,0,0.45)]">
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-gold">Admin</p>
-                                <h2 className="mt-1 font-serif text-[24px] font-semibold text-[color:var(--orion-text)]">Configurar pipeline</h2>
-                                <p className="mt-2 text-sm text-[color:var(--orion-text-secondary)]">
-                                    Ajuste etapas e ordem operacional sem sair do board.
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="pipeline-config-title"
+                >
+                    <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[16px] border border-white/10 bg-[#111114] shadow-[0_32px_80px_rgba(0,0,0,0.45)]">
+                        <header className="flex items-center justify-between gap-3 border-b border-white/10 bg-[#151517] px-5 py-4">
+                            <div className="min-w-0">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-gold)]">Pipeline</p>
+                                <h2 id="pipeline-config-title" className="truncate text-lg font-bold text-[color:var(--orion-text)]">
+                                    Configuração do pipeline · {pipelineName}
+                                </h2>
+                                <p className="mt-1 text-xs text-[color:var(--orion-text-secondary)]">
+                                    Ajuste etapas e regras de automação sem sair do Kanban.
                                 </p>
                             </div>
                             <button
                                 type="button"
-                                title="Fechar"
                                 onClick={() => setShowPipelineConfig(false)}
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-[color:var(--orion-text-secondary)] transition hover:border-brand-gold hover:text-brand-gold"
+                                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-white/10 text-[color:var(--orion-text-secondary)] hover:border-[color:var(--orion-gold)] hover:text-[color:var(--orion-gold)]"
+                                aria-label="Fechar configuração do pipeline"
                             >
                                 <X className="h-4 w-4" />
                             </button>
+                        </header>
+
+                        <div role="tablist" aria-label="Configuração do pipeline" className="flex shrink-0 items-center gap-1 border-b border-white/10 bg-[#0f0f11] px-3">
+                            {([
+                                { key: 'stages' as const, label: 'Etapas' },
+                                { key: 'rules' as const, label: 'Regras' },
+                            ]).map((tab) => {
+                                const isActive = configTab === tab.key;
+                                return (
+                                    <button
+                                        key={tab.key}
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={isActive}
+                                        onClick={() => setConfigTab(tab.key)}
+                                        className={cn(
+                                            'relative h-10 px-4 text-[12px] font-semibold transition-colors',
+                                            isActive
+                                                ? 'text-[color:var(--orion-gold)]'
+                                                : 'text-[color:var(--orion-text-secondary)] hover:text-[color:var(--orion-text)]',
+                                        )}
+                                    >
+                                        {tab.label}
+                                        {isActive ? (
+                                            <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-[color:var(--orion-gold)]" />
+                                        ) : null}
+                                    </button>
+                                );
+                            })}
                         </div>
 
-                        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-                            <Card title="Nova etapa" description="Adicione etapas canônicas ao pipeline atual.">
-                                <form onSubmit={createStage} className="grid gap-3">
-                                    <Input
-                                        value={newStageName}
-                                        onChange={(event) => setNewStageName(event.target.value)}
-                                        placeholder="Nova etapa"
-                                        required
-                                    />
-                                    <input
-                                        type="color"
-                                        title="Cor da etapa"
-                                        value={newStageColor}
-                                        onChange={(event) => setNewStageColor(event.target.value)}
-                                        className="h-10 w-full cursor-pointer rounded-md border border-white/10 bg-[color:var(--orion-base)] px-2"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={creatingStage}
-                                        className="inline-flex h-10 items-center justify-center rounded-md bg-brand-gold text-sm font-bold text-black transition hover:bg-brand-gold-light disabled:opacity-50"
-                                    >
-                                        {creatingStage ? 'Criando...' : 'Adicionar etapa'}
-                                    </button>
-                                </form>
-                            </Card>
+                        <div className="min-h-0 flex-1 overflow-y-auto">
+                            {configTab === 'stages' ? (
+                                <div className="grid gap-6 p-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+                                    <Card title="Nova etapa" description="Adicione uma etapa ao Kanban atual.">
+                                        <form onSubmit={createStage} className="grid gap-3">
+                                            <Input
+                                                value={newStageName}
+                                                onChange={(event) => setNewStageName(event.target.value)}
+                                                placeholder="Nova etapa"
+                                                required
+                                            />
+                                            <input
+                                                type="color"
+                                                title="Cor da etapa"
+                                                value={newStageColor}
+                                                onChange={(event) => setNewStageColor(event.target.value)}
+                                                className="h-10 w-full cursor-pointer rounded-md border border-white/10 bg-[color:var(--orion-base)] px-2"
+                                            />
+                                            <button
+                                                type="submit"
+                                                disabled={creatingStage}
+                                                className="inline-flex h-10 items-center justify-center rounded-md bg-brand-gold text-sm font-bold text-black transition hover:bg-brand-gold-light disabled:opacity-50"
+                                            >
+                                                {creatingStage ? 'Criando...' : 'Adicionar etapa'}
+                                            </button>
+                                        </form>
+                                    </Card>
 
-                            <Card title="Etapas atuais" description="Reordene e remova etapas sem sair do contexto do pipeline.">
-                                <div className="space-y-2">
-                                    {stages.map((stage, index) => (
-                                        <div key={stage.id} className="flex items-center justify-between rounded-lg border border-white/10 bg-[color:var(--orion-base)] px-3 py-2">
-                                            <div className="flex items-center gap-2">
-                                                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
-                                                <span className="text-sm font-medium text-[color:var(--orion-text)]">{stage.name}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => moveStageLocal(stage.id, 'up')}
-                                                    disabled={index === 0}
-                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/10 text-sm text-[color:var(--orion-text-secondary)] transition hover:border-brand-gold hover:text-brand-gold disabled:opacity-40"
-                                                >
-                                                    ↑
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => moveStageLocal(stage.id, 'down')}
-                                                    disabled={index === stages.length - 1}
-                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/10 text-sm text-[color:var(--orion-text-secondary)] transition hover:border-brand-gold hover:text-brand-gold disabled:opacity-40"
-                                                >
-                                                    ↓
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => void removeStage(stage.id)}
-                                                    disabled={stage.is_won || stage.is_lost}
-                                                    className="inline-flex h-8 items-center justify-center rounded-md border border-red-400/25 px-3 text-xs font-semibold text-red-300 transition hover:bg-red-500/10 disabled:opacity-40"
-                                                >
-                                                    Excluir
-                                                </button>
-                                            </div>
+                                    <Card title="Etapas atuais" description="Edite nome, cor, ordem e marcadores de ganho/perda.">
+                                        <div className="space-y-2">
+                                            {stages.map((stage, index) => (
+                                                <div key={stage.id} className="grid gap-3 rounded-lg border border-white/10 bg-[color:var(--orion-base)] px-3 py-3 xl:grid-cols-[minmax(180px,1fr)_96px_150px_auto] xl:items-center">
+                                                    <Input
+                                                        value={stage.name}
+                                                        onChange={(event) => updateStageLocal(stage.id, { name: event.target.value })}
+                                                        aria-label={`Nome da etapa ${stage.name}`}
+                                                    />
+                                                    <input
+                                                        type="color"
+                                                        title={`Cor da etapa ${stage.name}`}
+                                                        value={stage.color}
+                                                        onChange={(event) => updateStageLocal(stage.id, { color: event.target.value })}
+                                                        className="h-10 w-full cursor-pointer rounded-md border border-white/10 bg-[color:var(--orion-surface)] px-2"
+                                                    />
+                                                    <div className="flex flex-wrap gap-2 text-[11px] text-[color:var(--orion-text-secondary)]">
+                                                        <label className="inline-flex h-8 items-center gap-2 rounded-md border border-white/10 px-2">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={stage.is_won}
+                                                                onChange={(event) => updateStageLocal(stage.id, { is_won: event.target.checked })}
+                                                                className="accent-[color:var(--orion-gold)]"
+                                                            />
+                                                            Ganho
+                                                        </label>
+                                                        <label className="inline-flex h-8 items-center gap-2 rounded-md border border-white/10 px-2">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={stage.is_lost}
+                                                                onChange={(event) => updateStageLocal(stage.id, { is_lost: event.target.checked })}
+                                                                className="accent-[color:var(--orion-gold)]"
+                                                            />
+                                                            Perda
+                                                        </label>
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => moveStageLocal(stage.id, 'up')}
+                                                            disabled={index === 0}
+                                                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/10 text-sm text-[color:var(--orion-text-secondary)] transition hover:border-brand-gold hover:text-brand-gold disabled:opacity-40"
+                                                            title="Subir etapa"
+                                                        >
+                                                            ↑
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => moveStageLocal(stage.id, 'down')}
+                                                            disabled={index === stages.length - 1}
+                                                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/10 text-sm text-[color:var(--orion-text-secondary)] transition hover:border-brand-gold hover:text-brand-gold disabled:opacity-40"
+                                                            title="Descer etapa"
+                                                        >
+                                                            ↓
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => void saveStage(stage)}
+                                                            disabled={savingStageId === stage.id}
+                                                            className="inline-flex h-8 items-center justify-center rounded-md bg-brand-gold px-3 text-xs font-bold text-black transition hover:bg-brand-gold-light disabled:opacity-50"
+                                                        >
+                                                            {savingStageId === stage.id ? 'Salvando...' : 'Salvar'}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => void removeStage(stage.id)}
+                                                            disabled={stage.is_won || stage.is_lost}
+                                                            className="inline-flex h-8 items-center justify-center rounded-md border border-red-400/25 px-3 text-xs font-semibold text-red-300 transition hover:bg-red-500/10 disabled:opacity-40"
+                                                        >
+                                                            Excluir
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
 
-                                <button
-                                    type="button"
-                                    onClick={() => void saveStageOrder()}
-                                    disabled={savingOrder}
-                                    className="mt-4 inline-flex h-10 items-center justify-center rounded-md bg-brand-gold px-4 text-sm font-bold text-black transition hover:bg-brand-gold-light disabled:opacity-50"
-                                >
-                                    {savingOrder ? 'Salvando...' : 'Salvar ordem'}
-                                </button>
-                            </Card>
+                                        <button
+                                            type="button"
+                                            onClick={() => void saveStageOrder()}
+                                            disabled={savingOrder}
+                                            className="mt-4 inline-flex h-10 items-center justify-center rounded-md bg-brand-gold px-4 text-sm font-bold text-black transition hover:bg-brand-gold-light disabled:opacity-50"
+                                        >
+                                            {savingOrder ? 'Salvando...' : 'Salvar ordem'}
+                                        </button>
+                                    </Card>
+                                </div>
+                            ) : (
+                                <PipelineRulesDialog
+                                    embedded
+                                    open
+                                    pipeline={pipeline}
+                                    sourceStages={stages}
+                                    onClose={() => undefined}
+                                    onToast={(toast) => {
+                                        if (!toast) return;
+                                        if (toast.kind === 'success') setInfoMessage(toast.message);
+                                        if (toast.kind === 'error') setErrorMessage(toast.message);
+                                    }}
+                                />
+                            )}
                         </div>
                     </div>
                 </div>

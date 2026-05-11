@@ -309,14 +309,14 @@ async function resolveConversationLinks(inbound: ParsedWhatsAppInboundEvent): Pr
     );
     const customerId = customerResult.rows[0]?.id ?? null;
 
+    const defaultLeadContext = await resolveDefaultLeadContext();
     const leadResult = await query<{ id: string }>(
-        'SELECT id FROM leads WHERE whatsapp_number = $1 LIMIT 1',
-        [contactPhone]
+        'SELECT id FROM leads WHERE whatsapp_number = $1 AND pipeline_id = $2 LIMIT 1',
+        [contactPhone, defaultLeadContext.pipelineId]
     );
     let leadId = leadResult.rows[0]?.id ?? null;
 
     if (!leadId && !customerId) {
-        const defaultLeadContext = await resolveDefaultLeadContext();
         const createdLead = await query<{ id: string }>(
             `INSERT INTO leads (
                 whatsapp_number,

@@ -225,19 +225,20 @@ router.post(
                 return;
             }
 
+            const pipelineId = await resolveDefaultPipelineId();
             const duplicate = await query<PublicLeadRow>(
                 `SELECT id, name, whatsapp_number, email, source, created_at
                  FROM leads
                  WHERE whatsapp_number = $1
+                   AND pipeline_id = $2
                  LIMIT 1`,
-                [normalizedWhatsapp]
+                [normalizedWhatsapp, pipelineId]
             );
 
             let lead = duplicate.rows[0];
             let duplicatePrevented = false;
 
             if (!lead) {
-                const pipelineId = await resolveDefaultPipelineId();
                 const stageId = await resolveDefaultStageId(pipelineId);
                 const inserted = await query<PublicLeadRow>(
                     `INSERT INTO leads (

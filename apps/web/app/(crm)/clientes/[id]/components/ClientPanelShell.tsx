@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { CustomerFull, CustomerStats, PipelineStage, LeadRecord } from './types';
 import ClientTopbar from './ClientTopbar';
 import ClientStagebar from './ClientStagebar';
@@ -16,20 +16,59 @@ import ClientEntregaTab from './tabs/ClientEntregaTab';
 import ClientHistoricoTab from './tabs/ClientHistoricoTab';
 import { QuickChatPanel } from './QuickChatPanel';
 import { LeadAppointmentsTab } from '@/app/(crm)/agenda/components/LeadAppointmentsTab';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface Props {
   customerId: string;
   initialCustomer: CustomerFull;
   entityType?: 'customer' | 'lead';
+  userRole: string;
+  customPermissions?: Record<string, boolean>;
 }
 
-export default function ClientPanelShell({ customerId, initialCustomer, entityType = 'customer' }: Props) {
+// Mapeia cada aba para a chave de permissão correspondente.
+const TAB_PERMISSION: Record<TabKey, string> = {
+  agenda: 'ficha.agenda.view',
+  ficha: 'ficha.dados.view',
+  atendimento: 'ficha.atendimento.view',
+  proposta: 'ficha.proposta.view',
+  pedidos: 'ficha.pedidos.view',
+  os: 'ficha.os.view',
+  entrega: 'ficha.entrega.view',
+  caixa: 'ficha.caixa.view',
+  historico: 'ficha.historico.view',
+};
+
+const DEFAULT_TAB_ORDER: TabKey[] = [
+  'agenda', 'ficha', 'atendimento', 'proposta', 'pedidos', 'os', 'entrega', 'caixa', 'historico',
+];
+
+export default function ClientPanelShell({
+  customerId,
+  initialCustomer,
+  entityType = 'customer',
+  userRole,
+  customPermissions,
+}: Props) {
+  const { can } = usePermissions(userRole, customPermissions);
+
+  const visibleTabs = useMemo<TabKey[]>(
+    () => DEFAULT_TAB_ORDER.filter((tab) => can(TAB_PERMISSION[tab])),
+    [can],
+  );
   const [customer, setCustomer] = useState<CustomerFull>(initialCustomer);
   const [stats, setStats] = useState<CustomerStats | null>(null);
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [lead, setLead] = useState<LeadRecord | null>(null);
   const [currentStageId, setCurrentStageId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabKey>('ficha');
+  const [activeTab, setActiveTab] = useState<TabKey>(() => visibleTabs.includes('ficha') ? 'ficha' : (visibleTabs[0] ?? 'ficha'));
+
+  // Se a aba ativa deixa de estar visível (perms mudaram), cai pra primeira disponível.
+  useEffect(() => {
+    if (!visibleTabs.includes(activeTab) && visibleTabs.length > 0) {
+      setActiveTab(visibleTabs[0]!);
+    }
+  }, [visibleTabs, activeTab]);
   const [showOSModal, setShowOSModal] = useState(false);
   const [canCreateDelivery, setCanCreateDelivery] = useState(false);
   const [chatSession, setChatSession] = useState<{ conversationId: string; channel: string } | null>(null);
@@ -157,6 +196,7 @@ export default function ClientPanelShell({ customerId, initialCustomer, entityTy
           <ClientTabs
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            visibleTabs={visibleTabs}
           />
 
           {/* Tab body */}
@@ -168,7 +208,7 @@ export default function ClientPanelShell({ customerId, initialCustomer, entityTy
               background: '#0F0F11',
             }}
           >
-            {activeTab === 'ficha' && (
+            {activeTab === 'ficha' && can('ficha.dados.view') && (
               <ClientFichaTab
                 customer={customer}
                 customerId={customerId}
@@ -176,38 +216,54 @@ export default function ClientPanelShell({ customerId, initialCustomer, entityTy
                 onUpdate={handleCustomerUpdate}
               />
             )}
-            {activeTab === 'agenda' && (
+            {activeTab === 'agenda' && can('ficha.agenda.view') && (
               <div className="max-w-4xl mx-auto py-2">
                 <LeadAppointmentsTab leadId={lead?.id ?? null} customerId={customerId} />
               </div>
             )}
-            {activeTab === 'atendimento' && (
+            {activeTab === 'atendimento' && can('ficha.atendimento.view') && (
               <ClientAtendimentoTab
                 customerId={customerId}
                 onOSCreated={handleOSCreated}
               />
             )}
-            {activeTab === 'proposta' && (
+            {activeTab === 'proposta' && can('ficha.proposta.view') && (
               <ClientPropostaTab customerId={customerId} />
             )}
-            {activeTab === 'pedidos' && (
+            {activeTab === 'pedidos' && can('ficha.pedidos.view') && (
               <ClientPedidosTab customerId={customerId} />
             )}
-            {activeTab === 'os' && (
+            {activeTab === 'os' && can('ficha.os.view') && (
               <ClientOSTab
                 customerId={customerId}
                 initialShowModal={showOSModal}
                 onModalClose={() => setShowOSModal(false)}
               />
             )}
-            {activeTab === 'entrega' && (
+            {activeTab === 'entrega' && can('ficha.entrega.view') && (
               <ClientEntregaTab
                 customerId={customerId}
                 customer={customer}
                 canCreateDelivery={canCreateDelivery}
               />
             )}
-            {activeTab === 'historico' && (
+            {activeTab === 'caixa' && can('ficha.caixa.view') && (
+              <div className="max-w-4xl mx-auto py-8 text-center">
+                <div className="rounded-2xl border border-white/10 bg-[#141417] p-10">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-gold)]">Caixa</p>
+                  <h3 className="mt-2 text-xl font-semibold text-[color:var(--orion-text)]">
+                    Caixa embutido na ficha
+                  </h3>
+                  <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[color:var(--orion-text-secondary)]">
+                    Em breve: mesmo motor do PDV (carrinho, formas de pagamento, troco, Mercado Pago) acessível diretamente daqui — para fechar a venda sem sair da ficha do cliente.
+                  </p>
+                  <p className="mt-4 text-[11px] uppercase tracking-[0.12em] text-[color:var(--orion-text-muted)]">
+                    Disponível na Fase 4 do roadmap
+                  </p>
+                </div>
+              </div>
+            )}
+            {activeTab === 'historico' && can('ficha.historico.view') && (
               <ClientHistoricoTab customerId={customerId} />
             )}
           </div>

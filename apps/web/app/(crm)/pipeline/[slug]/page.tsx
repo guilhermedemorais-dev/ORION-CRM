@@ -9,7 +9,7 @@ export default async function PipelinePage({
     searchParams,
 }: {
     params: { slug: string };
-    searchParams?: { q?: string };
+    searchParams?: { config?: string; q?: string };
 }) {
     const session = requireSession();
 
@@ -34,10 +34,12 @@ export default async function PipelinePage({
         <LeadsPipelineClient
             initialLeads={leadResponse.data}
             initialStages={stagesResponse.data}
+            pipeline={pipeline}
             pipelineId={pipeline.id}
             pipelineName={pipeline.name}
-            canManagePipeline={session.user.role === 'ADMIN'}
+            canManagePipeline={session.user.role === 'ROOT' || session.user.role === 'ADMIN'}
             currentUserId={session.user.id}
+            initialConfigOpen={searchParams?.config === '1'}
             initialQuery={searchParams?.q ?? ''}
         />
     );

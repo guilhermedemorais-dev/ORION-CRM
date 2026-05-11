@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { logoutAction } from '@/app/(crm)/actions';
 import {
     BarChart3,
+    BookOpen,
     CalendarDays,
     Circle,
     DollarSign,
@@ -51,6 +52,7 @@ const navGroups = [
             { icon: BarChart3, label: 'Analytics', href: '/analytics' },
             { icon: Store, label: 'Loja', href: '/settings/loja' },
             { icon: Settings, label: 'Ajustes', href: '/ajustes' },
+            { icon: BookOpen, label: 'Ajuda', href: '/ajuda' },
             { icon: LifeBuoy, label: 'Suporte', href: '/chamados' },
         ],
     },
@@ -177,10 +179,10 @@ export function Sidebar({
                                         </Link>
                                         {userRole === 'ROOT' ? (
                                             <Link
-                                                href={`/pipeline/${pipeline.slug}/builder-v2`}
+                                                href={`/pipeline/${pipeline.slug}?config=1`}
                                                 onClick={onCloseMobile}
                                                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[color:var(--orion-border-mid)] bg-white/5 text-[color:var(--orion-text-secondary)] transition-colors hover:border-[color:var(--orion-border-strong)] hover:text-[color:var(--orion-text)]"
-                                                aria-label={`Abrir Builder V2 do pipeline ${pipeline.name}`}
+                                                aria-label={`Configurar Kanban do pipeline ${pipeline.name}`}
                                             >
                                                 <PencilLine className="h-3.5 w-3.5" />
                                             </Link>
@@ -196,12 +198,12 @@ export function Sidebar({
                         })}
                         {userRole === 'ROOT' ? (
                             <Link
-                                href="/pipeline/novo/builder"
+                                href="/pipeline/leads?config=1"
                                 onClick={onCloseMobile}
                                 className="mx-0 flex min-h-[44px] items-center gap-[10px] px-5 py-3 text-[12px] font-medium text-[color:var(--orion-text-secondary)] transition-colors hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)] lg:min-h-0 lg:h-8 lg:py-0"
                             >
                                 <PlusCircle className="h-4 w-4 shrink-0 text-[color:var(--orion-gold)]" />
-                                <span>Novo pipeline</span>
+                                <span>Configurar kanban</span>
                             </Link>
                         ) : null}
                     </div>

@@ -28,10 +28,23 @@ const PERMISSIONS: Record<string, string[]> = {
     'settings.view':            ['GERENTE', 'ADMIN'],
     'pipeline.configure':       ['GERENTE', 'ADMIN'],
     'users.manage':             ['GERENTE', 'ADMIN'],
+
+    // Visibilidade da Ficha do Cliente
+    'ficha.agenda.view':        ['ADMIN', 'GERENTE', 'ATENDENTE'],
+    'ficha.dados.view':         ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO', 'FINANCEIRO'],
+    'ficha.atendimento.view':   ['ADMIN', 'GERENTE', 'ATENDENTE'],
+    'ficha.proposta.view':      ['ADMIN', 'GERENTE', 'ATENDENTE'],
+    'ficha.pedidos.view':       ['ADMIN', 'GERENTE', 'ATENDENTE', 'FINANCEIRO'],
+    'ficha.os.view':            ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],
+    'ficha.entrega.view':       ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],
+    'ficha.historico.view':     ['ADMIN', 'GERENTE', 'ATENDENTE'],
+    'ficha.caixa.view':         ['ADMIN', 'GERENTE', 'ATENDENTE', 'FINANCEIRO'],
 };
 
 export function usePermissions(role: string, customPermissions?: Record<string, boolean>) {
     const can = (permission: string): boolean => {
+        // ROOT bypassa toda a matriz (espelha o backend).
+        if (role === 'ROOT') return true;
         if (customPermissions?.[permission] !== undefined) {
             return customPermissions[permission];
         }

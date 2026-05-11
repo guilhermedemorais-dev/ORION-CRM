@@ -13,6 +13,7 @@ interface Product {
     minimum_stock: number;
     category: string | null;
     is_active: boolean;
+    is_raw_material?: boolean;
     metal?: string | null;
     weight_grams?: number | null;
 }
@@ -492,7 +493,12 @@ export function PdvClient({
                                             className={`cursor-pointer overflow-hidden rounded-[10px] border bg-[#18181C] transition ${isOut ? 'cursor-not-allowed border-[rgba(255,255,255,0.07)] opacity-35' : inCart ? 'border-[rgba(200,169,122,0.3)] bg-[rgba(200,169,122,0.06)]' : 'border-[rgba(255,255,255,0.07)] hover:-translate-y-px hover:border-[rgba(200,169,122,0.3)] hover:bg-[#202024] hover:shadow-[0_4px_16px_rgba(0,0,0,0.4)]'}`}>
                                             <div className="flex aspect-square w-full items-center justify-center bg-[#202024] text-3xl">💎</div>
                                             <div className="px-2.5 pb-2.5 pt-2">
-                                                <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.5px] text-[#4A4A52]">{product.code}</p>
+                                                <div className="mb-0.5 flex items-center justify-between gap-1">
+                                                    <p className="text-[9px] font-semibold uppercase tracking-[0.5px] text-[#4A4A52]">{product.code}</p>
+                                                    {product.is_raw_material && (
+                                                        <span title="Matéria-prima" className="rounded px-1 py-0.5 text-[8px] font-bold uppercase tracking-[0.06em]" style={{ background: 'rgba(200,169,122,0.16)', color: '#C8A97A' }}>MP</span>
+                                                    )}
+                                                </div>
                                                 <p className="mb-1.5 text-[12px] font-semibold leading-tight text-[#EDE8E0]">{product.name}</p>
                                                 <p className="font-serif text-[14px] font-bold text-[#C8A97A]">{fmtCurrency(product.price_cents)}</p>
                                                 <div className="mt-1.5 flex items-center justify-between">

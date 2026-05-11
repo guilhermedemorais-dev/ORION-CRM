@@ -8,7 +8,8 @@ export type TabKey =
   | 'pedidos'
   | 'os'
   | 'entrega'
-  | 'historico';
+  | 'historico'
+  | 'caixa';
 
 interface Tab {
   key: TabKey;
@@ -20,9 +21,10 @@ interface Props {
   activeTab: TabKey;
   onTabChange: (tab: TabKey) => void;
   badges?: Partial<Record<TabKey, number>>;
+  visibleTabs?: TabKey[];
 }
 
-const TABS: Tab[] = [
+const ALL_TABS: Tab[] = [
   { key: 'agenda', label: 'Agenda' },
   { key: 'ficha', label: 'Ficha' },
   { key: 'atendimento', label: 'Atendimento' },
@@ -30,10 +32,14 @@ const TABS: Tab[] = [
   { key: 'pedidos', label: 'Pedidos' },
   { key: 'os', label: 'OS' },
   { key: 'entrega', label: 'Entrega' },
+  { key: 'caixa', label: 'Caixa' },
   { key: 'historico', label: 'Histórico' },
 ];
 
-export default function ClientTabs({ activeTab, onTabChange, badges = {} }: Props) {
+export default function ClientTabs({ activeTab, onTabChange, badges = {}, visibleTabs }: Props) {
+  const TABS = visibleTabs
+    ? ALL_TABS.filter((tab) => visibleTabs.includes(tab.key))
+    : ALL_TABS;
   return (
     <div
       style={{

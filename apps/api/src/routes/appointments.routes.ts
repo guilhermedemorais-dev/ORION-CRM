@@ -224,10 +224,16 @@ router.post('/', authenticate, async (req: Request, res: Response, next: NextFun
             if (!resolvedLeadId && data.contact_phone) {
                 const phone = normalizePhone(data.contact_phone);
 
-                // Try to find existing lead by phone
+                // Try to find existing lead by phone (prefer the pipeline informado,
+                // fallback para qualquer pipeline — agendamento é vinculado ao
+                // atendimento comercial, não duplica.)
                 const existingLead = await client.query<{ id: string }>(
-                    `SELECT id FROM leads WHERE whatsapp_number = $1 LIMIT 1`,
-                    [phone]
+                    `SELECT id FROM leads
+                     WHERE whatsapp_number = $1
+                     ORDER BY CASE WHEN pipeline_id = $2 THEN 0 ELSE 1 END,
+                              created_at ASC
+                     LIMIT 1`,
+                    [phone, pipelineId]
                 );
 
                 if (existingLead.rows[0]) {

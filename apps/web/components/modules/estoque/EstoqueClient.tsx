@@ -5,14 +5,22 @@ import { useConfirm } from '@/components/system/ConfirmDialog';
 
 interface Product {
   id: string; code: string; name: string;
-  category: string | null; collection: string | null; description: string | null;
+  category: string | null; category_id: string | null;
+  collection: string | null; description: string | null;
   price_cents: number; cost_price_cents: number;
   stock_quantity: number; minimum_stock: number;
   metal: string | null; weight_grams: number | null;
   location: string | null; size_info: string | null; stones: string | null;
   photo_url: string | null; is_active: boolean; pdv_enabled: boolean;
-  requires_production: boolean; is_low_stock: boolean;
+  requires_production: boolean; is_raw_material: boolean; is_low_stock: boolean;
   created_at: string; updated_at: string;
+}
+
+interface ProductCategory {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  position: number;
 }
 
 interface StockMovement {
@@ -53,8 +61,10 @@ const btnGold = 'h-9 px-4 rounded-lg bg-[#C8A97A] text-black text-xs font-bold h
 const btnGhost = 'h-9 px-3 rounded-lg bg-[#18181C] border border-white/[0.07] text-[#888480] text-xs font-semibold hover:border-white/[0.11] hover:text-[#EDE8E0] transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer';
 
 // ── Product Modal ─────────────────────────────────────────────────────────────
-function ProductModal({ product, onClose, onSaved, showToast }: {
+function ProductModal({ product, categories, onManageCategories, onClose, onSaved, showToast }: {
   product: Product | null;
+  categories: ProductCategory[];
+  onManageCategories: () => void;
   onClose: () => void;
   onSaved: () => void;
   showToast: (msg: string, type?: 'success' | 'error') => void;
@@ -70,6 +80,7 @@ function ProductModal({ product, onClose, onSaved, showToast }: {
     code: product?.code ?? '',
     name: product?.name ?? '',
     category: product?.category ?? '',
+    category_id: product?.category_id ?? '',
     collection: product?.collection ?? '',
     description: product?.description ?? '',
     price: product ? String(product.price_cents / 100) : '',
@@ -84,6 +95,7 @@ function ProductModal({ product, onClose, onSaved, showToast }: {
     is_active: product?.is_active ?? true,
     pdv_enabled: product?.pdv_enabled ?? true,
     requires_production: product?.requires_production ?? false,
+    is_raw_material: product?.is_raw_material ?? false,
   });
 
   const set = (k: keyof typeof f, v: string | boolean) => setF(prev => ({ ...prev, [k]: v }));
@@ -122,7 +134,9 @@ function ProductModal({ product, onClose, onSaved, showToast }: {
     try {
       const body = {
         code: f.code, name: f.name,
-        category: f.category || undefined, collection: f.collection || undefined,
+        category: f.category || undefined,
+        category_id: f.category_id || undefined,
+        collection: f.collection || undefined,
         description: f.description || undefined,
         price_cents: Math.round(priceNum * 100),
         cost_price_cents: Math.round(costNum * 100),
@@ -130,7 +144,9 @@ function ProductModal({ product, onClose, onSaved, showToast }: {
         location: f.location || undefined, metal: f.metal || undefined,
         weight_grams: f.weight_grams ? parseFloat(f.weight_grams) : undefined,
         size_info: f.size_info || undefined, stones: f.stones || undefined,
-        is_active: f.is_active, pdv_enabled: f.pdv_enabled, requires_production: f.requires_production,
+        is_active: f.is_active, pdv_enabled: f.pdv_enabled,
+        requires_production: f.requires_production,
+        is_raw_material: f.is_raw_material,
       };
       const url = product ? `/api/internal/products/${product.id}` : '/api/internal/products';
       const res = await fetch(url, { method: product ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -194,10 +210,39 @@ function ProductModal({ product, onClose, onSaved, showToast }: {
                 <input className={ic} value={f.name} onChange={e => set('name', e.target.value)} placeholder="Nome do produto" />
               </div>
               <div>
-                <label className={lbl}>Categoria</label>
-                <select title="Categoria" className={`${inp} ${inpH} focus:border-[rgba(200,169,122,0.5)]`} value={f.category} onChange={e => set('category', e.target.value)}>
+                <div className="flex items-center justify-between mb-1">
+                  <label className={lbl}>Categoria</label>
+                  <button
+                    type="button"
+                    onClick={onManageCategories}
+                    className="text-[10px] font-semibold text-[#C8A97A] hover:text-[#E8D5B0]"
+                  >
+                    + Gerenciar
+                  </button>
+                </div>
+                <select
+                  title="Categoria"
+                  className={`${inp} ${inpH} focus:border-[rgba(200,169,122,0.5)]`}
+                  value={f.category_id || ''}
+                  onChange={e => set('category_id', e.target.value)}
+                >
                   <option value="">Selecionar...</option>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  {categories
+                    .filter(c => c.parent_id === null)
+                    .map(parent => {
+                      const subs = categories.filter(c => c.parent_id === parent.id);
+                      if (subs.length === 0) {
+                        return <option key={parent.id} value={parent.id}>{parent.name}</option>;
+                      }
+                      return (
+                        <optgroup key={parent.id} label={parent.name}>
+                          <option value={parent.id}>{parent.name} (geral)</option>
+                          {subs.map(sub => (
+                            <option key={sub.id} value={sub.id}>{sub.name}</option>
+                          ))}
+                        </optgroup>
+                      );
+                    })}
                 </select>
               </div>
               <div>
@@ -288,7 +333,12 @@ function ProductModal({ product, onClose, onSaved, showToast }: {
           <div>
             <div className={sc}>Configurações</div>
             <div className="space-y-2.5">
-              {([['is_active', 'Produto ativo'], ['pdv_enabled', 'Disponível no PDV'], ['requires_production', 'Requer produção']] as [keyof typeof f, string][]).map(([key, label]) => (
+              {([
+                ['is_active', 'Produto ativo'],
+                ['pdv_enabled', 'Disponível no PDV'],
+                ['requires_production', 'Requer produção'],
+                ['is_raw_material', 'Matéria-prima (consumível em OS)'],
+              ] as [keyof typeof f, string][]).map(([key, label]) => (
                 <label key={key} className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={f[key] as boolean} onChange={e => set(key, e.target.checked)} style={{ accentColor: '#C8A97A', width: 14, height: 14 }} />
                   <span className="text-[13px] font-medium" style={{ color: '#888480' }}>{label}</span>
@@ -308,6 +358,213 @@ function ProductModal({ product, onClose, onSaved, showToast }: {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Category Manager Modal ────────────────────────────────────────────────────
+function CategoryManagerModal({ categories, onClose, onChanged, showToast }: {
+  categories: ProductCategory[];
+  onClose: () => void;
+  onChanged: () => void | Promise<void>;
+  showToast: (msg: string, type?: 'success' | 'error') => void;
+}) {
+  const [name, setName] = useState('');
+  const [parentId, setParentId] = useState<string>('');
+  const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+
+  const parents = categories.filter(c => c.parent_id === null);
+
+  const create = async () => {
+    if (!name.trim()) { showToast('Informe um nome para a categoria.', 'error'); return; }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/internal/product-categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), parent_id: parentId || null }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => null);
+        throw new Error(d?.message ?? 'Erro ao criar categoria');
+      }
+      setName('');
+      setParentId('');
+      await onChanged();
+      showToast('Categoria criada');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Erro ao criar categoria', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const rename = async (id: string) => {
+    if (!editingName.trim()) { showToast('Nome inválido.', 'error'); return; }
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/internal/product-categories/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editingName.trim() }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => null);
+        throw new Error(d?.message ?? 'Erro ao renomear');
+      }
+      setEditingId(null);
+      setEditingName('');
+      await onChanged();
+      showToast('Categoria renomeada');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Erro ao renomear', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (id: string, label: string) => {
+    if (!window.confirm(`Excluir a categoria "${label}"?\n\nProdutos com esta categoria continuam, mas ficam sem categoria atribuída.`)) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/internal/product-categories/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const d = await res.json().catch(() => null);
+        throw new Error(d?.message ?? 'Erro ao excluir categoria');
+      }
+      await onChanged();
+      showToast('Categoria removida');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Erro ao excluir categoria', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-5" style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden" style={{ background: '#15151A', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <div>
+            <h2 className="text-base font-bold text-[#EDE8E0]">Gerenciar categorias</h2>
+            <p className="text-[11px] text-[#888480] mt-1">Crie categorias e subcategorias para organizar o estoque.</p>
+          </div>
+          <button onClick={onClose} className="h-9 w-9 rounded-lg text-[#888480] hover:text-[#EDE8E0] hover:bg-white/5">✕</button>
+        </div>
+
+        <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
+          {/* Criar nova */}
+          <div className="rounded-xl p-4" style={{ background: '#18181C', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#C8A97A] mb-3">Nova categoria</p>
+            <div className="grid grid-cols-[1fr_220px_auto] gap-2">
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Ex: Anéis, Ouro 18k, Embalagem"
+                className={`${inp} ${inpH} focus:border-[rgba(200,169,122,0.5)]`}
+              />
+              <select
+                value={parentId}
+                onChange={e => setParentId(e.target.value)}
+                title="Categoria pai (opcional)"
+                className={`${inp} ${inpH} focus:border-[rgba(200,169,122,0.5)]`}
+              >
+                <option value="">Sem pai (raiz)</option>
+                {parents.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <button onClick={create} disabled={busy} className={btnGold + ' disabled:opacity-50'}>Adicionar</button>
+            </div>
+          </div>
+
+          {/* Lista */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#4A4A52] mb-2">Categorias existentes</p>
+            {categories.length === 0 ? (
+              <div className="rounded-xl p-6 text-center text-[12px] text-[#888480]" style={{ background: '#18181C', border: '1px dashed rgba(255,255,255,0.08)' }}>
+                Nenhuma categoria cadastrada ainda.
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {parents.map(parent => {
+                  const subs = categories.filter(c => c.parent_id === parent.id);
+                  return (
+                    <div key={parent.id}>
+                      <CategoryRow
+                        category={parent}
+                        editingId={editingId}
+                        editingName={editingName}
+                        setEditingId={setEditingId}
+                        setEditingName={setEditingName}
+                        onRename={rename}
+                        onRemove={remove}
+                        busy={busy}
+                      />
+                      {subs.length > 0 && (
+                        <div className="ml-6 mt-1 space-y-1 border-l border-white/5 pl-3">
+                          {subs.map(sub => (
+                            <CategoryRow
+                              key={sub.id}
+                              category={sub}
+                              editingId={editingId}
+                              editingName={editingName}
+                              setEditingId={setEditingId}
+                              setEditingName={setEditingName}
+                              onRename={rename}
+                              onRemove={remove}
+                              busy={busy}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="px-6 py-3 flex justify-end" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: '#18181C' }}>
+          <button onClick={onClose} className={btnGhost}>Fechar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CategoryRow({ category, editingId, editingName, setEditingId, setEditingName, onRename, onRemove, busy }: {
+  category: ProductCategory;
+  editingId: string | null;
+  editingName: string;
+  setEditingId: (id: string | null) => void;
+  setEditingName: (name: string) => void;
+  onRename: (id: string) => void;
+  onRemove: (id: string, label: string) => void;
+  busy: boolean;
+}) {
+  const isEditing = editingId === category.id;
+  return (
+    <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: '#18181C', border: '1px solid rgba(255,255,255,0.06)' }}>
+      {isEditing ? (
+        <>
+          <input
+            value={editingName}
+            onChange={e => setEditingName(e.target.value)}
+            autoFocus
+            className="flex-1 bg-[#202026] border border-white/[0.07] rounded-md px-2 h-8 text-[13px] text-[#EDE8E0] outline-none focus:border-[rgba(200,169,122,0.5)]"
+          />
+          <button onClick={() => onRename(category.id)} disabled={busy} className="h-8 px-2.5 rounded-md bg-[#C8A97A] text-black text-[11px] font-bold hover:bg-[#E8D5B0] disabled:opacity-50">Salvar</button>
+          <button onClick={() => { setEditingId(null); setEditingName(''); }} className="h-8 px-2.5 rounded-md text-[#888480] hover:text-[#EDE8E0] text-[11px]">Cancelar</button>
+        </>
+      ) : (
+        <>
+          <span className="flex-1 text-[13px] text-[#EDE8E0]">{category.name}</span>
+          <button onClick={() => { setEditingId(category.id); setEditingName(category.name); }} className="h-7 px-2 rounded-md text-[#888480] hover:text-[#C8A97A] text-[11px]">Renomear</button>
+          <button onClick={() => onRemove(category.id, category.name)} disabled={busy} className="h-7 px-2 rounded-md text-[#E05252] hover:bg-[rgba(224,82,82,0.1)] text-[11px] disabled:opacity-50">Excluir</button>
+        </>
+      )}
     </div>
   );
 }
@@ -423,6 +680,24 @@ export default function EstoqueClient({ initialProducts, initialMeta, initialSta
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+
+  const refreshCategories = useCallback(async () => {
+    try {
+      const res = await fetch('/api/internal/product-categories');
+      if (!res.ok) return;
+      const data = await res.json();
+      setCategories(Array.isArray(data?.data) ? data.data : []);
+    } catch {
+      // silently fail
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshCategories();
+  }, [refreshCategories]);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -624,6 +899,7 @@ export default function EstoqueClient({ initialProducts, initialMeta, initialSta
           </select>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <button onClick={() => setShowCategoryManager(true)} className={btnGhost}>Categorias</button>
           <button onClick={handleExport} className={btnGhost}>↑ Exportar CSV</button>
           <label className={`${btnGhost} !cursor-pointer`}>
             ↓ Importar CSV
@@ -691,7 +967,12 @@ export default function EstoqueClient({ initialProducts, initialMeta, initialSta
                             {p.photo_url ? <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" /> : '💍'}
                           </div>
                           <div className="min-w-0">
-                            <div className="text-[13px] font-semibold truncate max-w-[160px]" style={{ color: '#EDE8E0' }}>{p.name}</div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[13px] font-semibold truncate max-w-[160px]" style={{ color: '#EDE8E0' }}>{p.name}</span>
+                              {p.is_raw_material && (
+                                <span title="Matéria-prima (consumível em OS)" className="inline-flex items-center px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold uppercase tracking-[0.06em]" style={{ background: 'rgba(200,169,122,0.14)', color: '#C8A97A' }}>MP</span>
+                              )}
+                            </div>
                             <div className="text-[11px]" style={{ color: '#4A4A52' }}>{p.code}</div>
                           </div>
                         </div>
@@ -812,12 +1093,23 @@ export default function EstoqueClient({ initialProducts, initialMeta, initialSta
       {(showCreate || editProduct) && (
         <ProductModal
           product={editProduct}
+          categories={categories}
+          onManageCategories={() => setShowCategoryManager(true)}
           onClose={() => { setShowCreate(false); setEditProduct(null); }}
           onSaved={() => {
             const msg = editProduct ? 'Produto atualizado' : 'Produto cadastrado';
             setShowCreate(false); setEditProduct(null);
             showToast(msg); void fetchData();
           }}
+          showToast={showToast}
+        />
+      )}
+
+      {showCategoryManager && (
+        <CategoryManagerModal
+          categories={categories}
+          onClose={() => setShowCategoryManager(false)}
+          onChanged={refreshCategories}
           showToast={showToast}
         />
       )}
