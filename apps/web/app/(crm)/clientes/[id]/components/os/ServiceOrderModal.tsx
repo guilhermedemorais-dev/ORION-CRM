@@ -1,9 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { parseCurrencyToCents } from '@/lib/financeiro';
 import { notify } from '@/lib/toast';
+
+interface ProductOption {
+    id: string;
+    code: string;
+    name: string;
+    price_cents: number;
+    cost_price_cents: number;
+    stock_quantity: number;
+    is_raw_material: boolean;
+    metal: string | null;
+    category: string | null;
+}
+
+interface DraftMaterial {
+    tempId: string;
+    productId: string;
+    productCode: string;
+    productName: string;
+    isRawMaterial: boolean;
+    quantity: string;
+    unitPriceCents: number;
+    unitCostCents: number;
+    stockAtAdd: number;
+}
 
 function formatCentsBRInput(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -82,6 +106,15 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
     notes: '',
   });
 
+  // Materiais a serem adicionados na OS após criação
+  const [materials, setMaterials] = useState<DraftMaterial[]>([]);
+  const [materialSearch, setMaterialSearch] = useState('');
+  const [materialFilter, setMaterialFilter] = useState<'all' | 'raw' | 'finished'>('all');
+  const [searchResults, setSearchResults] = useState<ProductOption[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [laborCentsStr, setLaborCentsStr] = useState('');
+
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === 'Escape' && !saving) onClose();
@@ -89,6 +122,75 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [onClose, saving]);
+
+  // Busca produtos com debounce para autocomplete de materiais
+  useEffect(() => {
+    if (!materialSearch.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+    setSearching(true);
+    const handle = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({ q: materialSearch.trim(), limit: '12', active_only: 'true' });
+        if (materialFilter === 'raw') params.set('is_raw_material', 'true');
+        if (materialFilter === 'finished') params.set('is_raw_material', 'false');
+        const res = await fetch(`/api/internal/products?${params.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(Array.isArray(data?.data) ? data.data : []);
+          setShowSearchResults(true);
+        }
+      } catch {
+        // silently fail
+      } finally {
+        setSearching(false);
+      }
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [materialSearch, materialFilter]);
+
+  const addMaterial = useCallback((product: ProductOption) => {
+    setMaterials((prev) => {
+      if (prev.some((m) => m.productId === product.id)) {
+        return prev;
+      }
+      return [
+        ...prev,
+        {
+          tempId: `${product.id}-${Date.now()}`,
+          productId: product.id,
+          productCode: product.code,
+          productName: product.name,
+          isRawMaterial: product.is_raw_material,
+          quantity: '1',
+          unitPriceCents: product.price_cents,
+          unitCostCents: product.cost_price_cents ?? 0,
+          stockAtAdd: product.stock_quantity,
+        },
+      ];
+    });
+    setMaterialSearch('');
+    setSearchResults([]);
+    setShowSearchResults(false);
+  }, []);
+
+  const removeMaterial = useCallback((tempId: string) => {
+    setMaterials((prev) => prev.filter((m) => m.tempId !== tempId));
+  }, []);
+
+  const updateMaterialQuantity = useCallback((tempId: string, value: string) => {
+    setMaterials((prev) => prev.map((m) => m.tempId === tempId ? { ...m, quantity: value } : m));
+  }, []);
+
+  // Cálculo: subtotal materiais + mão de obra = total preview
+  const materialsSubtotalCents = materials.reduce((sum, m) => {
+    const qty = parseFloat(m.quantity.replace(',', '.')) || 0;
+    return sum + Math.round(qty * m.unitPriceCents);
+  }, 0);
+  const laborCents = parseCents(laborCentsStr);
+  const previewTotalCents = materialsSubtotalCents + laborCents;
 
   function handleChange(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -116,6 +218,7 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
     setSaving(true);
     setError(null);
     try {
+      // 1) Cria a OS primeiro (sem materiais ainda).
       const res = await fetch('/api/internal/service-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -138,6 +241,40 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
         }),
       });
       if (!res.ok) throw new Error('Falha ao criar OS');
+      const created = await res.json().catch(() => null);
+      const osId = created?.id ?? created?.data?.id ?? null;
+
+      // 2) Se temos OS criada e materiais selecionados, anexa cada um.
+      // Falhas individuais não derrubam a OS toda — usuário pode reanexar depois.
+      if (osId && materials.length > 0) {
+        for (const m of materials) {
+          const qty = parseFloat(m.quantity.replace(',', '.'));
+          if (!qty || qty <= 0) continue;
+          try {
+            await fetch(`/api/internal/service-orders/${osId}/materials`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ product_id: m.productId, quantity: qty }),
+            });
+          } catch {
+            // continua tentando os outros
+          }
+        }
+      }
+
+      // 3) Se mão de obra foi informada, registra agora (recálculo total).
+      if (osId && laborCents > 0) {
+        try {
+          await fetch(`/api/internal/service-orders/${osId}/labor`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ labor_cents: laborCents }),
+          });
+        } catch {
+          // ignora — pode editar depois
+        }
+      }
+
       notify.success('Ordem de serviço criada', form.product_name);
       onSaved();
       router.refresh();
@@ -283,6 +420,178 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
             </div>
           </div>
 
+          {/* Materiais consumidos */}
+          <div style={{ marginBottom: '22px' }}>
+            <SectionTitle>Materiais</SectionTitle>
+            <p style={{ fontSize: '11px', color: '#7A7774', marginTop: '-4px', marginBottom: '10px' }}>
+              Adicione matérias-primas ou peças prontas do estoque que serão consumidas na produção.
+              O subtotal soma o preço de venda de cada item.
+            </p>
+
+            {/* Filtros + busca */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+              {([
+                { key: 'all', label: 'Tudo' },
+                { key: 'raw', label: 'Matéria-prima' },
+                { key: 'finished', label: 'Peças prontas' },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setMaterialFilter(opt.key)}
+                  style={{
+                    height: '26px',
+                    padding: '0 10px',
+                    background: materialFilter === opt.key ? 'rgba(200,169,122,0.15)' : 'transparent',
+                    border: `1px solid ${materialFilter === opt.key ? 'rgba(200,169,122,0.35)' : 'rgba(255,255,255,0.10)'}`,
+                    borderRadius: '6px',
+                    color: materialFilter === opt.key ? '#C8A97A' : '#A8A4A0',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ position: 'relative', marginBottom: '10px' }}>
+              <input
+                style={inputStyle}
+                value={materialSearch}
+                onChange={(e) => setMaterialSearch(e.target.value)}
+                placeholder="Buscar produto por nome ou código..."
+                onFocus={() => { if (searchResults.length > 0) setShowSearchResults(true); }}
+              />
+              {showSearchResults && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '38px',
+                    left: 0,
+                    right: 0,
+                    background: '#1A1A1E',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    borderRadius: '7px',
+                    maxHeight: '220px',
+                    overflowY: 'auto',
+                    zIndex: 10,
+                    boxShadow: '0 6px 24px rgba(0,0,0,0.45)',
+                  }}
+                >
+                  {searching && (
+                    <div style={{ padding: '10px 12px', fontSize: '11px', color: '#7A7774' }}>Buscando...</div>
+                  )}
+                  {!searching && searchResults.length === 0 && (
+                    <div style={{ padding: '10px 12px', fontSize: '11px', color: '#7A7774' }}>Nenhum produto encontrado.</div>
+                  )}
+                  {!searching && searchResults.map((product) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => addMaterial(product)}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '8px 12px',
+                        background: 'transparent',
+                        border: 'none',
+                        borderBottom: '1px solid rgba(255,255,255,0.04)',
+                        color: '#E8E4DE',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '8px',
+                      }}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 600 }}>{product.name}</span>
+                          {product.is_raw_material && (
+                            <span style={{ fontSize: '9px', fontWeight: 700, color: '#C8A97A', background: 'rgba(200,169,122,0.14)', padding: '1px 5px', borderRadius: '4px' }}>MP</span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#7A7774' }}>
+                          {product.code} · Estoque: {product.stock_quantity} · R$ {(product.price_cents / 100).toFixed(2)}
+                        </div>
+                      </div>
+                      <span style={{ color: '#C8A97A', fontSize: '14px' }}>+</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Lista de materiais adicionados */}
+            {materials.length === 0 ? (
+              <div style={{ border: '1px dashed rgba(255,255,255,0.08)', borderRadius: '7px', padding: '14px', textAlign: 'center', color: '#7A7774', fontSize: '11px' }}>
+                Nenhum material adicionado ainda.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {materials.map((m) => {
+                  const qty = parseFloat(m.quantity.replace(',', '.')) || 0;
+                  const lineCents = Math.round(qty * m.unitPriceCents);
+                  const insufficient = qty > m.stockAtAdd;
+                  return (
+                    <div
+                      key={m.tempId}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 90px 90px 28px',
+                        gap: '8px',
+                        alignItems: 'center',
+                        padding: '8px 10px',
+                        background: '#1A1A1E',
+                        border: `1px solid ${insufficient ? 'rgba(224,82,82,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                        borderRadius: '7px',
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '12px', color: '#E8E4DE', fontWeight: 600 }}>{m.productName}</span>
+                          {m.isRawMaterial && (
+                            <span style={{ fontSize: '9px', fontWeight: 700, color: '#C8A97A', background: 'rgba(200,169,122,0.14)', padding: '1px 5px', borderRadius: '4px' }}>MP</span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '10px', color: insufficient ? '#E05252' : '#7A7774' }}>
+                          {m.productCode} · Estoque: {m.stockAtAdd}{insufficient ? ` (insuficiente para ${qty})` : ''}
+                        </div>
+                      </div>
+                      <input
+                        style={{ ...inputStyle, height: '30px', fontSize: '11px', textAlign: 'right' }}
+                        value={m.quantity}
+                        onChange={(e) => updateMaterialQuantity(m.tempId, e.target.value)}
+                        placeholder="Qtd"
+                        aria-label={`Quantidade de ${m.productName}`}
+                      />
+                      <div style={{ fontSize: '11px', color: '#C8A97A', fontWeight: 600, textAlign: 'right' }}>
+                        R$ {(lineCents / 100).toFixed(2)}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeMaterial(m.tempId)}
+                        aria-label={`Remover ${m.productName}`}
+                        style={{ width: '28px', height: '28px', background: 'transparent', border: '1px solid rgba(224,82,82,0.25)', borderRadius: '5px', color: '#E05252', cursor: 'pointer', fontSize: '13px' }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+
+                {/* Resumo */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', marginTop: '4px', background: 'rgba(200,169,122,0.06)', border: '1px solid rgba(200,169,122,0.15)', borderRadius: '7px' }}>
+                  <span style={{ fontSize: '11px', color: '#A8A4A0', fontWeight: 600 }}>Subtotal materiais</span>
+                  <span style={{ fontSize: '12px', color: '#C8A97A', fontWeight: 700 }}>R$ {(materialsSubtotalCents / 100).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Valores */}
           <div style={{ marginBottom: '22px' }}>
             <SectionTitle>Valores</SectionTitle>
@@ -290,10 +599,31 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
               <FieldGroup label="Sinal / Entrada (R$)">
                 <input style={inputStyle} inputMode="numeric" value={form.deposit_cents_str} onChange={handleCurrencyChange('deposit_cents_str')} placeholder="0,00" />
               </FieldGroup>
-              <FieldGroup label="Total (R$)">
+              <FieldGroup label="Mão de obra (R$)">
+                <input
+                  style={inputStyle}
+                  inputMode="numeric"
+                  value={laborCentsStr}
+                  onChange={(e) => {
+                    const onlyNums = e.target.value.replace(/\D/g, '');
+                    setLaborCentsStr(onlyNums ? formatCentsBRInput(Number(onlyNums)) : '');
+                  }}
+                  placeholder="0,00"
+                />
+              </FieldGroup>
+              <FieldGroup label="Total da OS (R$)">
                 <input style={inputStyle} inputMode="numeric" value={form.total_cents_str} onChange={handleCurrencyChange('total_cents_str')} placeholder="0,00" />
               </FieldGroup>
+              <div>
+                <label style={labelStyle}>Total calculado (preview)</label>
+                <div style={{ ...inputStyle, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', color: '#C8A97A', fontWeight: 700, background: 'rgba(200,169,122,0.06)' }}>
+                  R$ {(previewTotalCents / 100).toFixed(2)}
+                </div>
+              </div>
             </div>
+            <p style={{ fontSize: '10px', color: '#7A7774', marginTop: '6px' }}>
+              O preview mostra subtotal de materiais + mão de obra. O campo "Total" é o valor cobrado do cliente (pode incluir markup adicional).
+            </p>
           </div>
 
           {/* Notas */}

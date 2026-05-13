@@ -6,6 +6,37 @@
 
 ---
 
+## [v1.8.0] — 2026-05-13
+### Roadmap do Projeto — nova aba de gestão de planejamento
+- Nova aba **Roadmap** em Suporte: painel de gestão dos planos do projeto em linguagem leiga
+- Aba **Linha do Tempo** preservada (gráfico de atividade + histórico técnico de releases continua como estava)
+- Aba **Atualizações** removida — sua função foi absorvida pelo Roadmap
+- Cards de item com título + descrição + status (planejado, aguardando aprovação, aprovado, em andamento, parado, concluído, reprovado) + prazo previsto + dropdown de detalhes técnicos
+- Dropdown de status editável diretamente no card (apenas ROOT)
+- Botões **Aprovar / Reprovar** para o cliente (ADMIN/ROOT)
+- Comentários com threading (responder a comentário específico)
+- Reações **👍 (concordo) / 👎 (não vou seguir)** no comentário, apenas ROOT (com tooltip explicando que não é ofensa)
+- Anexos no item ou em comentários (PNG, JPG, GIF, WEBP, MP4, WEBM, MOV, PDF — até 10MB)
+- Badge **IA** quando o item foi registrado por Claude direto pelo banco
+- Badge numérico dourado no menu lateral **Suporte** com a contagem de items aguardando aprovação (atualiza a cada 60s)
+- Central de Ajuda ganhou seção **Roadmap do Projeto** explicando todo o ciclo
+- Migration `052` cria 4 tabelas: `roadmap_items`, `roadmap_comments` (com threading via `parent_comment_id`), `roadmap_comment_reactions`, `roadmap_attachments`
+- 13 endpoints novos sob `/api/v1/roadmap/...` com RBAC apropriado (criar/editar só ROOT, aprovar ROOT+ADMIN, comentar/reagir autenticados, deletar comentário próprio ou ROOT)
+
+## [v1.7.0] — 2026-05-11
+### Materiais na OS, botão "Faturar no PDV" e revisão do fluxo OS→PDV
+- Nova seção **Materiais** dentro do modal de criar OS — busca produtos do estoque com filtros (Tudo / Matéria-prima / Peças prontas), adiciona com quantidade, calcula subtotal automaticamente
+- Snapshot de preço e custo no momento que o material é adicionado (preserva histórico mesmo se o produto for repreçado depois)
+- Mão de obra agora é campo separado (padrão de joalheria) — total preview soma materiais + mão de obra
+- Migration `051` cria `service_order_materials` e adiciona `labor_cents`, `materials_subtotal_cents`, `markup_percent` na OS
+- Endpoints CRUD `/service-orders/:id/materials` (GET/POST/PATCH/DELETE) + `/labor` (PATCH) com recálculo transacional dos totais da OS
+- Botão **Faturar no PDV** na barra direita da ficha do cliente — abre o PDV com cliente pré-selecionado via `?customer_id=`
+- PDV aceita pré-seleção de cliente via URL (atalho da ficha para fechar venda rápido)
+- Aba **Caixa** da ficha removida (era placeholder) — decisão arquitetural: fluxo correto é OS→PDV, não checkout duplicado na ficha
+- Permissão `ficha.caixa.view` removida do backend, frontend e painel de Ajustes
+- Central de Ajuda ganhou nova seção **"Ordem de Serviço (OS) e materiais"** documentando o fluxo completo
+- Limpeza de ruído: pastas `.codex/`, `.opencode/`, `.claude/`, `.playwright-mcp/` e PNGs soltos na raiz agora ignorados pelo Git (skills locais migradas para `~/.codex/skills`, `~/.opencode/skills`, `~/.claude/skills`)
+
 ## [v1.6.0] — 2026-05-11
 ### Pipeline configurável, regras de handoff, permissões da ficha, central de ajuda e categorias de estoque
 - Modal único de configuração do pipeline com abas **Etapas** e **Regras** (substitui o builder React Flow antigo e o builder-v2 do Codex; ambos descontinuados)

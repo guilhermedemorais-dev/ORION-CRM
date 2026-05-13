@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { AttendanceBlock } from '../types';
+import ServiceOrderModal from '../os/ServiceOrderModal';
 
 interface Props {
   customerId: string;
@@ -168,10 +169,22 @@ function Skeleton() {
   return <div style={{ background: '#202026', borderRadius: '10px', height: '160px', animation: 'pulse 1.4s ease-in-out infinite' }} />;
 }
 
-export default function ClientOSTab({ customerId, initialShowModal: _initialShowModal, onModalClose: _onModalClose }: Props) {
+export default function ClientOSTab({ customerId, initialShowModal, onModalClose }: Props) {
   const [blocks, setBlocks] = useState<AttendanceBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(Boolean(initialShowModal));
+
+  // Quando o pai dispara initialShowModal (clicou em "Nova OS" na barra direita),
+  // abre o modal local.
+  useEffect(() => {
+    if (initialShowModal) setShowModal(true);
+  }, [initialShowModal]);
+
+  const closeModal = useCallback(() => {
+    setShowModal(false);
+    onModalClose?.();
+  }, [onModalClose]);
 
   const fetchBlocks = useCallback(async () => {
     setLoading(true);
@@ -233,6 +246,17 @@ export default function ClientOSTab({ customerId, initialShowModal: _initialShow
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {blocks.map((b) => <OSBlockCard key={b.id} block={b} />)}
         </div>
+      )}
+
+      {showModal && (
+        <ServiceOrderModal
+          customerId={customerId}
+          onClose={closeModal}
+          onSaved={() => {
+            fetchBlocks();
+            closeModal();
+          }}
+        />
       )}
     </>
   );

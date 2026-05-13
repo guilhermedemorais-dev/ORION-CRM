@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import DebugTab from './DebugTab';
+import RoadmapTab from './RoadmapTab';
 
 // ---------- Types ----------
 
@@ -30,7 +31,7 @@ interface PendingSection {
     items: string[];
 }
 
-type TabKey = 'incidents' | 'debug' | 'timeline' | 'updates';
+type TabKey = 'incidents' | 'debug' | 'timeline' | 'roadmap';
 
 function buildClientFacingSummary(entry: TimelineEntry): string {
     const haystack = `${entry.version} ${entry.title} ${entry.items.join(' ')}`.toLowerCase();
@@ -913,7 +914,7 @@ function UpdatesTab() {
 
 // ---------- Main Client ----------
 
-export default function ChamadosClient({ userRole }: { userRole: string }) {
+export default function ChamadosClient({ userRole, userId }: { userRole: string; userId: string }) {
     const [activeTab, setActiveTab] = useState<TabKey>('incidents');
 
     const isAdmin = userRole === 'ADMIN' || userRole === 'ROOT';
@@ -922,7 +923,7 @@ export default function ChamadosClient({ userRole }: { userRole: string }) {
         { key: 'incidents', label: 'Incidentes' },
         ...(isRoot ? [{ key: 'debug' as TabKey, label: 'Debug ao vivo' }] : []),
         { key: 'timeline', label: 'Linha do Tempo' },
-        { key: 'updates', label: 'Atualizações' },
+        { key: 'roadmap', label: 'Roadmap' },
     ];
 
     return (
@@ -962,7 +963,7 @@ export default function ChamadosClient({ userRole }: { userRole: string }) {
                 {activeTab === 'incidents' && <IncidentsTab userRole={userRole} />}
                 {activeTab === 'debug' && <DebugTab userRole={userRole} />}
                 {activeTab === 'timeline' && <TimelineTab />}
-                {activeTab === 'updates' && <UpdatesTab />}
+                {activeTab === 'roadmap' && <RoadmapTab userId={userId} userRole={userRole} />}
             </div>
         </>
     );

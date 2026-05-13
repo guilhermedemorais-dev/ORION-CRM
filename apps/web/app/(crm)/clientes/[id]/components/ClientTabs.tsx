@@ -8,8 +8,7 @@ export type TabKey =
   | 'pedidos'
   | 'os'
   | 'entrega'
-  | 'historico'
-  | 'caixa';
+  | 'historico';
 
 interface Tab {
   key: TabKey;
@@ -32,7 +31,6 @@ const ALL_TABS: Tab[] = [
   { key: 'pedidos', label: 'Pedidos' },
   { key: 'os', label: 'OS' },
   { key: 'entrega', label: 'Entrega' },
-  { key: 'caixa', label: 'Caixa' },
   { key: 'historico', label: 'Histórico' },
 ];
 

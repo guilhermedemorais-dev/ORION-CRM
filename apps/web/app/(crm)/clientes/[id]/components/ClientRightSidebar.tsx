@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings2, Gem, FileText, MessageSquare } from 'lucide-react';
+import { Settings2, Gem, FileText, MessageSquare, Monitor } from 'lucide-react';
 import type { CustomerFull, CustomerStats } from './types';
 
 interface ChannelConversation {
@@ -290,6 +290,17 @@ export default function ClientRightSidebar({ customer, stats, onNewOS, onNewBloc
             bg: 'rgba(167,139,250,0.08)',
             border: 'rgba(167,139,250,0.20)',
             onClick: onNewBlock,
+          },
+          {
+            icon: <Monitor size={13} />,
+            label: 'Faturar no PDV',
+            color: '#4CAF82',
+            bg: 'rgba(76,175,130,0.08)',
+            border: 'rgba(76,175,130,0.20)',
+            onClick: () => {
+              const params = new URLSearchParams({ customer_id: customer.id });
+              window.location.href = `/pdv?${params.toString()}`;
+            },
           },
         ].map((action) => (
           <button

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { logoutAction } from '@/app/(crm)/actions';
@@ -84,6 +85,26 @@ export function Sidebar({
 }) {
     const pathname = usePathname();
     const isActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+
+    // Badge "Suporte" — quantos items do roadmap aguardam aprovação.
+    // Atualiza a cada 60s e logo após cada visita à página de chamados.
+    const [roadmapUnread, setRoadmapUnread] = useState(0);
+    useEffect(() => {
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const res = await fetch('/api/internal/roadmap/notifications/unread-count');
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!cancelled) setRoadmapUnread(Number(data?.data?.unread_count ?? 0));
+            } catch {
+                // silently fail
+            }
+        };
+        void load();
+        const handle = setInterval(load, 60_000);
+        return () => { cancelled = true; clearInterval(handle); };
+    }, [pathname]);
 
     const visibleGroups = navGroups.map((group) => ({
         ...group,
@@ -221,6 +242,7 @@ export function Sidebar({
                             {group.items.map((item) => {
                                 const Icon = item.icon;
                                 const active = isActive(item.href);
+                                const showBadge = item.href === '/chamados' && roadmapUnread > 0;
 
                                 return (
                                     <Link
@@ -234,7 +256,15 @@ export function Sidebar({
                                         }`}
                                     >
                                         <Icon className={`h-4 w-4 shrink-0 transition-opacity duration-120 ${active ? 'text-[color:var(--orion-gold)]' : 'opacity-50 text-[color:var(--orion-text-secondary)]'}`} />
-                                        <span>{item.label}</span>
+                                        <span className="flex-1">{item.label}</span>
+                                        {showBadge ? (
+                                            <span
+                                                title={`${roadmapUnread} item(s) aguardando aprovação`}
+                                                className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[color:var(--orion-gold)] px-1.5 text-[10px] font-bold text-[#0A0A0C]"
+                                            >
+                                                {roadmapUnread > 99 ? '99+' : roadmapUnread}
+                                            </span>
+                                        ) : null}
                                     </Link>
                                 );
                             })}

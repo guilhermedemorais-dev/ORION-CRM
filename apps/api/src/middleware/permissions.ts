@@ -70,7 +70,6 @@ const PERMISSIONS: Record<string, UserRole[]> = {
     'ficha.os.view':            ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],
     'ficha.entrega.view':       ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],
     'ficha.historico.view':     ['ADMIN', 'GERENTE', 'ATENDENTE'],
-    'ficha.caixa.view':         ['ADMIN', 'GERENTE', 'ATENDENTE', 'FINANCEIRO'],
 };
 
 // ─── Lógica com override personalizado ───────────────────────────────────────

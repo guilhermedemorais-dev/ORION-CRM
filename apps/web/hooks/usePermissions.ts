@@ -38,7 +38,6 @@ const PERMISSIONS: Record<string, string[]> = {
     'ficha.os.view':            ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],
     'ficha.entrega.view':       ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],
     'ficha.historico.view':     ['ADMIN', 'GERENTE', 'ATENDENTE'],
-    'ficha.caixa.view':         ['ADMIN', 'GERENTE', 'ATENDENTE', 'FINANCEIRO'],
 };
 
 export function usePermissions(role: string, customPermissions?: Record<string, boolean>) {

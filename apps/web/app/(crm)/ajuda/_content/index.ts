@@ -8,6 +8,8 @@ import { pipelinesContent } from './pipelines';
 import { rulesContent } from './rules';
 import { fichaPermissionsContent } from './ficha-permissions';
 import { estoqueCategoriasContent } from './estoque-categorias';
+import { ordemServicoContent } from './ordem-servico';
+import { roadmapContent } from './roadmap';
 
 export interface HelpSection {
     id: string;
@@ -18,9 +20,11 @@ export interface HelpSection {
 
 export const HELP_SECTIONS: HelpSection[] = [
     welcomeContent,
+    roadmapContent,
     pipelinesContent,
     rulesContent,
     estoqueCategoriasContent,
+    ordemServicoContent,
     fichaPermissionsContent,
 ];
 

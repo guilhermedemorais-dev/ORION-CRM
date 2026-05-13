@@ -6,5 +6,5 @@ import ChamadosClient from './components/ChamadosClient';
 export default function ChamadosPage() {
     const session = requireSession();
 
-    return <ChamadosClient userRole={session.user.role} />;
+    return <ChamadosClient userRole={session.user.role} userId={session.user.id} />;
 }

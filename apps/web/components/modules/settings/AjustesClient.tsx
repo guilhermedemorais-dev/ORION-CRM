@@ -98,7 +98,6 @@ const FICHA_PERMISSION_MODULES: PermissionModule[] = [
     { key: 'ficha.pedidos.view', label: 'Pedidos', icon: '📦' },
     { key: 'ficha.os.view', label: 'OS (ordens de serviço)', icon: '⚙️' },
     { key: 'ficha.entrega.view', label: 'Entrega', icon: '🚚' },
-    { key: 'ficha.caixa.view', label: 'Caixa (PDV embutido)', icon: '💵' },
     { key: 'ficha.historico.view', label: 'Histórico', icon: '🕒' },
 ];
 
@@ -110,10 +109,10 @@ const FICHA_DEFAULTS: Record<UserRoleKey, string[]> = {
     ROOT: FICHA_PERMISSION_MODULES.map(m => m.key),
     ADMIN: FICHA_PERMISSION_MODULES.map(m => m.key),
     GERENTE: FICHA_PERMISSION_MODULES.map(m => m.key),
-    VENDEDOR: ['ficha.agenda.view', 'ficha.dados.view', 'ficha.atendimento.view', 'ficha.proposta.view', 'ficha.pedidos.view', 'ficha.caixa.view', 'ficha.historico.view'],
-    ATENDENTE: ['ficha.agenda.view', 'ficha.dados.view', 'ficha.atendimento.view', 'ficha.proposta.view', 'ficha.pedidos.view', 'ficha.os.view', 'ficha.entrega.view', 'ficha.caixa.view', 'ficha.historico.view'],
+    VENDEDOR: ['ficha.agenda.view', 'ficha.dados.view', 'ficha.atendimento.view', 'ficha.proposta.view', 'ficha.pedidos.view', 'ficha.historico.view'],
+    ATENDENTE: ['ficha.agenda.view', 'ficha.dados.view', 'ficha.atendimento.view', 'ficha.proposta.view', 'ficha.pedidos.view', 'ficha.os.view', 'ficha.entrega.view', 'ficha.historico.view'],
     PRODUCAO: ['ficha.dados.view', 'ficha.os.view', 'ficha.entrega.view'],
-    FINANCEIRO: ['ficha.dados.view', 'ficha.pedidos.view', 'ficha.caixa.view', 'ficha.historico.view'],
+    FINANCEIRO: ['ficha.dados.view', 'ficha.pedidos.view', 'ficha.historico.view'],
 };
 
 const DEFAULT_PERMS_BY_ROLE: Record<UserRoleKey, Record<string, boolean>> = {

@@ -72,11 +72,19 @@ export function PdvClient({
     userRole,
     initialProducts,
     initialSettings,
+    initialCustomer,
 }: {
     userName: string;
     userRole: string;
     initialProducts: Product[];
     initialSettings: StoreReceiptSettings | null;
+    initialCustomer?: {
+        id: string;
+        name: string | null;
+        whatsapp_number: string;
+        email: string | null;
+        cpf: string | null;
+    } | null;
 }) {
     // ── Products ──
     const [products, setProducts] = useState<Product[]>(initialProducts);
@@ -88,7 +96,18 @@ export function PdvClient({
     const [cart, setCart] = useState<Record<string, CartItem>>({});
 
     // ── Customer ──
-    const [linkedCustomer, setLinkedCustomer] = useState<LinkedCustomer | null>(null);
+    // Pré-popula com cliente vindo do ?customer_id= (ex: botão "Faturar no PDV" da ficha).
+    const [linkedCustomer, setLinkedCustomer] = useState<LinkedCustomer | null>(
+        initialCustomer
+            ? {
+                id: initialCustomer.id,
+                name: initialCustomer.name ?? 'Cliente',
+                phone: initialCustomer.whatsapp_number,
+                email: initialCustomer.email,
+                cpf: initialCustomer.cpf,
+            }
+            : null,
+    );
     const [customerQuery, setCustomerQuery] = useState('');
     const [customerResults, setCustomerResults] = useState<LinkedCustomer[]>([]);
     const [customerSearchLoading, setCustomerSearchLoading] = useState(false);

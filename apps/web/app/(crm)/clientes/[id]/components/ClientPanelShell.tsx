@@ -35,12 +35,11 @@ const TAB_PERMISSION: Record<TabKey, string> = {
   pedidos: 'ficha.pedidos.view',
   os: 'ficha.os.view',
   entrega: 'ficha.entrega.view',
-  caixa: 'ficha.caixa.view',
   historico: 'ficha.historico.view',
 };
 
 const DEFAULT_TAB_ORDER: TabKey[] = [
-  'agenda', 'ficha', 'atendimento', 'proposta', 'pedidos', 'os', 'entrega', 'caixa', 'historico',
+  'agenda', 'ficha', 'atendimento', 'proposta', 'pedidos', 'os', 'entrega', 'historico',
 ];
 
 export default function ClientPanelShell({
@@ -246,22 +245,6 @@ export default function ClientPanelShell({
                 customer={customer}
                 canCreateDelivery={canCreateDelivery}
               />
-            )}
-            {activeTab === 'caixa' && can('ficha.caixa.view') && (
-              <div className="max-w-4xl mx-auto py-8 text-center">
-                <div className="rounded-2xl border border-white/10 bg-[#141417] p-10">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[color:var(--orion-gold)]">Caixa</p>
-                  <h3 className="mt-2 text-xl font-semibold text-[color:var(--orion-text)]">
-                    Caixa embutido na ficha
-                  </h3>
-                  <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[color:var(--orion-text-secondary)]">
-                    Em breve: mesmo motor do PDV (carrinho, formas de pagamento, troco, Mercado Pago) acessível diretamente daqui — para fechar a venda sem sair da ficha do cliente.
-                  </p>
-                  <p className="mt-4 text-[11px] uppercase tracking-[0.12em] text-[color:var(--orion-text-muted)]">
-                    Disponível na Fase 4 do roadmap
-                  </p>
-                </div>
-              </div>
             )}
             {activeTab === 'historico' && can('ficha.historico.view') && (
               <ClientHistoricoTab customerId={customerId} />

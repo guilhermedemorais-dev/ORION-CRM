@@ -25,7 +25,6 @@ Nem todo mundo precisa ver tudo:
    - **Pedidos** — pedidos formais e status de pagamento
    - **OS** — ordens de serviço de produção
    - **Entrega** — entregas em andamento e concluídas
-   - **Caixa** — caixa embutido (venda direto da ficha) [em breve]
    - **Histórico** — linha do tempo completa
 5. Clique em **Salvar** no fim do formulário.
 
@@ -33,8 +32,10 @@ Nem todo mundo precisa ver tudo:
 Cada cargo já vem com defaults razoáveis:
 - **ATENDENTE**: vê tudo, exceto OS e Entrega (depende da loja).
 - **PRODUÇÃO**: vê só Ficha, OS e Entrega.
-- **FINANCEIRO**: vê Ficha, Pedidos, Caixa e Histórico.
+- **FINANCEIRO**: vê Ficha, Pedidos e Histórico.
 - **GERENTE / ADMIN / ROOT**: veem tudo.
+
+Para **faturar uma venda** com cliente já cadastrado, use o botão **Faturar no PDV** na barra direita da ficha — ele abre o PDV com cliente pré-selecionado.
 
 Você pode sobrescrever qualquer default desligando o toggle.
 
