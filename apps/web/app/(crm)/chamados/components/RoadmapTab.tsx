@@ -5,7 +5,7 @@
 // comenta e anexa arquivos. ROOT cria/edita os items.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Paperclip, MessageSquare, Plus, Trash2, ThumbsUp, ThumbsDown, X, Check, Edit2, Send, ChevronDown, ChevronRight, Reply } from 'lucide-react';
+import { Paperclip, MessageSquare, Plus, Trash2, ThumbsUp, ThumbsDown, X, Check, Edit2, Send, ChevronDown, ChevronRight, Reply, Download } from 'lucide-react';
 
 type StatusKey =
     | 'PLANEJADO'
@@ -245,6 +245,57 @@ function RoadmapItemCard({
         if (!window.confirm(`Excluir item "${item.title}"? Esta ação não pode ser desfeita.`)) return;
         await fetch(`/api/internal/roadmap/items/${item.id}`, { method: 'DELETE' });
         onChanged();
+    };
+
+    // Baixa o item como arquivo .md (frontmatter + conteúdo). Serve pra você
+    // mandar pra IA versionar no Git em PRD.DOCS/roadmap/.
+    const downloadMarkdown = () => {
+        const slug = item.title
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[̀-ͯ]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 60);
+        const filename = `${item.id.slice(0, 8)}-${slug || 'item'}.md`;
+
+        const frontmatter = [
+            '---',
+            `id: ${item.id}`,
+            `title: ${JSON.stringify(item.title)}`,
+            `status: ${item.status}`,
+            `approval_state: ${item.approval_state}`,
+            item.due_date ? `due_date: ${item.due_date.slice(0, 10)}` : null,
+            `created_by_ai: ${item.created_by_ai}`,
+            item.created_by_name ? `created_by: ${JSON.stringify(item.created_by_name)}` : null,
+            `created_at: ${item.created_at}`,
+            `updated_at: ${item.updated_at}`,
+            '---',
+            '',
+        ].filter((line) => line !== null).join('\n');
+
+        const body = [
+            `# ${item.title}`,
+            '',
+            '## Descrição',
+            '',
+            item.description.trim(),
+            '',
+        ];
+        if (item.technical_details && item.technical_details.trim()) {
+            body.push('## Detalhes técnicos', '', item.technical_details.trim(), '');
+        }
+
+        const content = frontmatter + body.join('\n');
+        const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     };
 
     const submitComment = async (parentId: string | null) => {
@@ -580,9 +631,22 @@ function RoadmapItemCard({
                         </div>
                     </div>
 
-                    {/* Ações ROOT (editar/excluir) */}
+                    {/* Ações ROOT (baixar/editar/excluir) */}
                     {isRoot && (
                         <div style={{ marginTop: '12px', display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                            <button
+                                type="button"
+                                onClick={downloadMarkdown}
+                                title="Baixar como markdown (.md) para versionar no Git"
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                    background: 'transparent', border: '1px solid rgba(200,169,122,0.30)',
+                                    color: '#C8A97A', fontSize: '11px', borderRadius: '6px',
+                                    padding: '4px 10px', cursor: 'pointer',
+                                }}
+                            >
+                                <Download size={11} /> Baixar .md
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => setEditing(true)}
