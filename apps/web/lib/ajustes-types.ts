@@ -64,7 +64,8 @@ export type AjustesTab =
     | 'notificacoes'
     | 'seguranca'
     | 'integracoes'
-    | 'ia-copiloto';
+    | 'ia-copiloto'
+    | 'banco-dados';
 
 // ── IA Copiloto ───────────────────────────────────────────────────────────────
 

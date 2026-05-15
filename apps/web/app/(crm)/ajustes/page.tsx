@@ -11,6 +11,7 @@ const validTabs = new Set<AjustesTab>([
     'seguranca',
     'integracoes',
     'ia-copiloto',
+    'banco-dados',
 ]);
 
 const fallbackSettings: AdminSettings = {

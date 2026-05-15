@@ -28,6 +28,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 
 import { IntegracoesTab } from './IntegracoesTab';
+import { BancoDadosTab } from './BancoDadosTab';
 import { IACopilotoTab } from './IACopilotoTab';
 import { HexColorPicker } from 'react-colorful';
 import { useForm } from 'react-hook-form';
@@ -207,6 +208,7 @@ interface ToastRecord {
 const tabItems: Array<{
     id: AjustesTab;
     label: string;
+    rootOnly?: boolean;
 }> = [
     { id: 'empresa', label: 'Empresa' },
     { id: 'usuarios', label: 'Usuários' },
@@ -214,6 +216,7 @@ const tabItems: Array<{
     { id: 'seguranca', label: 'Segurança' },
     { id: 'integracoes', label: 'Integrações' },
     { id: 'ia-copiloto', label: 'IA Copiloto' },
+    { id: 'banco-dados', label: 'Banco de Dados', rootOnly: true },
 ];
 
 type NotificationToggleKey =
@@ -2246,8 +2249,21 @@ export function AjustesClient({
         if (activeTab === 'seguranca') return renderSecurityTab();
         if (activeTab === 'integracoes') return <IntegracoesTab onToast={addToast} />;
         if (activeTab === 'ia-copiloto') return <IACopilotoTab />;
+        if (activeTab === 'banco-dados') {
+            if (currentUserRole !== 'ROOT') {
+                return (
+                    <div className="rounded-xl border border-white/10 bg-[#0F0F11] p-6 text-center text-sm text-[#C8C4BE]">
+                        Esta seção é restrita ao usuário ROOT.
+                    </div>
+                );
+            }
+            return <BancoDadosTab />;
+        }
         return null;
     };
+
+    // Filtra tabs: abas marcadas como rootOnly só aparecem pra ROOT
+    const visibleTabs = tabItems.filter((tab) => !tab.rootOnly || currentUserRole === 'ROOT');
 
     const headerAction = activeTab === 'empresa' ? (
         <button
@@ -2266,7 +2282,7 @@ export function AjustesClient({
             <PageHeader title="Ajustes" actions={headerAction} />
 
             <div className="flex gap-1 overflow-x-auto border-b border-white/5">
-                {tabItems.map((tab) => {
+                {visibleTabs.map((tab) => {
                     const isActive = activeTab === tab.id;
 
                     return (

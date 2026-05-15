@@ -6,6 +6,20 @@
 
 ---
 
+## [v1.9.0] — 2026-05-15
+### Aba "Banco de Dados" em Ajustes (ROOT only) + botão Baixar .md no Roadmap
+- Nova aba **Banco de Dados** em Ajustes — visível apenas para o usuário ROOT
+- Lista todas as 61 tabelas do banco com contagem de registros e tamanho em disco
+- Filtro de busca por nome e toggle "Apenas com dados"
+- **Por tabela**: exportar CSV (Excel), exportar SQL (INSERTs), apagar (TRUNCATE CASCADE)
+- **Globais**: Exportar tudo (dump completo `.sql`) e Apagar tudo (preserva `users`, `settings`, `_migrations`)
+- Confirmação digitada (nome da tabela ou `APAGAR TUDO`) antes de operações destrutivas
+- Selo **PROTEGIDA** indica quais tabelas ficam fora do "Apagar tudo"
+- Audit log de cada operação (quem, quando, quantas linhas)
+- 6 endpoints novos sob `/api/v1/admin/database/...` com RBAC ROOT
+- Roadmap ganhou botão **Baixar .md** no card — gera arquivo markdown com frontmatter para você mandar pro dev versionar no Git
+- Central de Ajuda ganhou seção **Banco de Dados (uso interno)**
+
 ## [v1.8.0] — 2026-05-13
 ### Roadmap do Projeto — nova aba de gestão de planejamento
 - Nova aba **Roadmap** em Suporte: painel de gestão dos planos do projeto em linguagem leiga

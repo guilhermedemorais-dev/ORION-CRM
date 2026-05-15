@@ -10,6 +10,7 @@ import { fichaPermissionsContent } from './ficha-permissions';
 import { estoqueCategoriasContent } from './estoque-categorias';
 import { ordemServicoContent } from './ordem-servico';
 import { roadmapContent } from './roadmap';
+import { bancoDadosContent } from './banco-dados';
 
 export interface HelpSection {
     id: string;
@@ -26,6 +27,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     estoqueCategoriasContent,
     ordemServicoContent,
     fichaPermissionsContent,
+    bancoDadosContent,
 ];
 
 export const HELP_GROUPS = Array.from(
