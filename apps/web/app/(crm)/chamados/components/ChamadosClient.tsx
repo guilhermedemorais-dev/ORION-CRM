@@ -23,6 +23,17 @@ interface TimelineEntry {
     version: string;
     date: string;
     title: string;
+    /** Resumo curto pra usuário leigo (até 350 chars). */
+    summary?: string;
+    /** Texto explicativo do benefício (parágrafos). */
+    user_impact?: string;
+    /** Lista de novidades em linguagem clara. */
+    highlights?: string[];
+    /** Lista técnica (colapsável). */
+    technical_details?: string[];
+    /** Aviso crítico (opcional). */
+    warning?: string;
+    /** @deprecated mantido para retrocompatibilidade (commits-only entries usam isso). */
     items: string[];
 }
 
@@ -586,6 +597,250 @@ function ActivityGraph() {
     );
 }
 
+// ---------- Release Card (Timeline) ----------
+
+// Renderiza inline markdown simples: **bold** e `code`
+function renderInlineMd(text: string): React.ReactNode {
+    const parts: React.ReactNode[] = [];
+    const regex = /(\*\*[^*]+\*\*|`[^`]+`)/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    let key = 0;
+    while ((match = regex.exec(text)) !== null) {
+        if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+        const token = match[0];
+        if (token.startsWith('**')) {
+            parts.push(<strong key={key++} style={{ color: '#F0EDE8', fontWeight: 700 }}>{token.slice(2, -2)}</strong>);
+        } else {
+            parts.push(
+                <code key={key++} style={{
+                    background: 'rgba(200,169,122,0.10)', color: '#C8A97A',
+                    padding: '1px 6px', borderRadius: '4px',
+                    fontFamily: 'ui-monospace,monospace', fontSize: '11px',
+                }}>{token.slice(1, -1)}</code>,
+            );
+        }
+        lastIndex = regex.lastIndex;
+    }
+    if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+    return parts;
+}
+
+function ReleaseCard({ entry }: { entry: TimelineEntry }) {
+    const [techOpen, setTechOpen] = useState(false);
+
+    const hasNewFormat = !!(entry.summary || entry.user_impact || (entry.highlights && entry.highlights.length > 0));
+    const isDevBuild = entry.version.startsWith('Em desenvolvimento') || entry.version.startsWith('Build ');
+
+    // Quando não tem o formato novo (entradas antigas/commits), cai em items legado
+    const highlights = entry.highlights ?? [];
+    const technical = entry.technical_details ?? [];
+    const legacyItems = (!hasNewFormat && entry.items.length > 0) ? entry.items : [];
+
+    // Versão badge — cor cinza pra dev build, dourado pra release oficial
+    const versionStyle: React.CSSProperties = isDevBuild ? {
+        padding: '4px 10px', borderRadius: '999px',
+        background: 'rgba(122,119,116,0.18)', border: '1px solid rgba(122,119,116,0.35)',
+        fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em',
+        color: '#7A7774', fontFamily: "'DM Sans', sans-serif",
+    } : {
+        padding: '4px 10px', borderRadius: '999px',
+        background: 'linear-gradient(135deg, rgba(200,169,122,0.18), rgba(200,169,122,0.06))',
+        border: '1px solid rgba(200,169,122,0.35)',
+        fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em',
+        color: '#C8A97A', fontFamily: "'DM Sans', sans-serif",
+    };
+
+    return (
+        <div style={{ display: 'flex', gap: '16px', position: 'relative' }}>
+            <div style={{ width: '24px', flexShrink: 0, display: 'flex', justifyContent: 'center', paddingTop: '24px' }}>
+                <div style={{
+                    width: '12px', height: '12px', borderRadius: '50%',
+                    background: isDevBuild ? '#7A7774' : '#C8A97A',
+                    boxShadow: isDevBuild
+                        ? '0 0 0 4px rgba(122,119,116,0.15)'
+                        : '0 0 0 4px rgba(200,169,122,0.15), 0 0 12px rgba(200,169,122,0.4)',
+                    position: 'relative', zIndex: 1,
+                }} />
+            </div>
+
+            <div style={{
+                flex: 1, minWidth: 0,
+                background: '#0F0F11',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '12px',
+                padding: '20px 24px',
+            }}>
+                {/* Resumo curto destacado (só quando há summary explícito) */}
+                {entry.summary && (
+                    <div style={{
+                        marginBottom: '14px',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(200,169,122,0.22)',
+                        background: 'linear-gradient(135deg, rgba(200,169,122,0.10), rgba(200,169,122,0.02))',
+                        padding: '12px 14px',
+                    }}>
+                        <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#C8A97A', marginBottom: '6px' }}>
+                            Em poucas palavras
+                        </div>
+                        <div style={{ fontSize: '12.5px', lineHeight: 1.6, color: '#E8E4DE' }}>
+                            {renderInlineMd(entry.summary)}
+                        </div>
+                    </div>
+                )}
+
+                {/* Header com versão + data */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                    <div style={versionStyle}>{entry.version}</div>
+                    <div style={{ fontSize: '11px', color: '#7A7774', fontWeight: 500 }}>
+                        {formatBrDate(entry.date)}
+                    </div>
+                </div>
+
+                {/* Título da release */}
+                {entry.title && (
+                    <div style={{
+                        fontFamily: "'Playfair Display', serif",
+                        fontSize: '18px',
+                        fontWeight: 700,
+                        color: '#F0EDE8',
+                        marginBottom: entry.user_impact || highlights.length > 0 ? '16px' : '8px',
+                        lineHeight: 1.3,
+                    }}>
+                        {entry.title}
+                    </div>
+                )}
+
+                {/* O que melhora pra você */}
+                {entry.user_impact && (
+                    <div style={{ marginBottom: '18px' }}>
+                        <div style={{
+                            fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em',
+                            textTransform: 'uppercase', color: '#A78BFA', marginBottom: '8px',
+                        }}>
+                            🎯 O que melhora pra você
+                        </div>
+                        {entry.user_impact.split(/\n\n+/).map((para, i) => (
+                            <p key={i} style={{
+                                margin: '0 0 8px', fontSize: '13px', color: '#C8C4BE',
+                                lineHeight: 1.65,
+                            }}>
+                                {renderInlineMd(para)}
+                            </p>
+                        ))}
+                    </div>
+                )}
+
+                {/* Novidades (highlights) */}
+                {highlights.length > 0 && (
+                    <div style={{ marginBottom: '14px' }}>
+                        <div style={{
+                            fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em',
+                            textTransform: 'uppercase', color: '#4CAF82', marginBottom: '10px',
+                        }}>
+                            🚀 Novidades ({highlights.length})
+                        </div>
+                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {highlights.map((item, i) => (
+                                <li key={i} style={{
+                                    display: 'flex', gap: '10px', alignItems: 'flex-start',
+                                    fontSize: '13px', color: '#C8C4BE', lineHeight: 1.55,
+                                }}>
+                                    <span style={{ color: '#4CAF82', flexShrink: 0, marginTop: '2px', fontSize: '10px' }}>◆</span>
+                                    <span style={{ minWidth: 0 }}>{renderInlineMd(item)}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
+                {/* Detalhes técnicos (colapsável) */}
+                {technical.length > 0 && (
+                    <div style={{ marginBottom: '12px' }}>
+                        <button
+                            type="button"
+                            onClick={() => setTechOpen(!techOpen)}
+                            style={{
+                                width: '100%', textAlign: 'left',
+                                background: 'transparent', border: '1px solid rgba(91,156,246,0.20)',
+                                borderRadius: '8px', padding: '8px 12px', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                                color: '#5B9CF6', fontSize: '11px', fontWeight: 700,
+                                letterSpacing: '0.06em', textTransform: 'uppercase',
+                            }}
+                        >
+                            <span>{techOpen ? '▼' : '▶'}</span>
+                            🔧 Detalhes técnicos ({technical.length})
+                        </button>
+                        {techOpen && (
+                            <ul style={{
+                                listStyle: 'none', padding: '10px 14px 0 14px', margin: '8px 0 0',
+                                display: 'flex', flexDirection: 'column', gap: '6px',
+                                background: 'rgba(91,156,246,0.04)',
+                                border: '1px solid rgba(91,156,246,0.10)',
+                                borderRadius: '8px',
+                                paddingBottom: '10px',
+                            }}>
+                                {technical.map((item, i) => (
+                                    <li key={i} style={{
+                                        display: 'flex', gap: '8px', alignItems: 'flex-start',
+                                        fontSize: '12px', color: '#A0B8D0', lineHeight: 1.5,
+                                    }}>
+                                        <span style={{ color: '#5B9CF6', flexShrink: 0, marginTop: '2px', fontSize: '9px' }}>›</span>
+                                        <span style={{ minWidth: 0 }}>{renderInlineMd(item)}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                )}
+
+                {/* Aviso crítico */}
+                {entry.warning && (
+                    <div style={{
+                        marginTop: '12px',
+                        background: 'rgba(240,160,64,0.08)',
+                        border: '1px solid rgba(240,160,64,0.30)',
+                        borderRadius: '8px',
+                        padding: '10px 12px',
+                        display: 'flex',
+                        gap: '10px',
+                        alignItems: 'flex-start',
+                    }}>
+                        <div style={{ fontSize: '14px', flexShrink: 0 }}>⚠️</div>
+                        <div>
+                            <div style={{
+                                fontSize: '10px', fontWeight: 700, color: '#F0A040',
+                                marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.06em',
+                            }}>
+                                Atenção
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#E8E4DE', lineHeight: 1.55 }}>
+                                {renderInlineMd(entry.warning)}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Fallback: entradas antigas/commits sem formato novo */}
+                {legacyItems.length > 0 && (
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {legacyItems.map((item, i) => (
+                            <li key={i} style={{
+                                display: 'flex', gap: '10px', alignItems: 'flex-start',
+                                fontSize: '13px', color: '#C8C4BE', lineHeight: 1.55,
+                            }}>
+                                <span style={{ color: '#C8A97A', flexShrink: 0, marginTop: '2px', fontSize: '10px' }}>◆</span>
+                                <span style={{ minWidth: 0 }}>{renderInlineMd(item)}</span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        </div>
+    );
+}
+
 // ---------- Timeline Tab ----------
 
 function TimelineTab() {
@@ -657,65 +912,7 @@ function TimelineTab() {
             <div style={{ position: 'absolute', left: '11px', top: '8px', bottom: '8px', width: '1px', background: 'linear-gradient(to bottom, rgba(200,169,122,0.4), rgba(200,169,122,0.05))', pointerEvents: 'none' }} />
 
             {entries.map((entry, idx) => (
-                <div key={`${entry.version}-${idx}`} style={{ display: 'flex', gap: '16px', position: 'relative' }}>
-                    <div style={{ width: '24px', flexShrink: 0, display: 'flex', justifyContent: 'center', paddingTop: '24px' }}>
-                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#C8A97A', boxShadow: '0 0 0 4px rgba(200,169,122,0.15), 0 0 12px rgba(200,169,122,0.4)', position: 'relative', zIndex: 1 }} />
-                    </div>
-
-                    <div style={{ flex: 1, minWidth: 0, background: '#0F0F11', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px 24px' }}>
-                        <div style={{ marginBottom: '14px', borderRadius: '10px', border: '1px solid rgba(200,169,122,0.22)', background: 'rgba(200,169,122,0.08)', padding: '12px 14px' }}>
-                            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#C8A97A', marginBottom: '6px' }}>
-                                Resumo para cliente
-                            </div>
-                            <div style={{ fontSize: '12px', lineHeight: 1.6, color: '#E8E4DE' }}>
-                                {buildClientFacingSummary(entry)}
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                            <div style={{
-                                padding: '4px 10px',
-                                borderRadius: '999px',
-                                background: 'linear-gradient(135deg, rgba(200,169,122,0.18), rgba(200,169,122,0.06))',
-                                border: '1px solid rgba(200,169,122,0.35)',
-                                fontSize: '11px',
-                                fontWeight: 700,
-                                letterSpacing: '0.04em',
-                                color: '#C8A97A',
-                                fontFamily: "'DM Sans', sans-serif",
-                            }}>
-                                {entry.version}
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#7A7774', fontWeight: 500 }}>
-                                {formatBrDate(entry.date)}
-                            </div>
-                        </div>
-
-                        {entry.title && (
-                            <div style={{
-                                fontFamily: "'Playfair Display', serif",
-                                fontSize: '18px',
-                                fontWeight: 700,
-                                color: '#F0EDE8',
-                                marginBottom: '14px',
-                                lineHeight: 1.3,
-                            }}>
-                                {entry.title}
-                            </div>
-                        )}
-
-                        {entry.items.length > 0 && (
-                            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {entry.items.map((item, i) => (
-                                    <li key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', color: '#C8C4BE', lineHeight: 1.55 }}>
-                                        <span style={{ color: '#C8A97A', flexShrink: 0, marginTop: '2px', fontSize: '10px' }}>◆</span>
-                                        <span style={{ minWidth: 0 }}>{item}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
-                </div>
+                <ReleaseCard key={`${entry.version}-${idx}`} entry={entry} />
             ))}
         </div>
         </>

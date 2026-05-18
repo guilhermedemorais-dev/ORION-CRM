@@ -13,6 +13,17 @@ interface TimelineEntry {
     version: string;
     date: string;
     title: string;
+    /** Resumo curto pra usuário leigo (até 350 chars). */
+    summary?: string;
+    /** Texto explicativo do benefício no dia a dia (parágrafos). */
+    user_impact?: string;
+    /** Lista de novidades em linguagem clara (substitui items quando presente). */
+    highlights: string[];
+    /** Lista técnica para devs (colapsável no frontend). */
+    technical_details: string[];
+    /** Avisos críticos (opcional). */
+    warning?: string;
+    /** @deprecated mantido para retrocompatibilidade do frontend antigo. Vira a junção de highlights+technical_details. */
     items: string[];
 }
 
@@ -55,47 +66,160 @@ async function readReleasesFileSafe(): Promise<string | null> {
     }
 }
 
+// Aceita data ISO (YYYY-MM-DD) ou data por extenso em português ("15 de maio de 2026")
+const MES_PT: Record<string, string> = {
+    janeiro: '01', fevereiro: '02', marco: '03', 'março': '03', abril: '04',
+    maio: '05', junho: '06', julho: '07', agosto: '08',
+    setembro: '09', outubro: '10', novembro: '11', dezembro: '12',
+};
+
+function parseDateString(raw: string): string | null {
+    const trimmed = raw.trim();
+    // ISO YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+    // "DD de MES de YYYY"
+    const m = trimmed.toLowerCase().match(/^(\d{1,2})\s+de\s+([a-zç]+)\s+de\s+(\d{4})$/);
+    if (m && m[1] && m[2] && m[3]) {
+        const dd = m[1].padStart(2, '0');
+        const mm = MES_PT[m[2]];
+        const yyyy = m[3];
+        if (mm) return `${yyyy}-${mm}-${dd}`;
+    }
+    return null;
+}
+
+type ParserSection =
+    | 'none'
+    | 'summary'
+    | 'user_impact'
+    | 'highlights'
+    | 'technical_details'
+    | 'warning';
+
+const SECTION_HEADERS: Record<string, ParserSection> = {
+    'em poucas palavras': 'summary',
+    'o que melhora pra você': 'user_impact',
+    'o que melhora para você': 'user_impact',
+    'novidades principais': 'highlights',
+    'novidades': 'highlights',
+    'detalhes técnicos': 'technical_details',
+    'detalhes tecnicos': 'technical_details',
+    'atenção': 'warning',
+    'atencao': 'warning',
+};
+
 function parseReleases(markdown: string): TimelineEntry[] {
     const lines = markdown.split(/\r?\n/);
     const entries: TimelineEntry[] = [];
 
     let current: TimelineEntry | null = null;
+    let section: ParserSection = 'none';
+    let textBuffer: string[] = [];
+
+    const flushTextBuffer = () => {
+        if (!current || textBuffer.length === 0) return;
+        const joined = textBuffer.join(' ').trim();
+        if (joined) {
+            if (section === 'summary') {
+                current.summary = current.summary ? `${current.summary} ${joined}`.trim() : joined;
+            } else if (section === 'user_impact') {
+                current.user_impact = current.user_impact ? `${current.user_impact}\n\n${joined}` : joined;
+            } else if (section === 'warning') {
+                current.warning = current.warning ? `${current.warning} ${joined}`.trim() : joined;
+            }
+        }
+        textBuffer = [];
+    };
 
     for (const rawLine of lines) {
         const line = rawLine.trimEnd();
 
-        // Match: ## [vX.Y.Z] — YYYY-MM-DD  (em-dash or hyphen)
-        const versionMatch = line.match(/^##\s*\[([^\]]+)\]\s*[—–-]\s*(\d{4}-\d{2}-\d{2})\s*$/);
+        // Cabeçalho da release: ## [vX.Y.Z] — data
+        const versionMatch = line.match(/^##\s*\[([^\]]+)\]\s*[—–-]\s*(.+)$/);
         if (versionMatch && versionMatch[1] && versionMatch[2]) {
+            flushTextBuffer();
+            const isoDate = parseDateString(versionMatch[2]);
             if (current) entries.push(current);
             current = {
                 version: versionMatch[1],
-                date: versionMatch[2],
+                date: isoDate ?? versionMatch[2].trim(),
                 title: '',
+                highlights: [],
+                technical_details: [],
                 items: [],
             };
+            section = 'none';
             continue;
         }
 
         if (!current) continue;
 
-        // Section title: ### Title
-        const titleMatch = line.match(/^###\s+(.+)$/);
-        if (titleMatch && titleMatch[1] && !current.title) {
-            current.title = titleMatch[1].trim();
+        // ### Title da release (primeiro h3 do bloco — o "subtítulo")
+        const h3Match = line.match(/^###\s+(.+)$/);
+        if (h3Match && h3Match[1]) {
+            flushTextBuffer();
+            const headerText = h3Match[1].trim();
+            if (!current.title) {
+                current.title = headerText;
+            }
+            // h3 não muda de section — só serve como subtítulo da versão
+            section = 'none';
             continue;
         }
 
-        // Bullet items: - item or * item
+        // #### Seções (h4): Em poucas palavras / O que melhora / Novidades / Detalhes técnicos / Atenção
+        // Também aceita sub-headers livres dentro de Novidades (ignora)
+        const h4Match = line.match(/^####\s+(.+)$/);
+        if (h4Match && h4Match[1]) {
+            flushTextBuffer();
+            const headerText = h4Match[1].trim();
+            const normalized = headerText
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[̀-ͯ]/g, '');
+            const known = SECTION_HEADERS[normalized] ?? SECTION_HEADERS[headerText.toLowerCase()];
+            if (known) {
+                section = known;
+            }
+            // se for h4 não reconhecido (ex: "#### Limpar e exportar banco direto na tela"),
+            // mantém a section atual — vira label dentro da seção pai.
+            continue;
+        }
+
+        // Bullets: vão pra highlights ou technical_details conforme a seção
         const bulletMatch = line.match(/^\s*[-*]\s+(.+)$/);
         if (bulletMatch && bulletMatch[1]) {
-            current.items.push(bulletMatch[1].trim());
+            flushTextBuffer();
+            const text = bulletMatch[1].trim();
+            if (section === 'technical_details') {
+                current.technical_details.push(text);
+            } else {
+                // default: highlights (mesmo se a seção for 'none' ou outra)
+                current.highlights.push(text);
+            }
+            current.items.push(text); // retrocompat
+            continue;
+        }
+
+        // Texto livre (parágrafo) — só relevante para sections que aceitam texto
+        if (line.trim().length > 0 && !line.startsWith('---') && !line.startsWith('>')) {
+            if (section === 'summary' || section === 'user_impact' || section === 'warning') {
+                textBuffer.push(line.trim());
+            }
+            continue;
+        }
+
+        // Linha em branco
+        if (line.trim().length === 0 && textBuffer.length > 0) {
+            // Sinaliza fim de parágrafo
+            flushTextBuffer();
         }
     }
 
+    flushTextBuffer();
     if (current) entries.push(current);
 
-    // Sort by date descending (most recent first)
+    // Ordena por data desc — usa a data ISO quando disponível
     entries.sort((a, b) => b.date.localeCompare(a.date));
     return entries;
 }
@@ -196,12 +320,17 @@ function buildTimelineEntriesFromGit(commits: GitCommitEntry[]): TimelineEntry[]
 
     return Array.from(grouped.entries())
         .sort((a, b) => b[0].localeCompare(a[0]))
-        .map(([date, items], index) => ({
-            version: index === 0 ? 'Em desenvolvimento' : `Build ${date}`,
-            date,
-            title: index === 0 ? 'Commits recentes ainda não documentados' : 'Atualizações por commits',
-            items: items.map((commit) => `${commit.subject} (${commit.hash})`),
-        }));
+        .map(([date, items], index) => {
+            const bullets = items.map((commit) => `${commit.subject} (${commit.hash})`);
+            return {
+                version: index === 0 ? 'Em desenvolvimento' : `Build ${date}`,
+                date,
+                title: index === 0 ? 'Commits recentes ainda não documentados' : 'Atualizações por commits',
+                highlights: [],
+                technical_details: bullets,
+                items: bullets,
+            };
+        });
 }
 
 function mergeReleaseTimelineWithGit(releases: TimelineEntry[], commits: GitCommitEntry[]): TimelineEntry[] {
