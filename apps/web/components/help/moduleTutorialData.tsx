@@ -12,7 +12,173 @@ export interface TutorialStep {
   tip?: string;
   /** Cor de destaque para o card */
   color?: string;
+  /** Lista numerada de instruções (passo-a-passo) */
+  instructions?: string[];
+  /** Exemplo prático contextualizando o passo */
+  example?: string;
+  /** Avisos importantes / o que evitar */
+  warning?: string;
+  /** Como confirmar que funcionou */
+  success_check?: string;
+  /** Quem faz esse passo (cargo: atendente, gerente, produção, etc.) */
+  actor?: string;
 }
+
+/**
+ * Estrutura do tour mestre — explica o fluxo completo da joalheria
+ * (cliente entra → atendimento → proposta → OS → produção → pagamento → entrega).
+ * Aparece em todos os contextos da aba Tutorial como bloco destacado no topo.
+ */
+export interface MasterTourSection {
+  title: string;
+  intro: string;
+  steps: TutorialStep[];
+}
+
+export const MASTER_TOUR: MasterTourSection = {
+  title: 'Como operar a joalheria do começo ao fim',
+  intro: 'Esse é o fluxo completo de um atendimento, da primeira mensagem do cliente até a entrega da peça. Leia uma vez para entender o sistema todo. Cada passo abaixo corresponde a uma tela do CRM — depois você usa a "Ajuda" da tela específica para o detalhe.',
+  steps: [
+    {
+      title: 'O cliente chega',
+      icon: '📥',
+      color: '#5B9CF6',
+      actor: 'Automático / Atendente',
+      description: 'Toda venda começa quando o cliente faz contato. O sistema captura por 3 canais principais: WhatsApp (mais comum), formulário do site, ou cadastro manual no balcão.',
+      instructions: [
+        'WhatsApp: assim que o cliente manda mensagem, o sistema cria automaticamente um lead na etapa "Novo" do pipeline Leads',
+        'Site/Formulário: se o cliente preenche o formulário público, vira um lead "Novo" também',
+        'Balcão: o atendente clica em "+ Novo Lead" no Kanban ou cadastra o cliente direto pelo PDV',
+      ],
+      example: 'Maria manda mensagem no WhatsApp da loja perguntando sobre uma aliança. Em segundos aparece um card "Maria - Não identificado" na coluna "Novo" do Kanban de Leads.',
+      success_check: 'O lead aparece no Kanban (menu Leads → Pipeline). Você consegue clicar no card e ver a ficha vazia da Maria.',
+    },
+    {
+      title: 'Qualificar o lead',
+      icon: '🎯',
+      color: '#A78BFA',
+      actor: 'Atendente',
+      description: 'Atendente conversa com o cliente, entende o que ele quer, qual prazo, faixa de valor. Conforme a conversa avança, move o card pelas colunas do Kanban.',
+      instructions: [
+        'Abre o card do lead ou vai na aba Inbox para responder a mensagem',
+        'Conforme entende o pedido, anota observações na ficha (cor preferida, ocasião, orçamento)',
+        'Arrasta o card de "Novo" para "Qualificado" quando confirmar que tem real interesse',
+      ],
+      example: 'Você descobre que Maria quer aliança de ouro 18k branco, aro 16, vai casar em junho. Anota tudo na ficha e move o card para "Qualificado".',
+      warning: 'Não pule a etapa Qualificado. Sem qualificar, você acumula leads que não vão converter e distorce suas métricas.',
+      success_check: 'Card mudou de coluna. Histórico do lead mostra "Etapa: Novo → Qualificado".',
+    },
+    {
+      title: 'Enviar proposta',
+      icon: '📝',
+      color: '#F0A040',
+      actor: 'Atendente',
+      description: 'Com a peça definida, prepara o orçamento e envia para o cliente. A proposta inclui o preço final, prazo de produção e formas de pagamento.',
+      instructions: [
+        'Na ficha do cliente → aba Proposta → "+ Nova Proposta"',
+        'Preenche descrição da peça, valor total, condições de pagamento',
+        'Salva e envia (PDF) para o cliente — pelo WhatsApp dentro do sistema mesmo',
+        'Move o card no Kanban para "Proposta Enviada"',
+      ],
+      example: 'Você fez o orçamento: aliança R$ 4.500, prazo 30 dias, pode parcelar em 3x. Salva no sistema e o sistema gera um PDF profissional pra mandar para Maria.',
+      success_check: 'A proposta aparece listada na ficha. Card está na coluna "Proposta Enviada".',
+    },
+    {
+      title: 'Negociar e aprovar',
+      icon: '🤝',
+      color: '#F59E0B',
+      actor: 'Atendente',
+      description: 'Cliente pode aceitar direto ou pedir ajustes. Você negocia até chegar num acordo. Quando o cliente confirma, você move o card para a etapa que dispara a próxima fase.',
+      instructions: [
+        'Se cliente pede desconto ou mudança, edita a proposta',
+        'Quando cliente aceita, anota o "ok" na ficha e move o card para "Convertido"',
+      ],
+      example: 'Maria pediu pra parcelar em 5x ao invés de 3x. Você ajusta a proposta e ela confirma. Card vai pra "Convertido".',
+      success_check: 'Card chegou em "Convertido". Se você configurou regras de pipeline, um card novo aparece automaticamente no setor Produção (com o mesmo cliente).',
+    },
+    {
+      title: 'Criar a Ordem de Serviço (OS)',
+      icon: '⚙️',
+      color: '#C8A97A',
+      actor: 'Atendente',
+      description: 'A OS é o documento de produção da peça. Tem as especificações técnicas (metal, pedra, peso), os materiais consumidos do estoque, mão de obra e prazo.',
+      instructions: [
+        'Na ficha do cliente → aba Atendimento → expande "Especificações de Fabricação"',
+        'Preenche metal, pedra, aro, peso, gravação, observações',
+        'Expande a seção "Materiais" (em desenvolvimento — fase próxima)',
+        'Adiciona cada matéria-prima/peça pronta do estoque com quantidade',
+        'Informa mão de obra (R$) e preço final de venda',
+        'Salva — a OS fica registrada com número (ex: OS-20260515-1234)',
+      ],
+      example: 'Para a aliança da Maria, você adiciona 8g de ouro 18k branco (R$ 2.264 de custo), mão de obra R$ 800. Preço final que ela vai pagar: R$ 4.500.',
+      warning: 'O estoque não baixa quando você cria a OS — só fica reservado. A baixa real acontece quando a peça é entregue e paga.',
+      success_check: 'A OS aparece listada na ficha do cliente. Recebeu um número (ex: OS-20260515-1234) que serve para faturar depois.',
+    },
+    {
+      title: 'Produzir a peça',
+      icon: '🔨',
+      color: '#5B9CF6',
+      actor: 'Produção (ourives)',
+      description: 'O ourives recebe a OS e começa a fabricar. O sistema acompanha o progresso por etapas (design → modelagem → fundição → cravação → polimento → QC → embalagem → pronta).',
+      instructions: [
+        'O ourives vê as OS atribuídas a ele no menu Produção',
+        'Conforme avança, marca cada etapa como concluída',
+        'Pode anexar fotos do progresso (cera, peça em andamento, peça finalizada)',
+        'Quando termina, marca como "Pronta para entrega"',
+      ],
+      example: 'João Ourives recebe a OS-20260515-1234, faz o desenho 3D, manda imprimir cera, funde o ouro, ajusta o tamanho, poliu. Marca como "Pronta" em 25 dias.',
+      success_check: 'A OS muda para status "Pronta". Atendente recebe alerta no Dashboard de que uma OS está aguardando entrega.',
+    },
+    {
+      title: 'Faturar no PDV',
+      icon: '💰',
+      color: '#4CAF82',
+      actor: 'Atendente',
+      description: 'Quando o cliente vem buscar (ou paga remotamente), o atendente vai no PDV e faz a venda. O sistema puxa todos os dados da OS automaticamente.',
+      instructions: [
+        'Atalho rápido: na ficha do cliente, clica em "Faturar no PDV" (botão verde na barra direita)',
+        'O PDV abre já com o cliente vinculado',
+        'Digita o código da OS (ex: OS-20260515-1234) — os itens/valores são preenchidos automaticamente',
+        'Confere o total, escolhe a forma de pagamento (Pix, cartão, dinheiro)',
+        'Se for Mercado Pago: gera link/QR Code pro cliente pagar',
+        'Confirma a venda → estoque baixa as matérias-primas → OS muda para "Entregue"',
+      ],
+      example: 'Maria vem buscar a aliança. Você abre a ficha dela, clica "Faturar no PDV", digita OS-20260515-1234. Cobra R$ 4.500 em 5x no cartão. Sistema baixa 8g de ouro do estoque, registra a venda no financeiro, marca a OS como entregue.',
+      warning: 'Se o cliente quer pagar em parcelas separadas (sinal agora + saldo depois), use a função de pagamento parcial. Cada parcela vira um lançamento financeiro próprio.',
+      success_check: 'Pedido aparece na aba Pedidos com status "Pago" ou "Aguardando pagamento". Lançamento entra no Financeiro. Estoque foi atualizado.',
+    },
+    {
+      title: 'Entregar a peça',
+      icon: '📦',
+      color: '#2DD4BF',
+      actor: 'Atendente / Entregador',
+      description: 'Última fase do fluxo. Pode ser retirada no balcão ou envio por transportadora.',
+      instructions: [
+        'Retirada no balcão: cliente assina o recibo, atendente marca como entregue',
+        'Envio: cria entrega no menu Entregas (transportadora + código de rastreio)',
+        'Cliente recebe automaticamente notificação no WhatsApp com o código de rastreio',
+      ],
+      example: 'Maria buscou na loja, assinou o recibo. Sistema registra a entrega como concluída.',
+      success_check: 'OS marcada como "Entregue". Ficha do cliente mostra a peça no histórico de compras.',
+    },
+    {
+      title: 'Pós-venda e recompra',
+      icon: '💎',
+      color: '#A78BFA',
+      actor: 'Atendente',
+      description: 'O cliente entregue não é o fim — é o começo do relacionamento. Use o sistema para fazer remarketing, lembrar de datas especiais e gerar recompras.',
+      instructions: [
+        'Anota na ficha datas importantes (aniversário, casamento, data preferida)',
+        'O Dashboard mostra alertas de "cliente sem compra há X meses"',
+        'Usa a aba Inbox para mandar mensagens personalizadas em datas especiais',
+        'Cria campanhas no menu Automações para disparar lembretes automáticos',
+      ],
+      example: 'Em maio do ano seguinte (1 ano de casamento), o sistema alerta que Maria está há 12 meses sem comprar. Você manda uma mensagem felicitando o bodas de papel — ela responde interessada num pingente. Novo ciclo começa.',
+      success_check: 'A ficha da Maria tem múltiplas compras ao longo do tempo. O LTV (valor vitalício do cliente) cresce.',
+    },
+  ],
+};
+
 
 export interface TutorialSection {
   /** Nome da seção (ex: "Painel Esquerdo") */
@@ -1057,6 +1223,13 @@ export const MODULE_TUTORIALS: Record<HelpContext, ModuleTutorialData> = {
             description: 'Configure o assistente IA: modelo, temperatura, prompts do sistema e permissões de acesso.',
             tip: 'Ajuste a temperatura: baixa = respostas precisas, alta = mais criativas.',
             color: '#2DD4BF',
+          },
+          {
+            title: 'Banco de Dados (somente ROOT)',
+            icon: '🗄️',
+            description: 'Liste todas as tabelas do banco com contagem e tamanho. Exporte tabelas em CSV ou SQL, ou apague registros com confirmação. Use para zerar dados de teste antes de subir pra produção.',
+            tip: 'Sempre exporte um backup antes de apagar. "Apagar tudo" preserva users, settings e _migrations para você não perder acesso.',
+            color: '#E05252',
           },
         ],
       },

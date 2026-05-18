@@ -81,7 +81,7 @@ export function HelpPanel({ context, onClose }: Props) {
       <div
         style={{
           position: 'fixed', right: 0, top: 0,
-          width: 380, height: '100vh',
+          width: 'min(560px, 95vw)', height: '100vh',
           zIndex: 150,
           background: 'var(--orion-surface)',
           borderLeft: '1px solid var(--orion-border-mid)',

@@ -252,6 +252,101 @@ router.get(
 
 router.use('/integrations', integrationsRoutes);
 
+// ---- GET /settings/agenda ----
+// Retorna a configuração de pipeline padrão dos agendamentos.
+router.get(
+    '/agenda',
+    authenticate,
+    async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const result = await query<{
+                default_appointment_pipeline_id: string | null;
+                pipeline_name: string | null;
+                pipeline_slug: string | null;
+            }>(
+                `SELECT s.default_appointment_pipeline_id,
+                        p.name AS pipeline_name,
+                        p.slug AS pipeline_slug
+                 FROM settings s
+                 LEFT JOIN pipelines p ON p.id = s.default_appointment_pipeline_id
+                 LIMIT 1`
+            );
+            const row = result.rows[0];
+            res.json({
+                default_appointment_pipeline_id: row?.default_appointment_pipeline_id ?? null,
+                pipeline_name: row?.pipeline_name ?? null,
+                pipeline_slug: row?.pipeline_slug ?? null,
+            });
+        } catch (err) {
+            next(err);
+        }
+    }
+);
+
+// ---- PATCH /settings/agenda (ROOT/ADMIN) ----
+// Define o pipeline padrão dos agendamentos. Null = sem pipeline padrão
+// (agendamentos ainda funcionam, só não vinculam a nenhum pipeline).
+const agendaSettingsSchema = z.object({
+    default_appointment_pipeline_id: z.string().uuid().nullable(),
+});
+
+router.patch(
+    '/agenda',
+    authenticate,
+    requireRole(['ROOT', 'ADMIN']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const parsed = agendaSettingsSchema.safeParse(req.body);
+            if (!parsed.success) {
+                next(AppError.badRequest(
+                    'Verifique o pipeline informado.',
+                    parsed.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+                ));
+                return;
+            }
+
+            // Se um pipeline foi informado, valida que existe
+            if (parsed.data.default_appointment_pipeline_id) {
+                const check = await query<{ id: string }>(
+                    `SELECT id FROM pipelines WHERE id = $1 LIMIT 1`,
+                    [parsed.data.default_appointment_pipeline_id]
+                );
+                if (!check.rows[0]) {
+                    next(AppError.badRequest('Pipeline informado não existe.'));
+                    return;
+                }
+            }
+
+            await query(
+                `UPDATE settings SET default_appointment_pipeline_id = $1, updated_at = NOW()`,
+                [parsed.data.default_appointment_pipeline_id]
+            );
+
+            await invalidateSettingsCache();
+
+            if (req.user) {
+                await createAuditLog({
+                    userId: req.user.id,
+                    action: 'UPDATE',
+                    entityType: 'settings',
+                    entityId: null,
+                    oldValue: null,
+                    newValue: { default_appointment_pipeline_id: parsed.data.default_appointment_pipeline_id },
+                    req,
+                });
+            }
+
+            res.json({
+                data: {
+                    default_appointment_pipeline_id: parsed.data.default_appointment_pipeline_id,
+                },
+            });
+        } catch (err) {
+            next(err);
+        }
+    }
+);
+
 // ---- PUT /settings (ADMIN only) ----
 
 router.put(

@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Lightbulb, BookOpen, Play, CheckCircle2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Lightbulb, BookOpen, Play, CheckCircle2, AlertTriangle, ListOrdered, User } from 'lucide-react';
 import type { HelpContext } from '@/hooks/useHelpContext';
-import { MODULE_TUTORIALS, type ModuleTutorialData, type TutorialSection, type TutorialStep } from './moduleTutorialData';
+import { MODULE_TUTORIALS, MASTER_TOUR, type TutorialSection, type TutorialStep } from './moduleTutorialData';
 
 interface ModuleTutorialProps {
   context: HelpContext;
@@ -70,23 +70,183 @@ function TutorialStepCard({ step, index }: { step: TutorialStep; index: number }
         </div>
       </button>
 
-      {expanded && step.tip && (
-        <div
-          style={{
-            margin: '0 14px 12px',
-            padding: '8px 10px',
-            background: `${step.color || '#C8A97A'}11`,
-            border: `1px solid ${step.color || '#C8A97A'}22`,
-            borderRadius: 8,
-            display: 'flex',
-            gap: 8,
-            alignItems: 'flex-start',
-          }}
-        >
-          <Lightbulb size={13} style={{ color: step.color || '#C8A97A', flexShrink: 0, marginTop: 1 }} />
-          <span style={{ fontSize: 11, color: 'var(--orion-text)', lineHeight: 1.5, fontStyle: 'italic' }}>
-            {step.tip}
-          </span>
+      {expanded && (
+        <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {step.actor && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
+              padding: '2px 8px', background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4,
+              fontSize: 10, color: 'var(--orion-text-secondary)',
+              textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 600,
+            }}>
+              <User size={10} /> {step.actor}
+            </div>
+          )}
+
+          {step.instructions && step.instructions.length > 0 && (
+            <div style={{
+              padding: '10px 12px',
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: 8,
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6,
+                fontSize: 10, fontWeight: 700, color: 'var(--orion-text-muted)',
+                textTransform: 'uppercase', letterSpacing: '.06em',
+              }}>
+                <ListOrdered size={12} /> Passo a passo
+              </div>
+              <ol style={{ margin: 0, padding: '0 0 0 18px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {step.instructions.map((line, i) => (
+                  <li key={i} style={{ fontSize: 11, color: 'var(--orion-text)', lineHeight: 1.55 }}>
+                    {line}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {step.example && (
+            <div style={{
+              padding: '10px 12px',
+              background: `${step.color || '#C8A97A'}11`,
+              border: `1px solid ${step.color || '#C8A97A'}33`,
+              borderRadius: 8,
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4,
+                fontSize: 10, fontWeight: 700, color: step.color || '#C8A97A',
+                textTransform: 'uppercase', letterSpacing: '.06em',
+              }}>
+                💡 Exemplo prático
+              </div>
+              <span style={{ fontSize: 11, color: 'var(--orion-text)', lineHeight: 1.55, fontStyle: 'italic' }}>
+                {step.example}
+              </span>
+            </div>
+          )}
+
+          {step.warning && (
+            <div style={{
+              padding: '10px 12px',
+              background: 'rgba(240,160,64,0.08)',
+              border: '1px solid rgba(240,160,64,0.30)',
+              borderRadius: 8,
+              display: 'flex', gap: 8, alignItems: 'flex-start',
+            }}>
+              <AlertTriangle size={13} style={{ color: '#F0A040', flexShrink: 0, marginTop: 1 }} />
+              <div>
+                <div style={{
+                  fontSize: 10, fontWeight: 700, color: '#F0A040', marginBottom: 2,
+                  textTransform: 'uppercase', letterSpacing: '.06em',
+                }}>
+                  Atenção
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--orion-text)', lineHeight: 1.55 }}>
+                  {step.warning}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {step.success_check && (
+            <div style={{
+              padding: '10px 12px',
+              background: 'rgba(76,175,130,0.08)',
+              border: '1px solid rgba(76,175,130,0.30)',
+              borderRadius: 8,
+              display: 'flex', gap: 8, alignItems: 'flex-start',
+            }}>
+              <CheckCircle2 size={13} style={{ color: '#4CAF82', flexShrink: 0, marginTop: 1 }} />
+              <div>
+                <div style={{
+                  fontSize: 10, fontWeight: 700, color: '#4CAF82', marginBottom: 2,
+                  textTransform: 'uppercase', letterSpacing: '.06em',
+                }}>
+                  Como saber que funcionou
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--orion-text)', lineHeight: 1.55 }}>
+                  {step.success_check}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {step.tip && (
+            <div style={{
+              padding: '8px 10px',
+              background: `${step.color || '#C8A97A'}0D`,
+              border: `1px solid ${step.color || '#C8A97A'}22`,
+              borderRadius: 8,
+              display: 'flex', gap: 8, alignItems: 'flex-start',
+            }}>
+              <Lightbulb size={13} style={{ color: step.color || '#C8A97A', flexShrink: 0, marginTop: 1 }} />
+              <span style={{ fontSize: 11, color: 'var(--orion-text)', lineHeight: 1.5, fontStyle: 'italic' }}>
+                {step.tip}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Bloco do tour mestre — fluxo completo da joalheria.
+ * Aparece no topo de TODA aba Tutorial, independente do contexto.
+ * Colapsado por padrão (não estoura o painel).
+ */
+function MasterTourBlock() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{
+      margin: '0 -16px 18px',
+      padding: '14px 16px',
+      background: 'linear-gradient(135deg, rgba(167,139,250,0.10), rgba(91,156,246,0.06))',
+      borderBottom: '1px solid rgba(167,139,250,0.20)',
+    }}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        style={{
+          width: '100%', background: 'transparent', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', padding: 0,
+        }}
+      >
+        <div style={{
+          width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+          background: 'rgba(167,139,250,0.18)', border: '1px solid rgba(167,139,250,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+        }}>🗺️</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--orion-text)' }}>
+              {MASTER_TOUR.title}
+            </span>
+            {open
+              ? <ChevronDown size={14} style={{ color: 'var(--orion-text-muted)' }} />
+              : <ChevronRight size={14} style={{ color: 'var(--orion-text-muted)' }} />}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--orion-text-secondary)', marginTop: 3, lineHeight: 1.5 }}>
+            {open ? 'Veja abaixo cada etapa do fluxo completo.' : 'Toque para ler o tour completo de uma operação (9 passos).'}
+          </div>
+        </div>
+      </button>
+
+      {open && (
+        <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <p style={{
+            margin: 0, fontSize: 11, color: 'var(--orion-text-secondary)', lineHeight: 1.6,
+            fontStyle: 'italic',
+          }}>
+            {MASTER_TOUR.intro}
+          </p>
+          {MASTER_TOUR.steps.map((step, i) => (
+            <TutorialStepCard key={i} step={step} index={i} />
+          ))}
         </div>
       )}
     </div>
@@ -228,6 +388,9 @@ export function ModuleTutorial({ context }: ModuleTutorialProps) {
 
   return (
     <div style={{ padding: '0 16px 20px', overflowY: 'auto', flex: 1 }}>
+      {/* Master tour — fluxo completo da joalheria, aparece em todo contexto */}
+      <MasterTourBlock />
+
       {/* Module header */}
       <div
         style={{

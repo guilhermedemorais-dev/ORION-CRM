@@ -23,6 +23,81 @@ const NEVER_TRUNCATE_EVER = new Set<string>([
     'pg_stat_statements',  // extensão postgres
 ]);
 
+// Dicionário de nomes amigáveis + descrição curta por tabela.
+// Mostra o que cada tabela representa em linguagem de negócio para o
+// usuário ROOT entender antes de apagar/exportar.
+const TABLE_META: Record<string, { label: string; description: string }> = {
+    _migrations: { label: 'Histórico de migrations', description: 'Versões de banco já aplicadas. Não apague — o sistema acharia que precisa rodar tudo do zero.' },
+    users: { label: 'Usuários do sistema', description: 'Login, senha, cargo (ROOT/ADMIN/ATENDENTE...). Se apagar você perde o acesso.' },
+    settings: { label: 'Configurações da loja', description: 'Nome, logo, cores, telefones, redes sociais.' },
+
+    leads: { label: 'Leads (oportunidades comerciais)', description: 'Contatos que ainda não viraram clientes. Aparecem no Kanban de pipelines.' },
+    lead_timeline: { label: 'Linha do tempo dos leads', description: 'Histórico de eventos (criação, mudança de etapa, notas) de cada lead.' },
+    lead_attachments: { label: 'Anexos de leads', description: 'Arquivos enviados pelos clientes durante o atendimento (fotos, áudios).' },
+
+    customers: { label: 'Clientes', description: 'Pessoas que já compraram ou tiveram ficha aberta. Fonte única de verdade do cliente.' },
+    customer_blocks: { label: 'Blocos da ficha do cliente', description: 'Atendimentos, propostas e anotações dentro da ficha de cada cliente.' },
+    attendance_blocks: { label: 'Blocos de atendimento', description: 'Cada bloco é um atendimento (chamada, mensagem, visita) dentro da ficha.' },
+
+    pipelines: { label: 'Pipelines (setores)', description: 'Cada pipeline é um setor da operação (Leads, Produção, Entrega...).' },
+    pipeline_stages: { label: 'Etapas dos pipelines', description: 'Listas/colunas dentro de cada pipeline (Novo, Qualificado, etc.).' },
+    pipeline_automation_rules: { label: 'Regras de automação dos pipelines', description: 'Regras que movem cards entre setores automaticamente.' },
+    pipeline_card_links: { label: 'Vínculos entre cards de pipelines', description: 'Liga um card em "Leads" ao card filho gerado em "Produção" pela regra.' },
+    pipeline_rule_executions: { label: 'Execuções de regras', description: 'Histórico de cada vez que uma regra disparou.' },
+
+    products: { label: 'Produtos do estoque', description: 'Joias prontas, matérias-primas, peças. Tudo que pode ser vendido ou consumido.' },
+    product_categories: { label: 'Categorias de produto', description: 'Anéis, Brincos, Ouro 18k, etc. Criadas pelo usuário no Estoque.' },
+    stock_movements: { label: 'Movimentações de estoque', description: 'Histórico de entradas, saídas, ajustes e perdas de cada produto.' },
+
+    orders: { label: 'Pedidos / Vendas', description: 'Pedidos formais com status (aberto, pago, entregue). Inclui vendas do PDV.' },
+    order_items: { label: 'Itens dos pedidos', description: 'Produtos dentro de cada pedido (quantidade e preço).' },
+    order_payments: { label: 'Pagamentos dos pedidos', description: 'Cada parcela ou pagamento individual de um pedido.' },
+
+    service_orders: { label: 'Ordens de Serviço (OS)', description: 'Peças sob encomenda em produção (com prazo, especificações, etapas).' },
+    service_order_materials: { label: 'Materiais consumidos em OS', description: 'Matérias-primas e peças do estoque usadas em cada OS.' },
+
+    appointments: { label: 'Agendamentos', description: 'Compromissos da agenda (visitas, ligações, entregas).' },
+    appointment_reminders: { label: 'Lembretes de agendamento', description: 'Mensagens automáticas antes de cada compromisso.' },
+
+    financial_entries: { label: 'Lançamentos financeiros', description: 'Entradas e saídas do caixa (vendas, despesas, comissões).' },
+    payments: { label: 'Pagamentos recebidos', description: 'Recibos de pagamentos confirmados (Pix, cartão, dinheiro, etc.).' },
+
+    conversations: { label: 'Conversas do WhatsApp', description: 'Threads de conversa do inbox unificado por cliente.' },
+    messages: { label: 'Mensagens recebidas/enviadas', description: 'Cada mensagem individual da conversa (texto, mídia, áudio).' },
+
+    audit_logs: { label: 'Log de auditoria', description: 'Registro de tudo que foi criado, alterado ou apagado, com quem fez e quando.' },
+    system_errors: { label: 'Erros do sistema', description: 'Erros capturados em produção (para debug).' },
+    system_tickets: { label: 'Tickets de suporte', description: 'Incidentes e sugestões abertos pelos usuários em Suporte.' },
+    operator_webhook_log: { label: 'Log de webhooks do operador', description: 'Chamadas de webhook do painel administrativo (Hostinger/SaaS).' },
+
+    channel_integrations: { label: 'Integrações de canais', description: 'WhatsApp, Instagram, formulários — credenciais e status.' },
+    integration_providers: { label: 'Provedores de integração', description: 'Catálogo de integrações disponíveis (Meta, n8n, etc.).' },
+    whatsapp_providers: { label: 'Provedores do WhatsApp', description: 'Contas de WhatsApp Business configuradas.' },
+    webhook_keys: { label: 'Chaves de webhook', description: 'Chaves de segurança para receber webhooks de terceiros.' },
+
+    ai_copilot_config: { label: 'Configuração do Copiloto IA', description: 'Comportamento e prompts do assistente IA.' },
+    ai_skills: { label: 'Skills do Copiloto IA', description: 'Habilidades especializadas (atendimento, vendas, meta).' },
+    ai_renders: { label: 'Renderizações 3D por IA', description: 'Imagens geradas para apresentar joias antes de produzir.' },
+
+    proposal_attachments: { label: 'Anexos de propostas', description: 'PDFs, imagens enviadas em propostas comerciais.' },
+    carriers_config: { label: 'Transportadoras', description: 'Cadastro de transportadoras para entregas.' },
+
+    roadmap_items: { label: 'Itens do roadmap', description: 'Planos e tarefas do projeto que o cliente acompanha em Suporte.' },
+    roadmap_comments: { label: 'Comentários do roadmap', description: 'Conversas sobre cada plano (em threading).' },
+    roadmap_comment_reactions: { label: 'Reações aos comentários', description: '👍 / 👎 dos comentários do roadmap.' },
+    roadmap_attachments: { label: 'Anexos do roadmap', description: 'Imagens e vídeos anexados aos planos.' },
+
+    store_orders: { label: 'Pedidos da loja online', description: 'Pedidos vindos da vitrine pública (loja externa).' },
+    refresh_tokens: { label: 'Tokens de sessão', description: 'Sessões ativas dos usuários (login persistente).' },
+};
+
+function metaFor(tableName: string): { label: string; description: string } {
+    return TABLE_META[tableName] ?? {
+        label: tableName,
+        description: 'Tabela do sistema (sem descrição cadastrada).',
+    };
+}
+
 router.use(authenticate);
 router.use(requireRole(['ROOT']));
 
@@ -71,12 +146,17 @@ router.get('/tables', async (_req: Request, res: Response, next: NextFunction): 
         }
 
         res.json({
-            data: result.rows.map((row) => ({
-                ...row,
-                row_count: Number(row.row_count),
-                size_bytes: Number(row.size_bytes),
-                protected_in_bulk: NEVER_TRUNCATE_IN_BULK.has(row.name),
-            })),
+            data: result.rows.map((row) => {
+                const meta = metaFor(row.name);
+                return {
+                    ...row,
+                    row_count: Number(row.row_count),
+                    size_bytes: Number(row.size_bytes),
+                    protected_in_bulk: NEVER_TRUNCATE_IN_BULK.has(row.name),
+                    label: meta.label,
+                    description: meta.description,
+                };
+            }),
         });
     } catch (err) {
         next(err);

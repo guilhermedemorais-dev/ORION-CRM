@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import { logoutAction } from '@/app/(crm)/actions';
 import {
     BarChart3,
-    BookOpen,
     CalendarDays,
     Circle,
     DollarSign,
@@ -53,7 +52,6 @@ const navGroups = [
             { icon: BarChart3, label: 'Analytics', href: '/analytics' },
             { icon: Store, label: 'Loja', href: '/settings/loja' },
             { icon: Settings, label: 'Ajustes', href: '/ajustes' },
-            { icon: BookOpen, label: 'Ajuda', href: '/ajuda' },
             { icon: LifeBuoy, label: 'Suporte', href: '/chamados' },
         ],
     },

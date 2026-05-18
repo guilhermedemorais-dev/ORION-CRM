@@ -218,7 +218,16 @@ router.post('/', authenticate, async (req: Request, res: Response, next: NextFun
         const appointment = await transaction(async (client) => {
             let resolvedLeadId = data.lead_id || null;
             let resolvedCustomerId = data.customer_id || null;
-            const pipelineId = data.pipeline_id || null;
+
+            // pipeline_id explícito > settings.default_appointment_pipeline_id > null
+            // Se ficar null, o agendamento ainda é criado, só não cria/vincula lead.
+            let pipelineId = data.pipeline_id || null;
+            if (!pipelineId) {
+                const fallback = await client.query<{ default_appointment_pipeline_id: string | null }>(
+                    `SELECT default_appointment_pipeline_id FROM settings LIMIT 1`
+                );
+                pipelineId = fallback.rows[0]?.default_appointment_pipeline_id ?? null;
+            }
 
             // If no lead_id provided but contact_phone is, try to find or create a lead
             if (!resolvedLeadId && data.contact_phone) {

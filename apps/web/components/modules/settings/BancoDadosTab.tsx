@@ -14,6 +14,8 @@ interface TableRow {
     size_bytes: number;
     size_pretty: string;
     protected_in_bulk: boolean;
+    label: string;
+    description: string;
 }
 
 function fmtNumber(n: number): string {
@@ -58,7 +60,13 @@ export function BancoDadosTab() {
         let list = tables;
         if (showOnlyWithData) list = list.filter((t) => t.row_count > 0);
         const q = query.trim().toLowerCase();
-        if (q) list = list.filter((t) => t.name.toLowerCase().includes(q));
+        if (q) {
+            list = list.filter((t) =>
+                t.name.toLowerCase().includes(q) ||
+                t.label.toLowerCase().includes(q) ||
+                t.description.toLowerCase().includes(q),
+            );
+        }
         return list;
     }, [tables, query, showOnlyWithData]);
 
@@ -238,13 +246,12 @@ export function BancoDadosTab() {
                             }}
                         >
                             <div style={{ minWidth: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <code style={{
-                                        fontSize: '12px', fontWeight: 600, color: '#F0EDE8',
-                                        fontFamily: 'monospace',
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <span style={{
+                                        fontSize: '13px', fontWeight: 600, color: '#F0EDE8',
                                     }}>
-                                        {table.name}
-                                    </code>
+                                        {table.label}
+                                    </span>
                                     {table.protected_in_bulk && (
                                         <span title="Preservada em 'Apagar tudo'" style={{
                                             fontSize: '9px', fontWeight: 700, color: '#5B9CF6',
@@ -255,8 +262,19 @@ export function BancoDadosTab() {
                                             PROTEGIDA
                                         </span>
                                     )}
+                                    <code style={{
+                                        fontSize: '10px', color: '#7A7774',
+                                        fontFamily: 'monospace',
+                                        background: 'rgba(255,255,255,0.04)',
+                                        padding: '1px 6px', borderRadius: '3px',
+                                    }}>
+                                        {table.name}
+                                    </code>
                                 </div>
-                                <div style={{ fontSize: '10px', color: '#7A7774', marginTop: '2px' }}>
+                                <div style={{ fontSize: '11px', color: '#A8A4A0', marginTop: '4px', lineHeight: 1.4 }}>
+                                    {table.description}
+                                </div>
+                                <div style={{ fontSize: '10px', color: '#7A7774', marginTop: '3px' }}>
                                     {fmtNumber(table.row_count)} registros · {table.size_pretty}
                                 </div>
                             </div>
@@ -297,9 +315,12 @@ export function BancoDadosTab() {
             {/* Modal de confirmação tabela única */}
             {confirmingTable && (
                 <ConfirmModal
-                    title={`Apagar todos os dados de "${confirmingTable.name}"?`}
+                    title={`Apagar "${confirmingTable.label}"?`}
                     message={
                         <>
+                            <p style={modalText}>
+                                {confirmingTable.description}
+                            </p>
                             <p style={modalText}>
                                 Esta ação vai apagar <strong style={{ color: '#E05252' }}>{fmtNumber(confirmingTable.row_count)} registros</strong> da tabela <code style={{ fontFamily: 'monospace', color: '#F0EDE8' }}>{confirmingTable.name}</code>.
                             </p>

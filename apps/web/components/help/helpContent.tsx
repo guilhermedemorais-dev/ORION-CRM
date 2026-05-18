@@ -108,6 +108,14 @@ export const HELP_CONTENT: Record<HelpContext, HelpContextData> = {
           { icon: <Shield size={13} />,        label: 'pdv_enabled',            description: 'Se desativado, o produto não aparece no PDV mesmo com estoque disponível.' },
         ],
       },
+      {
+        title: 'Categorias e tipo de produto',
+        items: [
+          { icon: <Database size={13} />,      label: 'Categorias',         description: 'Botão "Categorias" no topo abre o gerenciador. Crie categorias livremente (Anéis, Brincos, Ouro 18k) com subcategorias (Anéis > Aliança).' },
+          { icon: <Gem size={13} />,           label: 'Tipo do produto',    description: 'No formulário do produto, toggle "Matéria-prima" diferencia: joia pronta (vende direto) vs matéria-prima (consumível em OS).' },
+          { icon: <Shield size={13} />,        label: 'Selo MP',            description: 'Produtos marcados como matéria-prima recebem selo MP dourado na lista do estoque e nos cards do PDV.' },
+        ],
+      },
     ],
   },
 
@@ -150,6 +158,34 @@ export const HELP_CONTENT: Record<HelpContext, HelpContextData> = {
           { icon: <Monitor size={13} />,       label: 'PDV / Balcão', description: 'Cliente cadastrado durante uma venda presencial.' },
           { icon: <Globe size={13} />,         label: 'Online',       description: 'Cliente que veio pelo catálogo ou formulário online.' },
           { icon: <Edit size={13} />,          label: 'Manual',       description: 'Cadastro feito diretamente nesta tela pela equipe.' },
+        ],
+      },
+      {
+        title: 'Abas da ficha do cliente',
+        items: [
+          { icon: <Calendar size={13} />,     label: 'Agenda',        description: 'Compromissos, retornos e visitas marcadas com este cliente.' },
+          { icon: <User size={13} />,         label: 'Ficha',         description: 'Dados pessoais: nome, telefone, endereço, CPF, observações.' },
+          { icon: <MessageCircle size={13} />, label: 'Atendimento',  description: 'Blocos de atendimento com especificações de fabricação e materiais consumidos.' },
+          { icon: <FileText size={13} />,     label: 'Proposta',      description: 'Propostas comerciais enviadas ao cliente.' },
+          { icon: <Package size={13} />,      label: 'Pedidos',       description: 'Pedidos formais com status (aberto, pago, entregue).' },
+          { icon: <Wrench size={13} />,       label: 'OS',            description: 'Ordens de serviço em produção. Materiais, mão de obra, etapas, prazo.' },
+          { icon: <Truck size={13} />,        label: 'Entrega',       description: 'Entregas em andamento e histórico.' },
+          { icon: <Clock size={13} />,        label: 'Histórico',     description: 'Linha do tempo completa de todos os eventos do cliente.' },
+        ],
+      },
+      {
+        title: 'Ordem de Serviço (OS) — seção Materiais',
+        items: [
+          { icon: <Gem size={13} />,          label: 'Materiais do estoque',  description: 'Adicione matérias-primas e peças prontas que serão consumidas na produção. Filtre por Tudo / Matéria-prima / Peças prontas.' },
+          { icon: <Wrench size={13} />,       label: 'Mão de obra',           description: 'Campo separado (padrão de joalheria). Vendedor digita manualmente, é variável a cada desenho.' },
+          { icon: <BarChart2 size={13} />,    label: 'Total calculado',       description: 'Subtotal materiais + mão de obra. Mostrado como preview — o preço de venda final continua manual.' },
+          { icon: <Shield size={13} />,       label: 'Snapshot de preço',     description: 'Quando você adiciona um material, o preço/custo é "fotografado" no momento. Mesmo se repreçar depois, a OS antiga mantém o valor original.' },
+        ],
+      },
+      {
+        title: 'Faturar no PDV',
+        items: [
+          { icon: <Monitor size={13} />,      label: 'Botão Faturar no PDV',  description: 'Na barra direita da ficha, abre o PDV com o cliente já pré-selecionado. Atalho pra fechar venda rápida sem buscar o cliente de novo.' },
         ],
       },
     ],
@@ -220,6 +256,15 @@ export const HELP_CONTENT: Record<HelpContext, HelpContextData> = {
           { icon: <TrendingUp size={13} />,    label: 'Taxa de conversão', description: 'Percentual de leads que viraram clientes. Meta ideal: acima de 30%.' },
           { icon: <Clock size={13} />,         label: 'Tempo médio',       description: 'Quantos dias um lead leva de "Novo" a "Convertido". Busque reduzir este tempo.' },
           { icon: <BarChart2 size={13} />,     label: 'Leads por fonte',   description: 'De onde vêm seus leads: WhatsApp, Instagram, Indicação, Balcão. Invista nos canais mais eficientes.' },
+        ],
+      },
+      {
+        title: 'Configurar pipeline (ícone de lápis na sidebar)',
+        items: [
+          { icon: <Wrench size={13} />,        label: 'Aba Etapas',        description: 'Crie, renomeie, reordene as colunas do pipeline. Marque cores e quais são "Ganho" ou "Perda".' },
+          { icon: <Workflow size={13} />,      label: 'Aba Regras',        description: 'Automatiza o handoff entre setores: quando um card chega em uma etapa, cria/move/espelha um card em outro pipeline.' },
+          { icon: <Plus size={13} />,          label: 'Gerar card no setor destino', description: 'Recomendado. Mantém o card aqui como histórico e cria um novo no pipeline destino (ex: Convertido → cria card em Produção).' },
+          { icon: <ChevronRight size={13} />,  label: 'Mover card',        description: 'Tira o card daqui e leva pra outro pipeline. Use quando o card só faz sentido em um lugar de cada vez.' },
         ],
       },
     ],
@@ -450,6 +495,32 @@ export const HELP_CONTENT: Record<HelpContext, HelpContextData> = {
         items: [
           { icon: <Download size={13} />,    label: 'Exportar dados',       description: 'Baixe clientes, produtos e pedidos em CSV ou JSON. Útil para backup ou migração.' },
           { icon: <Plus size={13} />,        label: 'Importar CSV',         description: 'Importe produtos ou clientes em massa. Use o modelo padrão — campos obrigatórios marcados.' },
+        ],
+      },
+      {
+        title: 'Permissões da ficha do cliente (em Usuários)',
+        items: [
+          { icon: <Lock size={13} />,         label: '9 toggles por usuário', description: 'Em Ajustes → Usuários → editar usuário, role até "Visibilidade da Ficha do Cliente". Cada toggle controla uma aba.' },
+          { icon: <Eye size={13} />,          label: 'Defaults por cargo',   description: 'ATENDENTE vê todas. PRODUÇÃO só Ficha/OS/Entrega. FINANCEIRO só Ficha/Pedidos/Histórico. Sobrescrevíveis por usuário.' },
+          { icon: <Shield size={13} />,       label: 'ROOT sempre vê tudo',  description: 'Por design, ROOT bypassa todas as permissões. Pra você não se trancar fora do sistema.' },
+        ],
+      },
+      {
+        title: 'Roadmap (em Suporte)',
+        items: [
+          { icon: <Workflow size={13} />,     label: 'Painel de planejamento', description: 'Em Suporte → aba Roadmap. ROOT publica planos, cliente aprova/reprova, ambos comentam (com threading).' },
+          { icon: <ChevronRight size={13} />, label: 'Status do item',         description: 'Planejado → Aguardando aprovação → Aprovado → Em andamento → Concluído (ou Reprovado/Parado). ROOT edita pelo dropdown.' },
+          { icon: <Download size={13} />,     label: 'Baixar .md',             description: 'Botão no card baixa o item como markdown. Use pra mandar pro dev versionar no Git.' },
+        ],
+      },
+      {
+        title: 'Banco de Dados (somente ROOT)',
+        items: [
+          { icon: <Database size={13} />,    label: 'Listar tabelas',       description: 'Visualize todas as tabelas do banco com contagem de registros e tamanho em disco. Nome amigável + descrição para cada uma.' },
+          { icon: <Download size={13} />,    label: 'Exportar tabela',      description: 'Baixe uma tabela específica em CSV (Excel) ou SQL (INSERTs para restaurar no Postgres).' },
+          { icon: <Download size={13} />,    label: 'Exportar tudo',        description: 'Dump completo do banco em .sql com todas as tabelas e INSERTs em transação. Para backup antes de operações destrutivas.' },
+          { icon: <Trash2 size={13} />,      label: 'Apagar tabela',        description: 'TRUNCATE CASCADE em uma tabela específica. Exige digitar o nome para confirmar. Apaga também tabelas dependentes.' },
+          { icon: <Trash2 size={13} />,      label: 'Apagar tudo',          description: 'Zera todas as tabelas operacionais. Preserva users, settings e _migrations para o sistema continuar funcionando. Exige digitar "APAGAR TUDO".' },
         ],
       },
     ],

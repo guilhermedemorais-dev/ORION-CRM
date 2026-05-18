@@ -29,6 +29,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 import { IntegracoesTab } from './IntegracoesTab';
 import { BancoDadosTab } from './BancoDadosTab';
+import { AgendaTab } from './AgendaTab';
 import { IACopilotoTab } from './IACopilotoTab';
 import { HexColorPicker } from 'react-colorful';
 import { useForm } from 'react-hook-form';
@@ -216,6 +217,7 @@ const tabItems: Array<{
     { id: 'seguranca', label: 'Segurança' },
     { id: 'integracoes', label: 'Integrações' },
     { id: 'ia-copiloto', label: 'IA Copiloto' },
+    { id: 'agenda', label: 'Agenda' },
     { id: 'banco-dados', label: 'Banco de Dados', rootOnly: true },
 ];
 
@@ -2249,6 +2251,7 @@ export function AjustesClient({
         if (activeTab === 'seguranca') return renderSecurityTab();
         if (activeTab === 'integracoes') return <IntegracoesTab onToast={addToast} />;
         if (activeTab === 'ia-copiloto') return <IACopilotoTab />;
+        if (activeTab === 'agenda') return <AgendaTab />;
         if (activeTab === 'banco-dados') {
             if (currentUserRole !== 'ROOT') {
                 return (
