@@ -222,11 +222,16 @@ router.post('/', authenticate, async (req: Request, res: Response, next: NextFun
             // pipeline_id explícito > settings.default_appointment_pipeline_id > null
             // Se ficar null, o agendamento ainda é criado, só não cria/vincula lead.
             let pipelineId = data.pipeline_id || null;
+            let configuredStageId: string | null = null;
             if (!pipelineId) {
-                const fallback = await client.query<{ default_appointment_pipeline_id: string | null }>(
-                    `SELECT default_appointment_pipeline_id FROM settings LIMIT 1`
+                const fallback = await client.query<{
+                    default_appointment_pipeline_id: string | null;
+                    default_appointment_stage_id: string | null;
+                }>(
+                    `SELECT default_appointment_pipeline_id, default_appointment_stage_id FROM settings LIMIT 1`
                 );
                 pipelineId = fallback.rows[0]?.default_appointment_pipeline_id ?? null;
+                configuredStageId = fallback.rows[0]?.default_appointment_stage_id ?? null;
             }
 
             // If no lead_id provided but contact_phone is, try to find or create a lead
@@ -248,14 +253,18 @@ router.post('/', authenticate, async (req: Request, res: Response, next: NextFun
                 if (existingLead.rows[0]) {
                     resolvedLeadId = existingLead.rows[0].id;
                 } else if (pipelineId) {
-                    // Create a new lead in the specified pipeline
-                    // Find default stage for the pipeline
-                    const stageResult = await client.query<{ id: string }>(                        `SELECT id FROM pipeline_stages WHERE pipeline_id = $1 ORDER BY position ASC LIMIT 1`,
-                        [pipelineId]
-                    );
-                    const stageId = stageResult.rows[0]?.id || null;
+                    // Stage prioridade: configurado em settings > primeira etapa do pipeline
+                    let stageId: string | null = configuredStageId;
+                    if (!stageId) {
+                        const stageResult = await client.query<{ id: string }>(
+                            `SELECT id FROM pipeline_stages WHERE pipeline_id = $1 ORDER BY position ASC LIMIT 1`,
+                            [pipelineId]
+                        );
+                        stageId = stageResult.rows[0]?.id || null;
+                    }
 
-                    const newLead = await client.query<{ id: string }>(                        `INSERT INTO leads (whatsapp_number, name, source, stage, pipeline_id, stage_id, assigned_to, last_interaction_at)
+                    const newLead = await client.query<{ id: string }>(
+                        `INSERT INTO leads (whatsapp_number, name, source, stage, pipeline_id, stage_id, assigned_to, last_interaction_at)
                          VALUES ($1, $2, 'BALCAO', 'NOVO', $3, $4, $5, NOW())
                          RETURNING id`,
                         [phone, data.contact_name || null, pipelineId, stageId, req.user!.id]

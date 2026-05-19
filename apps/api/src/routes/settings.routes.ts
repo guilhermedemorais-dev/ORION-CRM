@@ -253,7 +253,7 @@ router.get(
 router.use('/integrations', integrationsRoutes);
 
 // ---- GET /settings/agenda ----
-// Retorna a configuração de pipeline padrão dos agendamentos.
+// Retorna a configuração de pipeline + etapa padrão dos agendamentos.
 router.get(
     '/agenda',
     authenticate,
@@ -261,21 +261,28 @@ router.get(
         try {
             const result = await query<{
                 default_appointment_pipeline_id: string | null;
+                default_appointment_stage_id: string | null;
                 pipeline_name: string | null;
                 pipeline_slug: string | null;
+                stage_name: string | null;
             }>(
                 `SELECT s.default_appointment_pipeline_id,
+                        s.default_appointment_stage_id,
                         p.name AS pipeline_name,
-                        p.slug AS pipeline_slug
+                        p.slug AS pipeline_slug,
+                        st.name AS stage_name
                  FROM settings s
                  LEFT JOIN pipelines p ON p.id = s.default_appointment_pipeline_id
+                 LEFT JOIN pipeline_stages st ON st.id = s.default_appointment_stage_id
                  LIMIT 1`
             );
             const row = result.rows[0];
             res.json({
                 default_appointment_pipeline_id: row?.default_appointment_pipeline_id ?? null,
+                default_appointment_stage_id: row?.default_appointment_stage_id ?? null,
                 pipeline_name: row?.pipeline_name ?? null,
                 pipeline_slug: row?.pipeline_slug ?? null,
+                stage_name: row?.stage_name ?? null,
             });
         } catch (err) {
             next(err);
@@ -284,10 +291,11 @@ router.get(
 );
 
 // ---- PATCH /settings/agenda (ROOT/ADMIN) ----
-// Define o pipeline padrão dos agendamentos. Null = sem pipeline padrão
-// (agendamentos ainda funcionam, só não vinculam a nenhum pipeline).
+// Define pipeline + etapa padrão dos agendamentos. Null em qualquer um =
+// agendamentos ainda funcionam, só não vinculam ou caem na primeira etapa.
 const agendaSettingsSchema = z.object({
     default_appointment_pipeline_id: z.string().uuid().nullable(),
+    default_appointment_stage_id: z.string().uuid().nullable().optional(),
 });
 
 router.patch(
@@ -305,11 +313,14 @@ router.patch(
                 return;
             }
 
-            // Se um pipeline foi informado, valida que existe
-            if (parsed.data.default_appointment_pipeline_id) {
+            const pipelineId = parsed.data.default_appointment_pipeline_id;
+            const stageId = parsed.data.default_appointment_stage_id ?? null;
+
+            // Pipeline existe?
+            if (pipelineId) {
                 const check = await query<{ id: string }>(
                     `SELECT id FROM pipelines WHERE id = $1 LIMIT 1`,
-                    [parsed.data.default_appointment_pipeline_id]
+                    [pipelineId]
                 );
                 if (!check.rows[0]) {
                     next(AppError.badRequest('Pipeline informado não existe.'));
@@ -317,9 +328,31 @@ router.patch(
                 }
             }
 
+            // Etapa pertence ao pipeline?
+            if (stageId) {
+                if (!pipelineId) {
+                    next(AppError.badRequest('Informe um pipeline antes de escolher a etapa.'));
+                    return;
+                }
+                const stageCheck = await query<{ id: string }>(
+                    `SELECT id FROM pipeline_stages WHERE id = $1 AND pipeline_id = $2 LIMIT 1`,
+                    [stageId, pipelineId]
+                );
+                if (!stageCheck.rows[0]) {
+                    next(AppError.badRequest('Etapa não pertence ao pipeline escolhido.'));
+                    return;
+                }
+            }
+
+            // Se pipeline ficou null, zera também o stage (não faz sentido stage sem pipeline)
+            const finalStageId = pipelineId ? stageId : null;
+
             await query(
-                `UPDATE settings SET default_appointment_pipeline_id = $1, updated_at = NOW()`,
-                [parsed.data.default_appointment_pipeline_id]
+                `UPDATE settings
+                 SET default_appointment_pipeline_id = $1,
+                     default_appointment_stage_id = $2,
+                     updated_at = NOW()`,
+                [pipelineId, finalStageId]
             );
 
             await invalidateSettingsCache();
@@ -331,14 +364,18 @@ router.patch(
                     entityType: 'settings',
                     entityId: null,
                     oldValue: null,
-                    newValue: { default_appointment_pipeline_id: parsed.data.default_appointment_pipeline_id },
+                    newValue: {
+                        default_appointment_pipeline_id: pipelineId,
+                        default_appointment_stage_id: finalStageId,
+                    },
                     req,
                 });
             }
 
             res.json({
                 data: {
-                    default_appointment_pipeline_id: parsed.data.default_appointment_pipeline_id,
+                    default_appointment_pipeline_id: pipelineId,
+                    default_appointment_stage_id: finalStageId,
                 },
             });
         } catch (err) {

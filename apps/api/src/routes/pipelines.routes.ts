@@ -382,6 +382,21 @@ router.post(
                 return;
             }
 
+            // Checagem prévia: já existe pipeline com este nome ou slug?
+            const existing = await query<{ name: string; slug: string }>(
+                `SELECT name, slug FROM pipelines
+                 WHERE slug = $1 OR LOWER(name) = LOWER($2)
+                 LIMIT 1`,
+                [slug, parsed.data.name]
+            );
+            if (existing.rows[0]) {
+                const conflictBy = existing.rows[0].slug === slug ? 'URL/identificador' : 'nome';
+                next(AppError.badRequest(
+                    `Já existe um kanban com este ${conflictBy} ("${existing.rows[0].name}"). Escolha outro nome.`
+                ));
+                return;
+            }
+
             const result = await query<PipelineRow>(
                 `INSERT INTO pipelines (name, slug, description, icon, created_by)
                  VALUES ($1, $2, $3, $4, $5)
@@ -402,6 +417,12 @@ router.post(
 
             res.status(201).json(mapPipeline(created));
         } catch (error) {
+            // Fallback defensivo: race condition entre checagem e insert
+            const dbErr = error as { code?: string };
+            if (dbErr.code === '23505') {
+                next(AppError.badRequest('Já existe um kanban com este nome. Escolha outro.'));
+                return;
+            }
             next(error);
         }
     }

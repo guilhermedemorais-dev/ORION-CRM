@@ -15,17 +15,29 @@ interface PipelineOption {
     is_active: boolean;
 }
 
+interface StageOption {
+    id: string;
+    name: string;
+    position: number;
+    color: string | null;
+}
+
 interface AgendaSettings {
     default_appointment_pipeline_id: string | null;
+    default_appointment_stage_id: string | null;
     pipeline_name: string | null;
     pipeline_slug: string | null;
+    stage_name: string | null;
 }
 
 export function AgendaTab() {
     const [pipelines, setPipelines] = useState<PipelineOption[]>([]);
+    const [stages, setStages] = useState<StageOption[]>([]);
     const [current, setCurrent] = useState<AgendaSettings | null>(null);
     const [selectedId, setSelectedId] = useState<string>('');
+    const [selectedStageId, setSelectedStageId] = useState<string>('');
     const [loading, setLoading] = useState(true);
+    const [loadingStages, setLoadingStages] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [toast, setToast] = useState<{ kind: 'success' | 'error'; msg: string } | null>(null);
@@ -52,6 +64,7 @@ export function AgendaTab() {
             setPipelines(list.filter((p: PipelineOption) => p.is_active));
             setCurrent(settingsData);
             setSelectedId(settingsData?.default_appointment_pipeline_id ?? '');
+            setSelectedStageId(settingsData?.default_appointment_stage_id ?? '');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Erro ao carregar.');
         } finally {
@@ -61,6 +74,39 @@ export function AgendaTab() {
 
     useEffect(() => { void load(); }, [load]);
 
+    // Carrega etapas quando muda o pipeline selecionado
+    useEffect(() => {
+        if (!selectedId) {
+            setStages([]);
+            return;
+        }
+        let cancelled = false;
+        (async () => {
+            setLoadingStages(true);
+            try {
+                const res = await fetch(`/api/internal/pipelines/${selectedId}/stages`);
+                if (!res.ok) return;
+                const data = await res.json();
+                if (cancelled) return;
+                const list = Array.isArray(data?.data) ? data.data : [];
+                setStages(list);
+            } catch {
+                // silent
+            } finally {
+                if (!cancelled) setLoadingStages(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [selectedId]);
+
+    // Quando muda o pipeline, limpa a stage se ela não pertencer ao novo pipeline
+    useEffect(() => {
+        if (!selectedStageId || stages.length === 0) return;
+        if (!stages.find((s) => s.id === selectedStageId)) {
+            setSelectedStageId('');
+        }
+    }, [stages, selectedStageId]);
+
     const save = async () => {
         setSaving(true);
         try {
@@ -69,6 +115,7 @@ export function AgendaTab() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     default_appointment_pipeline_id: selectedId || null,
+                    default_appointment_stage_id: selectedId ? (selectedStageId || null) : null,
                 }),
             });
             const data = await res.json().catch(() => null);
@@ -76,7 +123,7 @@ export function AgendaTab() {
                 throw new Error(data?.message ?? 'Falha ao salvar.');
             }
             showToast('success', selectedId
-                ? 'Pipeline padrão da agenda atualizado.'
+                ? `Agenda configurada para o pipeline "${pipelines.find(p => p.id === selectedId)?.name ?? '—'}"${selectedStageId ? `, etapa "${stages.find(s => s.id === selectedStageId)?.name ?? '—'}"` : ', primeira etapa'}.`
                 : 'Pipeline padrão removido. Agendamentos continuarão funcionando sem vínculo.');
             await load();
         } catch (err) {
@@ -86,7 +133,9 @@ export function AgendaTab() {
         }
     };
 
-    const hasUnsavedChange = selectedId !== (current?.default_appointment_pipeline_id ?? '');
+    const pipelineChanged = selectedId !== (current?.default_appointment_pipeline_id ?? '');
+    const stageChanged = (selectedStageId || '') !== (current?.default_appointment_stage_id ?? '');
+    const hasUnsavedChange = pipelineChanged || stageChanged;
     const isUnconfigured = !current?.default_appointment_pipeline_id;
 
     if (loading) {
@@ -158,6 +207,50 @@ export function AgendaTab() {
                         : 'Agendamentos serão criados sem vínculo a pipeline. Você pode mudar a qualquer momento.'}
                 </p>
 
+                {/* Dropdown de etapa — só aparece se um pipeline foi selecionado */}
+                {selectedId && (
+                    <div className="mt-4">
+                        <label className="mb-1.5 block text-[11px] font-semibold text-[#A8A4A0]">
+                            Etapa onde o card vai cair
+                        </label>
+                        {loadingStages ? (
+                            <div className="flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-[#15151A] px-3 text-[12px] text-[#7A7774]">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Carregando etapas…
+                            </div>
+                        ) : stages.length === 0 ? (
+                            <div className="flex h-10 items-center rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 text-[11px] text-rose-300">
+                                Este pipeline não tem etapas cadastradas. Crie etapas no kanban antes de configurar.
+                            </div>
+                        ) : (
+                            <>
+                                <select
+                                    value={selectedStageId}
+                                    onChange={(e) => setSelectedStageId(e.target.value)}
+                                    aria-label="Etapa padrão dos agendamentos"
+                                    className="h-10 w-full rounded-lg border border-white/10 bg-[#15151A] px-3 text-[13px] text-[#F0EDE8] outline-none focus:border-[#C8A97A]/50"
+                                >
+                                    <option value="" className="bg-[#15151A]">
+                                        — Primeira etapa do pipeline (padrão) —
+                                    </option>
+                                    {stages
+                                        .slice()
+                                        .sort((a, b) => a.position - b.position)
+                                        .map((s) => (
+                                            <option key={s.id} value={s.id} className="bg-[#15151A]">
+                                                {s.name}
+                                            </option>
+                                        ))}
+                                </select>
+                                <p className="mt-2 text-[10px] text-[#7A7774]">
+                                    {selectedStageId
+                                        ? `Cards novos caem na etapa "${stages.find(s => s.id === selectedStageId)?.name ?? '—'}".`
+                                        : 'Sem etapa específica escolhida — vai pra primeira etapa do pipeline (geralmente "Novo").'}
+                                </p>
+                            </>
+                        )}
+                    </div>
+                )}
+
                 <div className="mt-4 flex items-center justify-end gap-2">
                     {hasUnsavedChange && (
                         <span className="text-[10px] font-semibold text-amber-300">Alterações não salvas</span>
@@ -179,7 +272,10 @@ export function AgendaTab() {
                 <div className="flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-[11px] text-emerald-400">
                     <Check className="h-4 w-4 flex-shrink-0" />
                     <span>
-                        Configurado para o pipeline <strong>{current?.pipeline_name ?? '—'}</strong>.
+                        Configurado para o pipeline <strong>{current?.pipeline_name ?? '—'}</strong>
+                        {current?.stage_name
+                            ? <> na etapa <strong>{current.stage_name}</strong>.</>
+                            : <>, primeira etapa (padrão).</>}
                     </span>
                 </div>
             )}
