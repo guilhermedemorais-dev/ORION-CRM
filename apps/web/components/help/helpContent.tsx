@@ -123,6 +123,14 @@ export const HELP_CONTENT: Record<HelpContext, HelpContextData> = {
     pageTitle: 'Pedidos',
     sections: [
       {
+        title: 'O que este módulo faz',
+        items: [
+          { icon: <Eye size={13} />,       label: 'Visão gerencial',           description: 'Espelho de todos os pedidos de todos os clientes. Use pra encontrar rápido, monitorar e operar (pausar, cancelar, exportar).' },
+          { icon: <User size={13} />,      label: 'Pedidos nascem na ficha',   description: 'A criação de pedido acontece na ficha do cliente (aba Atendimento). Aqui você só monitora e opera.' },
+          { icon: <Wrench size={13} />,    label: 'Abrir ficha pelo drawer',   description: 'Clique no pedido → drawer lateral → botão "Abrir ficha" leva à esteira de atendimento do cliente.' },
+        ],
+      },
+      {
         title: 'KPIs do topo',
         items: [
           { icon: <BarChart2 size={13} />, label: 'Pedidos ativos',         description: 'Pedidos em andamento, não cancelados, não finalizados e não pausados.' },

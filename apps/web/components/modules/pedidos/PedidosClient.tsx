@@ -1,18 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    createCustomOrderAction,
     createMercadoPagoPaymentLinkAction,
-    createReadyOrderAction,
     requestOrderNfeAction,
     sendOrderReceiptAction,
     updateOrderStatusAction,
 } from '@/app/(crm)/pedidos/actions';
 import { useConfirm } from '@/components/system/ConfirmDialog';
 import { useToast } from '@/components/system/ToastProvider';
-import type { CustomerRecord, OrderRecord } from '@/lib/api';
+import type { OrderRecord } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,7 +28,6 @@ interface OrderStats {
 interface PedidosClientProps {
     initialOrders: OrderRecord[];
     initialStats: OrderStats;
-    initialCustomers: CustomerRecord[];
     canCommercial: boolean;
 }
 
@@ -109,141 +106,6 @@ const lbl = 'block text-[11px] font-semibold text-[#888480] tracking-wide mb-1';
 const btnGold = 'h-9 px-4 rounded-lg bg-[#C8A97A] text-black text-xs font-bold hover:bg-[#E8D5B0] transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
 const btnGhost = 'h-9 px-3 rounded-lg bg-[#18181C] border border-white/[0.07] text-[#888480] text-xs font-semibold hover:border-white/[0.11] hover:text-[#EDE8E0] transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer disabled:opacity-50';
 const btnDanger = 'h-9 px-3 rounded-lg bg-[#18181C] border border-rose-500/30 text-rose-300 text-xs font-semibold hover:border-rose-500/50 hover:text-rose-200 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer disabled:opacity-50';
-
-// ─── Create Order Modal ───────────────────────────────────────────────────────
-
-function CreateOrderModal({ customers, onClose }: { customers: CustomerRecord[]; onClose: () => void }) {
-    const [tab, setTab] = useState<'PRONTA_ENTREGA' | 'PERSONALIZADO'>('PRONTA_ENTREGA');
-    const router = useRouter();
-
-    useEffect(() => {
-        const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-        window.addEventListener('keydown', h);
-        return () => window.removeEventListener('keydown', h);
-    }, [onClose]);
-
-    // After submit, server action redirects with ?notice=...; we just refresh.
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
-            <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl rounded-2xl border border-white/[0.07] bg-[#111113] p-6 max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-base font-semibold text-[#EDE8E0]" style={{ fontFamily: 'Playfair Display, serif' }}>Novo pedido</h2>
-                    <button onClick={onClose} className="text-[#888480] hover:text-[#EDE8E0] text-xl leading-none">×</button>
-                </div>
-
-                <div className="flex gap-2 mb-4 border-b border-white/[0.07]">
-                    {[
-                        { id: 'PRONTA_ENTREGA', label: 'Pronta entrega' },
-                        { id: 'PERSONALIZADO', label: 'Personalizado' },
-                    ].map((t) => (
-                        <button
-                            key={t.id}
-                            onClick={() => setTab(t.id as 'PRONTA_ENTREGA' | 'PERSONALIZADO')}
-                            className={`px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
-                                tab === t.id ? 'text-[#C8A97A] border-b-2 border-[#C8A97A] -mb-px' : 'text-[#888480] hover:text-[#EDE8E0]'
-                            }`}
-                        >
-                            {t.label}
-                        </button>
-                    ))}
-                </div>
-
-                {tab === 'PRONTA_ENTREGA' ? (
-                    <form action={createReadyOrderAction} className="grid gap-3" onSubmit={() => setTimeout(() => router.refresh(), 800)}>
-                        <div>
-                            <label className={lbl}>Cliente</label>
-                            <select name="customer_id" required className={`${inp} ${inpH}`}>
-                                <option value="">Selecionar cliente</option>
-                                {customers.map((c) => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className={lbl}>Descrição do item</label>
-                            <input name="item_description" required className={`${inp} ${inpH}`} placeholder="Ex: Anel solitário ouro 18k" />
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                            <div>
-                                <label className={lbl}>Qtd</label>
-                                <input name="quantity" type="number" min={1} defaultValue={1} required className={`${inp} ${inpH}`} />
-                            </div>
-                            <div>
-                                <label className={lbl}>Preço (centavos)</label>
-                                <input name="unit_price_cents" type="number" min={1} required className={`${inp} ${inpH}`} placeholder="150000" />
-                            </div>
-                            <div>
-                                <label className={lbl}>Desconto (centavos)</label>
-                                <input name="discount_cents" type="number" min={0} defaultValue={0} className={`${inp} ${inpH}`} />
-                            </div>
-                        </div>
-                        <div>
-                            <label className={lbl}>Entrega</label>
-                            <select name="delivery_type" defaultValue="RETIRADA" className={`${inp} ${inpH}`}>
-                                <option value="RETIRADA">Retirada</option>
-                                <option value="ENTREGA">Entrega</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className={lbl}>Observações</label>
-                            <textarea name="notes" rows={2} className={`${inp} py-2`} placeholder="Observações internas do pedido" />
-                        </div>
-                        <div className="flex justify-end gap-2 pt-2">
-                            <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
-                            <button type="submit" className={btnGold}>Criar pedido</button>
-                        </div>
-                    </form>
-                ) : (
-                    <form action={createCustomOrderAction} className="grid gap-3" onSubmit={() => setTimeout(() => router.refresh(), 800)}>
-                        <div>
-                            <label className={lbl}>Cliente</label>
-                            <select name="customer_id" required className={`${inp} ${inpH}`}>
-                                <option value="">Selecionar cliente</option>
-                                {customers.map((c) => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className={lbl}>Resumo comercial da peça</label>
-                            <input name="item_description" required className={`${inp} ${inpH}`} />
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                            <div>
-                                <label className={lbl}>Qtd</label>
-                                <input name="quantity" type="number" min={1} defaultValue={1} required className={`${inp} ${inpH}`} />
-                            </div>
-                            <div>
-                                <label className={lbl}>Valor estimado (centavos)</label>
-                                <input name="unit_price_cents" type="number" min={1} required className={`${inp} ${inpH}`} />
-                            </div>
-                            <div>
-                                <label className={lbl}>Desconto (centavos)</label>
-                                <input name="discount_cents" type="number" min={0} defaultValue={0} className={`${inp} ${inpH}`} />
-                            </div>
-                        </div>
-                        <div>
-                            <label className={lbl}>Metal</label>
-                            <input name="metal_type" required className={`${inp} ${inpH}`} placeholder="Ex: Ouro 18k" />
-                        </div>
-                        <div>
-                            <label className={lbl}>Descrição do design</label>
-                            <textarea name="design_description" rows={3} required className={`${inp} py-2`} placeholder="Descreva a peça, medidas, referências e acabamentos" />
-                        </div>
-                        <div>
-                            <label className={lbl}>Prazo de produção</label>
-                            <input name="production_deadline" type="datetime-local" className={`${inp} ${inpH}`} />
-                        </div>
-                        <div className="flex justify-end gap-2 pt-2">
-                            <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
-                            <button type="submit" className={btnGold}>Criar personalizado</button>
-                        </div>
-                    </form>
-                )}
-            </div>
-        </div>
-    );
-}
 
 // ─── WhatsApp Preview Modal ───────────────────────────────────────────────────
 
@@ -699,7 +561,7 @@ function InfoCell({ label, value }: { label: string; value: string }) {
 
 // ─── Main Client ──────────────────────────────────────────────────────────────
 
-export default function PedidosClient({ initialOrders, initialStats, initialCustomers, canCommercial }: PedidosClientProps) {
+export default function PedidosClient({ initialOrders, initialStats, canCommercial }: PedidosClientProps) {
     const [orders, setOrders] = useState<OrderRecord[]>(initialOrders);
     const [stats, setStats] = useState<OrderStats>(initialStats);
     const [search, setSearch] = useState('');
@@ -707,7 +569,6 @@ export default function PedidosClient({ initialOrders, initialStats, initialCust
     const [typeFilter, setTypeFilter] = useState<'' | OrderType>('');
     const [pausedFilter, setPausedFilter] = useState<'' | '1' | '0'>('');
     const [selectedOrder, setSelectedOrder] = useState<OrderRecord | null>(null);
-    const [showCreate, setShowCreate] = useState(false);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
     const toast = useToast();
@@ -846,7 +707,6 @@ export default function PedidosClient({ initialOrders, initialStats, initialCust
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                     <button onClick={handleExport} className={btnGhost}>↑ Exportar CSV</button>
-                    <button onClick={() => setShowCreate(true)} className={btnGold}>+ Novo pedido</button>
                 </div>
             </div>
 
@@ -868,8 +728,10 @@ export default function PedidosClient({ initialOrders, initialStats, initialCust
                                 {orders.length === 0 && !loading ? (
                                     <tr>
                                         <td colSpan={7} className="px-3 py-12 text-center text-xs text-[#4A4A52]">
-                                            Nenhum pedido encontrado. {(statusFilter || typeFilter || pausedFilter || search) && 'Ajuste os filtros ou '}
-                                            <button onClick={() => setShowCreate(true)} className="text-[#C8A97A] hover:underline">crie um novo pedido</button>.
+                                            Nenhum pedido encontrado.{' '}
+                                            {(statusFilter || typeFilter || pausedFilter || search)
+                                                ? 'Ajuste os filtros acima.'
+                                                : 'Pedidos novos são criados na ficha do cliente, aba Atendimento.'}
                                         </td>
                                     </tr>
                                 ) : (
@@ -921,13 +783,6 @@ export default function PedidosClient({ initialOrders, initialStats, initialCust
                     onClose={() => setSelectedOrder(null)}
                     onChanged={() => { void refreshAll(); router.refresh(); }}
                     canCommercial={canCommercial}
-                />
-            )}
-
-            {showCreate && (
-                <CreateOrderModal
-                    customers={initialCustomers}
-                    onClose={() => { setShowCreate(false); void refreshAll(); router.refresh(); }}
                 />
             )}
         </div>

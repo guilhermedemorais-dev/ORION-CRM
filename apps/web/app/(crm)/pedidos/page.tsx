@@ -1,6 +1,6 @@
 import { OrdersFlashToast } from '@/app/(crm)/pedidos/OrdersFlashToast';
 import PedidosClient from '@/components/modules/pedidos/PedidosClient';
-import type { ApiListResponse, CustomerRecord, OrderRecord } from '@/lib/api';
+import type { ApiListResponse, OrderRecord } from '@/lib/api';
 import { apiRequest } from '@/lib/api';
 import { getSession } from '@/lib/auth';
 
@@ -25,7 +25,7 @@ export default async function OrdersPage({
     const session = getSession();
     const canCommercial = COMMERCIAL_ROLES.has(session?.user.role ?? '');
 
-    const [ordersResponse, statsResponse, customersResponse] = await Promise.all([
+    const [ordersResponse, statsResponse] = await Promise.all([
         apiRequest<ApiListResponse<OrderRecord>>('/orders?limit=100').catch(() => ({
             data: [],
             meta: { total: 0, page: 1, limit: 100, pages: 1 },
@@ -37,10 +37,6 @@ export default async function OrdersPage({
             paused: 0,
             open_value_cents: 0,
         })),
-        apiRequest<ApiListResponse<CustomerRecord>>('/customers?limit=200').catch(() => ({
-            data: [],
-            meta: { total: 0, page: 1, limit: 200, pages: 1 },
-        })),
     ]);
 
     return (
@@ -49,7 +45,6 @@ export default async function OrdersPage({
             <PedidosClient
                 initialOrders={ordersResponse.data}
                 initialStats={statsResponse}
-                initialCustomers={customersResponse.data}
                 canCommercial={canCommercial}
             />
         </>
