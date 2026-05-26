@@ -109,35 +109,62 @@ export default function ClientPedidosTab({ customerId, canCommercial = true }: P
         } catch { toast.push('error', 'Erro ao exportar'); }
     };
 
+    const ctrlStyle: React.CSSProperties = {
+        height: '35px',
+        background: '#1A1A1E',
+        border: '1px solid rgba(255,255,255,0.10)',
+        borderRadius: '7px',
+        padding: '0 11px',
+        fontSize: '12px',
+        color: '#F0EDE8',
+        fontFamily: "'DM Sans', sans-serif",
+        outline: 'none',
+        boxSizing: 'border-box',
+    };
+
     return (
-        <div style={{ background: '#0A0A0B', color: '#EDE8E0', minHeight: '100%', fontFamily: 'Inter, sans-serif', margin: '-18px -20px', padding: '14px 16px' }}>
-            {/* Header da aba */}
-            <div className="flex items-end justify-between gap-3 pt-1 pb-4">
+        <div style={{ color: '#F0EDE8', fontFamily: "'DM Sans', sans-serif" }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px', marginBottom: '16px' }}>
                 <div>
-                    <h2 className="text-base font-semibold text-[#EDE8E0]" style={{ fontFamily: 'Playfair Display, serif' }}>Pedidos</h2>
-                    <p className="text-[11px] text-[#7A7774] mt-0.5">{orders.length} pedido(s) deste cliente</p>
+                    <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.10em', color: '#7A7774', marginBottom: '4px' }}>Pedidos</div>
+                    <div style={{ fontSize: '11px', color: '#7A7774' }}>{orders.length} pedido(s) deste cliente</div>
                 </div>
-                <button onClick={handleExport} className={btnGhost}>↑ Exportar CSV</button>
+                <button
+                    onClick={handleExport}
+                    style={{
+                        height: '32px',
+                        padding: '0 14px',
+                        background: 'rgba(200,169,122,0.10)',
+                        border: '1px solid rgba(200,169,122,0.25)',
+                        borderRadius: '7px',
+                        color: '#C8A97A',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        fontFamily: "'DM Sans', sans-serif",
+                    }}
+                >
+                    ↑ Exportar CSV
+                </button>
             </div>
 
             {/* Toolbar */}
-            <div className="flex items-center gap-2 pb-4 flex-wrap">
-                <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] pointer-events-none" style={{ color: '#4A4A52' }}>🔍</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: '#7A7774', pointerEvents: 'none' }}>🔍</span>
                     <input
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Buscar por número..."
-                        className="h-9 pl-8 pr-3 rounded-lg text-[13px] outline-none transition-colors placeholder:text-[#4A4A52]"
-                        style={{ width: 220, background: '#18181C', border: '1px solid rgba(255,255,255,0.07)', color: '#EDE8E0' }}
+                        style={{ ...ctrlStyle, width: 200, padding: '0 11px 0 30px' }}
                     />
                 </div>
                 <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as OrderStatus | '')}
-                    className="h-9 px-3 rounded-lg text-[12px] outline-none cursor-pointer"
-                    style={{ background: '#18181C', border: '1px solid rgba(255,255,255,0.07)', color: '#888480' }}
+                    style={{ ...ctrlStyle, cursor: 'pointer' }}
                 >
                     <option value="">Todas as etapas</option>
                     {(Object.keys(STAGE_LABEL) as OrderStatus[]).map((s) => (
@@ -147,8 +174,7 @@ export default function ClientPedidosTab({ customerId, canCommercial = true }: P
                 <select
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value as OrderType | '')}
-                    className="h-9 px-3 rounded-lg text-[12px] outline-none cursor-pointer"
-                    style={{ background: '#18181C', border: '1px solid rgba(255,255,255,0.07)', color: '#888480' }}
+                    style={{ ...ctrlStyle, cursor: 'pointer' }}
                 >
                     <option value="">Todos os tipos</option>
                     <option value="PRONTA_ENTREGA">Pronta entrega</option>
@@ -157,8 +183,7 @@ export default function ClientPedidosTab({ customerId, canCommercial = true }: P
                 <select
                     value={pausedFilter}
                     onChange={(e) => setPausedFilter(e.target.value as '' | '1' | '0')}
-                    className="h-9 px-3 rounded-lg text-[12px] outline-none cursor-pointer"
-                    style={{ background: '#18181C', border: '1px solid rgba(255,255,255,0.07)', color: '#888480' }}
+                    style={{ ...ctrlStyle, cursor: 'pointer' }}
                 >
                     <option value="">Pausados e ativos</option>
                     <option value="1">Só pausados</option>
@@ -167,70 +192,70 @@ export default function ClientPedidosTab({ customerId, canCommercial = true }: P
             </div>
 
             {/* Table */}
-            <div className="pb-2">
-                <div className="flex flex-col rounded-xl overflow-hidden" style={{ background: '#111113', border: '1px solid rgba(255,255,255,0.07)' }}>
-                    <div className="overflow-x-auto" style={{ maxHeight: 'calc(100vh - 380px)', overflowY: 'auto' }}>
-                        <table className="w-full border-collapse">
-                            <thead className="sticky top-0 z-10">
-                                <tr style={{ background: '#18181C', borderBottom: '1px solid rgba(255,255,255,0.11)' }}>
-                                    {['Pedido', 'Tipo', 'Etapa', 'Valor', 'Criado em'].map((col) => (
-                                        <th key={col} className="px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.6px] whitespace-nowrap" style={{ color: '#4A4A52' }}>
-                                            {col}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    Array.from({ length: 3 }).map((_, i) => (
-                                        <tr key={i} className="border-b border-white/[0.04]">
-                                            {Array.from({ length: 5 }).map((__, j) => (
-                                                <td key={j} className="px-3 py-3">
-                                                    <div className="h-3 bg-white/[0.04] rounded animate-pulse" />
-                                                </td>
-                                            ))}
-                                        </tr>
-                                    ))
-                                ) : orders.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={5} className="px-3 py-12 text-center text-xs text-[#4A4A52]">
-                                            Nenhum pedido encontrado para este cliente.{' '}
-                                            {(statusFilter || typeFilter || pausedFilter || search) && 'Ajuste os filtros acima.'}
-                                        </td>
+            <div style={{ background: '#141417', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 380px)', overflowY: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead style={{ position: 'sticky', top: 0, zIndex: 5 }}>
+                            <tr style={{ background: '#1A1A1E', borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
+                                {['Pedido', 'Tipo', 'Etapa', 'Valor', 'Criado em'].map((col) => (
+                                    <th key={col} style={{ padding: '10px 14px', textAlign: 'left', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.10em', color: '#7A7774', whiteSpace: 'nowrap' }}>
+                                        {col}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading ? (
+                                Array.from({ length: 3 }).map((_, i) => (
+                                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                        {Array.from({ length: 5 }).map((__, j) => (
+                                            <td key={j} style={{ padding: '14px' }}>
+                                                <div style={{ height: '12px', background: 'rgba(255,255,255,0.04)', borderRadius: '4px' }} />
+                                            </td>
+                                        ))}
                                     </tr>
-                                ) : (
-                                    orders.map((o) => {
-                                        const paused = Boolean(o.paused_at);
-                                        const sc = statusColor(o.status, paused);
-                                        return (
-                                            <tr
-                                                key={o.id}
-                                                onClick={() => handleSelectOrder(o)}
-                                                className="cursor-pointer transition-colors hover:bg-white/[0.02] border-b border-white/[0.04]"
-                                            >
-                                                <td className="px-3 py-3 text-xs whitespace-nowrap">
-                                                    <div className="font-semibold text-[#EDE8E0]">{o.order_number}</div>
-                                                </td>
-                                                <td className="px-3 py-3 text-xs whitespace-nowrap">
-                                                    <span className="text-[#888480]">{o.type === 'PRONTA_ENTREGA' ? 'PE' : 'Person.'}</span>
-                                                </td>
-                                                <td className="px-3 py-3 min-w-[200px]">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: sc.dot }} />
-                                                        <div className="flex-1 min-w-0">
-                                                            <StageBar status={o.status} paused={paused} />
-                                                        </div>
+                                ))
+                            ) : orders.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} style={{ padding: '48px 14px', textAlign: 'center', fontSize: '12px', color: '#7A7774' }}>
+                                        Nenhum pedido encontrado para este cliente.{' '}
+                                        {(statusFilter || typeFilter || pausedFilter || search) && 'Ajuste os filtros acima.'}
+                                    </td>
+                                </tr>
+                            ) : (
+                                orders.map((o) => {
+                                    const paused = Boolean(o.paused_at);
+                                    const sc = statusColor(o.status, paused);
+                                    return (
+                                        <tr
+                                            key={o.id}
+                                            onClick={() => handleSelectOrder(o)}
+                                            style={{ cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.15s' }}
+                                            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)'; }}
+                                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                                        >
+                                            <td style={{ padding: '14px', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                                <div style={{ fontWeight: 600, color: '#F0EDE8' }}>{o.order_number}</div>
+                                            </td>
+                                            <td style={{ padding: '14px', fontSize: '12px', whiteSpace: 'nowrap', color: '#7A7774' }}>
+                                                {o.type === 'PRONTA_ENTREGA' ? 'PE' : 'Person.'}
+                                            </td>
+                                            <td style={{ padding: '14px', minWidth: '200px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0, background: sc.dot }} />
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <StageBar status={o.status} paused={paused} />
                                                     </div>
-                                                </td>
-                                                <td className="px-3 py-3 text-xs whitespace-nowrap text-[#EDE8E0] font-medium">{fmtCurrency(o.final_amount_cents)}</td>
-                                                <td className="px-3 py-3 text-xs whitespace-nowrap text-[#888480]">{fmtShortDate(o.created_at)}</td>
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '14px', fontSize: '12px', whiteSpace: 'nowrap', color: '#F0EDE8', fontWeight: 500 }}>{fmtCurrency(o.final_amount_cents)}</td>
+                                            <td style={{ padding: '14px', fontSize: '12px', whiteSpace: 'nowrap', color: '#7A7774' }}>{fmtShortDate(o.created_at)}</td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
