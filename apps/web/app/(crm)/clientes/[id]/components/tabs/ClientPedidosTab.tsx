@@ -112,7 +112,7 @@ export default function ClientPedidosTab({ customerId, canCommercial = true }: P
     return (
         <div style={{ background: '#0A0A0B', color: '#EDE8E0', minHeight: '100%', fontFamily: 'Inter, sans-serif' }}>
             {/* Header da aba */}
-            <div className="flex items-end justify-between gap-3 px-2 pt-1 pb-4">
+            <div className="flex items-end justify-between gap-3 pt-1 pb-4">
                 <div>
                     <h2 className="text-base font-semibold text-[#EDE8E0]" style={{ fontFamily: 'Playfair Display, serif' }}>Pedidos</h2>
                     <p className="text-[11px] text-[#7A7774] mt-0.5">{orders.length} pedido(s) deste cliente</p>
@@ -121,7 +121,7 @@ export default function ClientPedidosTab({ customerId, canCommercial = true }: P
             </div>
 
             {/* Toolbar */}
-            <div className="flex items-center gap-2 px-2 pb-4 flex-wrap">
+            <div className="flex items-center gap-2 pb-4 flex-wrap">
                 <div className="relative">
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] pointer-events-none" style={{ color: '#4A4A52' }}>🔍</span>
                     <input
@@ -167,7 +167,7 @@ export default function ClientPedidosTab({ customerId, canCommercial = true }: P
             </div>
 
             {/* Table */}
-            <div className="px-2 pb-2">
+            <div className="pb-2">
                 <div className="flex flex-col rounded-xl overflow-hidden" style={{ background: '#111113', border: '1px solid rgba(255,255,255,0.07)' }}>
                     <div className="overflow-x-auto" style={{ maxHeight: 'calc(100vh - 380px)', overflowY: 'auto' }}>
                         <table className="w-full border-collapse">
