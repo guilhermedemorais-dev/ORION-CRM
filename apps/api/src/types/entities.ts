@@ -339,6 +339,9 @@ export interface Order {
     estimated_delivery_at: Date | null;
     cancelled_at: Date | null;
     cancellation_reason: string | null;
+    paused_at: Date | null;
+    paused_reason: string | null;
+    paused_by: string | null;
     created_at: Date;
     updated_at: Date;
 }

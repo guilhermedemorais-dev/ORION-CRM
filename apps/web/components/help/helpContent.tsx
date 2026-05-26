@@ -123,6 +123,15 @@ export const HELP_CONTENT: Record<HelpContext, HelpContextData> = {
     pageTitle: 'Pedidos',
     sections: [
       {
+        title: 'KPIs do topo',
+        items: [
+          { icon: <BarChart2 size={13} />, label: 'Pedidos ativos',         description: 'Pedidos em andamento, não cancelados, não finalizados e não pausados.' },
+          { icon: <AlertCircle size={13} />, label: 'Aguardando pagamento', description: 'Pedidos com pagamento pendente. Use o link Mercado Pago no drawer pra cobrar.' },
+          { icon: <Wrench size={13} />,    label: 'Em produção',            description: 'Pedidos em produção + controle de qualidade.' },
+          { icon: <Gem size={13} />,       label: 'Valor em aberto',         description: 'Soma de todos os pedidos não finalizados (não cancelados, não retirados).' },
+        ],
+      },
+      {
         title: 'Tipos de pedido',
         items: [
           { icon: <Package size={13} />,  label: 'Pronta entrega', description: 'Produtos do estoque comprados no PDV ou catálogo. Estoque baixado na hora da venda.' },
@@ -131,11 +140,30 @@ export const HELP_CONTENT: Record<HelpContext, HelpContextData> = {
         ],
       },
       {
-        title: 'Ações',
+        title: 'Lista com barra de etapa',
         items: [
-          { icon: <User size={13} />,         label: 'Ver ficha (ícone pessoa)', description: 'Abre a ficha completa do cliente vinculado ao pedido.' },
-          { icon: <FileText size={13} />,     label: 'NF-e (ícone nota)',        description: 'Solicita emissão de nota fiscal. Requer CPF/CNPJ cadastrado na ficha do cliente.' },
-          { icon: <MessageCircle size={13} />, label: 'WhatsApp (ícone mensagem)', description: 'Envia o comprovante do pedido diretamente para o WhatsApp do cliente.' },
+          { icon: <Eye size={13} />,       label: 'Clicar na linha',           description: 'Abre o drawer lateral com todos os detalhes, ações e dados do cliente.' },
+          { icon: <BarChart2 size={13} />, label: 'Barra de progresso',        description: 'Mostra em qual etapa do fluxo o pedido está (0 a 100%). Dourado = ativo, laranja = pausado, vermelho = cancelado.' },
+          { icon: <Download size={13} />,  label: 'Exportar CSV',              description: 'Baixa um CSV com todos os pedidos do filtro atual (status, valor, datas, motivos).' },
+        ],
+      },
+      {
+        title: 'Ações no drawer',
+        items: [
+          { icon: <User size={13} />,         label: 'Abrir ficha',              description: 'Abre a ficha completa do cliente vinculado ao pedido em nova aba.' },
+          { icon: <CheckCircle size={13} />,  label: 'Avançar etapa',            description: 'Move o pedido pra próxima etapa do fluxo padrão (Rascunho → Pagamento → Pago → Produção → QA → Retirado).' },
+          { icon: <MessageCircle size={13} />, label: 'Notificar WhatsApp',      description: 'Gera prévia editável e envia notificação da etapa atual pelo provedor WhatsApp configurado em Ajustes.' },
+          { icon: <Clock size={13} />,        label: 'Pausar pedido',            description: 'Pausa o pedido com motivo. O status real é preservado — ao retomar, volta exatamente de onde estava.' },
+          { icon: <AlertCircle size={13} />,  label: 'Cancelar pedido',          description: 'Cancela o pedido com motivo registrado. Ação permanente (mas auditada no histórico).' },
+          { icon: <FileText size={13} />,     label: 'NF-e',                     description: 'Solicita emissão de nota fiscal. Requer CPF/CNPJ cadastrado na ficha do cliente.' },
+          { icon: <FileText size={13} />,     label: 'Comprovantes',             description: 'Envia o comprovante por WhatsApp (gera link wa.me) ou e-mail.' },
+        ],
+      },
+      {
+        title: 'Notificação WhatsApp por etapa',
+        items: [
+          { icon: <MessageCircle size={13} />, label: 'Manual com preview',     description: 'Toda mudança de etapa pode disparar uma mensagem. O sistema gera o texto, você edita se quiser e clica Enviar.' },
+          { icon: <Shield size={13} />,        label: 'Provedor configurável',   description: 'A mensagem usa o provedor marcado como primário em Ajustes > WhatsApp (UazAPI, Evolution, Meta, etc.).' },
         ],
       },
     ],

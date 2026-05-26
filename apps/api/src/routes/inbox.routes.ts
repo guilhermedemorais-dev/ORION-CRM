@@ -28,7 +28,7 @@ import {
     type CurrentUser,
 } from '../services/inbox.service.js';
 import { subscribeInboxEvents } from '../services/inbox-events.service.js';
-import { sendTextMessage } from '../services/meta-whatsapp.service.js';
+import { sendWhatsAppMessage } from '../services/whatsapp-sender.service.js';
 
 const router = Router();
 
@@ -505,10 +505,11 @@ router.post(
             let outbound: { meta_message_id: string };
 
             try {
-                outbound = await sendTextMessage({
+                const sendResult = await sendWhatsAppMessage({
                     to: conversation.whatsapp_number,
                     text: outboundPayload.text,
                 });
+                outbound = { meta_message_id: sendResult.provider_message_id };
             } catch (error) {
                 await appendOutboundMessage({
                     conversationId: params.data.id,

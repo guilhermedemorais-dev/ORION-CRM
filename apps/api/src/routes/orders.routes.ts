@@ -8,6 +8,7 @@ import { authenticate } from '../middleware/auth.js';
 import { createAuditLog } from '../middleware/audit.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { requireRole } from '../middleware/rbac.js';
+import { sendWhatsAppMessage } from '../services/whatsapp-sender.service.js';
 import type { DeliveryType, OrderStatus, OrderType } from '../types/entities.js';
 
 const router = Router();
@@ -34,6 +35,7 @@ const listOrdersSchema = z.object({
     customer_id: z.string().uuid().optional(),
     assigned_to: z.string().uuid().optional(),
     q: z.string().trim().min(1).max(100).optional(),
+    paused: z.enum(['1', '0', 'true', 'false']).optional(),
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
 });
@@ -79,9 +81,15 @@ interface OrderListRow {
     notes: string | null;
     customer_id: string;
     customer_name: string;
+    customer_whatsapp_number: string | null;
     assigned_user_id: string;
     assigned_user_name: string;
     production_order_id: string | null;
+    paused_at: Date | null;
+    paused_reason: string | null;
+    paused_by: string | null;
+    cancelled_at: Date | null;
+    cancellation_reason: string | null;
 }
 
 interface OrderDetailRow extends OrderListRow {
@@ -150,12 +158,18 @@ function mapOrder(row: OrderListRow) {
         customer: {
             id: row.customer_id,
             name: row.customer_name,
+            whatsapp_number: row.customer_whatsapp_number,
         },
         assigned_to: {
             id: row.assigned_user_id,
             name: row.assigned_user_name,
         },
         production_order_id: row.production_order_id,
+        paused_at: row.paused_at,
+        paused_reason: row.paused_reason,
+        paused_by: row.paused_by,
+        cancelled_at: row.cancelled_at,
+        cancellation_reason: row.cancellation_reason,
     };
 }
 
@@ -174,8 +188,14 @@ async function fetchOrderRow(orderId: string): Promise<OrderDetailRow | null> {
             o.created_at,
             o.updated_at,
             o.notes,
+            o.paused_at,
+            o.paused_reason,
+            o.paused_by,
+            o.cancelled_at,
+            o.cancellation_reason,
             c.id AS customer_id,
             c.name AS customer_name,
+            c.whatsapp_number AS customer_whatsapp_number,
             u.id AS assigned_user_id,
             u.name AS assigned_user_name,
             po.id AS production_order_id,
@@ -296,6 +316,12 @@ router.get(
                 )`);
             }
 
+            if (parsed.data.paused === '1' || parsed.data.paused === 'true') {
+                filters.push(`o.paused_at IS NOT NULL`);
+            } else if (parsed.data.paused === '0' || parsed.data.paused === 'false') {
+                filters.push(`o.paused_at IS NULL`);
+            }
+
             const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
 
             const countResult = await query<{ total: string }>(
@@ -325,8 +351,14 @@ router.get(
                     o.created_at,
                     o.updated_at,
                     o.notes,
+                    o.paused_at,
+                    o.paused_reason,
+                    o.paused_by,
+                    o.cancelled_at,
+                    o.cancellation_reason,
                     c.id AS customer_id,
                     c.name AS customer_name,
+                    c.whatsapp_number AS customer_whatsapp_number,
                     u.id AS assigned_user_id,
                     u.name AS assigned_user_name,
                     po.id AS production_order_id
@@ -351,6 +383,133 @@ router.get(
                     pages: Math.max(1, Math.ceil(total / parsed.data.limit)),
                 },
             });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+// ── GET /orders/stats ─────────────────────────────────────────────────────────
+// (definido antes de /:id para não colidir com o parâmetro de rota)
+router.get(
+    '/stats',
+    authenticate,
+    requireRole(['ADMIN', 'ATENDENTE', 'FINANCEIRO', 'PRODUCAO']),
+    async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const result = await query<{
+                active: string;
+                awaiting_payment: string;
+                in_production: string;
+                paused: string;
+                open_value_cents: string;
+            }>(
+                `SELECT
+                    COUNT(*) FILTER (
+                        WHERE o.status NOT IN ('CANCELADO', 'RETIRADO')
+                          AND o.paused_at IS NULL
+                    )::text AS active,
+                    COUNT(*) FILTER (WHERE o.status = 'AGUARDANDO_PAGAMENTO')::text AS awaiting_payment,
+                    COUNT(*) FILTER (WHERE o.status IN ('EM_PRODUCAO', 'CONTROLE_QUALIDADE'))::text AS in_production,
+                    COUNT(*) FILTER (WHERE o.paused_at IS NOT NULL)::text AS paused,
+                    COALESCE(SUM(o.final_amount_cents) FILTER (
+                        WHERE o.status NOT IN ('CANCELADO', 'RETIRADO')
+                    ), 0)::text AS open_value_cents
+                 FROM orders o`
+            );
+
+            const row = result.rows[0];
+            res.json({
+                active: Number(row?.active ?? 0),
+                awaiting_payment: Number(row?.awaiting_payment ?? 0),
+                in_production: Number(row?.in_production ?? 0),
+                paused: Number(row?.paused ?? 0),
+                open_value_cents: Number(row?.open_value_cents ?? 0),
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+// ── GET /orders/export ────────────────────────────────────────────────────────
+// (definido antes de /:id para não colidir com o parâmetro de rota)
+router.get(
+    '/export',
+    authenticate,
+    requireRole(['ROOT', 'ADMIN', 'ATENDENTE', 'FINANCEIRO']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const scopedAssignedTo = getScopedAssignedTo(req);
+            const filters: string[] = [];
+            const values: unknown[] = [];
+
+            if (scopedAssignedTo) {
+                values.push(scopedAssignedTo);
+                filters.push(`o.assigned_to = $${values.length}`);
+            }
+
+            const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
+
+            const result = await query<{
+                order_number: string;
+                type: OrderType;
+                status: OrderStatus;
+                customer_name: string;
+                assigned_user_name: string;
+                final_amount_cents: number;
+                delivery_type: DeliveryType;
+                paused_at: Date | null;
+                cancelled_at: Date | null;
+                created_at: Date;
+            }>(
+                `SELECT
+                    o.order_number,
+                    o.type,
+                    o.status,
+                    c.name AS customer_name,
+                    u.name AS assigned_user_name,
+                    o.final_amount_cents,
+                    o.delivery_type,
+                    o.paused_at,
+                    o.cancelled_at,
+                    o.created_at
+                 FROM orders o
+                 INNER JOIN customers c ON c.id = o.customer_id
+                 INNER JOIN users u ON u.id = o.assigned_to
+                 ${whereClause}
+                 ORDER BY o.created_at DESC`,
+                values
+            );
+
+            const escape = (v: unknown): string => {
+                const s = v === null || v === undefined ? '' : String(v);
+                return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+            };
+            const fmtBrl = (c: number) =>
+                new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(c / 100);
+            const fmtIso = (d: Date | null) => (d ? new Date(d).toISOString() : '');
+
+            const header = 'Pedido,Tipo,Status,Cliente,Responsavel,Valor,Entrega,Pausado em,Cancelado em,Criado em\n';
+            const lines = result.rows.map((r) =>
+                [
+                    escape(r.order_number),
+                    escape(r.type),
+                    escape(r.status),
+                    escape(r.customer_name),
+                    escape(r.assigned_user_name),
+                    escape(fmtBrl(r.final_amount_cents)),
+                    escape(r.delivery_type),
+                    escape(fmtIso(r.paused_at)),
+                    escape(fmtIso(r.cancelled_at)),
+                    escape(fmtIso(r.created_at)),
+                ].join(',')
+            );
+
+            const csv = header + lines.join('\n') + '\n';
+            res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+            res.setHeader('Content-Disposition', 'attachment; filename="pedidos.csv"');
+            res.send(csv);
         } catch (error) {
             next(error);
         }
@@ -805,6 +964,375 @@ router.patch(
                     }
                     : null,
                 order_items: items,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+// ── POST /orders/:id/pause ────────────────────────────────────────────────────
+const pauseOrderSchema = z.object({
+    reason: z.string().trim().min(2).max(500),
+});
+
+router.post(
+    '/:id/pause',
+    authenticate,
+    requireRole(['ROOT', 'ADMIN', 'ATENDENTE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const orderId = String(req.params['id'] ?? '');
+            const parsed = pauseOrderSchema.safeParse(req.body);
+            if (!parsed.success) {
+                next(AppError.badRequest('Informe o motivo da pausa.'));
+                return;
+            }
+
+            const order = await fetchOrderRow(orderId);
+            if (!order) {
+                next(AppError.notFound('Pedido não encontrado.'));
+                return;
+            }
+
+            assertCanAccessOrder(req, order.assigned_user_id);
+
+            if (order.status === 'CANCELADO' || order.status === 'RETIRADO') {
+                next(AppError.conflict('ORDER_FINALIZED', 'Pedidos finalizados não podem ser pausados.'));
+                return;
+            }
+
+            if (order.paused_at) {
+                next(AppError.conflict('ORDER_ALREADY_PAUSED', 'Este pedido já está pausado.'));
+                return;
+            }
+
+            await query(
+                `UPDATE orders
+                 SET paused_at = NOW(), paused_reason = $2, paused_by = $3, updated_at = NOW()
+                 WHERE id = $1`,
+                [order.id, parsed.data.reason, req.user!.id]
+            );
+
+            await createAuditLog({
+                userId: req.user!.id,
+                action: 'PAUSE_ORDER',
+                entityType: 'orders',
+                entityId: order.id,
+                oldValue: { paused_at: null },
+                newValue: { paused_at: new Date().toISOString(), paused_reason: parsed.data.reason },
+                req,
+            });
+
+            const updated = await fetchOrderRow(order.id);
+            const items = await fetchOrderItems(order.id);
+            res.json({
+                ...mapOrder(updated as OrderDetailRow),
+                custom_details: updated?.custom_detail_id
+                    ? {
+                        id: updated.custom_detail_id,
+                        design_description: updated.design_description,
+                        metal_type: updated.metal_type,
+                        production_deadline: updated.production_deadline,
+                        approved_at: updated.approved_at,
+                        approved_by_customer: updated.approved_by_customer,
+                    }
+                    : null,
+                order_items: items,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+// ── POST /orders/:id/resume ───────────────────────────────────────────────────
+router.post(
+    '/:id/resume',
+    authenticate,
+    requireRole(['ROOT', 'ADMIN', 'ATENDENTE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const orderId = String(req.params['id'] ?? '');
+            const order = await fetchOrderRow(orderId);
+            if (!order) {
+                next(AppError.notFound('Pedido não encontrado.'));
+                return;
+            }
+
+            assertCanAccessOrder(req, order.assigned_user_id);
+
+            if (!order.paused_at) {
+                next(AppError.conflict('ORDER_NOT_PAUSED', 'Este pedido não está pausado.'));
+                return;
+            }
+
+            await query(
+                `UPDATE orders
+                 SET paused_at = NULL, paused_reason = NULL, paused_by = NULL, updated_at = NOW()
+                 WHERE id = $1`,
+                [order.id]
+            );
+
+            await createAuditLog({
+                userId: req.user!.id,
+                action: 'RESUME_ORDER',
+                entityType: 'orders',
+                entityId: order.id,
+                oldValue: { paused_at: order.paused_at, paused_reason: order.paused_reason },
+                newValue: { paused_at: null },
+                req,
+            });
+
+            const updated = await fetchOrderRow(order.id);
+            const items = await fetchOrderItems(order.id);
+            res.json({
+                ...mapOrder(updated as OrderDetailRow),
+                custom_details: updated?.custom_detail_id
+                    ? {
+                        id: updated.custom_detail_id,
+                        design_description: updated.design_description,
+                        metal_type: updated.metal_type,
+                        production_deadline: updated.production_deadline,
+                        approved_at: updated.approved_at,
+                        approved_by_customer: updated.approved_by_customer,
+                    }
+                    : null,
+                order_items: items,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+// ── POST /orders/:id/cancel ───────────────────────────────────────────────────
+const cancelOrderSchema = z.object({
+    reason: z.string().trim().min(2).max(500),
+});
+
+router.post(
+    '/:id/cancel',
+    authenticate,
+    requireRole(['ROOT', 'ADMIN', 'ATENDENTE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const orderId = String(req.params['id'] ?? '');
+            const parsed = cancelOrderSchema.safeParse(req.body);
+            if (!parsed.success) {
+                next(AppError.badRequest('Informe o motivo do cancelamento.'));
+                return;
+            }
+
+            const order = await fetchOrderRow(orderId);
+            if (!order) {
+                next(AppError.notFound('Pedido não encontrado.'));
+                return;
+            }
+
+            assertCanAccessOrder(req, order.assigned_user_id);
+
+            if (order.status === 'CANCELADO') {
+                next(AppError.conflict('ORDER_ALREADY_CANCELLED', 'Este pedido já está cancelado.'));
+                return;
+            }
+
+            if (order.status === 'RETIRADO') {
+                next(AppError.conflict('ORDER_FINALIZED', 'Pedidos retirados não podem ser cancelados.'));
+                return;
+            }
+
+            await query(
+                `UPDATE orders
+                 SET status = 'CANCELADO',
+                     cancelled_at = NOW(),
+                     cancellation_reason = $2,
+                     paused_at = NULL,
+                     paused_reason = NULL,
+                     paused_by = NULL,
+                     updated_at = NOW()
+                 WHERE id = $1`,
+                [order.id, parsed.data.reason]
+            );
+
+            await createAuditLog({
+                userId: req.user!.id,
+                action: 'CANCEL_ORDER',
+                entityType: 'orders',
+                entityId: order.id,
+                oldValue: { status: order.status },
+                newValue: { status: 'CANCELADO', cancellation_reason: parsed.data.reason },
+                req,
+            });
+
+            const updated = await fetchOrderRow(order.id);
+            const items = await fetchOrderItems(order.id);
+            res.json({
+                ...mapOrder(updated as OrderDetailRow),
+                custom_details: updated?.custom_detail_id
+                    ? {
+                        id: updated.custom_detail_id,
+                        design_description: updated.design_description,
+                        metal_type: updated.metal_type,
+                        production_deadline: updated.production_deadline,
+                        approved_at: updated.approved_at,
+                        approved_by_customer: updated.approved_by_customer,
+                    }
+                    : null,
+                order_items: items,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+// ── POST /orders/:id/notify-whatsapp ──────────────────────────────────────────
+// Preview + envio manual de notificação de etapa para o cliente.
+const notifyWhatsAppSchema = z.object({
+    message: z.string().trim().min(2).max(3000).optional(),
+});
+
+function buildStageMessage(params: {
+    customerFirstName: string;
+    orderNumber: string;
+    status: OrderStatus;
+    paused: boolean;
+    storeName: string;
+}): string {
+    const { customerFirstName, orderNumber, status, paused, storeName } = params;
+
+    if (paused) {
+        return `Olá ${customerFirstName}! Seu pedido ${orderNumber} na ${storeName} foi temporariamente pausado. Entraremos em contato em breve com mais informações.`;
+    }
+
+    const labelByStatus: Record<OrderStatus, string> = {
+        RASCUNHO: 'em rascunho',
+        AGUARDANDO_PAGAMENTO: 'aguardando pagamento',
+        PAGO: 'foi pago e em breve entrará em separação',
+        SEPARANDO: 'em separação',
+        ENVIADO: 'a caminho',
+        RETIRADO: 'pronto e retirado',
+        CANCELADO: 'cancelado',
+        AGUARDANDO_APROVACAO_DESIGN: 'aguardando sua aprovação de design',
+        APROVADO: 'aprovado e seguindo para produção',
+        EM_PRODUCAO: 'em produção',
+        CONTROLE_QUALIDADE: 'em controle de qualidade',
+    };
+
+    return `Olá ${customerFirstName}! Seu pedido ${orderNumber} na ${storeName} está ${labelByStatus[status]}. Qualquer dúvida estamos à disposição.`;
+}
+
+router.get(
+    '/:id/notify-whatsapp/preview',
+    authenticate,
+    requireRole(['ROOT', 'ADMIN', 'ATENDENTE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const orderId = String(req.params['id'] ?? '');
+            const order = await fetchOrderRow(orderId);
+            if (!order) {
+                next(AppError.notFound('Pedido não encontrado.'));
+                return;
+            }
+
+            assertCanAccessOrder(req, order.assigned_user_id);
+
+            if (!order.customer_whatsapp_number) {
+                next(new AppError(422, 'NOTIFY_NO_PHONE', 'Cliente sem WhatsApp cadastrado.'));
+                return;
+            }
+
+            const settingsRes = await query<{ company_name: string }>(
+                `SELECT company_name FROM settings LIMIT 1`
+            );
+            const storeName = settingsRes.rows[0]?.company_name ?? 'nossa loja';
+            const firstName = (order.customer_name ?? '').split(' ')[0] || 'cliente';
+            const message = buildStageMessage({
+                customerFirstName: firstName,
+                orderNumber: order.order_number,
+                status: order.status,
+                paused: order.paused_at !== null,
+                storeName,
+            });
+
+            res.json({
+                whatsapp_number: order.customer_whatsapp_number,
+                message,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+router.post(
+    '/:id/notify-whatsapp',
+    authenticate,
+    requireRole(['ROOT', 'ADMIN', 'ATENDENTE']),
+    rateLimit({ windowMs: 60 * 1000, max: 30, name: 'orders-notify' }),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const orderId = String(req.params['id'] ?? '');
+            const parsed = notifyWhatsAppSchema.safeParse(req.body ?? {});
+            if (!parsed.success) {
+                next(AppError.badRequest('Mensagem inválida.'));
+                return;
+            }
+
+            const order = await fetchOrderRow(orderId);
+            if (!order) {
+                next(AppError.notFound('Pedido não encontrado.'));
+                return;
+            }
+
+            assertCanAccessOrder(req, order.assigned_user_id);
+
+            if (!order.customer_whatsapp_number) {
+                next(new AppError(422, 'NOTIFY_NO_PHONE', 'Cliente sem WhatsApp cadastrado.'));
+                return;
+            }
+
+            let messageText = parsed.data.message;
+            if (!messageText) {
+                const settingsRes = await query<{ company_name: string }>(
+                    `SELECT company_name FROM settings LIMIT 1`
+                );
+                const storeName = settingsRes.rows[0]?.company_name ?? 'nossa loja';
+                const firstName = (order.customer_name ?? '').split(' ')[0] || 'cliente';
+                messageText = buildStageMessage({
+                    customerFirstName: firstName,
+                    orderNumber: order.order_number,
+                    status: order.status,
+                    paused: order.paused_at !== null,
+                    storeName,
+                });
+            }
+
+            const result = await sendWhatsAppMessage({
+                to: order.customer_whatsapp_number,
+                text: messageText,
+            });
+
+            await createAuditLog({
+                userId: req.user!.id,
+                action: 'NOTIFY_WHATSAPP',
+                entityType: 'orders',
+                entityId: order.id,
+                oldValue: null,
+                newValue: {
+                    status: order.status,
+                    message_length: messageText.length,
+                    provider_type: result.provider_type,
+                    provider_id: result.provider_id,
+                },
+                req,
+            });
+
+            res.json({
+                sent: true,
+                provider_message_id: result.provider_message_id,
+                provider_type: result.provider_type,
             });
         } catch (error) {
             next(error);

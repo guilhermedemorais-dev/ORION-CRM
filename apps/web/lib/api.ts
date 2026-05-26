@@ -183,9 +183,14 @@ export interface OrderRecord {
     created_at: string;
     updated_at: string;
     notes: string | null;
-    customer: { id: string; name: string };
+    customer: { id: string; name: string; whatsapp_number?: string | null };
     assigned_to: { id: string; name: string };
     production_order_id: string | null;
+    paused_at?: string | null;
+    paused_reason?: string | null;
+    paused_by?: string | null;
+    cancelled_at?: string | null;
+    cancellation_reason?: string | null;
     custom_details?: {
         id: string;
         design_description: string | null;
