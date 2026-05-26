@@ -110,7 +110,7 @@ export default function ClientPedidosTab({ customerId, canCommercial = true }: P
     };
 
     return (
-        <div style={{ background: '#0A0A0B', color: '#EDE8E0', minHeight: '100%', fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ background: '#0A0A0B', color: '#EDE8E0', minHeight: '100%', fontFamily: 'Inter, sans-serif', margin: '-18px -20px', padding: '14px 16px' }}>
             {/* Header da aba */}
             <div className="flex items-end justify-between gap-3 pt-1 pb-4">
                 <div>
