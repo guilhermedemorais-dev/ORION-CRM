@@ -933,6 +933,56 @@ body{font-family:var(--font-body);background:var(--bg-void);color:var(--text-pri
       </div>
     </div>
 
+    <div class="spec-label">Error Dialog (padrão obrigatório do sistema)</div>
+    <div class="spec-preview center" style="min-height:340px;background:rgba(0,0,0,0.5)">
+      <div class="dialog-shell" style="max-width:480px">
+        <div class="dialog-header">
+          <div class="dialog-title" style="display:flex;align-items:center;gap:8px;color:var(--red)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Não foi possível mover este pedido
+          </div>
+          <div class="dialog-close"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+        </div>
+        <div class="dialog-body" style="font-size:13px;color:var(--text-secondary);line-height:1.7">
+          <p style="margin-bottom:12px">Algumas regras configuradas no fluxo impedem essa movimentação:</p>
+          <ul style="list-style:none;padding:0;margin:0">
+            <li style="padding:8px 12px;background:rgba(224,82,82,0.08);border-left:2px solid var(--red);border-radius:4px;margin-bottom:6px;font-size:12px">Pagamento atual: <strong>Não pago</strong>. Esta etapa exige pelo menos pagamento parcial.</li>
+            <li style="padding:8px 12px;background:rgba(224,82,82,0.08);border-left:2px solid var(--red);border-radius:4px;font-size:12px">O cliente ainda não aprovou o design.</li>
+          </ul>
+          <div style="margin-top:14px;border-top:1px solid var(--border-low);padding-top:10px">
+            <button style="background:none;border:none;color:var(--text-secondary);font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Detalhes técnicos
+            </button>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn btn-primary">Entendi</button>
+        </div>
+      </div>
+    </div>
+    <div class="spec-code"><span class="c">// PADRÃO OBRIGATÓRIO PARA ERROS NO SISTEMA INTEIRO</span>
+<span class="c">// </span>
+<span class="c">// Header: ícone de alerta vermelho + título curto e claro (PT-BR)</span>
+<span class="c">// Body:   parágrafo amigável + lista de violations específicas</span>
+<span class="c">// Cada violation: borda esquerda vermelha, fundo rgba(224,82,82,0.08)</span>
+<span class="c">// </span>
+<span class="c">// Botão "+ Detalhes técnicos" colapsável (default fechado)</span>
+<span class="c">//   Quando expandido: mostra error code, requestId, stack relevante</span>
+<span class="c">//   font-family: var(--font-mono) · font-size: 10px</span>
+<span class="c">// </span>
+<span class="c">// Footer: 1 botão primário "Entendi" (foco visual)</span>
+<span class="c">// </span>
+<span class="c">// QUANDO USAR:</span>
+<span class="c">// - Erros de validação que bloqueiam ação do usuário</span>
+<span class="c">// - Regras de negócio violadas (ex: fluxo)</span>
+<span class="c">// - Falhas em integrações externas (Meta, MP, etc.)</span>
+<span class="c">// </span>
+<span class="c">// QUANDO NÃO USAR:</span>
+<span class="c">// - Confirmações de ação (use Dialog padrão)</span>
+<span class="c">// - Erro de campo único em form (use input-error-msg inline)</span>
+<span class="c">// - Mensagem rápida não-bloqueante (use toast)</span></div>
+
     <div class="spec-label">Dropdown</div>
     <div class="spec-preview center">
       <div class="dropdown">

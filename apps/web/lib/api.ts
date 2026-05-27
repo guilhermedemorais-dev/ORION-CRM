@@ -191,6 +191,9 @@ export interface OrderRecord {
     paused_by?: string | null;
     cancelled_at?: string | null;
     cancellation_reason?: string | null;
+    payment_status?: 'nao_pago' | 'parcial' | 'pago' | 'estornado' | 'isento';
+    flow_id?: string | null;
+    current_stage_id?: string | null;
     custom_details?: {
         id: string;
         design_description: string | null;

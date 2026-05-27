@@ -10,6 +10,7 @@ import {
 } from '@/app/(crm)/pedidos/actions';
 import { useConfirm } from '@/components/system/ConfirmDialog';
 import { useToast } from '@/components/system/ToastProvider';
+import { ErrorModal, type ErrorViolation } from '@/components/system/ErrorModal';
 import type { OrderRecord } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -72,6 +73,31 @@ export function progressPercent(status: OrderStatus): number {
     if (status === 'CANCELADO') return 0;
     const total = STAGE_ORDER.length - 1;
     return Math.min(100, Math.round((stageProgress(status) / total) * 100));
+}
+
+export type OrderPaymentStatus = 'nao_pago' | 'parcial' | 'pago' | 'estornado' | 'isento';
+
+export const PAYMENT_STATUS_LABEL: Record<OrderPaymentStatus, string> = {
+    nao_pago: 'Não pago',
+    parcial: 'Sinal pago',
+    pago: 'Pago',
+    estornado: 'Estornado',
+    isento: 'Isento',
+};
+
+export function paymentStatusColor(status: OrderPaymentStatus): { bg: string; border: string; text: string } {
+    switch (status) {
+        case 'pago':
+        case 'isento':
+            return { bg: 'rgba(76,175,130,0.12)', border: 'rgba(76,175,130,0.30)', text: '#4CAF82' };
+        case 'parcial':
+            return { bg: 'rgba(240,160,64,0.12)', border: 'rgba(240,160,64,0.30)', text: '#F0A040' };
+        case 'estornado':
+            return { bg: 'rgba(224,82,82,0.12)', border: 'rgba(224,82,82,0.30)', text: '#E05252' };
+        case 'nao_pago':
+        default:
+            return { bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.10)', text: '#888480' };
+    }
 }
 
 export function statusColor(status: OrderStatus, paused: boolean): { dot: string; bg: string; text: string } {
@@ -303,6 +329,13 @@ export function OrderDrawer({
     const [showWhatsApp, setShowWhatsApp] = useState(false);
     const [showPause, setShowPause] = useState(false);
     const [showCancel, setShowCancel] = useState(false);
+    const [ruleError, setRuleError] = useState<null | {
+        violations: ErrorViolation[];
+        canOverride: boolean;
+        targetStageId?: string;
+        targetLabel: string;
+    }>(null);
+    const [overrideReason, setOverrideReason] = useState<string | null>(null);
 
     useEffect(() => {
         const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showWhatsApp && !showPause && !showCancel) onClose(); };
@@ -413,6 +446,22 @@ export function OrderDrawer({
 
                     <div className="rounded-xl border border-white/[0.07] bg-[#111113] p-4">
                         <StageBar status={order.status} paused={paused} />
+                        {order.payment_status && (() => {
+                            const ps = order.payment_status as OrderPaymentStatus;
+                            const c = paymentStatusColor(ps);
+                            return (
+                                <div className="mt-3 flex items-center justify-between text-[11px]">
+                                    <span className="text-[#4A4A52] uppercase tracking-[0.6px]">Pagamento</span>
+                                    <span
+                                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-semibold"
+                                        style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.text }}
+                                    >
+                                        <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: c.text }} />
+                                        {PAYMENT_STATUS_LABEL[ps]}
+                                    </span>
+                                </div>
+                            );
+                        })()}
                         {paused && order.paused_reason && (
                             <div className="mt-3 text-[11px] text-[#F0A040]">Pausado: {order.paused_reason}</div>
                         )}
@@ -538,6 +587,48 @@ export function OrderDrawer({
                     variant="danger"
                     onCancel={() => setShowCancel(false)}
                     onConfirm={handleCancel}
+                />
+            )}
+
+            {ruleError && !overrideReason && (
+                <ErrorModal
+                    title={`Não foi possível mover para ${ruleError.targetLabel}`}
+                    description="Algumas regras configuradas no fluxo impedem essa movimentação:"
+                    violations={ruleError.violations}
+                    onClose={() => setRuleError(null)}
+                    secondaryAction={ruleError.canOverride ? {
+                        label: '🛡 Forçar movimentação',
+                        variant: 'danger',
+                        onClick: () => setOverrideReason(''),
+                    } : undefined}
+                />
+            )}
+
+            {ruleError && overrideReason !== null && (
+                <ReasonModal
+                    title="Forçar movimentação"
+                    description="Você está ignorando as regras de fluxo. Esta ação será registrada no histórico de auditoria. Informe um motivo claro."
+                    confirmLabel="Forçar agora"
+                    variant="danger"
+                    onCancel={() => { setOverrideReason(null); }}
+                    onConfirm={async (reason) => {
+                        const stageId = ruleError.targetStageId;
+                        if (!stageId) return;
+                        setBusy(true);
+                        const { ok, data } = await callJson(`/api/internal/orders/${order.id}/stage`, {
+                            method: 'PATCH',
+                            body: JSON.stringify({ stage_id: stageId, override: true, override_reason: reason }),
+                        });
+                        setBusy(false);
+                        if (!ok) {
+                            toast.push('error', 'Falha ao forçar movimentação', String(data.message ?? ''));
+                            return;
+                        }
+                        toast.push('success', 'Movimentação forçada', 'Registrado no audit log.');
+                        setOverrideReason(null);
+                        setRuleError(null);
+                        onChanged();
+                    }}
                 />
             )}
         </>

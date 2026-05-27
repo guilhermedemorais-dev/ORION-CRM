@@ -9,6 +9,7 @@ import { createAuditLog } from '../middleware/audit.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { requireRole } from '../middleware/rbac.js';
 import { sendWhatsAppMessage } from '../services/whatsapp-sender.service.js';
+import { checkFlowRules } from '../services/flow-rules.service.js';
 import type { DeliveryType, OrderStatus, OrderType } from '../types/entities.js';
 
 const router = Router();
@@ -90,6 +91,9 @@ interface OrderListRow {
     paused_by: string | null;
     cancelled_at: Date | null;
     cancellation_reason: string | null;
+    payment_status: 'nao_pago' | 'parcial' | 'pago' | 'estornado' | 'isento';
+    flow_id: string | null;
+    current_stage_id: string | null;
 }
 
 interface OrderDetailRow extends OrderListRow {
@@ -170,6 +174,9 @@ function mapOrder(row: OrderListRow) {
         paused_by: row.paused_by,
         cancelled_at: row.cancelled_at,
         cancellation_reason: row.cancellation_reason,
+        payment_status: row.payment_status,
+        flow_id: row.flow_id,
+        current_stage_id: row.current_stage_id,
     };
 }
 
@@ -193,6 +200,9 @@ async function fetchOrderRow(orderId: string): Promise<OrderDetailRow | null> {
             o.paused_by,
             o.cancelled_at,
             o.cancellation_reason,
+            o.payment_status,
+            o.flow_id,
+            o.current_stage_id,
             c.id AS customer_id,
             c.name AS customer_name,
             c.whatsapp_number AS customer_whatsapp_number,
@@ -356,6 +366,9 @@ router.get(
                     o.paused_by,
                     o.cancelled_at,
                     o.cancellation_reason,
+            o.payment_status,
+            o.flow_id,
+            o.current_stage_id,
                     c.id AS customer_id,
                     c.name AS customer_name,
                     c.whatsapp_number AS customer_whatsapp_number,
@@ -1337,6 +1350,99 @@ router.post(
         } catch (error) {
             next(error);
         }
+    }
+);
+
+// ── PATCH /orders/:id/stage ───────────────────────────────────────────────────
+// Move o pedido pra uma etapa específica do pipeline do fluxo associado.
+// Aplica validação de regras (payment_rule etc.) — pode ser ignorada com override.
+const moveStageSchema = z.object({
+    stage_id: z.string().uuid(),
+    override: z.boolean().optional(),
+    override_reason: z.string().trim().min(2).max(500).optional(),
+});
+
+router.patch(
+    '/:id/stage',
+    authenticate,
+    requireRole(['ROOT', 'ADMIN', 'ATENDENTE']),
+    rateLimit({ windowMs: 60 * 1000, max: 60, name: 'orders-stage' }),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const orderId = String(req.params['id'] ?? '');
+            const parsed = moveStageSchema.safeParse(req.body);
+            if (!parsed.success) {
+                next(AppError.badRequest('Dados inválidos.', parsed.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))));
+                return;
+            }
+            const { stage_id, override, override_reason } = parsed.data;
+
+            const order = await fetchOrderRow(orderId);
+            if (!order) { next(AppError.notFound('Pedido não encontrado.')); return; }
+            assertCanAccessOrder(req, order.assigned_user_id);
+
+            // Verifica regras do fluxo
+            const ruleCheck = await checkFlowRules({ orderId, targetStageId: stage_id });
+
+            if (!ruleCheck.ok) {
+                const canOverride = req.user?.role === 'ROOT' || req.user?.role === 'ADMIN';
+                if (!override) {
+                    res.status(409).json({
+                        error: 'FLOW_RULES_VIOLATED',
+                        message: 'Não foi possível mover este pedido para esta etapa.',
+                        violations: ruleCheck.violations,
+                        can_override: canOverride,
+                        requestId: req.requestId,
+                    });
+                    return;
+                }
+                if (!canOverride) {
+                    next(AppError.forbidden('Apenas ROOT ou ADMIN podem forçar movimentação.'));
+                    return;
+                }
+                if (!override_reason || override_reason.trim().length < 2) {
+                    next(AppError.badRequest('Override exige um motivo (mínimo 2 caracteres).'));
+                    return;
+                }
+            }
+
+            await query(
+                `UPDATE orders SET current_stage_id = $2, updated_at = NOW() WHERE id = $1`,
+                [orderId, stage_id]
+            );
+
+            await createAuditLog({
+                userId: req.user!.id,
+                action: override ? 'OVERRIDE_STAGE_MOVE' : 'MOVE_STAGE',
+                entityType: 'orders',
+                entityId: orderId,
+                oldValue: { current_stage_id: order.current_stage_id },
+                newValue: {
+                    current_stage_id: stage_id,
+                    overridden_violations: override ? ruleCheck.violations : undefined,
+                    override_reason: override ? override_reason : undefined,
+                },
+                req,
+            });
+
+            const updated = await fetchOrderRow(orderId);
+            const items = await fetchOrderItems(orderId);
+            res.json({
+                ...mapOrder(updated as OrderDetailRow),
+                custom_details: updated?.custom_detail_id
+                    ? {
+                        id: updated.custom_detail_id,
+                        design_description: updated.design_description,
+                        metal_type: updated.metal_type,
+                        production_deadline: updated.production_deadline,
+                        approved_at: updated.approved_at,
+                        approved_by_customer: updated.approved_by_customer,
+                    }
+                    : null,
+                order_items: items,
+                rule_check: ruleCheck,
+            });
+        } catch (err) { next(err); }
     }
 );
 

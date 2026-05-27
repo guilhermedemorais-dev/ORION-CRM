@@ -57,6 +57,7 @@ import integrationProvidersRoutes from './routes/integration-providers.routes.js
 import appointmentsRoutes from './routes/appointments.routes.js';
 import ticketsRoutes from './routes/tickets.routes.js';
 import systemErrorsRoutes from './routes/system-errors.routes.js';
+import flowsRoutes from './routes/flows.routes.js';
 import { captureSystemError } from './services/systemErrors.service.js';
 import { initializeWhatsAppWebhookWorker, shutdownWhatsAppWebhookWorker } from './workers/whatsappWebhook.worker.js';
 import { initializeAppointmentReminderWorker, shutdownAppointmentReminderWorker } from './workers/appointmentReminder.worker.js';
@@ -151,6 +152,7 @@ app.use('/api/v1/org', settingsRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/appointments', appointmentsRoutes);
 app.use('/api/v1/tickets', ticketsRoutes);
+app.use('/api/v1/flows', flowsRoutes);
 app.use('/api/v1/system/errors', systemErrorsRoutes);
 app.use('/api/v1/system', systemRoutes);
 app.use('/api/v1/webhooks/whatsapp', whatsappRoutes);

@@ -12,6 +12,7 @@ const validTabs = new Set<AjustesTab>([
     'integracoes',
     'ia-copiloto',
     'agenda',
+    'fluxo',
     'banco-dados',
 ]);
 
