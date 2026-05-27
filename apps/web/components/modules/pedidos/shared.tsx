@@ -336,6 +336,23 @@ export function OrderDrawer({
         targetLabel: string;
     }>(null);
     const [overrideReason, setOverrideReason] = useState<string | null>(null);
+    const [flowStages, setFlowStages] = useState<Array<{ id: string; name: string; position: number; color: string }>>([]);
+
+    // Carrega etapas do pipeline associado ao fluxo (se houver)
+    useEffect(() => {
+        if (!order.flow_id) { setFlowStages([]); return; }
+        let cancelled = false;
+        fetch(`/api/internal/flows/${order.flow_id}`, { cache: 'no-store' })
+            .then(res => res.ok ? res.json() : null)
+            .then((flow: { rules?: Array<{ stage_id: string; stage_name: string; stage_position: number; stage_color: string }> } | null) => {
+                if (cancelled || !flow?.rules) return;
+                setFlowStages(flow.rules.map(r => ({
+                    id: r.stage_id, name: r.stage_name, position: r.stage_position, color: r.stage_color,
+                })).sort((a, b) => a.position - b.position));
+            })
+            .catch(() => { /* silencioso, cai no caminho legado */ });
+        return () => { cancelled = true; };
+    }, [order.flow_id]);
 
     useEffect(() => {
         const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showWhatsApp && !showPause && !showCancel) onClose(); };
@@ -381,6 +398,59 @@ export function OrderDrawer({
         if (!ok) { toast.push('error', 'Falha ao cancelar', String(data.message ?? '')); return; }
         toast.push('success', 'Pedido cancelado');
         onChanged();
+    };
+
+    // Move pra etapa específica do fluxo (com validação de regras)
+    const moveToFlowStage = async (stageId: string, stageName: string) => {
+        setBusy(true);
+        const { ok, status, data } = await callJson(`/api/internal/orders/${order.id}/stage`, {
+            method: 'PATCH',
+            body: JSON.stringify({ stage_id: stageId }),
+        });
+        setBusy(false);
+
+        if (ok) {
+            toast.push('success', 'Etapa atualizada');
+            onChanged();
+            return;
+        }
+
+        // 409 com violations → abre ErrorModal com opção de override
+        if (status === 409 && Array.isArray((data as { violations?: unknown }).violations)) {
+            setRuleError({
+                violations: (data as { violations: ErrorViolation[] }).violations,
+                canOverride: Boolean((data as { can_override?: boolean }).can_override),
+                targetStageId: stageId,
+                targetLabel: stageName,
+            });
+            return;
+        }
+
+        toast.push('error', 'Falha ao mover etapa', String((data as { message?: string }).message ?? ''));
+    };
+
+    // Avança pra próxima etapa do fluxo
+    const handleAdvanceFlowStage = async () => {
+        if (flowStages.length === 0) return;
+        const currentIdx = flowStages.findIndex(s => s.id === order.current_stage_id);
+        const nextIdx = currentIdx >= 0 ? currentIdx + 1 : 0;
+        if (nextIdx >= flowStages.length) {
+            toast.push('warning', 'Sem próxima etapa', 'Pedido já está na última etapa do fluxo.');
+            return;
+        }
+        const next = flowStages[nextIdx]!;
+        const ok = await confirm({ title: 'Avançar etapa?', description: `Mover para "${next.name}".`, confirmLabel: 'Avançar' });
+        if (!ok) return;
+        await moveToFlowStage(next.id, next.name);
+    };
+
+    const handleFlowStageChange = async (stageId: string) => {
+        if (stageId === order.current_stage_id) return;
+        const target = flowStages.find(s => s.id === stageId);
+        if (!target) return;
+        const ok = await confirm({ title: 'Mudar etapa?', description: `Mover para "${target.name}".`, confirmLabel: 'Confirmar' });
+        if (!ok) return;
+        await moveToFlowStage(target.id, target.name);
     };
 
     const handleAdvanceStage = async () => {
@@ -472,7 +542,13 @@ export function OrderDrawer({
 
                     <div className="grid grid-cols-2 gap-2">
                         {!finalized && !paused && (
-                            <button onClick={handleAdvanceStage} className={btnGold} disabled={busy}>Avançar etapa</button>
+                            <button
+                                onClick={order.flow_id ? handleAdvanceFlowStage : handleAdvanceStage}
+                                className={btnGold}
+                                disabled={busy || (Boolean(order.flow_id) && flowStages.length === 0)}
+                            >
+                                Avançar etapa
+                            </button>
                         )}
                         {!finalized && !paused && (
                             <button onClick={() => setShowWhatsApp(true)} className={btnGhost} disabled={busy || !order.customer.whatsapp_number}>
@@ -492,16 +568,33 @@ export function OrderDrawer({
 
                     <div>
                         <label className={lbl}>Mudar etapa manualmente</label>
-                        <select
-                            value={order.status}
-                            onChange={(e) => handleStatusChange(e.target.value as OrderStatus)}
-                            disabled={finalized || busy}
-                            className={`${inp} ${inpH}`}
-                        >
-                            {(Object.keys(STAGE_LABEL) as OrderStatus[]).map((s) => (
-                                <option key={s} value={s}>{STAGE_LABEL[s]}</option>
-                            ))}
-                        </select>
+                        {order.flow_id && flowStages.length > 0 ? (
+                            <select
+                                value={order.current_stage_id ?? ''}
+                                onChange={(e) => void handleFlowStageChange(e.target.value)}
+                                disabled={finalized || paused || busy}
+                                className={`${inp} ${inpH}`}
+                            >
+                                {!order.current_stage_id && <option value="">— Selecione uma etapa —</option>}
+                                {flowStages.map((s) => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
+                        ) : (
+                            <select
+                                value={order.status}
+                                onChange={(e) => handleStatusChange(e.target.value as OrderStatus)}
+                                disabled={finalized || busy}
+                                className={`${inp} ${inpH}`}
+                            >
+                                {(Object.keys(STAGE_LABEL) as OrderStatus[]).map((s) => (
+                                    <option key={s} value={s}>{STAGE_LABEL[s]}</option>
+                                ))}
+                            </select>
+                        )}
+                        {order.flow_id && flowStages.length > 0 && (
+                            <p className="text-[10px] text-[#555] mt-1">Etapas do fluxo configurado em Ajustes &gt; Fluxo.</p>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 text-xs">

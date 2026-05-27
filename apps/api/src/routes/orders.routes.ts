@@ -703,6 +703,25 @@ router.post(
                     );
                 }
 
+                // Auto-associa ao fluxo ativo do módulo Pedidos (se houver),
+                // posicionando na primeira etapa do pipeline associado.
+                const activeFlowRes = await client.query<{ id: string; pipeline_id: string; first_stage_id: string | null }>(
+                    `SELECT
+                        f.id,
+                        f.pipeline_id,
+                        (SELECT s.id FROM pipeline_stages s WHERE s.pipeline_id = f.pipeline_id ORDER BY s.position ASC LIMIT 1) AS first_stage_id
+                     FROM flows f
+                     WHERE f.active_module = 'pedidos'
+                     LIMIT 1`
+                );
+                const activeFlow = activeFlowRes.rows[0];
+                if (activeFlow) {
+                    await client.query(
+                        `UPDATE orders SET flow_id = $2, current_stage_id = $3, updated_at = NOW() WHERE id = $1`,
+                        [orderId, activeFlow.id, activeFlow.first_stage_id]
+                    );
+                }
+
                 return orderId;
             });
 

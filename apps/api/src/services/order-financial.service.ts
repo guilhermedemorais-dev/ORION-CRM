@@ -1,6 +1,7 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { AppError } from '../lib/errors.js';
+import { syncOrderPaymentStatus } from './payment-status.service.js';
 
 export const MANUAL_PAYMENT_METHODS = [
     'DINHEIRO',
@@ -391,6 +392,10 @@ export async function applyApprovedPaymentEffects(
             [order.id]
         );
     }
+
+    // Recalcula payment_status agregado a partir das linhas de payments
+    // (cobre pagamento integral, parcelas, estornos parciais, etc.)
+    await syncOrderPaymentStatus(input.orderId, client);
 }
 
 async function resolvePdvCustomerId(client: PoolClient, customerId: string | null): Promise<string> {
