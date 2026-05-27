@@ -6,6 +6,7 @@ import {
   ShoppingBag, CreditCard, Star, MessageCircle, Package,
   Truck, FileText, Wrench, AlertCircle, Circle, ChevronDown,
   ChevronUp, RefreshCw, Mail, ThumbsUp, Clock,
+  Pause, Play, XCircle, Shield, Send,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -90,8 +91,15 @@ function getEventConfig(type: string): EventConfig {
     attendance_created: { icon: <MessageCircle size={13} />, color: '#A78BFA', bg: 'rgba(167,139,250,0.12)',   border: 'rgba(167,139,250,0.25)',   category: 'Atendimento' },
     attendance_updated: { icon: <Pencil size={13} />,        color: '#A78BFA', bg: 'rgba(167,139,250,0.10)',   border: 'rgba(167,139,250,0.20)',   category: 'Atendimento' },
     pipeline_advanced:  { icon: <ArrowRightLeft size={13} />,color: '#2DD4BF', bg: 'rgba(45,212,191,0.12)',    border: 'rgba(45,212,191,0.25)',    category: 'Atendimento' },
-    order_created:      { icon: <ShoppingBag size={13} />,   color: '#A78BFA', bg: 'rgba(167,139,250,0.12)',   border: 'rgba(167,139,250,0.25)',   category: 'Pedido' },
-    order_updated:      { icon: <Pencil size={13} />,        color: '#A78BFA', bg: 'rgba(167,139,250,0.10)',   border: 'rgba(167,139,250,0.20)',   category: 'Pedido' },
+    order_created:           { icon: <ShoppingBag size={13} />,   color: '#A78BFA', bg: 'rgba(167,139,250,0.12)',   border: 'rgba(167,139,250,0.25)',   category: 'Pedido' },
+    order_updated:           { icon: <Pencil size={13} />,        color: '#A78BFA', bg: 'rgba(167,139,250,0.10)',   border: 'rgba(167,139,250,0.20)',   category: 'Pedido' },
+    order_status_changed:    { icon: <ArrowRightLeft size={13} />,color: '#A78BFA', bg: 'rgba(167,139,250,0.10)',   border: 'rgba(167,139,250,0.20)',   category: 'Pedido' },
+    order_stage_moved:       { icon: <ArrowRightLeft size={13} />,color: '#C8A97A', bg: 'rgba(200,169,122,0.12)',   border: 'rgba(200,169,122,0.25)',   category: 'Pedido' },
+    order_stage_overridden:  { icon: <Shield size={13} />,        color: '#F0A040', bg: 'rgba(240,160,64,0.12)',    border: 'rgba(240,160,64,0.30)',    category: 'Pedido' },
+    order_paused:            { icon: <Pause size={13} />,         color: '#F0A040', bg: 'rgba(240,160,64,0.12)',    border: 'rgba(240,160,64,0.25)',    category: 'Pedido' },
+    order_resumed:           { icon: <Play size={13} />,          color: '#3FB87A', bg: 'rgba(63,184,122,0.12)',    border: 'rgba(63,184,122,0.25)',    category: 'Pedido' },
+    order_cancelled:         { icon: <XCircle size={13} />,       color: '#E05252', bg: 'rgba(224,82,82,0.12)',     border: 'rgba(224,82,82,0.25)',     category: 'Pedido' },
+    order_whatsapp_notified: { icon: <Send size={13} />,          color: '#3FB87A', bg: 'rgba(63,184,122,0.10)',    border: 'rgba(63,184,122,0.20)',    category: 'WhatsApp' },
     payment_received:   { icon: <CreditCard size={13} />,    color: '#2DD4BF', bg: 'rgba(45,212,191,0.12)',    border: 'rgba(45,212,191,0.25)',    category: 'Pagamento' },
     os_created:         { icon: <Wrench size={13} />,        color: '#F0A040', bg: 'rgba(240,160,64,0.12)',    border: 'rgba(240,160,64,0.25)',    category: 'Produção' },
     os_updated:         { icon: <RefreshCw size={13} />,     color: '#F0A040', bg: 'rgba(240,160,64,0.10)',    border: 'rgba(240,160,64,0.20)',    category: 'Produção' },

@@ -10,6 +10,7 @@ import { authenticate } from '../middleware/auth.js';
 import { createAuditLog } from '../middleware/audit.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { requireRole } from '../middleware/rbac.js';
+import { resolveUploadDir, ensureUploadDir, sniffPdf, sniffImage, publicUploadUrl } from '../lib/uploads.js';
 
 const router = Router();
 
@@ -34,6 +35,7 @@ interface CustomerRow {
     whatsapp_number: string;
     email: string | null;
     cpf: string | null;
+    photo_url: string | null;
     assigned_to: string | null;
     assigned_user_name: string | null;
     lifetime_value_cents: string;
@@ -42,38 +44,53 @@ interface CustomerRow {
     updated_at: Date;
 }
 
-function getScopedAssignedTo(req: Request): string | undefined {
-    if (!req.user) {
-        return undefined;
-    }
-
-    // ROOT e ADMIN veem todos; ATENDENTE só os próprios
-    if (req.user.role === 'ROOT' || req.user.role === 'ADMIN') {
-        return undefined;
-    }
-
-    return req.user.role === 'ATENDENTE' ? req.user.id : undefined;
-}
-
-function assertCanAccessCustomer(req: Request, assignedTo: string | null): void {
+// Política única do módulo de clientes:
+//   LEITURA  → qualquer usuário autenticado com capability `client.view` lê
+//              qualquer cliente (sem escopo de carteira).
+//   ESCRITA  → apenas:
+//              · ROOT/ADMIN, OU
+//              · o atendente dono (`assigned_to === user.id`), OU
+//              · usuário com toggle `custom_permissions.clientes_outros = true`
+//                (configurado no painel Ajustes → Usuários).
+async function assertCanEditCustomer(req: Request, assignedTo: string | null): Promise<void> {
     if (!req.user) {
         throw AppError.unauthorized();
     }
 
-    // ROOT sempre tem acesso
-    if (req.user.role === 'ROOT') {
+    // ROOT e ADMIN sempre podem
+    if (req.user.role === 'ROOT' || req.user.role === 'ADMIN') {
         return;
     }
 
-    // ADMIN tem acesso a todos
-    if (req.user.role === 'ADMIN') {
+    // Dono da carteira sempre pode
+    if (assignedTo && assignedTo === req.user.id) {
         return;
     }
 
-    // ATENDENTE só acessa clientes propios
-    if (!assignedTo || assignedTo !== req.user.id) {
-        throw AppError.forbidden('Acesso não autorizado para este cliente.');
+    // Toggle em users.custom_permissions habilita escrita fora da carteira.
+    // Carrega lazy do DB porque o JWT não traz custom_permissions.
+    const permsResult = await query<{ custom_permissions: Record<string, boolean> | null }>(
+        'SELECT custom_permissions FROM users WHERE id = $1 LIMIT 1',
+        [req.user.id]
+    );
+    const customPerms = permsResult.rows[0]?.custom_permissions ?? {};
+    if (customPerms['clientes_outros'] === true) {
+        return;
     }
+
+    throw AppError.forbidden('Apenas ADMIN, ROOT ou o atendente responsável pelo cliente podem alterar este registro.');
+}
+
+async function assertCanEditCustomerById(req: Request, customerId: string): Promise<void> {
+    const result = await query<{ assigned_to: string | null }>(
+        'SELECT assigned_to FROM customers WHERE id = $1 LIMIT 1',
+        [customerId]
+    );
+    const row = result.rows[0];
+    if (!row) {
+        throw AppError.notFound('Cliente não encontrado.');
+    }
+    await assertCanEditCustomer(req, row.assigned_to);
 }
 
 router.get(
@@ -92,14 +109,10 @@ router.get(
                 return;
             }
 
-            const scopedAssignedTo = getScopedAssignedTo(req);
+            // Listagem aberta: qualquer usuário com capability `client.view`
+            // enxerga todos os clientes (escopo de carteira só restringe escrita).
             const filters: string[] = [];
             const values: unknown[] = [];
-
-            if (scopedAssignedTo) {
-                values.push(scopedAssignedTo);
-                filters.push(`c.assigned_to = $${values.length}`);
-            }
 
             if (parsed.data.q) {
                 const normalizedQuery = parsed.data.q.trim();
@@ -146,6 +159,7 @@ router.get(
             c.whatsapp_number,
             c.email,
             c.cpf,
+            c.photo_url,
             c.assigned_to,
             u.name AS assigned_user_name,
             c.lifetime_value_cents::text,
@@ -196,6 +210,7 @@ router.get(
             c.whatsapp_number,
             c.email,
             c.cpf,
+            c.photo_url,
             c.assigned_to,
             u.name AS assigned_user_name,
             c.lifetime_value_cents::text,
@@ -215,7 +230,7 @@ router.get(
                 return;
             }
 
-            assertCanAccessCustomer(req, customer.assigned_to);
+            // Leitura aberta — escopo de carteira aplica só na escrita.
 
             const ordersResult = await query<{ total_orders: string }>(
                 'SELECT COUNT(*)::text AS total_orders FROM orders WHERE customer_id = $1',
@@ -248,13 +263,12 @@ router.get(
             const limit = 20;
             const offset = (page - 1) * limit;
 
-            // Busca cliente para verificar acesso
-            const customerRes = await query<{ assigned_to: string | null }>(
-                'SELECT assigned_to FROM customers WHERE id = $1 LIMIT 1',
+            // Confirma existência (leitura aberta).
+            const customerRes = await query<{ id: string }>(
+                'SELECT id FROM customers WHERE id = $1 LIMIT 1',
                 [customerId]
             );
             if (!customerRes.rows[0]) { next(AppError.notFound('Cliente não encontrado.')); return; }
-            assertCanAccessCustomer(req, customerRes.rows[0].assigned_to);
 
             const countRes = await query<{ total: string }>(
                 `SELECT COUNT(*)::text AS total FROM orders WHERE customer_id = $1`,
@@ -425,8 +439,7 @@ router.get(
             const customer = result.rows[0];
             if (!customer) { next(AppError.notFound('Cliente não encontrado.')); return; }
 
-            // Verifica acesso antes de retornar dados
-            assertCanAccessCustomer(req, customer.assigned_to);
+            // Leitura aberta — escopo de carteira aplica só na escrita.
 
             res.json({
                 ...customer,
@@ -480,13 +493,8 @@ router.patch(
                 return;
             }
 
-            // Busca cliente para verificar acesso
-            const customerRes = await query<{ assigned_to: string | null }>(
-                'SELECT assigned_to FROM customers WHERE id = $1 LIMIT 1',
-                [req.params['id']]
-            );
-            if (!customerRes.rows[0]) { next(AppError.notFound('Cliente não encontrado.')); return; }
-            assertCanAccessCustomer(req, customerRes.rows[0].assigned_to);
+            // Escrita: precisa ser ROOT/ADMIN, dono ou ter clientes_outros.
+            await assertCanEditCustomerById(req, req.params['id'] as string);
 
             const fields = parsed.data as Record<string, unknown>;
             const sets: string[] = [];
@@ -523,13 +531,12 @@ router.get(
         try {
             const id = req.params['id'] as string;
 
-            // Busca cliente para verificar acesso
-            const customerRes = await query<{ assigned_to: string | null }>(
-                'SELECT assigned_to FROM customers WHERE id = $1 LIMIT 1',
+            // Confirma existência (leitura aberta).
+            const customerRes = await query<{ id: string }>(
+                'SELECT id FROM customers WHERE id = $1 LIMIT 1',
                 [id]
             );
             if (!customerRes.rows[0]) { next(AppError.notFound('Cliente não encontrado.')); return; }
-            assertCanAccessCustomer(req, customerRes.rows[0].assigned_to);
 
             const [ltvRes, osRes, lastIntRes, proposalRes] = await Promise.all([
                 query<{ ltv: string; orders_count: string }>(
@@ -575,13 +582,12 @@ router.get(
             const requestedLimit = Number.parseInt(String(req.query['limit'] ?? '30'), 10);
             const limit = Number.isNaN(requestedLimit) ? 30 : Math.min(200, Math.max(1, requestedLimit));
 
-            // Busca cliente para verificar acesso
-            const customerRes = await query<{ assigned_to: string | null }>(
-                'SELECT assigned_to FROM customers WHERE id = $1 LIMIT 1',
+            // Confirma existência (leitura aberta).
+            const customerRes = await query<{ id: string }>(
+                'SELECT id FROM customers WHERE id = $1 LIMIT 1',
                 [id]
             );
             if (!customerRes.rows[0]) { next(AppError.notFound('Cliente não encontrado.')); return; }
-            assertCanAccessCustomer(req, customerRes.rows[0].assigned_to);
 
             const offset = (page - 1) * limit;
 
@@ -589,12 +595,19 @@ router.get(
                 const result = await query(
                     `SELECT al.id,
                             CASE
-                                WHEN al.entity_type = 'customer' AND al.action = 'CREATE' THEN 'created'
-                                WHEN al.entity_type = 'customer' AND al.action = 'UPDATE' THEN 'updated'
+                                WHEN al.entity_type IN ('customer', 'customers') AND al.action = 'CREATE' THEN 'created'
+                                WHEN al.entity_type IN ('customer', 'customers') AND al.action = 'UPDATE' THEN 'updated'
                                 WHEN al.entity_type = 'attendance_block' AND al.action = 'CREATE' THEN 'attendance_created'
                                 WHEN al.entity_type = 'attendance_block' AND al.action = 'UPDATE' THEN 'attendance_updated'
-                                WHEN al.entity_type = 'order' AND al.action = 'CREATE' THEN 'order_created'
-                                WHEN al.entity_type = 'order' AND al.action = 'UPDATE' THEN 'order_updated'
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'CREATE' THEN 'order_created'
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'UPDATE_STATUS' THEN 'order_status_changed'
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'MOVE_STAGE' THEN 'order_stage_moved'
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'OVERRIDE_STAGE_MOVE' THEN 'order_stage_overridden'
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'PAUSE_ORDER' THEN 'order_paused'
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'RESUME_ORDER' THEN 'order_resumed'
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'CANCEL_ORDER' THEN 'order_cancelled'
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'NOTIFY_WHATSAPP' THEN 'order_whatsapp_notified'
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'UPDATE' THEN 'order_updated'
                                 WHEN al.entity_type = 'service_order' AND al.action = 'CREATE' THEN 'os_created'
                                 WHEN al.entity_type = 'service_order' AND al.action = 'UPDATE' THEN 'os_updated'
                                 WHEN al.entity_type = 'delivery' AND al.action = 'CREATE' THEN 'delivery_created'
@@ -603,12 +616,25 @@ router.get(
                                 ELSE LOWER(al.entity_type)
                             END AS type,
                             CASE
-                                WHEN al.entity_type = 'customer' AND al.action = 'CREATE' THEN 'Cliente criado.'
-                                WHEN al.entity_type = 'customer' AND al.action = 'UPDATE' THEN 'Cadastro do cliente atualizado.'
+                                WHEN al.entity_type IN ('customer', 'customers') AND al.action = 'CREATE' THEN 'Cliente cadastrado.'
+                                WHEN al.entity_type IN ('customer', 'customers') AND al.action = 'UPDATE' THEN 'Cadastro do cliente atualizado.'
                                 WHEN al.entity_type = 'attendance_block' AND al.action = 'CREATE' THEN 'Atendimento registrado.'
                                 WHEN al.entity_type = 'attendance_block' AND al.action = 'UPDATE' THEN 'Atendimento atualizado.'
-                                WHEN al.entity_type = 'order' AND al.action = 'CREATE' THEN 'Pedido criado.'
-                                WHEN al.entity_type = 'order' AND al.action = 'UPDATE' THEN 'Pedido atualizado.'
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'CREATE' THEN
+                                    CONCAT('Pedido criado: ', COALESCE(al.new_value->>'order_number', SUBSTRING(al.entity_id::text, 1, 8)))
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'UPDATE_STATUS' THEN
+                                    CONCAT('Status do pedido alterado para ', COALESCE(al.new_value->>'status', 'desconhecido'), '.')
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'MOVE_STAGE' THEN 'Pedido avançou de etapa no fluxo.'
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'OVERRIDE_STAGE_MOVE' THEN
+                                    CONCAT('Etapa do pedido movida com OVERRIDE de regras. Motivo: ', COALESCE(al.new_value->>'override_reason', '—'))
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'PAUSE_ORDER' THEN
+                                    CONCAT('Pedido pausado. Motivo: ', COALESCE(al.new_value->>'paused_reason', '—'))
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'RESUME_ORDER' THEN 'Pedido retomado.'
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'CANCEL_ORDER' THEN
+                                    CONCAT('Pedido cancelado. Motivo: ', COALESCE(al.new_value->>'cancellation_reason', '—'))
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'NOTIFY_WHATSAPP' THEN
+                                    CONCAT('Notificação enviada ao cliente via WhatsApp (provedor: ', COALESCE(al.new_value->>'provider_type', 'desconhecido'), ').')
+                                WHEN al.entity_type IN ('order', 'orders') AND al.action = 'UPDATE' THEN 'Pedido atualizado.'
                                 WHEN al.entity_type = 'service_order' AND al.action = 'CREATE' THEN 'Ordem de serviço criada.'
                                 WHEN al.entity_type = 'service_order' AND al.action = 'UPDATE' THEN 'Ordem de serviço atualizada.'
                                 WHEN al.entity_type = 'delivery' AND al.action = 'CREATE' THEN 'Entrega criada.'
@@ -626,9 +652,9 @@ router.get(
                             )) AS metadata
                      FROM audit_logs al
                      LEFT JOIN users u ON u.id = al.user_id
-                     WHERE al.entity_id = $1 OR al.entity_id IN (
-                         SELECT id FROM attendance_blocks WHERE customer_id = $1
-                     )
+                     WHERE al.entity_id = $1
+                        OR al.entity_id IN (SELECT id FROM attendance_blocks WHERE customer_id = $1)
+                        OR al.entity_id IN (SELECT id FROM orders WHERE customer_id = $1)
                      ORDER BY al.created_at DESC
                      LIMIT $2 OFFSET $3`,
                     [id, limit, offset]
@@ -701,8 +727,139 @@ router.post(
     requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
+            await assertCanEditCustomerById(req, req.params['id'] as string);
             // Stub — retornar 201 até tabela de feedback ser criada
             res.status(201).json({ message: 'Feedback registrado.' });
+        } catch (err) { next(err); }
+    }
+);
+
+// ── POST/DELETE /customers/:id/photo ────────────────────────────────────────
+// Foto de perfil do cliente. Memory storage (5 MB), magic bytes obrigatório,
+// gravada em <UPLOAD_PATH>/customers/<id>/photo.<ext>.
+const photoUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+router.post(
+    '/:id/photo',
+    authenticate,
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
+    photoUpload.single('photo'),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const id = req.params['id'] as string;
+            if (!/^[0-9a-fA-F-]{36}$/.test(id)) {
+                throw AppError.badRequest('Cliente inválido.');
+            }
+            await assertCanEditCustomerById(req, id);
+
+            if (!req.file) {
+                throw AppError.badRequest('Nenhum arquivo enviado.');
+            }
+            const kind = sniffImage(req.file.buffer);
+            if (!kind) {
+                throw AppError.badRequest('Tipo de arquivo inválido. Apenas PNG, JPEG e WebP são aceitos.');
+            }
+
+            const current = await query<{ photo_url: string | null }>(
+                `SELECT photo_url FROM customers WHERE id = $1`,
+                [id]
+            );
+            if (current.rows.length === 0) {
+                throw AppError.notFound('Cliente não encontrado.');
+            }
+            const previousUrl = current.rows[0]?.photo_url ?? null;
+
+            const ext = kind === 'jpeg' ? 'jpg' : kind;
+            const uploadDir = await ensureUploadDir('customers', id);
+            const filename = `photo.${ext}`;
+            const absolutePath = path.join(uploadDir, filename);
+            await fs.writeFile(absolutePath, req.file.buffer);
+
+            // Se a extensão mudou (PNG → JPG, por ex.), o arquivo antigo precisa ser removido
+            // pra não vazar storage. Best-effort.
+            if (previousUrl && !previousUrl.endsWith(`/${filename}`)) {
+                const oldName = previousUrl.split('/').pop();
+                if (oldName) {
+                    await fs.unlink(path.join(uploadDir, oldName)).catch(() => {});
+                }
+            }
+
+            const photoUrl = publicUploadUrl('customers', id, filename);
+            await query(
+                `UPDATE customers SET photo_url = $2, updated_at = NOW() WHERE id = $1`,
+                [id, photoUrl]
+            );
+
+            await createAuditLog({
+                req,
+                userId: req.user!.id,
+                action: 'UPDATE',
+                entityType: 'customer',
+                entityId: id,
+                oldValue: { photo_url: previousUrl },
+                newValue: { photo_url: photoUrl },
+            });
+
+            res.json({ photo_url: photoUrl });
+        } catch (err) { next(err); }
+    }
+);
+
+router.delete(
+    '/:id/photo',
+    authenticate,
+    requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const id = req.params['id'] as string;
+            if (!/^[0-9a-fA-F-]{36}$/.test(id)) {
+                throw AppError.badRequest('Cliente inválido.');
+            }
+            await assertCanEditCustomerById(req, id);
+
+            const current = await query<{ photo_url: string | null }>(
+                `SELECT photo_url FROM customers WHERE id = $1`,
+                [id]
+            );
+            if (current.rows.length === 0) {
+                throw AppError.notFound('Cliente não encontrado.');
+            }
+            const previousUrl = current.rows[0]?.photo_url ?? null;
+            if (!previousUrl) {
+                res.json({ photo_url: null });
+                return;
+            }
+
+            await query(
+                `UPDATE customers SET photo_url = NULL, updated_at = NOW() WHERE id = $1`,
+                [id]
+            );
+
+            // Remove o arquivo do disco — best-effort.
+            try {
+                const segments = previousUrl.replace(/^\/?uploads\//, '').split('/').filter(Boolean);
+                if (segments.length > 0) {
+                    const absolutePath = resolveUploadDir(...segments);
+                    await fs.unlink(absolutePath).catch(() => {});
+                }
+            } catch {
+                // resolveUploadDir lança se escapar da raiz — ignora silenciosamente.
+            }
+
+            await createAuditLog({
+                req,
+                userId: req.user!.id,
+                action: 'DELETE',
+                entityType: 'customer',
+                entityId: id,
+                oldValue: { photo_url: previousUrl },
+                newValue: { photo_url: null },
+            });
+
+            res.json({ photo_url: null });
         } catch (err) { next(err); }
     }
 );
@@ -710,11 +867,14 @@ router.post(
 export default router;
 
 // ── Multer config for proposal attachments ──────────────────────────────────
-const uploadDir = path.join(process.cwd(), 'uploads', 'proposals');
+// Disk storage no diretório canônico de uploads (volume Docker servido por NGINX).
+// Magic bytes do PDF são validados após o multer escrever o arquivo;
+// validar antes só dá pra fazer com memoryStorage, e PDFs podem ser grandes.
+const proposalsDir = resolveUploadDir('proposals');
 const upload = multer({
-    dest: uploadDir,
+    dest: proposalsDir,
     limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
-    fileFilter: (req, file, cb) => {
+    fileFilter: (_req, file, cb) => {
         if (file.mimetype === 'application/pdf') {
             cb(null, true);
         } else {
@@ -723,8 +883,8 @@ const upload = multer({
     },
 });
 
-// Ensure upload directory exists
-fs.mkdir(uploadDir, { recursive: true }).catch(() => {});
+// Garante diretório no boot (best-effort; ensureUploadDir reforça em cada request)
+void ensureUploadDir('proposals');
 
 // ── GET /customers/:id/proposals/attachments ────────────────────────────────
 router.get(
@@ -757,19 +917,33 @@ router.post(
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const id = req.params['id'] as string;
+            await assertCanEditCustomerById(req, id);
             const file = req.file;
 
             if (!file) {
                 throw new AppError(400, 'FILE_MISSING', 'Arquivo não enviado');
             }
 
-            // Generate unique filename
-            const ext = path.extname(file.originalname);
-            const filename = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}${ext}`;
-            const filePath = path.join('proposals', filename);
+            // Magic bytes — defense in depth contra arquivos disfarçados de PDF.
+            // Lê só os primeiros bytes; não carrega o PDF inteiro na memória.
+            const fh = await fs.open(file.path, 'r');
+            const head = Buffer.alloc(8);
+            try {
+                await fh.read(head, 0, 8, 0);
+            } finally {
+                await fh.close();
+            }
+            if (!sniffPdf(head)) {
+                await fs.unlink(file.path).catch(() => {});
+                throw new AppError(400, 'INVALID_FILE_TYPE', 'O arquivo enviado não é um PDF válido.');
+            }
+
+            // Generate unique filename (forçando extensão .pdf — magic bytes já confirmaram)
+            const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}.pdf`;
+            const filePath = path.posix.join('proposals', filename);
 
             // Move file to final location
-            const finalPath = path.join(uploadDir, filename);
+            const finalPath = path.join(proposalsDir, filename);
             await fs.rename(file.path, finalPath);
 
             // Insert into database
@@ -777,7 +951,7 @@ router.post(
                 `INSERT INTO proposal_attachments (customer_id, filename, original_name, mime_type, file_size, file_path, uploaded_by)
                  VALUES ($1, $2, $3, $4, $5, $6, $7)
                  RETURNING id, filename, original_name, file_size, created_at`,
-                [id, filename, file.originalname, file.mimetype, file.size, filePath, req.user!.id]
+                [id, filename, file.originalname, 'application/pdf', file.size, filePath, req.user!.id]
             );
 
             const attachment = result.rows[0];
@@ -811,6 +985,8 @@ router.delete(
             const customerId = id;
             const attId = attachmentId;
 
+            await assertCanEditCustomerById(req, customerId as string);
+
             // Get file info before deleting
             const fileResult = await query(
                 `SELECT file_path FROM proposal_attachments WHERE id = $1 AND customer_id = $2`,
@@ -830,9 +1006,15 @@ router.delete(
             );
 
             // Delete file from disk
+            // `file_path` é gravado como caminho relativo "proposals/<filename>".
+            // resolveUploadDir prefixa com a raiz canônica e bloqueia traversal.
             const filePathStr = fileInfo['file_path'] as string;
-            const filePath = path.join(process.cwd(), 'uploads', filePathStr);
-            await fs.unlink(filePath).catch(() => {}); // Ignore if file doesn't exist
+            try {
+                const absolutePath = resolveUploadDir(...filePathStr.split('/').filter(Boolean));
+                await fs.unlink(absolutePath).catch(() => {});
+            } catch {
+                // resolveUploadDir lança se o caminho escapar da raiz — ignora.
+            }
 
             await createAuditLog({
                 req,
