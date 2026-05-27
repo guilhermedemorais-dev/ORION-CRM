@@ -6,6 +6,48 @@
 
 ---
 
+## [v1.10.0] — 27 de maio de 2026
+### Pedidos com Fluxo configurável, regras de pagamento e histórico completo na ficha
+
+#### Em poucas palavras
+O módulo Pedidos ganhou cara nova (no padrão do Estoque) e o sistema agora aceita Fluxos: você desenha como o pedido caminha entre etapas, define regras (ex: "só vai para produção se tiver pago pelo menos sinal") e o CRM bloqueia movimentações que quebrem a regra. Tudo o que acontece no pedido aparece também na linha do tempo do cliente, em PT-BR.
+
+#### O que melhora pra você
+Antes, etapa de pedido era fixa no código (Rascunho → Aguard. Pag. → Pago → ...). Não dava pra adaptar ao fluxo real da sua joalheria sem mexer no dev. Agora você cria quantos fluxos quiser em Ajustes baseando-se nos pipelines que já existem, e configura por etapa o que precisa estar pago, se notifica cliente automaticamente, e qual etapa conta como "em produção" ou "finalizado" pros KPIs.
+
+Quando o atendente tenta mover um pedido violando uma regra (ex: mandar pra "Pronto pra retirada" sem o cliente ter pago), aparece um modal vermelho explicando o motivo em português claro. Se for caso excepcional, ROOT ou ADMIN podem **forçar a movimentação** preenchendo um motivo — fica tudo registrado no histórico de auditoria.
+
+A aba "Pedidos" da ficha do cliente também ficou no mesmo padrão visual, filtrada só pelos pedidos dele, com o mesmo drawer lateral pra operar. E o histórico do cliente passou a mostrar cada mudança de etapa, pausa, retomada, cancelamento, override de regra e notificação WhatsApp — com data, autor e motivo.
+
+#### Novidades
+
+- **Módulo Pedidos refeito** com 4 KPIs no topo (Pedidos ativos · Aguardando pagamento · Em produção · Valor em aberto), tabela densa com **barra de progresso por etapa** colorida (dourado = ativo · laranja = pausado · vermelho = cancelado), drawer lateral ao clicar.
+- **Drawer com operações completas**: Avançar etapa · Notificar WhatsApp (com prévia editável) · Pausar (com motivo) · Retomar · Cancelar (com motivo) · Abrir ficha do cliente · Gerar link Mercado Pago · Solicitar NF-e · Comprovantes (WhatsApp/E-mail).
+- **Filtros**: busca por número/cliente, etapa, tipo (PE/Personalizado), pausados/ativos.
+- **Exportar CSV** completo do filtro atual.
+- **Aba Fluxo em Ajustes** (só ROOT): lista de fluxos cadastrados, botão "+ Novo fluxo", modal com nome + dropdown de pipeline + regras por etapa (regra de pagamento, conta como, notificar WhatsApp ao entrar).
+- **Pedidos novos** ficam automaticamente associados ao fluxo ativo do módulo Pedidos, começando na primeira etapa.
+- **payment_status do pedido** sincroniza automaticamente do PDV, Mercado Pago e baixas manuais — você nunca precisa marcar manualmente.
+- **ErrorModal padronizado** virou exigência do design system: título PT-BR + lista de violações com borda esquerda vermelha + botão "+ Detalhes técnicos" colapsável + ação secundária opcional (ex: Forçar movimentação).
+- **Aba Pedidos na ficha do cliente** repaginada com o mesmo layout do módulo, filtrada pelo cliente, no design system da ficha (DM Sans, paleta própria).
+- **Histórico do cliente** ganhou 9 novos eventos: Pedido pausado / retomado / cancelado, etapa movida / overridden, notificação WhatsApp enviada — com ícones próprios (Pause / Play / XCircle / Shield / Send), cor por categoria e descrição em PT-BR incluindo o motivo.
+- **Sender de WhatsApp genérico** respeita o provedor marcado como primário em Ajustes > WhatsApp (UazAPI, Evolution, Meta Cloud, Z-API, REST genérico) — sistema todo (Inbox + notificação de pedido) passa a usar o mesmo provedor automaticamente.
+
+#### Detalhes técnicos
+- **Migrations**: `057_orders_pause.sql` (paused_at, paused_reason, paused_by + índice parcial); `058_flows_and_payment_status.sql` (3 enums novos, 2 tabelas `flows` e `flow_stage_rules`, 3 colunas em `orders`, backfill de payment_status).
+- **Services**: `payment-status.service.ts` (computeOrderPaymentStatus + syncOrderPaymentStatus), `flow-rules.service.ts` (checkFlowRules com 5 regras de pagamento), `whatsapp-sender.service.ts` (roteia pra provedor primary).
+- **Rotas novas**: `/flows` (CRUD ROOT-only); `PATCH /orders/:id/stage` (move com validação + override); `POST /orders/:id/pause|resume|cancel`; `POST /orders/:id/notify-whatsapp` + `/preview`; `GET /orders/stats` e `/orders/export`.
+- **GET /customers/:id/history** estendido pra incluir audit_logs de orders vinculados ao cliente, com 8 actions novas mapeadas (PAUSE_ORDER, RESUME_ORDER, CANCEL_ORDER, MOVE_STAGE, OVERRIDE_STAGE_MOVE, NOTIFY_WHATSAPP, UPDATE_STATUS, CREATE).
+- **applyApprovedPaymentEffects** chama syncOrderPaymentStatus — ponto canônico cobre PDV / Mercado Pago / baixa manual.
+- **POST /orders** detecta `flows.active_module='pedidos'` e auto-popula `flow_id` + `current_stage_id` (primeira etapa) na mesma transaction.
+- **Frontend**: `components/system/ErrorModal.tsx` (novo padrão obrigatório); `components/modules/pedidos/{PedidosClient,shared}.tsx`; `components/modules/settings/FluxoTab.tsx`; `ClientPedidosTab.tsx` e `ClientHistoricoTab.tsx` atualizados.
+- **Design System** (`PRD.DOCS/Designer Systems/ORION-DESIGN-SYSTEM.html`): nova seção documentando o padrão Error Dialog com spec visual e regras de quando usar.
+
+#### Atenção
+A coluna `current_stage_id` dos pedidos antigos fica NULL — eles continuam usando o caminho legado (transições do enum `order_status`) até serem associados a um fluxo. Pedidos novos já entram no fluxo ativo automaticamente. Pra retroativar pedidos antigos, basta um UPDATE manual associando `flow_id` e `current_stage_id`.
+
+---
+
 ## [v1.9.0] — 15 de maio de 2026
 ### Limpeza do banco direto na tela e roteamento de agendamentos
 
