@@ -232,11 +232,16 @@ export function TimeGridView({ days, appointments, selectedId }: TimeGridViewPro
                                     const widthPct = 100 / totalCols;
                                     const leftPct = widthPct * col;
                                     const colorClass = STATUS_BG[appointment.status] ?? STATUS_BG.AGENDADO;
-                                    const time = new Date(appointment.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                                    const startDate = new Date(appointment.starts_at);
+                                    const endDate = new Date(appointment.ends_at);
+                                    const time = startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                                    const endTime = endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                                    const durationMin = Math.max(Math.round((endDate.getTime() - startDate.getTime()) / 60000), 0);
                                     const clientName = appointment.customer?.name || appointment.lead?.name || '';
                                     const typeName = formatTypeName(appointment.type);
                                     const label = clientName || typeName;
-                                    const tooltip = clientName ? `${time} — ${clientName} (${typeName})` : `${time} — ${typeName}`;
+                                    const hasConflict = totalCols > 1;
+                                    const tooltip = `${time}–${endTime} (${durationMin} min)${clientName ? ` — ${clientName}` : ''} (${typeName})${hasConflict ? ' · sobreposto com outro agendamento' : ''}`;
                                     const compact = height < 36;
                                     return (
                                         <button
@@ -250,6 +255,7 @@ export function TimeGridView({ days, appointments, selectedId }: TimeGridViewPro
                                             className={cn(
                                                 "absolute z-10 rounded-md border-l-[3px] px-1.5 py-1 text-left text-[11px] transition-all hover:z-20 hover:shadow-lg overflow-hidden",
                                                 colorClass,
+                                                hasConflict && "ring-1 ring-amber-400/60",
                                                 appointment.id === selectedId && "ring-1 ring-brand-gold ring-offset-1 ring-offset-transparent z-20"
                                             )}
                                             style={{
@@ -259,15 +265,23 @@ export function TimeGridView({ days, appointments, selectedId }: TimeGridViewPro
                                                 width: `calc(${widthPct}% - 4px)`,
                                             }}
                                         >
+                                            {hasConflict && (
+                                                <span
+                                                    aria-label="Conflito de horário"
+                                                    className="absolute right-1 top-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400/90 text-[8px] font-bold text-black"
+                                                >
+                                                    !
+                                                </span>
+                                            )}
                                             {compact ? (
-                                                <div className="flex items-center gap-1 truncate">
+                                                <div className="flex items-center gap-1 truncate pr-3">
                                                     <span className="opacity-75 shrink-0">{time}</span>
                                                     <span className="font-semibold truncate">{label}</span>
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <div className="text-[10px] opacity-75">{time}</div>
-                                                    <div className="font-semibold truncate">{label}</div>
+                                                    <div className="text-[10px] opacity-75 pr-4">{time}–{endTime} · {durationMin}m</div>
+                                                    <div className="font-semibold truncate pr-4">{label}</div>
                                                     {height > 60 && clientName && (
                                                         <div className="text-[10px] opacity-70 truncate">{typeName}</div>
                                                     )}

@@ -8,8 +8,9 @@ import { createAuditLog } from '../middleware/audit.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { requireRole } from '../middleware/rbac.js';
 import multer from 'multer';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { promises as fsp } from 'node:fs';
 import { join } from 'node:path';
+import { ensureUploadDir, publicUploadUrl, sniffImage, imageExtension } from '../lib/uploads.js';
 
 const router = Router();
 
@@ -1353,36 +1354,19 @@ router.post(
             }
 
             const buffer = req.file.buffer;
-            if (buffer.length < 4) {
-                next(AppError.badRequest('Arquivo inválido.'));
-                return;
-            }
-
-            // Validate magic bytes
-            const isPng = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
-            const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
-            const isWebp =
-                buffer.length >= 12 &&
-                buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
-                buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
-
-            if (!isPng && !isJpeg && !isWebp) {
+            const kind = sniffImage(buffer);
+            if (!kind) {
                 next(AppError.badRequest('Tipo de arquivo inválido. Apenas PNG, JPEG e WebP são aceitos.'));
                 return;
             }
 
-            let ext = 'jpg';
-            if (isPng) ext = 'png';
-            else if (isWebp) ext = 'webp';
-
-            const uploadDir = join('/uploads/products', params.data.id);
-            mkdirSync(uploadDir, { recursive: true });
-
+            const ext = imageExtension(kind);
+            const uploadDir = await ensureUploadDir('products', params.data.id);
             const filename = `photo.${ext}`;
             const filePath = join(uploadDir, filename);
-            writeFileSync(filePath, buffer);
+            await fsp.writeFile(filePath, buffer);
 
-            const photoUrl = `/uploads/products/${params.data.id}/${filename}`;
+            const photoUrl = publicUploadUrl('products', params.data.id, filename);
 
             await query(
                 `UPDATE products SET photo_url = $2, updated_at = NOW() WHERE id = $1`,

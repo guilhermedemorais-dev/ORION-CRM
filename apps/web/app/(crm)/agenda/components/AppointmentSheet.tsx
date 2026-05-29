@@ -104,6 +104,7 @@ export function AppointmentSheet({
     const [isPending, startTransition] = useTransition();
     const [notifySending, setNotifySending] = useState(false);
     const [notifySent, setNotifySent] = useState(false);
+    const [statusError, setStatusError] = useState<string | null>(null);
 
     // Confirmation dialogs state
     const [confirmAction, setConfirmAction] = useState<'complete' | 'cancel' | null>(null);
@@ -113,16 +114,52 @@ export function AppointmentSheet({
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
+    /** Resolve para qual rota navegar após "Iniciar Atendimento":
+     *  cliente > lead > fallback agenda. Customer tem ficha completa; lead tem
+     *  página própria. Sem nenhum dos dois (raro), volta pra agenda. */
+    const resolveAttendanceHref = useCallback((): string | null => {
+        if (appointment.customer?.id) return `/clientes/${appointment.customer.id}`;
+        if (appointment.lead?.id) return `/leads/${appointment.lead.id}`;
+        return null;
+    }, [appointment.customer?.id, appointment.lead?.id]);
+
     const handleStatusUpdate = useCallback((newStatus: string, extra?: { cancel_reason?: string; notes?: string }) => {
+        setStatusError(null);
         startTransition(async () => {
             const formData = new FormData();
             formData.append('id', appointment.id);
             formData.append('status', newStatus);
             if (extra?.cancel_reason) formData.append('cancel_reason', extra.cancel_reason);
             if (extra?.notes) formData.append('notes', extra.notes);
-            await updateAppointmentStatusAction(formData);
+            try {
+                const result = await updateAppointmentStatusAction(formData);
+                if (result && result.ok === false) {
+                    setStatusError(result.error);
+                    return;
+                }
+                // "Iniciar atendimento" abre a ficha do cliente/lead pra o atendente trabalhar.
+                if (newStatus === 'EM_ATENDIMENTO') {
+                    const href = resolveAttendanceHref();
+                    if (href) {
+                        router.push(href);
+                        return;
+                    }
+                    // Sem cliente/lead vinculado — status atualiza mas só refresh a agenda
+                    // com aviso de orientação.
+                    setStatusError('Atendimento iniciado, mas este agendamento não tem cliente vinculado. Edite o agendamento para vincular.');
+                }
+                // Demais transições (confirmado, cancelado, concluído, no-show):
+                // fecha o popup do confirm dialog e revalida a agenda para refletir o novo status.
+                setConfirmAction(null);
+                router.refresh();
+            } catch (err) {
+                const message = err instanceof Error && err.message && !err.message.includes('Server Components render')
+                    ? err.message
+                    : 'Não foi possível atualizar o status. Tente novamente.';
+                setStatusError(message);
+            }
         });
-    }, [appointment.id]);
+    }, [appointment.id, resolveAttendanceHref, router]);
 
     const handleNotify = async () => {
         setNotifySending(true);
@@ -167,41 +204,59 @@ export function AppointmentSheet({
     const isActive = !isEnded;
 
     return (
-        <div className="h-full bg-surface-sidebar border-l border-white/5 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-                <h2 className="text-lg font-semibold text-white">Detalhes do Agendamento</h2>
-                <Link href={closeHref} className="p-2 -mr-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/5">
-                    <X className="w-5 h-5" />
-                </Link>
-            </div>
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Detalhes do Agendamento"
+        >
+            {/* Backdrop clicável para fechar */}
+            <Link href={closeHref} className="absolute inset-0" aria-label="Fechar detalhes" tabIndex={-1} />
 
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+            {/* Caixa do modal */}
+            <div
+                className="relative w-full max-w-2xl max-h-[90vh] bg-surface-sidebar border border-white/10 rounded-xl shadow-2xl flex flex-col min-h-0 animate-in zoom-in-95 duration-200"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/5 shrink-0">
+                    <h2 className="text-lg font-semibold text-white truncate">Detalhes do Agendamento</h2>
+                    <Link href={closeHref} className="p-1.5 -mr-1 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-white/5 shrink-0">
+                        <X className="w-5 h-5" />
+                    </Link>
+                </div>
+
+                <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-5">
                 {/* Header Info */}
                 <div>
-                    <div className="flex items-center justify-between mb-2">
-                        {/* FIX: Sanitize event type for display */}
-                        <span className="text-xl font-bold text-white">{formatEventName(appointment.type)}</span>
-                        <StatusBadge status={appointment.status} />
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                        <span className="text-lg sm:text-xl font-bold text-white leading-tight">{formatEventName(appointment.type)}</span>
+                        <div className="shrink-0">
+                            <StatusBadge status={appointment.status} />
+                        </div>
                     </div>
-                    <p className="text-sm text-brand-gold">
+                    <p className="text-xs sm:text-sm text-brand-gold leading-relaxed">
                         {new Date(appointment.starts_at).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}
-                        {' - '}
+                        {' – '}
                         {new Date(appointment.ends_at).toLocaleTimeString('pt-BR', { timeStyle: 'short' })}
                     </p>
                 </div>
 
-                {/* Metadata: Pipeline & Responsável */}
-                <div className="grid grid-cols-2 gap-3">
-                    {appointment.pipeline_id && (
-                        <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02]">
+                {/* Metadata: Pipeline & Responsável — 2 colunas no modal (tem espaço sobrando). */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {(appointment.pipeline?.name || appointment.pipeline_id) && (
+                        <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] min-w-0">
                             <label className="block text-[10px] font-medium uppercase tracking-wider text-gray-500 mb-1">Pipeline</label>
-                            <p className="text-sm text-gray-300">{appointment.pipeline_id}</p>
+                            <p className="text-sm text-gray-300 truncate" title={appointment.pipeline?.name ?? appointment.pipeline_id ?? ''}>
+                                {appointment.pipeline?.name ?? '—'}
+                            </p>
                         </div>
                     )}
                     {appointment.assigned_to && (
-                        <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02]">
+                        <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] min-w-0">
                             <label className="block text-[10px] font-medium uppercase tracking-wider text-gray-500 mb-1">Responsável</label>
-                            <p className="text-sm text-gray-300">{appointment.assigned_to.name}</p>
+                            <p className="text-sm text-gray-300 truncate" title={appointment.assigned_to.name}>
+                                {appointment.assigned_to.name}
+                            </p>
                         </div>
                     )}
                 </div>
@@ -301,8 +356,17 @@ export function AppointmentSheet({
                 )}
             </div>
 
+            {/* Banner de erro de atualização de status — pt-BR */}
+            {statusError && (
+                <div className="px-5 pt-3 shrink-0">
+                    <div role="alert" className="rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+                        {statusError}
+                    </div>
+                </div>
+            )}
+
             {/* Actions Footer */}
-            <div className="p-5 border-t border-white/5 bg-black/20 flex flex-col gap-2.5">
+            <div className="px-4 sm:px-5 py-3 sm:py-4 border-t border-white/5 bg-black/20 flex flex-col gap-2 shrink-0">
 
                 {/* ─── Edit & Reschedule buttons (always visible when active) ─── */}
                 {isActive && !confirmAction && (
@@ -423,6 +487,7 @@ export function AppointmentSheet({
                         Atendimento Encerrado
                     </div>
                 )}
+            </div>
             </div>
         </div>
     );

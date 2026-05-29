@@ -30,6 +30,7 @@ export default async function LeadDetailPage({
         whatsapp_number: lead.whatsapp_number,
         email: lead.email,
         cpf: null,
+        photo_url: null,
         social_name: null,
         rg: null,
         birth_date: null,

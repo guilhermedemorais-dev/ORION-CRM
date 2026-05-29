@@ -38,22 +38,46 @@ function avatarColor(name: string) {
     return AVATAR_COLORS[idx] ?? AVATAR_COLORS[0]!;
 }
 
+type FieldErrors = { name?: string; whatsapp_number?: string; email?: string };
+
 function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
     const [name, setName] = useState('');
     const [whatsapp, setWhatsapp] = useState('');
     const [email, setEmail] = useState('');
     const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+    const [generalError, setGeneralError] = useState<string | null>(null);
+
+    function validateLocal(): FieldErrors {
+        const errors: FieldErrors = {};
+        const trimmedName = name.trim();
+        const trimmedWa = whatsapp.trim();
+        const trimmedEmail = email.trim();
+        if (!trimmedName) {
+            errors.name = 'Informe o nome do cliente.';
+        } else if (trimmedName.length < 2) {
+            errors.name = 'O nome deve ter no mínimo 2 caracteres.';
+        }
+        if (!trimmedWa) {
+            errors.whatsapp_number = 'Informe o WhatsApp.';
+        } else if (!/^\+[1-9]\d{1,14}$/.test(trimmedWa)) {
+            errors.whatsapp_number = 'WhatsApp deve estar no formato E.164. Ex.: +5511999998888.';
+        }
+        if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+            errors.email = 'E-mail inválido.';
+        }
+        return errors;
+    }
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        setError(null);
-        if (!name.trim()) { setError('[VALIDATION] Nome é obrigatório.'); return; }
-        if (!whatsapp.trim()) { setError('[VALIDATION] WhatsApp é obrigatório.'); return; }
-        if (!/^\+[1-9]\d{1,14}$/.test(whatsapp.trim())) {
-            setError('[VALIDATION] WhatsApp deve estar no formato E.164. Exemplo: +5511999998888');
+        setGeneralError(null);
+        const localErrors = validateLocal();
+        if (Object.keys(localErrors).length > 0) {
+            setFieldErrors(localErrors);
             return;
         }
+        setFieldErrors({});
         setSaving(true);
         try {
             const res = await fetch('/api/internal/customers', {
@@ -62,28 +86,41 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
                 body: JSON.stringify({ name: name.trim(), whatsapp_number: whatsapp.trim(), email: email.trim() || undefined }),
             });
             if (!res.ok) {
-                let msg = `[HTTP_${res.status}] Falha ao criar cliente.`;
-                try {
-                    const body = await res.json();
-                    const code = body?.error || `HTTP_${res.status}`;
-                    const reqId = body?.requestId ? ` · req: ${String(body.requestId).slice(0, 8)}` : '';
-                    const detailMsgs = Array.isArray(body?.details)
-                        ? body.details.map((d: { field?: string; message?: string }) => d.field ? `${d.field}: ${d.message}` : d.message).filter(Boolean).join('; ')
-                        : '';
-                    const detail = detailMsgs ? ` — ${detailMsgs}` : '';
-                    msg = `[${code}] ${body?.message || 'Erro desconhecido.'}${detail}${reqId}`;
-                } catch { /* keep fallback */ }
-                setError(msg);
+                const body = await res.json().catch(() => null) as
+                    | { message?: string; details?: Array<{ field?: string; message?: string }> }
+                    | null;
+                const serverFieldErrors: FieldErrors = {};
+                if (body?.details && Array.isArray(body.details)) {
+                    for (const d of body.details) {
+                        if (!d?.field || !d?.message) continue;
+                        if (d.field === 'name') serverFieldErrors.name = d.message;
+                        else if (d.field === 'whatsapp_number') serverFieldErrors.whatsapp_number = d.message;
+                        else if (d.field === 'email') serverFieldErrors.email = d.message;
+                    }
+                }
+                if (Object.keys(serverFieldErrors).length > 0) {
+                    setFieldErrors(serverFieldErrors);
+                    return;
+                }
+                setGeneralError(body?.message || 'Falha ao criar cliente.');
                 return;
             }
             onCreated();
             onClose();
         } catch (err) {
-            setError(`[NETWORK_ERROR] ${err instanceof Error ? err.message : 'Erro de rede.'}`);
+            setGeneralError(`Falha de rede: ${err instanceof Error ? err.message : 'tente novamente.'}`);
         } finally {
             setSaving(false);
         }
     }
+
+    const clearFieldError = (field: keyof FieldErrors) => {
+        setFieldErrors((prev) => {
+            if (!prev[field]) return prev;
+            const { [field]: _drop, ...rest } = prev;
+            return rest;
+        });
+    };
 
     return (
         <div
@@ -95,28 +132,54 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
                     <div style={{ fontFamily: "'Playfair Display', serif", fontSize: '16px', fontWeight: 700, color: '#F0EDE8' }}>Novo Cliente</div>
                     <button onClick={onClose} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '6px', color: '#7A7774', width: '28px', height: '28px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
                 </div>
-                <form onSubmit={handleSubmit} style={{ padding: '20px' }}>
+                <form onSubmit={handleSubmit} style={{ padding: '20px' }} noValidate>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {[
-                            { label: 'Nome completo *', value: name, onChange: setName, placeholder: 'Maria Fernanda Costa', required: true },
-                            { label: 'WhatsApp *', value: whatsapp, onChange: setWhatsapp, placeholder: '+5511999999999', required: true },
-                            { label: 'E-mail', value: email, onChange: setEmail, placeholder: 'email@cliente.com', required: false },
-                        ].map((f) => (
-                            <div key={f.label}>
-                                <label style={{ fontSize: '11px', fontWeight: 600, color: '#E8E4DE', display: 'block', marginBottom: '4px' }}>{f.label}</label>
-                                <input
-                                    value={f.value}
-                                    onChange={(e) => f.onChange(e.target.value)}
-                                    placeholder={f.placeholder}
-                                    required={f.required}
-                                    style={{ width: '100%', height: '35px', background: '#1A1A1E', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '7px', padding: '0 11px', fontSize: '12px', color: '#F0EDE8', boxSizing: 'border-box', outline: 'none', fontFamily: "'DM Sans', sans-serif" }}
-                                />
-                            </div>
-                        ))}
+                        {([
+                            { key: 'name', label: 'Nome completo *', value: name, onChange: setName, placeholder: 'Maria Fernanda Costa', errorKey: 'name' as const, help: 'Mínimo 2 caracteres.' },
+                            { key: 'whatsapp_number', label: 'WhatsApp *', value: whatsapp, onChange: setWhatsapp, placeholder: '+5511999999999', errorKey: 'whatsapp_number' as const, help: 'Formato E.164: +55 e DDD.' },
+                            { key: 'email', label: 'E-mail', value: email, onChange: setEmail, placeholder: 'email@cliente.com', errorKey: 'email' as const, help: null as string | null },
+                        ]).map((f) => {
+                            const err = fieldErrors[f.errorKey];
+                            return (
+                                <div key={f.key}>
+                                    <label htmlFor={`new-client-${f.key}`} style={{ fontSize: '11px', fontWeight: 600, color: '#E8E4DE', display: 'block', marginBottom: '4px' }}>{f.label}</label>
+                                    <input
+                                        id={`new-client-${f.key}`}
+                                        value={f.value}
+                                        onChange={(e) => { f.onChange(e.target.value); clearFieldError(f.errorKey); }}
+                                        placeholder={f.placeholder}
+                                        aria-invalid={!!err}
+                                        aria-describedby={err ? `new-client-${f.key}-error` : (f.help ? `new-client-${f.key}-help` : undefined)}
+                                        style={{
+                                            width: '100%',
+                                            height: '35px',
+                                            background: '#1A1A1E',
+                                            border: `1px solid ${err ? 'rgba(224,82,82,0.55)' : 'rgba(255,255,255,0.10)'}`,
+                                            borderRadius: '7px',
+                                            padding: '0 11px',
+                                            fontSize: '12px',
+                                            color: '#F0EDE8',
+                                            boxSizing: 'border-box',
+                                            outline: 'none',
+                                            fontFamily: "'DM Sans', sans-serif",
+                                        }}
+                                    />
+                                    {err ? (
+                                        <div id={`new-client-${f.key}-error`} style={{ marginTop: '4px', fontSize: '10px', color: '#E05252', fontWeight: 500 }}>
+                                            {err}
+                                        </div>
+                                    ) : f.help ? (
+                                        <div id={`new-client-${f.key}-help`} style={{ marginTop: '4px', fontSize: '10px', color: '#7A7774' }}>
+                                            {f.help}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            );
+                        })}
                     </div>
-                    {error && (
-                        <div style={{ marginTop: '14px', background: 'rgba(224,82,82,0.10)', border: '1px solid rgba(224,82,82,0.30)', borderRadius: '7px', padding: '10px 12px', color: '#E05252', fontSize: '12px', fontFamily: 'ui-monospace, monospace', wordBreak: 'break-word' }}>
-                            {error}
+                    {generalError && (
+                        <div role="alert" style={{ marginTop: '14px', background: 'rgba(224,82,82,0.10)', border: '1px solid rgba(224,82,82,0.30)', borderRadius: '7px', padding: '10px 12px', color: '#E05252', fontSize: '12px', wordBreak: 'break-word' }}>
+                            {generalError}
                         </div>
                     )}
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>

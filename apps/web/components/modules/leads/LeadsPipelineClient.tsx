@@ -189,6 +189,7 @@ export function LeadsPipelineClient({
     const [creatingStage, setCreatingStage] = useState(false);
     const [newStageName, setNewStageName] = useState('');
     const [newStageColor, setNewStageColor] = useState('#3B82F6');
+    const [newStageErrors, setNewStageErrors] = useState<{ name?: string; color?: string }>({});
     const [showNewLeadForm, setShowNewLeadForm] = useState(false);
     const [newLeadInitialStage, setNewLeadInitialStage] = useState<string | null>(null);
     const [newLeadName, setNewLeadName] = useState('');
@@ -832,23 +833,66 @@ export function LeadsPipelineClient({
 
     async function createStage(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!newStageName.trim()) return;
-        setCreatingStage(true);
         setErrorMessage(null);
+        setNewStageErrors({});
 
-        const response = await fetch(`/api/internal/pipelines/${pipelineId}/stages`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name: newStageName.trim(),
-                color: newStageColor,
-                position: stages.length + 1,
-            }),
-        });
+        // Validação local — espelha o que o backend exige (mín 2 / hex #RRGGBB).
+        // O servidor revalida; isto evita ida desnecessária e dá feedback imediato.
+        const trimmed = newStageName.trim();
+        const localErrors: { name?: string; color?: string } = {};
+        if (trimmed.length < 2) {
+            localErrors.name = 'O nome deve ter no mínimo 2 caracteres.';
+        } else if (trimmed.length > 100) {
+            localErrors.name = 'O nome deve ter no máximo 100 caracteres.';
+        }
+        if (!/^#[0-9A-Fa-f]{6}$/.test(newStageColor)) {
+            localErrors.color = 'Cor inválida. Use formato #RRGGBB.';
+        }
+        if (Object.keys(localErrors).length > 0) {
+            setNewStageErrors(localErrors);
+            return;
+        }
+
+        setCreatingStage(true);
+
+        let response: Response;
+        try {
+            response = await fetch(`/api/internal/pipelines/${pipelineId}/stages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: trimmed,
+                    color: newStageColor,
+                    position: stages.length + 1,
+                }),
+            });
+        } catch {
+            setCreatingStage(false);
+            setErrorMessage('Falha de rede ao criar etapa. Verifique sua conexão e tente novamente.');
+            return;
+        }
 
         setCreatingStage(false);
         const data = await response.json().catch(() => ({}));
+
         if (!response.ok) {
+            // Mapeia details[] do backend em mensagens por campo quando possível.
+            if (Array.isArray(data?.details) && data.details.length > 0) {
+                const fieldErrors: { name?: string; color?: string } = {};
+                for (const detail of data.details as Array<{ field?: string; message?: string }>) {
+                    if (!detail?.field || !detail?.message) continue;
+                    if (detail.field === 'name') fieldErrors.name = detail.message;
+                    else if (detail.field === 'color') fieldErrors.color = detail.message;
+                }
+                if (Object.keys(fieldErrors).length > 0) {
+                    setNewStageErrors(fieldErrors);
+                    return;
+                }
+            }
+            if (response.status === 403) {
+                setErrorMessage('Você não tem permissão para criar etapas. Apenas administradores podem alterar o Kanban.');
+                return;
+            }
             setErrorMessage(typeof data.message === 'string' ? data.message : 'Falha ao criar etapa.');
             return;
         }
@@ -1575,24 +1619,53 @@ export function LeadsPipelineClient({
                             {configTab === 'stages' ? (
                                 <div className="grid gap-6 p-5 lg:grid-cols-[320px_minmax(0,1fr)]">
                                     <Card title="Nova etapa" description="Adicione uma etapa ao Kanban atual.">
-                                        <form onSubmit={createStage} className="grid gap-3">
-                                            <Input
-                                                value={newStageName}
-                                                onChange={(event) => setNewStageName(event.target.value)}
-                                                placeholder="Nova etapa"
-                                                required
-                                            />
-                                            <input
-                                                type="color"
-                                                title="Cor da etapa"
-                                                value={newStageColor}
-                                                onChange={(event) => setNewStageColor(event.target.value)}
-                                                className="h-10 w-full cursor-pointer rounded-md border border-white/10 bg-[color:var(--orion-base)] px-2"
-                                            />
+                                        <form onSubmit={createStage} className="grid gap-3" noValidate>
+                                            <div>
+                                                <Input
+                                                    value={newStageName}
+                                                    onChange={(event) => {
+                                                        setNewStageName(event.target.value);
+                                                        if (newStageErrors.name) {
+                                                            setNewStageErrors((prev) => ({ ...prev, name: undefined }));
+                                                        }
+                                                    }}
+                                                    placeholder="Nome da etapa (mín. 2 caracteres)"
+                                                    aria-invalid={!!newStageErrors.name}
+                                                    aria-describedby={newStageErrors.name ? 'new-stage-name-error' : undefined}
+                                                    className={newStageErrors.name ? 'border-rose-500/60 focus-visible:ring-rose-500/40' : undefined}
+                                                />
+                                                {newStageErrors.name ? (
+                                                    <p id="new-stage-name-error" className="mt-1 text-[11px] font-medium text-rose-400">
+                                                        {newStageErrors.name}
+                                                    </p>
+                                                ) : null}
+                                            </div>
+                                            <div>
+                                                <input
+                                                    type="color"
+                                                    title="Cor da etapa"
+                                                    value={newStageColor}
+                                                    onChange={(event) => {
+                                                        setNewStageColor(event.target.value);
+                                                        if (newStageErrors.color) {
+                                                            setNewStageErrors((prev) => ({ ...prev, color: undefined }));
+                                                        }
+                                                    }}
+                                                    aria-invalid={!!newStageErrors.color}
+                                                    className={`h-10 w-full cursor-pointer rounded-md border bg-[color:var(--orion-base)] px-2 ${
+                                                        newStageErrors.color ? 'border-rose-500/60' : 'border-white/10'
+                                                    }`}
+                                                />
+                                                {newStageErrors.color ? (
+                                                    <p className="mt-1 text-[11px] font-medium text-rose-400">
+                                                        {newStageErrors.color}
+                                                    </p>
+                                                ) : null}
+                                            </div>
                                             <button
                                                 type="submit"
                                                 disabled={creatingStage}
-                                                className="inline-flex h-10 items-center justify-center rounded-md bg-brand-gold text-sm font-bold text-black transition hover:bg-brand-gold-light disabled:opacity-50"
+                                                className="inline-flex h-10 items-center justify-center rounded-md bg-brand-gold text-sm font-bold text-black transition hover:bg-brand-gold-light disabled:cursor-not-allowed disabled:opacity-50"
                                             >
                                                 {creatingStage ? 'Criando...' : 'Adicionar etapa'}
                                             </button>

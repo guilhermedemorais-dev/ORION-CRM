@@ -131,19 +131,32 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-async function readApiError(res: Response, fallbackCode: string): Promise<string> {
+interface ParsedApiError {
+  message: string;
+  fieldErrors: Record<string, string>;
+}
+
+async function readApiError(res: Response, fallbackCode: string): Promise<ParsedApiError> {
   try {
     const body = await res.json();
     const code = body?.error || fallbackCode;
-    const message = body?.message || 'Erro desconhecido.';
+    const baseMessage = body?.message || 'Erro desconhecido.';
     const reqId = body?.requestId ? ` · req: ${String(body.requestId).slice(0, 8)}` : '';
-    const detailMsgs = Array.isArray(body?.details)
-      ? body.details.map((d: { field?: string; message?: string }) => d.field ? `${d.field}: ${d.message}` : d.message).filter(Boolean).join('; ')
-      : '';
-    const detail = detailMsgs ? ` — ${detailMsgs}` : '';
-    return `[${code}] ${message}${detail}${reqId}`;
+    const fieldErrors: Record<string, string> = {};
+    if (Array.isArray(body?.details)) {
+      for (const d of body.details as Array<{ field?: string; message?: string }>) {
+        if (d?.field && d?.message) fieldErrors[d.field] = d.message;
+      }
+    }
+    return {
+      message: `[${code}] ${baseMessage}${reqId}`,
+      fieldErrors,
+    };
   } catch {
-    return `[${fallbackCode}] HTTP ${res.status} ${res.statusText}`;
+    return {
+      message: `[${fallbackCode}] HTTP ${res.status} ${res.statusText}`,
+      fieldErrors: {},
+    };
   }
 }
 
@@ -302,9 +315,12 @@ export default function ClientFichaTab({ customer, customerId, entityType, onUpd
           headers: { 'Content-Type': 'application/json' },
         });
         if (!convertRes.ok) {
-          const msg = await readApiError(convertRes, 'CONVERT_FAILED');
-          setError(msg);
-          notify.error('Falha ao converter lead', msg);
+          const parsed = await readApiError(convertRes, 'CONVERT_FAILED');
+          if (Object.keys(parsed.fieldErrors).length > 0) {
+            setFieldErrors((prev) => ({ ...prev, ...parsed.fieldErrors as Partial<Record<FieldName, string>> }));
+          }
+          setError(parsed.message);
+          notify.error('Falha ao converter lead', parsed.message);
           return;
         }
         const convertData = await convertRes.json();
@@ -325,9 +341,12 @@ export default function ClientFichaTab({ customer, customerId, entityType, onUpd
         body: JSON.stringify(form),
       });
       if (!res.ok) {
-        const msg = await readApiError(res, 'PATCH_FAILED');
-        setError(msg);
-        notify.error('Falha ao salvar ficha', msg);
+        const parsed = await readApiError(res, 'PATCH_FAILED');
+        if (Object.keys(parsed.fieldErrors).length > 0) {
+          setFieldErrors((prev) => ({ ...prev, ...parsed.fieldErrors as Partial<Record<FieldName, string>> }));
+        }
+        setError(parsed.message);
+        notify.error('Falha ao salvar ficha', parsed.message);
         return;
       }
       const data = await res.json();

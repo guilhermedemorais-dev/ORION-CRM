@@ -6,6 +6,7 @@ export interface CustomerFull {
   whatsapp_number: string;
   email: string | null;
   cpf: string | null;
+  photo_url: string | null;
   social_name: string | null;
   rg: string | null;
   birth_date: string | null;

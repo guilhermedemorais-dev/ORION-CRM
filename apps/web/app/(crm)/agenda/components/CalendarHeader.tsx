@@ -96,41 +96,41 @@ export function CalendarHeader({
     }, [view, currentDate, searchParams.toString()]);
 
     return (
-        <div className="flex items-center gap-2 sm:gap-3 mb-3 min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 mb-2 min-w-0">
             {/* Title + nav */}
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
-                <h1 className="text-lg sm:text-xl xl:text-2xl font-semibold text-white capitalize truncate">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 shrink">
+                <h1 className="text-base sm:text-lg xl:text-xl font-semibold text-white capitalize truncate">
                     {periodLabel}
                 </h1>
                 <div className="flex items-center gap-0.5 bg-surface-sidebar rounded-md p-0.5 border border-white/5 shrink-0">
                     <button
                         onClick={() => navigate(-1)}
-                        className="h-8 w-8 inline-flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
+                        className="h-7 w-7 inline-flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
                         title="Anterior"
                         aria-label="Período anterior"
                     >
-                        <ChevronLeft className="w-4 h-4" />
+                        <ChevronLeft className="w-3.5 h-3.5" />
                     </button>
                     <button
                         onClick={goToday}
-                        className="h-8 px-3 text-[12px] text-gray-300 hover:text-white hover:bg-white/5 rounded font-medium transition-colors"
+                        className="h-7 px-2.5 text-[11px] text-gray-300 hover:text-white hover:bg-white/5 rounded font-medium transition-colors"
                         title="Hoje (T)"
                     >
                         Hoje
                     </button>
                     <button
                         onClick={() => navigate(1)}
-                        className="h-8 w-8 inline-flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
+                        className="h-7 w-7 inline-flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
                         title="Próximo"
                         aria-label="Próximo período"
                     >
-                        <ChevronRight className="w-4 h-4" />
+                        <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                 </div>
             </div>
 
             {/* Spacer + responsive legend slot */}
-            <div className="flex-1 min-w-0 flex items-center justify-end gap-2 sm:gap-3">
+            <div className="flex-1 min-w-0 flex items-center justify-end gap-1.5 sm:gap-2">
                 <CalendarLegendInline className="hidden 2xl:flex" />
                 <CalendarLegendDots   className="hidden lg:flex 2xl:hidden" />
                 <CalendarLegendPopover className="lg:hidden" />
@@ -139,7 +139,8 @@ export function CalendarHeader({
 
                 <Button
                     onClick={openNewAppointment}
-                    icon={<Plus className="w-4 h-4" />}
+                    icon={<Plus className="w-3.5 h-3.5" />}
+                    size="sm"
                     className="shrink-0"
                 >
                     <span className="hidden sm:inline">Novo Agendamento</span>

@@ -1,6 +1,7 @@
 "use client"
 import type { AppointmentRecord } from "../types";
 import { AppointmentPill } from "./AppointmentPill";
+import { DayPopover } from "./DayPopover";
 import { cn } from "@/lib/utils";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -62,17 +63,34 @@ export function MonthView({
         setTodayStr(new Date().toISOString().split('T')[0]);
     }, []);
 
+    // DayPopover state — mini popup ancorado na célula do dia ao clicar "+N mais".
+    const [popoverDay, setPopoverDay] = useState<{
+        date: Date;
+        items: AppointmentRecord[];
+        anchor: { top: number; left: number; width: number; height: number };
+    } | null>(null);
+
     const handleAppointmentClick = (appointment: AppointmentRecord) => {
         const params = new URLSearchParams(searchParams.toString());
         params.set('selected', appointment.id);
         router.push(`${pathname}?${params.toString()}`);
     };
-    
-    const handleMoreClick = (dateStr: string) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('view', 'day');
-        params.set('date', dateStr);
-        router.push(`${pathname}?${params.toString()}`);
+
+    const handleMoreClick = (
+        event: React.MouseEvent<HTMLButtonElement>,
+        date: Date,
+        items: AppointmentRecord[]
+    ) => {
+        // Âncora = bounding rect da célula do dia (pai do botão até 2 níveis acima).
+        // .closest('[data-day-cell]') é mais robusto que `currentTarget.parentElement`.
+        const target = event.currentTarget;
+        const cell = target.closest('[data-day-cell]') as HTMLElement | null;
+        const rect = (cell ?? target).getBoundingClientRect();
+        setPopoverDay({
+            date,
+            items,
+            anchor: { top: rect.top, left: rect.left, width: rect.width, height: rect.height },
+        });
     };
 
     return (
@@ -103,45 +121,61 @@ export function MonthView({
                     const hiddenCount = dayAppointments.length - 3;
                     
                     return (
-                        <div 
-                            key={i} 
+                        <div
+                            key={i}
+                            data-day-cell
                             className={cn(
-                                "flex flex-col border-r border-b border-white/5 p-2 transition-colors hover:bg-white/[0.02]",
+                                "flex flex-col border-r border-b border-white/5 p-1.5 transition-colors hover:bg-white/[0.02] min-h-0",
                                 !isCurrentMonth && "bg-black/10 text-gray-600",
-                                isToday && "bg-brand-gold/5" // Highlight row or just the cell
+                                isToday && "bg-brand-gold/5"
                             )}
                         >
-                            <div className="flex justify-between items-start mb-2">
+                            <div className="flex justify-between items-start mb-1">
                                 <span className={cn(
-                                    "flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-medium",
-                                    isToday ? "bg-brand-gold text-black font-bold outline outline-2 outline-offset-2 outline-brand-gold/30" : (isCurrentMonth ? "text-gray-300" : "text-gray-600")
+                                    "flex h-[18px] w-[18px] items-center justify-center rounded-full text-[10px] font-medium shrink-0",
+                                    isToday
+                                        ? "bg-brand-gold text-black font-bold outline outline-1 outline-offset-1 outline-brand-gold/40"
+                                        : (isCurrentMonth ? "text-gray-300" : "text-gray-600")
                                 )}>
                                     {date.getDate()}
                                 </span>
                             </div>
                             
-                            <div className="flex-1 overflow-y-auto space-y-1.5 pr-0.5" style={{ scrollbarWidth: 'thin' }}>
+                            <div className="flex-1 overflow-hidden flex flex-col gap-1 pr-0.5 min-h-0">
                                 {visibleApps.map((app) => (
-                                    <AppointmentPill 
-                                        key={app.id} 
-                                        appointment={app} 
+                                    <AppointmentPill
+                                        key={app.id}
+                                        appointment={app}
                                         selected={app.id === selectedId}
                                         onClick={handleAppointmentClick}
+                                        compact
                                     />
                                 ))}
                                 {hiddenCount > 0 && (
-                                    <div 
-                                        className="text-[10px] text-center text-gray-500 font-medium py-0.5 mt-1 cursor-pointer hover:text-white transition-colors"
-                                        onClick={() => handleMoreClick(dateStr)}
+                                    <button
+                                        type="button"
+                                        className="w-full text-[10px] text-gray-400 hover:text-white font-semibold py-0.5 text-left px-1 transition-colors shrink-0"
+                                        onClick={(e) => handleMoreClick(e, date, dayAppointments)}
                                     >
-                                        Ver mais (+{hiddenCount})
-                                    </div>
+                                        +{hiddenCount} mais
+                                    </button>
                                 )}
                             </div>
                         </div>
                     );
                 })}
             </div>
+
+            {popoverDay && (
+                <DayPopover
+                    date={popoverDay.date}
+                    appointments={popoverDay.items}
+                    selectedId={selectedId ?? null}
+                    anchor={popoverDay.anchor}
+                    onClose={() => setPopoverDay(null)}
+                    onAppointmentClick={handleAppointmentClick}
+                />
+            )}
         </div>
     );
 }

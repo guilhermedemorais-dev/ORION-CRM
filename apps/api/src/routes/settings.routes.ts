@@ -262,12 +262,14 @@ router.get(
             const result = await query<{
                 default_appointment_pipeline_id: string | null;
                 default_appointment_stage_id: string | null;
+                default_appointment_duration_minutes: number | null;
                 pipeline_name: string | null;
                 pipeline_slug: string | null;
                 stage_name: string | null;
             }>(
                 `SELECT s.default_appointment_pipeline_id,
                         s.default_appointment_stage_id,
+                        s.default_appointment_duration_minutes,
                         p.name AS pipeline_name,
                         p.slug AS pipeline_slug,
                         st.name AS stage_name
@@ -280,6 +282,7 @@ router.get(
             res.json({
                 default_appointment_pipeline_id: row?.default_appointment_pipeline_id ?? null,
                 default_appointment_stage_id: row?.default_appointment_stage_id ?? null,
+                default_appointment_duration_minutes: row?.default_appointment_duration_minutes ?? 60,
                 pipeline_name: row?.pipeline_name ?? null,
                 pipeline_slug: row?.pipeline_slug ?? null,
                 stage_name: row?.stage_name ?? null,
@@ -296,6 +299,12 @@ router.get(
 const agendaSettingsSchema = z.object({
     default_appointment_pipeline_id: z.string().uuid().nullable(),
     default_appointment_stage_id: z.string().uuid().nullable().optional(),
+    default_appointment_duration_minutes: z
+        .number()
+        .int()
+        .min(5, 'A duração mínima é 5 minutos.')
+        .max(480, 'A duração máxima é 480 minutos (8h).')
+        .optional(),
 });
 
 router.patch(
@@ -346,13 +355,15 @@ router.patch(
 
             // Se pipeline ficou null, zera também o stage (não faz sentido stage sem pipeline)
             const finalStageId = pipelineId ? stageId : null;
+            const durationMinutes = parsed.data.default_appointment_duration_minutes ?? null;
 
             await query(
                 `UPDATE settings
                  SET default_appointment_pipeline_id = $1,
                      default_appointment_stage_id = $2,
+                     default_appointment_duration_minutes = COALESCE($3, default_appointment_duration_minutes),
                      updated_at = NOW()`,
-                [pipelineId, finalStageId]
+                [pipelineId, finalStageId, durationMinutes]
             );
 
             await invalidateSettingsCache();
@@ -367,6 +378,7 @@ router.patch(
                     newValue: {
                         default_appointment_pipeline_id: pipelineId,
                         default_appointment_stage_id: finalStageId,
+                        default_appointment_duration_minutes: durationMinutes,
                     },
                     req,
                 });
@@ -376,6 +388,7 @@ router.patch(
                 data: {
                     default_appointment_pipeline_id: pipelineId,
                     default_appointment_stage_id: finalStageId,
+                    default_appointment_duration_minutes: durationMinutes,
                 },
             });
         } catch (err) {

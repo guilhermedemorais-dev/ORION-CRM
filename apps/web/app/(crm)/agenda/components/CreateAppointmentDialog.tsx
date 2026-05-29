@@ -1,5 +1,5 @@
 "use client"
-import { X, Loader2, Send, Phone } from "lucide-react";
+import { X, Loader2, Send, Phone, Clock } from "lucide-react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Input } from "@/components/ui/Input"; 
 import { Button } from "@/components/ui/Button";
@@ -10,6 +10,11 @@ import { createAppointmentAction, editAppointmentAction, notifyAppointmentAction
 import { notify } from "@/lib/toast";
 import { useTransition, useEffect, useState, useMemo, useCallback } from "react";
 import type { AppointmentRecord } from "../types";
+
+const DURATION_PRESETS = [15, 30, 45, 60, 90, 120];
+const DEFAULT_DURATION = 60;
+const MIN_DURATION = 5;
+const MAX_DURATION = 480;
 
 // Base schema fields shared by both modes
 const baseFields = {
@@ -25,6 +30,10 @@ const baseFields = {
         return picked.getTime() >= today.getTime();
     }, { message: "A data não pode estar no passado" }),
     time: z.string().min(1, "Horário é obrigatório"),
+    duration_minutes: z.coerce.number()
+        .int("Use um número inteiro de minutos")
+        .min(MIN_DURATION, `Duração mínima: ${MIN_DURATION} min`)
+        .max(MAX_DURATION, `Duração máxima: ${MAX_DURATION} min (8h)`),
     notes: z.string().optional(),
 };
 
@@ -107,6 +116,7 @@ export function CreateAppointmentDialog({
     const [isPending, startTransition] = useTransition();
     const [pipelines, setPipelines] = useState<Pipeline[]>([]);
     const [users, setUsers] = useState<UserOption[]>([]);
+    const [defaultDuration, setDefaultDuration] = useState<number>(DEFAULT_DURATION);
     const [createdId, setCreatedId] = useState<string | null>(null);
     const [notifySending, setNotifySending] = useState(false);
     const [notifySent, setNotifySent] = useState(false);
@@ -149,6 +159,18 @@ export function CreateAppointmentDialog({
                 setUsers(list.map((u: { id: string; name: string }) => ({ id: u.id, name: u.name })));
             })
             .catch(() => {});
+
+        // Carrega duração padrão configurada em Ajustes > Agenda.
+        // Falha silenciosa cai no DEFAULT_DURATION (60).
+        fetch('/api/internal/settings/agenda')
+            .then(r => r.ok ? r.json() : null)
+            .then((data) => {
+                const v = data?.default_appointment_duration_minutes;
+                if (typeof v === 'number' && Number.isFinite(v) && v >= MIN_DURATION && v <= MAX_DURATION) {
+                    setDefaultDuration(v);
+                }
+            })
+            .catch(() => {});
     }, [isVisible]);
 
     // Load appointment data for edit mode
@@ -187,6 +209,11 @@ export function CreateAppointmentDialog({
     const defaultValues = useMemo(() => {
         if (editData) {
             const startsAt = new Date(editData.starts_at);
+            const endsAt = new Date(editData.ends_at);
+            const editDuration = Math.max(
+                MIN_DURATION,
+                Math.round((endsAt.getTime() - startsAt.getTime()) / 60000) || defaultDuration
+            );
             return {
                 type: editData.type || "Visita Showroom",
                 pipeline_id: editData.pipeline_id || "",
@@ -196,11 +223,13 @@ export function CreateAppointmentDialog({
                 contact_name: editData.lead?.name || editData.customer?.name || "",
                 contact_phone: editData.lead?.whatsapp_number || editData.customer?.whatsapp_number || "",
                 // For reschedule: clear dates so user picks new ones
-                date: isReschedule ? "" : startsAt.toISOString().split('T')[0],
-                time: isReschedule ? "" : startsAt.toTimeString().slice(0, 5),
+                date: isReschedule ? "" : `${startsAt.getFullYear()}-${String(startsAt.getMonth() + 1).padStart(2, '0')}-${String(startsAt.getDate()).padStart(2, '0')}`,
+                time: isReschedule ? "" : `${String(startsAt.getHours()).padStart(2, '0')}:${String(startsAt.getMinutes()).padStart(2, '0')}`,
+                duration_minutes: editDuration,
                 notes: editData.notes || "",
             };
         }
+        const now = new Date();
         return {
             type: "Visita Showroom",
             pipeline_id: "",
@@ -209,11 +238,12 @@ export function CreateAppointmentDialog({
             customer_id: prefilledCustomerId || "",
             contact_name: "",
             contact_phone: "",
-            date: new Date().toISOString().split('T')[0],
+            date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
             time: "10:00",
+            duration_minutes: defaultDuration,
             notes: ""
         };
-    }, [editData, isReschedule, prefilledLeadId, prefilledCustomerId, currentUserId]);
+    }, [editData, isReschedule, prefilledLeadId, prefilledCustomerId, currentUserId, defaultDuration]);
 
     const { register, handleSubmit, formState: { errors, isDirty }, setValue, watch, reset } = useForm<AppointmentFormValues>({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -232,12 +262,11 @@ export function CreateAppointmentDialog({
         handleClose();
     }, [isPending, isDirty, createdId, editSuccess, handleClose]);
 
-    // Reset form when editData loads
+    // Reset form when editData loads or when settings-driven default duration changes
+    // (settings load is async — the form precisa refletir a duração configurada).
     useEffect(() => {
-        if (editData) {
-            reset(defaultValues);
-        }
-    }, [editData, reset, defaultValues]);
+        reset(defaultValues);
+    }, [editData, defaultDuration, reset, defaultValues]);
 
     // Phone mask handler
     const phoneValue = watch('contact_phone');
@@ -263,36 +292,48 @@ export function CreateAppointmentDialog({
             if (data.contact_name) formData.append('contact_name', data.contact_name);
             // Strip phone mask before sending
             if (data.contact_phone) formData.append('contact_phone', stripPhoneMask(data.contact_phone));
-            formData.append('starts_at', `${data.date}T${data.time}:00`);
 
-            // Assume 1 hour duration
+            // Monta starts_at no fuso LOCAL do usuário e converte para ISO UTC,
+            // garantindo que o horário escolhido em tela seja exatamente o que
+            // o backend grava (sem deslocamento por timezone do container).
             const [hours, minutes] = data.time.split(':').map(Number);
-            const endDate = new Date(`${data.date}T00:00:00`);
-            endDate.setHours(hours + 1, minutes, 0, 0);
-            formData.append('ends_at', endDate.toISOString());
+            const localStart = new Date(`${data.date}T00:00:00`);
+            localStart.setHours(hours, minutes, 0, 0);
+            formData.append('starts_at', localStart.toISOString());
+
+            // Backend calcula ends_at a partir de duration_minutes.
+            formData.append('duration_minutes', String(data.duration_minutes));
 
             if (data.notes) formData.append('notes', data.notes);
 
             try {
                 if (isEditMode) {
-                    await editAppointmentAction(formData);
+                    const result = await editAppointmentAction(formData);
+                    // Em sucesso, o redirect dentro da action navega o usuário e
+                    // a Promise não resolve com objeto (ele já mudou de rota).
+                    // Só caímos aqui se a action retornou {ok:false, error}.
+                    if (result && result.ok === false) {
+                        setSubmitError(result.error);
+                        return;
+                    }
                     setEditSuccess(true);
                     notify.success('Agendamento atualizado');
-                    // Close shortly after so user sees the toast banner.
                     setTimeout(() => handleClose(), 1100);
                 } else {
                     const result = await createAppointmentAction(formData);
-                    if (result?.id) {
-                        setCreatedId(result.id);
+                    if (result.ok) {
+                        setCreatedId(result.data.id);
                         notify.success('Agendamento criado');
                     } else {
-                        setSubmitError('A API não retornou o agendamento criado.');
+                        setSubmitError(result.error);
                     }
                 }
             } catch (error) {
-                const message = error instanceof Error
+                // Captura genérica — em produção o Next mascara mensagens de Error
+                // jogadas por server actions; usamos mensagem segura em pt-BR.
+                const message = error instanceof Error && error.message && !error.message.includes('Server Components render')
                     ? error.message
-                    : 'Não foi possível registrar o agendamento.';
+                    : 'Não foi possível registrar o agendamento. Tente novamente.';
                 setSubmitError(message);
             }
         });
@@ -471,6 +512,53 @@ export function CreateAppointmentDialog({
                                     <Input type="time" {...register('time')} />
                                     {errors.time && <p className="text-[10px] text-rose-500">{errors.time.message}</p>}
                                 </div>
+                            </div>
+
+                            {/* Duração — chips + input livre */}
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-gray-400 flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    Duração do atendimento *
+                                </label>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {DURATION_PRESETS.map((m) => {
+                                        const active = Number(watch('duration_minutes')) === m;
+                                        return (
+                                            <button
+                                                key={m}
+                                                type="button"
+                                                onClick={() => setValue('duration_minutes', m, { shouldValidate: true, shouldDirty: true })}
+                                                className={`h-8 rounded-md border px-3 text-[11px] font-semibold transition-colors ${
+                                                    active
+                                                        ? 'border-brand-gold bg-brand-gold/15 text-brand-gold'
+                                                        : 'border-white/10 bg-white/5 text-gray-300 hover:border-brand-gold/40 hover:text-white'
+                                                }`}
+                                            >
+                                                {m < 60 ? `${m} min` : m === 60 ? '1h' : m % 60 === 0 ? `${m / 60}h` : `${Math.floor(m / 60)}h${m % 60}`}
+                                            </button>
+                                        );
+                                    })}
+                                    <div className="flex items-center gap-1.5">
+                                        <input
+                                            type="number"
+                                            inputMode="numeric"
+                                            min={MIN_DURATION}
+                                            max={MAX_DURATION}
+                                            step={5}
+                                            {...register('duration_minutes', { valueAsNumber: true })}
+                                            aria-label="Duração personalizada em minutos"
+                                            className="h-8 w-20 rounded-md border border-white/10 bg-white/5 px-2 text-[12px] text-[color:var(--orion-text)] focus:border-brand-gold focus:outline-none focus:ring-1 focus:ring-brand-gold transition-colors"
+                                        />
+                                        <span className="text-[10px] text-gray-500">min</span>
+                                    </div>
+                                </div>
+                                {errors.duration_minutes ? (
+                                    <p className="text-[10px] text-rose-500">{errors.duration_minutes.message as string}</p>
+                                ) : (
+                                    <p className="text-[10px] text-gray-500">
+                                        Padrão definido em Ajustes &gt; Agenda: {defaultDuration} min. Você pode ajustar para esse agendamento.
+                                    </p>
+                                )}
                             </div>
 
                             <div className="space-y-1.5">

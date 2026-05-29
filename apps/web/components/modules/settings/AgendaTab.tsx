@@ -6,7 +6,7 @@
 // lead naquele pipeline automaticamente.
 
 import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Calendar, Check, Loader2, Save } from 'lucide-react';
+import { AlertTriangle, Calendar, Check, Clock, Loader2, Save } from 'lucide-react';
 
 interface PipelineOption {
     id: string;
@@ -25,10 +25,16 @@ interface StageOption {
 interface AgendaSettings {
     default_appointment_pipeline_id: string | null;
     default_appointment_stage_id: string | null;
+    default_appointment_duration_minutes: number | null;
     pipeline_name: string | null;
     pipeline_slug: string | null;
     stage_name: string | null;
 }
+
+const DURATION_PRESETS = [15, 30, 45, 60, 90, 120];
+const DEFAULT_DURATION = 60;
+const MIN_DURATION = 5;
+const MAX_DURATION = 480;
 
 export function AgendaTab() {
     const [pipelines, setPipelines] = useState<PipelineOption[]>([]);
@@ -36,6 +42,8 @@ export function AgendaTab() {
     const [current, setCurrent] = useState<AgendaSettings | null>(null);
     const [selectedId, setSelectedId] = useState<string>('');
     const [selectedStageId, setSelectedStageId] = useState<string>('');
+    const [durationMinutes, setDurationMinutes] = useState<number>(60);
+    const [durationError, setDurationError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadingStages, setLoadingStages] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -65,6 +73,12 @@ export function AgendaTab() {
             setCurrent(settingsData);
             setSelectedId(settingsData?.default_appointment_pipeline_id ?? '');
             setSelectedStageId(settingsData?.default_appointment_stage_id ?? '');
+            setDurationMinutes(
+                Number.isFinite(settingsData?.default_appointment_duration_minutes)
+                    ? Number(settingsData.default_appointment_duration_minutes)
+                    : DEFAULT_DURATION
+            );
+            setDurationError(null);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Erro ao carregar.');
         } finally {
@@ -107,7 +121,23 @@ export function AgendaTab() {
         }
     }, [stages, selectedStageId]);
 
+    const validateDuration = (value: number): string | null => {
+        if (!Number.isFinite(value) || !Number.isInteger(value)) {
+            return 'Informe um número inteiro.';
+        }
+        if (value < MIN_DURATION) return `Mínimo ${MIN_DURATION} minutos.`;
+        if (value > MAX_DURATION) return `Máximo ${MAX_DURATION} minutos (8 horas).`;
+        return null;
+    };
+
     const save = async () => {
+        const dError = validateDuration(durationMinutes);
+        if (dError) {
+            setDurationError(dError);
+            showToast('error', dError);
+            return;
+        }
+        setDurationError(null);
         setSaving(true);
         try {
             const res = await fetch('/api/internal/settings/agenda', {
@@ -116,15 +146,19 @@ export function AgendaTab() {
                 body: JSON.stringify({
                     default_appointment_pipeline_id: selectedId || null,
                     default_appointment_stage_id: selectedId ? (selectedStageId || null) : null,
+                    default_appointment_duration_minutes: durationMinutes,
                 }),
             });
             const data = await res.json().catch(() => null);
             if (!res.ok) {
-                throw new Error(data?.message ?? 'Falha ao salvar.');
+                const fieldDetails = Array.isArray(data?.details) && data.details.length
+                    ? data.details.map((d: { field?: string; message?: string }) => d.message).filter(Boolean).join(' ')
+                    : null;
+                throw new Error(fieldDetails || data?.message || 'Falha ao salvar.');
             }
             showToast('success', selectedId
-                ? `Agenda configurada para o pipeline "${pipelines.find(p => p.id === selectedId)?.name ?? '—'}"${selectedStageId ? `, etapa "${stages.find(s => s.id === selectedStageId)?.name ?? '—'}"` : ', primeira etapa'}.`
-                : 'Pipeline padrão removido. Agendamentos continuarão funcionando sem vínculo.');
+                ? `Agenda configurada para o pipeline "${pipelines.find(p => p.id === selectedId)?.name ?? '—'}"${selectedStageId ? `, etapa "${stages.find(s => s.id === selectedStageId)?.name ?? '—'}"` : ', primeira etapa'}. Duração padrão: ${durationMinutes} min.`
+                : `Pipeline padrão removido. Duração padrão: ${durationMinutes} min.`);
             await load();
         } catch (err) {
             showToast('error', err instanceof Error ? err.message : 'Erro ao salvar.');
@@ -135,7 +169,9 @@ export function AgendaTab() {
 
     const pipelineChanged = selectedId !== (current?.default_appointment_pipeline_id ?? '');
     const stageChanged = (selectedStageId || '') !== (current?.default_appointment_stage_id ?? '');
-    const hasUnsavedChange = pipelineChanged || stageChanged;
+    const currentDuration = current?.default_appointment_duration_minutes ?? DEFAULT_DURATION;
+    const durationChanged = durationMinutes !== currentDuration;
+    const hasUnsavedChange = pipelineChanged || stageChanged || durationChanged;
     const isUnconfigured = !current?.default_appointment_pipeline_id;
 
     if (loading) {
@@ -251,6 +287,61 @@ export function AgendaTab() {
                     </div>
                 )}
 
+                {/* Duração padrão do atendimento */}
+                <div className="mt-5 border-t border-white/5 pt-4">
+                    <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-[#A8A4A0]">
+                        <Clock className="h-3.5 w-3.5" /> Duração padrão do atendimento
+                    </label>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {DURATION_PRESETS.map((m) => {
+                            const active = durationMinutes === m;
+                            return (
+                                <button
+                                    key={m}
+                                    type="button"
+                                    onClick={() => { setDurationMinutes(m); setDurationError(null); }}
+                                    className={`h-8 rounded-lg border px-3 text-[11px] font-semibold transition-colors ${
+                                        active
+                                            ? 'border-[#C8A97A] bg-[#C8A97A]/15 text-[#C8A97A]'
+                                            : 'border-white/10 bg-[#15151A] text-[#A8A4A0] hover:border-[#C8A97A]/40 hover:text-[#F0EDE8]'
+                                    }`}
+                                >
+                                    {m < 60 ? `${m} min` : m === 60 ? '1h' : m % 60 === 0 ? `${m / 60}h` : `${Math.floor(m / 60)}h${m % 60}`}
+                                </button>
+                            );
+                        })}
+                        <div className="ml-1 flex items-center gap-1.5">
+                            <input
+                                type="number"
+                                inputMode="numeric"
+                                min={MIN_DURATION}
+                                max={MAX_DURATION}
+                                step={5}
+                                value={durationMinutes}
+                                onChange={(e) => {
+                                    const v = parseInt(e.target.value, 10);
+                                    setDurationMinutes(Number.isFinite(v) ? v : 0);
+                                    setDurationError(validateDuration(Number.isFinite(v) ? v : 0));
+                                }}
+                                aria-label="Duração personalizada em minutos"
+                                aria-invalid={!!durationError}
+                                className={`h-8 w-20 rounded-lg border bg-[#15151A] px-2 text-[12px] text-[#F0EDE8] outline-none focus:border-[#C8A97A]/50 ${
+                                    durationError ? 'border-rose-500/60' : 'border-white/10'
+                                }`}
+                            />
+                            <span className="text-[10px] text-[#7A7774]">min</span>
+                        </div>
+                    </div>
+                    {durationError ? (
+                        <p className="mt-2 text-[10px] font-medium text-rose-400">{durationError}</p>
+                    ) : (
+                        <p className="mt-2 text-[10px] text-[#7A7774]">
+                            Cada novo agendamento usa essa duração quando você não escolher a hora final manualmente.
+                            Range válido: {MIN_DURATION}–{MAX_DURATION} minutos.
+                        </p>
+                    )}
+                </div>
+
                 <div className="mt-4 flex items-center justify-end gap-2">
                     {hasUnsavedChange && (
                         <span className="text-[10px] font-semibold text-amber-300">Alterações não salvas</span>
@@ -274,8 +365,9 @@ export function AgendaTab() {
                     <span>
                         Configurado para o pipeline <strong>{current?.pipeline_name ?? '—'}</strong>
                         {current?.stage_name
-                            ? <> na etapa <strong>{current.stage_name}</strong>.</>
-                            : <>, primeira etapa (padrão).</>}
+                            ? <> na etapa <strong>{current.stage_name}</strong></>
+                            : <>, primeira etapa (padrão)</>}
+                        {' '}· duração padrão <strong>{currentDuration} min</strong>.
                     </span>
                 </div>
             )}

@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "db:migrate": "tsx src/db/migrate.ts",
-    "test": "node --import tsx --test src/**/*.test.ts",
+    "test": "nodejs --import tsx --test src/**/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -20,9 +20,9 @@
     "express": "^4.21.1",
     "helmet": "^8.0.0",
     "ioredis": "^5.4.1",
-    "jsonwebtoken": "^9.0.2",
+    "jsonwebtoken": "^9.0.3",
     "multer": "^1.4.5-lts.1",
-    "pg": "^8.13.1",
+    "pg": "^8.20.0",
     "pino": "^9.5.0",
     "pino-pretty": "^13.0.0",
     "uuid": "^11.0.3",

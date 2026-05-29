@@ -23,6 +23,7 @@ export interface AppointmentRecord {
   customer?: { id: string; name: string; whatsapp_number?: string | null } | null;
   assigned_to?: { id: string; name: string } | null;
   pipeline_id?: string | null;
+  pipeline?: { id: string; name: string } | null;
   ai_context?: AiContextData | null;
   created_at: string;
   cancel_reason?: string | null;

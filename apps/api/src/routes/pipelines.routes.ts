@@ -46,25 +46,42 @@ const flowSaveSchema = z.object({
 });
 
 const pipelineStageCreateSchema = z.object({
-    name: z.string().trim().min(2).max(100),
-    color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-    position: z.coerce.number().int().min(1),
+    name: z.string({ required_error: 'Informe o nome da etapa.' })
+        .trim()
+        .min(2, 'O nome deve ter no mínimo 2 caracteres.')
+        .max(100, 'O nome deve ter no máximo 100 caracteres.'),
+    color: z.string({ required_error: 'Escolha uma cor.' })
+        .regex(/^#[0-9A-Fa-f]{6}$/, 'Cor inválida. Use formato hexadecimal #RRGGBB.'),
+    position: z.coerce.number({ invalid_type_error: 'Posição inválida.' })
+        .int('Posição deve ser um número inteiro.')
+        .min(1, 'A posição deve começar em 1.'),
     is_won: z.boolean().optional(),
     is_lost: z.boolean().optional(),
 }).refine((data) => !(data.is_won && data.is_lost), {
     message: 'Uma etapa não pode ser de ganho e perda ao mesmo tempo.',
+    path: ['is_won'],
 });
 
 const pipelineStageUpdateSchema = z.object({
-    name: z.string().trim().min(2).max(100).optional(),
-    color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-    position: z.coerce.number().int().min(1).optional(),
+    name: z.string()
+        .trim()
+        .min(2, 'O nome deve ter no mínimo 2 caracteres.')
+        .max(100, 'O nome deve ter no máximo 100 caracteres.')
+        .optional(),
+    color: z.string()
+        .regex(/^#[0-9A-Fa-f]{6}$/, 'Cor inválida. Use formato hexadecimal #RRGGBB.')
+        .optional(),
+    position: z.coerce.number()
+        .int('Posição deve ser um número inteiro.')
+        .min(1, 'A posição deve começar em 1.')
+        .optional(),
     is_won: z.boolean().optional(),
     is_lost: z.boolean().optional(),
 }).refine((data) => Object.keys(data).length > 0, {
-    message: 'Nenhum campo informado para atualizar a etapa.',
+    message: 'Informe pelo menos um campo para atualizar.',
 }).refine((data) => !(data.is_won && data.is_lost), {
     message: 'Uma etapa não pode ser de ganho e perda ao mesmo tempo.',
+    path: ['is_won'],
 });
 
 const pipelineStageReorderSchema = z.object({
@@ -730,7 +747,10 @@ router.put(
         try {
             const parsed = pipelineStageReorderSchema.safeParse(req.body);
             if (!parsed.success) {
-                next(AppError.badRequest('Payload de reordenação inválido.'));
+                next(AppError.badRequest(
+                    'Payload de reordenação inválido.',
+                    parsed.error.errors.map((error) => ({ field: error.path.join('.'), message: error.message }))
+                ));
                 return;
             }
 
@@ -771,7 +791,14 @@ router.patch(
             const params = pipelineStageParamsSchema.safeParse(req.params);
             const body = pipelineStageUpdateSchema.safeParse(req.body);
             if (!params.success || !body.success) {
-                next(AppError.badRequest('Etapa inválida.'));
+                const errors = [
+                    ...(params.success ? [] : params.error.errors),
+                    ...(body.success ? [] : body.error.errors),
+                ];
+                next(AppError.badRequest(
+                    'Etapa inválida.',
+                    errors.map((error) => ({ field: error.path.join('.'), message: error.message }))
+                ));
                 return;
             }
 

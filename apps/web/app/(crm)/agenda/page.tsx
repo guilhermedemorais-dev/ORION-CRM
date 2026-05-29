@@ -51,66 +51,62 @@ export default async function AgendaPage({
                 description="Gerencie seus agendamentos e horários para visitas e reuniões."
             />
 
-            <div className={cn(
-                'flex-1 overflow-hidden min-h-0 mt-4',
-                hasSelection ? 'grid grid-cols-1 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_400px] gap-4' : 'flex flex-col'
-            )}>
-                <div className="flex flex-col overflow-hidden p-0 min-w-0">
-                    <CalendarHeader currentDate={currentDate} view={view} />
-                    <div className="flex-1 overflow-hidden min-h-0">
-                        {view === 'month' && (
-                            <MonthView
-                                currentDate={currentDate}
-                                appointments={appointments}
-                                selectedId={searchParams.selected ?? null}
-                            />
-                        )}
-                        {view === 'day' && (
-                            <DayView
-                                currentDate={currentDate}
-                                appointments={appointments}
-                                selectedId={searchParams.selected ?? null}
-                            />
-                        )}
-                        {view === 'week' && (
-                            <WeekView
-                                currentDate={currentDate}
-                                appointments={appointments}
-                                selectedId={searchParams.selected ?? null}
-                                days={7}
-                            />
-                        )}
-                        {view === '4days' && (
-                            <WeekView
-                                currentDate={currentDate}
-                                appointments={appointments}
-                                selectedId={searchParams.selected ?? null}
-                                days={4}
-                            />
-                        )}
-                        {view === 'year' && (
-                            <YearView
-                                currentDate={currentDate}
-                                appointments={appointments}
-                            />
-                        )}
-                        {view === 'schedule' && (
-                            <ScheduleView
-                                currentDate={currentDate}
-                                appointments={appointments}
-                                selectedId={searchParams.selected ?? null}
-                            />
-                        )}
-                    </div>
+            {/* Agenda ocupa 100% do espaço; detalhes do agendamento abrem como modal central. */}
+            <div className="flex-1 min-h-0 mt-2 flex flex-col overflow-hidden">
+                <CalendarHeader currentDate={currentDate} view={view} />
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-4">
+                    {view === 'month' && (
+                        <MonthView
+                            currentDate={currentDate}
+                            appointments={appointments}
+                            selectedId={searchParams.selected ?? null}
+                        />
+                    )}
+                    {view === 'day' && (
+                        <DayView
+                            currentDate={currentDate}
+                            appointments={appointments}
+                            selectedId={searchParams.selected ?? null}
+                        />
+                    )}
+                    {view === 'week' && (
+                        <WeekView
+                            currentDate={currentDate}
+                            appointments={appointments}
+                            selectedId={searchParams.selected ?? null}
+                            days={7}
+                        />
+                    )}
+                    {view === '4days' && (
+                        <WeekView
+                            currentDate={currentDate}
+                            appointments={appointments}
+                            selectedId={searchParams.selected ?? null}
+                            days={4}
+                        />
+                    )}
+                    {view === 'year' && (
+                        <YearView
+                            currentDate={currentDate}
+                            appointments={appointments}
+                        />
+                    )}
+                    {view === 'schedule' && (
+                        <ScheduleView
+                            currentDate={currentDate}
+                            appointments={appointments}
+                            selectedId={searchParams.selected ?? null}
+                        />
+                    )}
                 </div>
-
-                {hasSelection && selectedAppointment && (
-                    <AppointmentSheet
-                        appointment={selectedAppointment}
-                        closeHref={closeHref}
-                    />
-                )}
             </div>
+
+            {hasSelection && selectedAppointment && (
+                <AppointmentSheet
+                    appointment={selectedAppointment}
+                    closeHref={closeHref}
+                />
+            )}
 
             {searchParams.create === 'true' && <CreateAppointmentDialog currentUserId={currentUserId} />}
         </div>

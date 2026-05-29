@@ -1,7 +1,13 @@
 'use client';
 
+import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Camera, Loader2 } from 'lucide-react';
 import { formatCurrencyFromCents, formatCurrencyShort, getInitials } from '@/lib/utils';
 import type { CustomerFull, CustomerStats } from './types';
+
+const ACCEPTED_PHOTO_MIME = 'image/png,image/jpeg,image/webp';
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
 interface Props {
   customer: CustomerFull;
@@ -148,11 +154,68 @@ const S = {
 };
 
 export default function ClientLeftSidebar({ customer, stats }: Props) {
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  // Mostra a foto recém-enviada antes do refresh (route handler invalida server cache).
+  const [optimisticPhoto, setOptimisticPhoto] = useState<string | null>(null);
+
   const ini = getInitials(customer.name);
   const ltv = stats?.ltv_cents ?? customer.ltv_cents ?? customer.lifetime_value_cents ?? 0;
   const ordersCount = stats?.orders_count ?? customer.orders_count ?? 0;
   const pendingOs = stats?.pending_os ?? (customer.has_pending_os ? 1 : 0);
   const lastDays = stats?.last_interaction_days ?? null;
+
+  const photoUrl = optimisticPhoto ?? customer.photo_url ?? null;
+
+  const handlePickPhoto = () => {
+    if (uploading) return;
+    setUploadError(null);
+    fileInputRef.current?.click();
+  };
+
+  const handlePhotoFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = ''; // permite reupload do mesmo arquivo
+    if (!file) return;
+
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      setUploadError('Use PNG, JPEG ou WebP.');
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setUploadError('Arquivo maior que 5 MB.');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+
+    const fd = new FormData();
+    fd.append('photo', file);
+
+    try {
+      const res = await fetch(`/api/internal/customers/${customer.id}/photo`, {
+        method: 'POST',
+        body: fd,
+      });
+      const data = await res.json().catch(() => ({} as { photo_url?: string; message?: string }));
+      if (!res.ok) {
+        setUploadError(typeof data.message === 'string' ? data.message : 'Falha ao enviar a foto.');
+        return;
+      }
+      if (typeof data.photo_url === 'string') {
+        // Cache-busting para forçar reload da imagem (mesmo arquivo pode ter substituído).
+        setOptimisticPhoto(`${data.photo_url}?v=${Date.now()}`);
+      }
+      router.refresh();
+    } catch {
+      setUploadError('Falha de rede ao enviar a foto.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <div style={S.sb}>
@@ -160,15 +223,84 @@ export default function ClientLeftSidebar({ customer, stats }: Props) {
       {/* ── HERO ── */}
       <div style={S.hero}>
         <div style={S.heroRow}>
-          <div style={S.av}>
-            {ini}
+          <button
+            type="button"
+            onClick={handlePickPhoto}
+            disabled={uploading}
+            aria-label={photoUrl ? 'Alterar foto do cliente' : 'Adicionar foto do cliente'}
+            title={photoUrl ? 'Alterar foto' : 'Adicionar foto'}
+            style={{
+              ...S.av,
+              cursor: uploading ? 'wait' : 'pointer',
+              padding: 0,
+              overflow: 'hidden',
+              backgroundImage: photoUrl ? `url("${photoUrl}")` : undefined,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          >
+            {!photoUrl && !uploading ? ini : null}
+            {uploading ? <Loader2 size={16} className="animate-spin" color="#C8A97A" /> : null}
+            {!uploading && (
+              <span
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  justifyContent: 'flex-end',
+                  padding: '2px',
+                  pointerEvents: 'none',
+                }}
+              >
+                <span
+                  style={{
+                    background: 'rgba(0,0,0,0.65)',
+                    border: '1px solid rgba(200,169,122,0.6)',
+                    borderRadius: '50%',
+                    width: '14px',
+                    height: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Camera size={8} color="#C8A97A" />
+                </span>
+              </span>
+            )}
             <div style={S.onlineDot} />
-          </div>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPTED_PHOTO_MIME}
+            onChange={handlePhotoFile}
+            style={{ display: 'none' }}
+            aria-hidden="true"
+          />
           <div>
             <div style={S.hname}>{customer.name.split(' ')[0]}</div>
             <div style={S.hsince}>Cliente desde {fmtDate(customer.created_at)}</div>
           </div>
         </div>
+        {uploadError ? (
+          <div
+            role="alert"
+            style={{
+              marginBottom: '8px',
+              padding: '6px 8px',
+              borderRadius: '6px',
+              background: 'rgba(224,82,82,0.10)',
+              border: '1px solid rgba(224,82,82,0.30)',
+              color: '#E05252',
+              fontSize: '10px',
+              lineHeight: 1.3,
+            }}
+          >
+            {uploadError}
+          </div>
+        ) : null}
 
         {/* Badges */}
         <div style={S.badges}>

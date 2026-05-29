@@ -25,7 +25,8 @@ const appointmentStatusSchema = z.enum([
 const createAppointmentSchema = z.object({
     type: z.string().min(1, 'Tipo é obrigatório'),
     starts_at: z.string().min(1, 'Data/hora início obrigatória'),
-    ends_at: z.string().min(1, 'Data/hora fim obrigatória'),
+    ends_at: z.string().optional().nullable(),
+    duration_minutes: z.number().int().min(5).max(480).optional().nullable(),
     notes: z.string().max(4000).optional().nullable(),
     lead_id: z.string().uuid().optional().nullable(),
     customer_id: z.string().uuid().optional().nullable(),
@@ -45,6 +46,18 @@ const createAppointmentSchema = z.object({
 const updateStatusSchema = z.object({
     status: appointmentStatusSchema,
     cancel_reason: z.string().max(500).optional().nullable(),
+});
+
+const updateAppointmentSchema = z.object({
+    type: z.string().min(1).optional(),
+    starts_at: z.string().min(1).optional(),
+    ends_at: z.string().optional().nullable(),
+    duration_minutes: z.number().int().min(5).max(480).optional().nullable(),
+    notes: z.string().max(4000).optional().nullable(),
+    assigned_to: z.string().uuid().optional().nullable(),
+    pipeline_id: z.string().uuid().optional().nullable(),
+    contact_name: z.string().max(255).optional().nullable(),
+    contact_phone: z.string().max(80).optional().nullable(),
 });
 
 const listQuerySchema = z.object({
@@ -88,6 +101,7 @@ interface AppointmentRow {
     assigned_to_id: string | null;
     assigned_to_name: string | null;
     pipeline_id: string | null;
+    pipeline_name: string | null;
     ai_context: Record<string, unknown> | null;
     cancelled_at: string | null;
     cancel_reason: string | null;
@@ -109,6 +123,7 @@ function formatAppointment(row: AppointmentRow) {
         customer: row.customer_id ? { id: row.customer_id, name: row.customer_name || 'Sem nome', whatsapp_number: row.customer_whatsapp } : null,
         assigned_to: row.assigned_to_id ? { id: row.assigned_to_id, name: row.assigned_to_name || '' } : null,
         pipeline_id: row.pipeline_id,
+        pipeline: row.pipeline_id ? { id: row.pipeline_id, name: row.pipeline_name || 'Sem nome' } : null,
         ai_context: row.ai_context,
         cancelled_at: row.cancelled_at,
         cancel_reason: row.cancel_reason,
@@ -125,13 +140,14 @@ const BASE_SELECT = `
         a.lead_id, l.name AS lead_name, l.whatsapp_number AS lead_whatsapp,
         a.customer_id, c.name AS customer_name, c.whatsapp_number AS customer_whatsapp,
         a.assigned_to AS assigned_to_id, u.name AS assigned_to_name,
-        a.pipeline_id,
+        a.pipeline_id, p.name AS pipeline_name,
         a.ai_context, a.cancelled_at, a.cancel_reason,
         a.reminder_sent_at, a.created_at, a.updated_at
     FROM appointments a
     LEFT JOIN leads l ON l.id = a.lead_id
     LEFT JOIN customers c ON c.id = a.customer_id
     LEFT JOIN users u ON u.id = a.assigned_to
+    LEFT JOIN pipelines p ON p.id = a.pipeline_id
 `;
 
 // ── GET /appointments ──────────────────────────────────────────────────────────
@@ -215,6 +231,66 @@ router.post('/', authenticate, async (req: Request, res: Response, next: NextFun
 
         const data = parsed.data;
 
+        // Resolve ends_at: prioridade ends_at explícito > duration_minutes > settings default
+        // Validação de tempo coerente: starts_at deve ser parseável; ends_at > starts_at.
+        const startsAtDate = new Date(data.starts_at);
+        if (Number.isNaN(startsAtDate.getTime())) {
+            throw AppError.badRequest('Data/hora de início inválida.', [
+                { field: 'starts_at', message: 'Formato inválido.' },
+            ]);
+        }
+
+        let resolvedEndsAt: string;
+        let resolvedDurationMinutes: number;
+        if (data.ends_at) {
+            const endsAtDate = new Date(data.ends_at);
+            if (Number.isNaN(endsAtDate.getTime())) {
+                throw AppError.badRequest('Data/hora de fim inválida.', [
+                    { field: 'ends_at', message: 'Formato inválido.' },
+                ]);
+            }
+            if (endsAtDate.getTime() <= startsAtDate.getTime()) {
+                throw AppError.badRequest('A hora final deve ser depois da hora inicial.', [
+                    { field: 'ends_at', message: 'Fim precisa ser maior que o início.' },
+                ]);
+            }
+            resolvedEndsAt = endsAtDate.toISOString();
+            resolvedDurationMinutes = Math.round((endsAtDate.getTime() - startsAtDate.getTime()) / 60000);
+        } else {
+            let durationMinutes = data.duration_minutes ?? null;
+            if (!durationMinutes) {
+                const defaults = await query<{ default_appointment_duration_minutes: number | null }>(
+                    `SELECT default_appointment_duration_minutes FROM settings LIMIT 1`
+                );
+                durationMinutes = defaults.rows[0]?.default_appointment_duration_minutes ?? 60;
+            }
+            resolvedDurationMinutes = durationMinutes;
+            resolvedEndsAt = new Date(startsAtDate.getTime() + durationMinutes * 60000).toISOString();
+        }
+
+        // Validar conflito de horário (overlap) — só conta agendamentos ativos.
+        // Regra: [starts_a, ends_a) ∩ [starts_b, ends_b) ≠ ∅ ⇔ starts_a < ends_b AND ends_a > starts_b
+        const assignedTo = data.assigned_to || req.user!.id;
+        const conflict = await query<{ id: string; type: string; starts_at: string; ends_at: string }>(
+            `SELECT id, type, starts_at, ends_at
+             FROM appointments
+             WHERE assigned_to = $1
+               AND status NOT IN ('CANCELADO', 'NAO_COMPARECEU', 'CONCLUIDO')
+               AND starts_at < $3::timestamptz
+               AND ends_at > $2::timestamptz
+             LIMIT 1`,
+            [assignedTo, startsAtDate.toISOString(), resolvedEndsAt]
+        );
+        if (conflict.rows[0]) {
+            const c = conflict.rows[0];
+            const conflictStart = new Date(c.starts_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+            const conflictEnd = new Date(c.ends_at).toLocaleString('pt-BR', { timeStyle: 'short' });
+            throw AppError.badRequest(
+                `Conflito de horário: já existe "${c.type}" de ${conflictStart} até ${conflictEnd}.`,
+                [{ field: 'starts_at', message: 'Esse horário sobrepõe um agendamento existente.' }]
+            );
+        }
+
         const appointment = await transaction(async (client) => {
             let resolvedLeadId = data.lead_id || null;
             let resolvedCustomerId = data.customer_id || null;
@@ -234,49 +310,80 @@ router.post('/', authenticate, async (req: Request, res: Response, next: NextFun
                 configuredStageId = fallback.rows[0]?.default_appointment_stage_id ?? null;
             }
 
+            // Resolve a etapa-alvo: configurada em settings > primeira etapa do pipeline.
+            // Calculada uma única vez pra reusar nos ramos abaixo.
+            let targetStageId: string | null = configuredStageId;
+            if (pipelineId && !targetStageId) {
+                const firstStage = await client.query<{ id: string }>(
+                    `SELECT id FROM pipeline_stages WHERE pipeline_id = $1 ORDER BY position ASC LIMIT 1`,
+                    [pipelineId]
+                );
+                targetStageId = firstStage.rows[0]?.id || null;
+            }
+
             // If no lead_id provided but contact_phone is, try to find or create a lead
             if (!resolvedLeadId && data.contact_phone) {
                 const phone = normalizePhone(data.contact_phone);
 
-                // Try to find existing lead by phone (prefer the pipeline informado,
-                // fallback para qualquer pipeline — agendamento é vinculado ao
-                // atendimento comercial, não duplica.)
-                const existingLead = await client.query<{ id: string }>(
-                    `SELECT id FROM leads
-                     WHERE whatsapp_number = $1
-                     ORDER BY CASE WHEN pipeline_id = $2 THEN 0 ELSE 1 END,
-                              created_at ASC
-                     LIMIT 1`,
-                    [phone, pipelineId]
-                );
+                // Busca lead já existente NESTE pipeline (a constraint unique é por
+                // whatsapp_number + pipeline_id, então só pode haver um por pipeline).
+                let existingInPipeline: { id: string; stage_id: string | null } | undefined;
+                if (pipelineId) {
+                    const r = await client.query<{ id: string; stage_id: string | null }>(
+                        `SELECT id, stage_id FROM leads WHERE whatsapp_number = $1 AND pipeline_id = $2 LIMIT 1`,
+                        [phone, pipelineId]
+                    );
+                    existingInPipeline = r.rows[0];
+                }
 
-                if (existingLead.rows[0]) {
-                    resolvedLeadId = existingLead.rows[0].id;
-                } else if (pipelineId) {
-                    // Stage prioridade: configurado em settings > primeira etapa do pipeline
-                    let stageId: string | null = configuredStageId;
-                    if (!stageId) {
-                        const stageResult = await client.query<{ id: string }>(
-                            `SELECT id FROM pipeline_stages WHERE pipeline_id = $1 ORDER BY position ASC LIMIT 1`,
-                            [pipelineId]
+                if (existingInPipeline) {
+                    resolvedLeadId = existingInPipeline.id;
+                    // Move o lead para a etapa configurada se ainda não estiver lá.
+                    if (targetStageId && existingInPipeline.stage_id !== targetStageId) {
+                        await client.query(
+                            `UPDATE leads SET stage_id = $1, last_interaction_at = NOW(), updated_at = NOW() WHERE id = $2`,
+                            [targetStageId, resolvedLeadId]
                         );
-                        stageId = stageResult.rows[0]?.id || null;
+                        await client.query(
+                            `INSERT INTO lead_timeline (lead_id, type, title, body, created_by)
+                             VALUES ($1, 'STAGE_CHANGED', 'Etapa atualizada', 'Lead movido para a etapa configurada da Agenda pelo novo agendamento.', $2)`,
+                            [resolvedLeadId, req.user!.id]
+                        ).catch(() => { /* silencia se constraint do timeline barrar */ });
                     }
-
+                } else if (pipelineId) {
+                    // Lead novo no pipeline configurado.
                     const newLead = await client.query<{ id: string }>(
                         `INSERT INTO leads (whatsapp_number, name, source, stage, pipeline_id, stage_id, assigned_to, last_interaction_at)
                          VALUES ($1, $2, 'BALCAO', 'NOVO', $3, $4, $5, NOW())
                          RETURNING id`,
-                        [phone, data.contact_name || null, pipelineId, stageId, req.user!.id]
+                        [phone, data.contact_name || null, pipelineId, targetStageId, req.user!.id]
                     );
                     resolvedLeadId = newLead.rows[0]!.id;
 
-                    // Create timeline event for lead creation
                     await client.query(
                         `INSERT INTO lead_timeline (lead_id, type, title, body, created_by)
                          VALUES ($1, 'LEAD_CREATED', 'Lead criado', 'Lead criado automaticamente pelo agendamento.', $2)`,
                         [resolvedLeadId, req.user!.id]
-                    ).catch(() => { /* timeline insert may fail on constraint, silently fail */ });
+                    ).catch(() => { /* silencia se constraint do timeline barrar */ });
+                }
+            } else if (resolvedLeadId && pipelineId && targetStageId) {
+                // Lead já vinculado (vindo da ficha) — garante que ele esteja no
+                // pipeline+etapa configurados, sem criar duplicatas.
+                const lead = await client.query<{ pipeline_id: string; stage_id: string | null }>(
+                    `SELECT pipeline_id, stage_id FROM leads WHERE id = $1 LIMIT 1`,
+                    [resolvedLeadId]
+                );
+                const current = lead.rows[0];
+                if (current && current.pipeline_id === pipelineId && current.stage_id !== targetStageId) {
+                    await client.query(
+                        `UPDATE leads SET stage_id = $1, last_interaction_at = NOW(), updated_at = NOW() WHERE id = $2`,
+                        [targetStageId, resolvedLeadId]
+                    );
+                    await client.query(
+                        `INSERT INTO lead_timeline (lead_id, type, title, body, created_by)
+                         VALUES ($1, 'STAGE_CHANGED', 'Etapa atualizada', 'Lead movido para a etapa configurada da Agenda pelo novo agendamento.', $2)`,
+                        [resolvedLeadId, req.user!.id]
+                    ).catch(() => { /* silencia */ });
                 }
             }
 
@@ -299,14 +406,14 @@ router.post('/', authenticate, async (req: Request, res: Response, next: NextFun
                 [
                     data.type,
                     data.source || 'CRM',
-                    data.starts_at,
-                    data.ends_at,
+                    startsAtDate.toISOString(),
+                    resolvedEndsAt,
                     data.notes || null,
                     resolvedLeadId,
                     resolvedCustomerId,
-                    data.assigned_to || req.user!.id,
+                    assignedTo,
                     pipelineId,
-                    null, // ai_context
+                    { duration_minutes: resolvedDurationMinutes },
                 ]
             );
 
@@ -475,6 +582,150 @@ router.post('/:id/notify', authenticate, async (req: Request, res: Response, nex
         });
 
         res.json({ sent: true, whatsapp_number: whatsappNumber });
+    } catch (err) {
+        next(err);
+    }
+});
+
+// ── PATCH /appointments/:id ────────────────────────────────────────────────────
+// Edição completa de agendamento (tipo, datas, responsável, notas, etc).
+// Mantém validação de overlap como o POST e roda em transação.
+
+router.patch('/:id', authenticate, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
+        const parsed = updateAppointmentSchema.safeParse(req.body);
+        if (!parsed.success) {
+            throw AppError.badRequest('Dados inválidos.', parsed.error.issues.map(i => ({ field: i.path.join('.'), message: i.message })));
+        }
+        const data = parsed.data;
+
+        const current = await query<{
+            id: string;
+            type: string;
+            starts_at: string;
+            ends_at: string;
+            assigned_to: string | null;
+            pipeline_id: string | null;
+            notes: string | null;
+            status: string;
+        }>(
+            `SELECT id, type, starts_at, ends_at, assigned_to, pipeline_id, notes, status
+             FROM appointments WHERE id = $1`,
+            [id]
+        );
+        if (!current.rows[0]) {
+            throw AppError.notFound('Agendamento não encontrado.');
+        }
+        const previous = current.rows[0];
+
+        if (['CONCLUIDO', 'CANCELADO'].includes(previous.status)) {
+            throw AppError.badRequest('Agendamentos concluídos ou cancelados não podem ser editados.');
+        }
+
+        // Resolve novos starts_at / ends_at (mantendo o anterior se não vier no body)
+        const newStartsAtRaw = data.starts_at ?? previous.starts_at;
+        const startsAtDate = new Date(newStartsAtRaw);
+        if (Number.isNaN(startsAtDate.getTime())) {
+            throw AppError.badRequest('Data/hora de início inválida.', [{ field: 'starts_at', message: 'Formato inválido.' }]);
+        }
+
+        let resolvedEndsAt: string;
+        if (data.ends_at) {
+            const endsAtDate = new Date(data.ends_at);
+            if (Number.isNaN(endsAtDate.getTime())) {
+                throw AppError.badRequest('Data/hora de fim inválida.', [{ field: 'ends_at', message: 'Formato inválido.' }]);
+            }
+            if (endsAtDate.getTime() <= startsAtDate.getTime()) {
+                throw AppError.badRequest('A hora final deve ser depois da hora inicial.', [{ field: 'ends_at', message: 'Fim precisa ser maior que o início.' }]);
+            }
+            resolvedEndsAt = endsAtDate.toISOString();
+        } else if (data.duration_minutes) {
+            resolvedEndsAt = new Date(startsAtDate.getTime() + data.duration_minutes * 60000).toISOString();
+        } else if (data.starts_at) {
+            // starts_at mudou mas duration não veio: mantém a duração anterior
+            const prevStart = new Date(previous.starts_at).getTime();
+            const prevEnd = new Date(previous.ends_at).getTime();
+            const prevDuration = Math.max(prevEnd - prevStart, 5 * 60000);
+            resolvedEndsAt = new Date(startsAtDate.getTime() + prevDuration).toISOString();
+        } else {
+            resolvedEndsAt = new Date(previous.ends_at).toISOString();
+        }
+
+        const assignedTo = data.assigned_to ?? previous.assigned_to ?? req.user!.id;
+
+        // Overlap: ignora o próprio agendamento
+        const conflict = await query<{ id: string; type: string; starts_at: string; ends_at: string }>(
+            `SELECT id, type, starts_at, ends_at
+             FROM appointments
+             WHERE id <> $1
+               AND assigned_to = $2
+               AND status NOT IN ('CANCELADO', 'NAO_COMPARECEU', 'CONCLUIDO')
+               AND starts_at < $4::timestamptz
+               AND ends_at > $3::timestamptz
+             LIMIT 1`,
+            [id, assignedTo, startsAtDate.toISOString(), resolvedEndsAt]
+        );
+        if (conflict.rows[0]) {
+            const c = conflict.rows[0];
+            const conflictStart = new Date(c.starts_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+            const conflictEnd = new Date(c.ends_at).toLocaleString('pt-BR', { timeStyle: 'short' });
+            throw AppError.badRequest(
+                `Conflito de horário: já existe "${c.type}" de ${conflictStart} até ${conflictEnd}.`,
+                [{ field: 'starts_at', message: 'Esse horário sobrepõe um agendamento existente.' }]
+            );
+        }
+
+        // Monta UPDATE dinâmico apenas com campos enviados
+        const sets: string[] = [];
+        const params: unknown[] = [];
+        let idx = 1;
+        const push = (col: string, value: unknown) => {
+            sets.push(`${col} = $${idx}`);
+            params.push(value);
+            idx++;
+        };
+
+        if (data.type !== undefined) push('type', data.type);
+        push('starts_at', startsAtDate.toISOString());
+        push('ends_at', resolvedEndsAt);
+        if (data.notes !== undefined) push('notes', data.notes);
+        if (data.assigned_to !== undefined) push('assigned_to', data.assigned_to);
+        if (data.pipeline_id !== undefined) push('pipeline_id', data.pipeline_id);
+        sets.push(`updated_at = NOW()`);
+
+        params.push(id);
+        await query(
+            `UPDATE appointments SET ${sets.join(', ')} WHERE id = $${idx}`,
+            params
+        );
+
+        void createAuditLog({
+            userId: req.user!.id,
+            action: 'UPDATE',
+            entityType: 'appointment',
+            entityId: id as string,
+            oldValue: {
+                type: previous.type,
+                starts_at: previous.starts_at,
+                ends_at: previous.ends_at,
+                assigned_to: previous.assigned_to,
+                pipeline_id: previous.pipeline_id,
+                notes: previous.notes,
+            },
+            newValue: {
+                type: data.type ?? previous.type,
+                starts_at: startsAtDate.toISOString(),
+                ends_at: resolvedEndsAt,
+                assigned_to: assignedTo,
+                pipeline_id: data.pipeline_id ?? previous.pipeline_id,
+                notes: data.notes ?? previous.notes,
+            },
+            req,
+        });
+
+        const result = await query<AppointmentRow>(`${BASE_SELECT} WHERE a.id = $1`, [id]);
+        res.json(formatAppointment(result.rows[0]!));
     } catch (err) {
         next(err);
     }
