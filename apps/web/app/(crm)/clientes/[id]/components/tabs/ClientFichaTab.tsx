@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { notify } from '@/lib/toast';
 import type { CustomerFull } from '../types';
@@ -160,6 +160,48 @@ async function readApiError(res: Response, fallbackCode: string): Promise<Parsed
   }
 }
 
+// Normaliza qualquer formato de data vindo do backend (DATE serializado como
+// timestamp ISO, ex.: "1990-05-20T00:00:00.000Z") para o formato YYYY-MM-DD que
+// o <input type="date"> exige. Sem isso o campo é descartado e parece "não salvar".
+function toDateInputValue(value: string | null | undefined): string {
+  if (!value) return '';
+  // A string sempre começa com YYYY-MM-DD; cortar evita qualquer deslocamento de fuso.
+  const match = /^\d{4}-\d{2}-\d{2}/.exec(value);
+  return match ? match[0] : '';
+}
+
+// ── Máscaras de input (formatam enquanto o usuário digita) ──
+function maskCpf(value: string): string {
+  const d = value.replace(/\D/g, '').slice(0, 11);
+  if (d.length > 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+  if (d.length > 6) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  if (d.length > 3) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  return d;
+}
+
+function maskCnpj(value: string): string {
+  const d = value.replace(/\D/g, '').slice(0, 14);
+  if (d.length > 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+  if (d.length > 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+  if (d.length > 5) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  if (d.length > 2) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  return d;
+}
+
+function maskPhone(value: string): string {
+  const d = value.replace(/\D/g, '').slice(0, 11);
+  if (d.length > 10) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length > 6) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  if (d.length > 2) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length > 0) return `(${d}`;
+  return d;
+}
+
+function maskCep(value: string): string {
+  const d = value.replace(/\D/g, '').slice(0, 8);
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
+}
+
 function fmtDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
   try {
@@ -175,13 +217,12 @@ function fmtDate(dateStr: string | null | undefined): string {
   }
 }
 
-export default function ClientFichaTab({ customer, customerId, entityType, onUpdate }: Props) {
-  const router = useRouter();
-  const [form, setForm] = useState({
+function buildInitialForm(customer: CustomerFull): FormState {
+  return {
     name: customer.name ?? '',
     social_name: customer.social_name ?? '',
     cpf: customer.cpf ?? '',
-    birth_date: customer.birth_date ?? '',
+    birth_date: toDateInputValue(customer.birth_date),
     rg: customer.rg ?? '',
     gender: customer.gender ?? '',
     whatsapp_number: customer.whatsapp_number ?? '',
@@ -200,7 +241,23 @@ export default function ClientFichaTab({ customer, customerId, entityType, onUpd
     preferred_channel: customer.preferred_channel ?? '',
     special_dates: customer.special_dates ?? '',
     remarketing_notes: customer.remarketing_notes ?? '',
-  } satisfies FormState);
+  };
+}
+
+export default function ClientFichaTab({ customer, customerId, entityType, onUpdate }: Props) {
+  const router = useRouter();
+  const [form, setForm] = useState<FormState>(() => buildInitialForm(customer));
+  // Snapshot dos valores salvos para detectar alterações pendentes.
+  const savedFormRef = useRef<FormState>(buildInitialForm(customer));
+  const isDirty = (Object.keys(form) as FieldName[]).some((k) => form[k] !== savedFormRef.current[k]);
+
+  // Avisa antes de fechar/recarregar a aba do navegador com edições não salvas.
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -257,7 +314,7 @@ export default function ClientFichaTab({ customer, customerId, entityType, onUpd
     return nextErrors;
   }
 
-  function handleChange(field: keyof typeof form) {
+  function handleChange(field: keyof typeof form, mask?: (v: string) => string) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
       setFieldErrors((prev) => {
         if (!prev[field]) return prev;
@@ -265,7 +322,8 @@ export default function ClientFichaTab({ customer, customerId, entityType, onUpd
         delete next[field];
         return next;
       });
-      setForm((prev) => ({ ...prev, [field]: e.target.value }));
+      const value = mask ? mask(e.target.value) : e.target.value;
+      setForm((prev) => ({ ...prev, [field]: value }));
     };
   }
 
@@ -355,6 +413,8 @@ export default function ClientFichaTab({ customer, customerId, entityType, onUpd
         ...data,
         id: targetId,
       });
+      // Marca o estado atual como salvo (zera "alterações não salvas").
+      savedFormRef.current = { ...form };
 
       notify.success(
         converted ? 'Lead convertido e ficha salva' : 'Ficha salva',
@@ -409,7 +469,7 @@ export default function ClientFichaTab({ customer, customerId, entityType, onUpd
             <input style={inputStyle} value={form.social_name} onChange={handleChange('social_name')} placeholder="Opcional" />
           </FieldGroup>
           <FieldGroup label="CPF">
-            <input style={getFieldStyle('cpf')} value={form.cpf} onChange={handleChange('cpf')} placeholder="000.000.000-00" />
+            <input style={getFieldStyle('cpf')} value={form.cpf} onChange={handleChange('cpf', maskCpf)} inputMode="numeric" placeholder="000.000.000-00" />
             {renderFieldError('cpf')}
           </FieldGroup>
           <FieldGroup label="Data de nascimento">
@@ -451,7 +511,7 @@ export default function ClientFichaTab({ customer, customerId, entityType, onUpd
             <input style={inputStyle} value={form.instagram} onChange={handleChange('instagram')} placeholder="@usuario" />
           </FieldGroup>
           <FieldGroup label="Telefone fixo">
-            <input style={inputStyle} value={form.phone_landline} onChange={handleChange('phone_landline')} placeholder="(11) 3333-4444" />
+            <input style={inputStyle} value={form.phone_landline} onChange={handleChange('phone_landline', maskPhone)} inputMode="numeric" placeholder="(11) 3333-4444" />
           </FieldGroup>
         </div>
       </div>
@@ -464,8 +524,9 @@ export default function ClientFichaTab({ customer, customerId, entityType, onUpd
             <input
               style={{ ...inputStyle, opacity: cepLoading ? 0.7 : 1 }}
               value={form.zip_code}
-              onChange={handleChange('zip_code')}
+              onChange={handleChange('zip_code', maskCep)}
               onBlur={handleCepBlur}
+              inputMode="numeric"
               placeholder="00000-000"
             />
           </FieldGroup>
@@ -489,7 +550,7 @@ export default function ClientFichaTab({ customer, customerId, entityType, onUpd
         <SectionTitle>Dados PJ (opcional)</SectionTitle>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <FieldGroup label="CNPJ">
-            <input style={inputStyle} value={form.cnpj} onChange={handleChange('cnpj')} placeholder="00.000.000/0001-00" />
+            <input style={inputStyle} value={form.cnpj} onChange={handleChange('cnpj', maskCnpj)} inputMode="numeric" placeholder="00.000.000/0001-00" />
           </FieldGroup>
           <FieldGroup label="Razão social">
             <input style={inputStyle} value={form.company_name} onChange={handleChange('company_name')} />
@@ -559,33 +620,43 @@ export default function ClientFichaTab({ customer, customerId, entityType, onUpd
         </div>
       )}
 
-      {/* Footer */}
+      {/* Footer — fixo no rodapé para o botão Salvar ficar sempre visível */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingTop: '16px',
+          position: 'sticky',
+          bottom: '-18px',
+          marginTop: '8px',
+          marginLeft: '-20px',
+          marginRight: '-20px',
+          padding: '14px 20px',
+          background: 'linear-gradient(180deg, rgba(15,15,17,0) 0%, #0F0F11 28%)',
           borderTop: '1px solid rgba(255,255,255,0.06)',
         }}
       >
-        <span style={{ fontSize: '11px', color: '#7A7774' }}>
-          Última atualização: {fmtDate(customer.updated_at)}{' '}
-          {customer.assigned_to ? `· ${customer.assigned_to.name}` : ''}
+        <span style={{ fontSize: '11px', color: isDirty ? '#F0A040' : '#7A7774' }}>
+          {isDirty ? (
+            '● Alterações não salvas'
+          ) : (
+            <>Última atualização: {fmtDate(customer.updated_at)}{' '}
+            {customer.assigned_to ? `· ${customer.assigned_to.name}` : ''}</>
+          )}
         </span>
         <button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || !isDirty}
           style={{
             height: '34px',
             padding: '0 20px',
-            background: saving ? '#1A1A1E' : 'rgba(200,169,122,0.15)',
-            border: '1px solid rgba(200,169,122,0.30)',
+            background: saving || !isDirty ? '#1A1A1E' : 'rgba(200,169,122,0.15)',
+            border: `1px solid ${saving || !isDirty ? 'rgba(255,255,255,0.10)' : 'rgba(200,169,122,0.30)'}`,
             borderRadius: '7px',
-            color: '#C8A97A',
+            color: saving || !isDirty ? '#7A7774' : '#C8A97A',
             fontSize: '12px',
             fontWeight: 600,
-            cursor: saving ? 'not-allowed' : 'pointer',
+            cursor: saving || !isDirty ? 'not-allowed' : 'pointer',
             fontFamily: "'DM Sans', sans-serif",
           }}
         >

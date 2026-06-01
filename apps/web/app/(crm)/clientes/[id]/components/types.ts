@@ -27,6 +27,7 @@ export interface CustomerFull {
   remarketing_notes: string | null;
   origin: string | null;
   notes: string | null;
+  tags: string[] | null;
   is_converted: boolean;
   lifetime_value_cents: number;
   ltv_cents: number;

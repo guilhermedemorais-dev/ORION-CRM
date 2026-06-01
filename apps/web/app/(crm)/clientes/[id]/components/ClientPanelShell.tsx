@@ -187,7 +187,7 @@ export default function ClientPanelShell({
       {/* Main */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
         {/* Left Sidebar */}
-        <ClientLeftSidebar customer={customer} stats={stats} />
+        <ClientLeftSidebar customer={customer} stats={stats} onUpdate={handleCustomerUpdate} canEditTags={entityType === 'customer'} />
 
         {/* Center */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

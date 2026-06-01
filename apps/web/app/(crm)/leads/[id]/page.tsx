@@ -51,6 +51,7 @@ export default async function LeadDetailPage({
         remarketing_notes: lead.notes,
         origin: lead.source,
         notes: lead.notes,
+        tags: null,
         is_converted: false,
         lifetime_value_cents: lead.estimated_value ?? 0,
         ltv_cents: lead.estimated_value ?? 0,

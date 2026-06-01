@@ -131,30 +131,120 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 // ── Metadata renderer ─────────────────────────────────────────────────────────
+//
+// O audit log guarda campos técnicos (action, entity_type, entity_id) e o objeto
+// `new_value`. A descrição do evento já é exibida em PT-BR acima; aqui mostramos
+// apenas os dados de `new_value` que fazem sentido para o usuário final, com
+// rótulos e valores traduzidos. Campos técnicos e ruído são ocultados.
 
-function MetadataBlock({ meta }: { meta: Record<string, unknown> }) {
-  const entries = Object.entries(meta).filter(([k]) =>
-    !['id', 'customer_id', 'created_by'].includes(k)
-  );
-  if (entries.length === 0) return null;
+// Campos que nunca devem aparecer para o usuário final (IDs, chaves técnicas).
+const HIDDEN_DETAIL_KEYS = new Set([
+  'id', 'customer_id', 'created_by', 'lead_id', 'order_id', 'organization_id',
+  'action', 'entity_type', 'entity_id', 'created_at', 'updated_at',
+  'rule_id', 'pipeline_id', 'conversation_id', 'provider_type',
+]);
+
+// Rótulos PT-BR para as chaves conhecidas dentro de new_value/metadata.
+const DETAIL_LABELS: Record<string, string> = {
+  order_number: 'Pedido nº',
+  status: 'Novo status',
+  old_status: 'Status anterior',
+  payment_status: 'Pagamento',
+  paused_reason: 'Motivo da pausa',
+  paused_at: 'Pausado em',
+  resumed_at: 'Retomado em',
+  cancellation_reason: 'Motivo do cancelamento',
+  cancelled_at: 'Cancelado em',
+  override_reason: 'Motivo da exceção',
+  from_stage: 'Saiu da etapa',
+  to_stage: 'Entrou na etapa',
+  from_stage_name: 'Saiu da etapa',
+  to_stage_name: 'Entrou na etapa',
+  stage_name: 'Etapa',
+  final_amount_cents: 'Valor',
+  total_cents: 'Valor total',
+  deposit_cents: 'Entrada',
+  amount_cents: 'Valor',
+  payment_method: 'Forma de pagamento',
+  product_name: 'Produto',
+  type: 'Tipo',
+  channel: 'Canal',
+  direction: 'Direção',
+  message_type: 'Tipo de mensagem',
+  contact_name: 'Contato',
+  contact_phone: 'Telefone',
+  tracking_code: 'Código de rastreio',
+  so_number: 'OS nº',
+};
+
+// Tradução de valores enumerados conhecidos.
+const VALUE_LABELS: Record<string, string> = {
+  // status de pedido
+  RASCUNHO: 'Rascunho',
+  AGUARDANDO_PAGAMENTO: 'Aguardando pagamento',
+  PAGO: 'Pago',
+  EM_PRODUCAO: 'Em produção',
+  PRONTO: 'Pronto',
+  ENTREGUE: 'Entregue',
+  CANCELADO: 'Cancelado',
+  PAUSADO: 'Pausado',
+  // payment_status
+  PENDING: 'Pendente',
+  PARTIAL: 'Parcial',
+  PAID: 'Pago',
+  REFUNDED: 'Estornado',
+  // direção de mensagem
+  inbound: 'Recebida',
+  outbound: 'Enviada',
+  // canais
+  whatsapp: 'WhatsApp',
+  email: 'E-mail',
+  instagram: 'Instagram',
+};
+
+const MONEY_KEYS = new Set(['final_amount_cents', 'total_cents', 'deposit_cents', 'amount_cents']);
+const DATE_KEYS = new Set(['paused_at', 'resumed_at', 'cancelled_at']);
+
+function translateValue(key: string, value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—';
+  if (MONEY_KEYS.has(key) && typeof value === 'number') {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value / 100);
+  }
+  if (DATE_KEYS.has(key) && typeof value === 'string') {
+    return fmtDate(value);
+  }
+  const raw = String(value);
+  return VALUE_LABELS[raw] ?? raw;
+}
+
+// Extrai pares {label, value} legíveis a partir do metadata do evento.
+function buildDetailRows(meta: Record<string, unknown>): Array<{ key: string; label: string; value: string }> {
+  // O conteúdo útil vive em new_value; o resto é técnico.
+  const source = (meta['new_value'] && typeof meta['new_value'] === 'object')
+    ? (meta['new_value'] as Record<string, unknown>)
+    : meta;
+
+  const rows: Array<{ key: string; label: string; value: string }> = [];
+  for (const [key, value] of Object.entries(source)) {
+    if (HIDDEN_DETAIL_KEYS.has(key)) continue;
+    if (value === null || value === undefined || value === '') continue;
+    if (typeof value === 'object') continue; // ignora objetos/arrays aninhados (ruído)
+    const label = DETAIL_LABELS[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    rows.push({ key, label, value: translateValue(key, value) });
+  }
+  return rows;
+}
+
+function MetadataBlock({ rows }: { rows: Array<{ key: string; label: string; value: string }> }) {
+  if (rows.length === 0) return null;
   return (
     <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      {entries.map(([key, value]) => {
-        if (value === null || value === undefined || value === '') return null;
-        const label = key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-        const isOldNew = key === 'old_value' || key === 'new_value';
-        return (
-          <div key={key} style={{ display: 'flex', gap: '6px', fontSize: '10px', lineHeight: 1.4 }}>
-            <span style={{ color: '#7A7774', flexShrink: 0, minWidth: '80px' }}>{label}:</span>
-            <span style={{
-              color: key === 'new_value' ? '#3FB87A' : key === 'old_value' ? '#E05252' : '#C8C4BE',
-              fontFamily: isOldNew ? 'monospace' : undefined,
-            }}>
-              {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-            </span>
-          </div>
-        );
-      })}
+      {rows.map(({ key, label, value }) => (
+        <div key={key} style={{ display: 'flex', gap: '6px', fontSize: '10px', lineHeight: 1.4 }}>
+          <span style={{ color: '#7A7774', flexShrink: 0, minWidth: '110px' }}>{label}:</span>
+          <span style={{ color: '#C8C4BE' }}>{value}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -164,7 +254,8 @@ function MetadataBlock({ meta }: { meta: Record<string, unknown> }) {
 function TimelineEntry({ item, isLast }: { item: LogItem; isLast: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const cfg = getEventConfig(item.type);
-  const hasDetail = item.metadata && Object.keys(item.metadata).length > 0;
+  const detailRows = item.metadata ? buildDetailRows(item.metadata) : [];
+  const hasDetail = detailRows.length > 0;
   const catColor = CATEGORY_COLORS[cfg.category] ?? '#7A7774';
 
   return (
@@ -223,13 +314,13 @@ function TimelineEntry({ item, isLast }: { item: LogItem; isLast: boolean }) {
         )}
 
         {/* Metadata detail */}
-        {expanded && item.metadata && (
+        {expanded && hasDetail && (
           <div style={{
             marginTop: '6px', padding: '8px 10px',
             background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
             borderRadius: '6px',
           }}>
-            <MetadataBlock meta={item.metadata} />
+            <MetadataBlock rows={detailRows} />
           </div>
         )}
       </div>

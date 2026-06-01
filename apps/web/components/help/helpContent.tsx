@@ -70,7 +70,15 @@ export const HELP_CONTENT: Record<HelpContext, HelpContextData> = {
           { icon: <ShoppingBag size={13} />,  label: 'Pedidos',     description: 'Pedidos confirmados: produtos de pronta entrega comprados no PDV ou catálogo.' },
           { icon: <Settings size={13} />,     label: 'OS (Ordem de Serviço)', description: 'Ordens de serviço aprovadas para fabricação. Visível pelo fabricante e designer 3D. Aqui não é possível criar novas OS — elas vêm da aba Atendimento.' },
           { icon: <Truck size={13} />,        label: 'Entrega',     description: 'Acompanhamento de entrega: retirada na loja ou envio. Histórico de rastreio.' },
-          { icon: <Clock size={13} />,        label: 'Histórico',   description: 'Log completo de tudo que aconteceu: atendimentos, mudanças de etapa, mensagens WhatsApp, e-mails e avaliações do cliente.' },
+          { icon: <Clock size={13} />,        label: 'Histórico',   description: 'Log completo de tudo que aconteceu: atendimentos, mudanças de etapa, mensagens WhatsApp, e-mails e avaliações do cliente. Os detalhes de cada evento são exibidos em português.' },
+        ],
+      },
+      {
+        title: 'Tags do cliente',
+        items: [
+          { icon: <Tag size={13} />,          label: 'O que são',     description: 'Marcadores livres na coluna esquerda da ficha para classificar o cliente (ex.: "VIP", "Aniversário em maio", "Indicação"). Aparecem em destaque dourado.' },
+          { icon: <Tag size={13} />,          label: 'Adicionar',     description: 'Clique no "+" ao lado de Tags, digite o texto e pressione Enter. Máximo de 30 tags por cliente.' },
+          { icon: <Tag size={13} />,          label: 'Remover',       description: 'Clique no "×" dentro da tag. A alteração é salva automaticamente, sem precisar do botão Salvar.' },
         ],
       },
     ],

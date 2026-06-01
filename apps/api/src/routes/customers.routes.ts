@@ -40,6 +40,7 @@ interface CustomerRow {
     assigned_user_name: string | null;
     lifetime_value_cents: string;
     notes: string | null;
+    tags: string[] | null;
     created_at: Date;
     updated_at: Date;
 }
@@ -424,8 +425,10 @@ router.get(
                 origin: string | null; is_converted: boolean; converted_at: Date | null;
                 ltv_cents: number;
                 orders_count: string; last_order_at: Date | null; has_pending_os: boolean;
+                birth_date_str: string | null;
             }>(
                 `SELECT c.*,
+                        TO_CHAR(c.birth_date, 'YYYY-MM-DD') AS birth_date_str,
                         u.name AS assigned_user_name,
                         (SELECT COUNT(*)::text FROM orders WHERE customer_id = c.id) AS orders_count,
                         (SELECT MAX(created_at) FROM orders WHERE customer_id = c.id) AS last_order_at,
@@ -443,6 +446,8 @@ router.get(
 
             res.json({
                 ...customer,
+                // birth_date vem do Postgres como DATE; força YYYY-MM-DD para o <input type="date">.
+                birth_date: customer.birth_date_str,
                 lifetime_value_cents: Number.parseInt(customer.lifetime_value_cents, 10),
                 orders_count: Number.parseInt(customer.orders_count, 10),
                 assigned_to: customer.assigned_to && customer.assigned_user_name
@@ -478,6 +483,7 @@ const patchCustomerSchema = z.object({
     special_dates: z.string().optional().nullable(),
     remarketing_notes: z.string().optional().nullable(),
     notes: z.string().optional().nullable(),
+    tags: z.array(z.string().trim().min(1).max(40)).max(30).optional(),
     assigned_to: z.string().uuid().optional().nullable(),
 });
 
@@ -487,7 +493,16 @@ router.patch(
     requireRole(['ADMIN', 'ATENDENTE', 'GERENTE']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
-            const parsed = patchCustomerSchema.safeParse(req.body);
+            // Campos opcionais vazios chegam como "" do formulário. Convertê-los em null
+            // ANTES da validação evita que constraints de formato (ex.: email) rejeitem
+            // string vazia e derrubem o PATCH inteiro com 400 — perdendo todas as edições.
+            const rawBody = (req.body ?? {}) as Record<string, unknown>;
+            const cleanedBody: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(rawBody)) {
+                cleanedBody[k] = typeof v === 'string' && v.trim() === '' ? null : v;
+            }
+
+            const parsed = patchCustomerSchema.safeParse(cleanedBody);
             if (!parsed.success) {
                 next(AppError.badRequest('Dados inválidos.', parsed.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))));
                 return;
@@ -496,15 +511,21 @@ router.patch(
             // Escrita: precisa ser ROOT/ADMIN, dono ou ter clientes_outros.
             await assertCanEditCustomerById(req, req.params['id'] as string);
 
-            const fields = parsed.data as Record<string, unknown>;
+            const { tags, ...fields } = parsed.data as Record<string, unknown> & { tags?: string[] };
             const sets: string[] = [];
             const values: unknown[] = [];
 
             for (const [k, v] of Object.entries(fields)) {
                 if (v === undefined) continue;
-                const normalized = typeof v === 'string' && v.trim() === '' ? null : v;
-                values.push(normalized);
+                values.push(v);
                 sets.push(`${k} = $${values.length}`);
+            }
+
+            // tags é JSONB: normaliza (remove vazios/duplicatas) e serializa com cast explícito.
+            if (tags !== undefined) {
+                const cleaned = Array.from(new Set(tags.map(t => t.trim()).filter(Boolean)));
+                values.push(JSON.stringify(cleaned));
+                sets.push(`tags = $${values.length}::jsonb`);
             }
             if (sets.length === 0) { res.json({ message: 'Nenhuma alteração.' }); return; }
             sets.push('updated_at = NOW()');

@@ -2,16 +2,22 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, Loader2 } from 'lucide-react';
+import { Camera, Loader2, X, Plus } from 'lucide-react';
 import { formatCurrencyFromCents, formatCurrencyShort, getInitials } from '@/lib/utils';
+import { notify } from '@/lib/toast';
 import type { CustomerFull, CustomerStats } from './types';
 
 const ACCEPTED_PHOTO_MIME = 'image/png,image/jpeg,image/webp';
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const MAX_TAGS = 30;
+const MAX_TAG_LEN = 40;
 
 interface Props {
   customer: CustomerFull;
   stats: CustomerStats | null;
+  onUpdate: (updated: Partial<CustomerFull>) => void;
+  // Tags só são editáveis em clientes (leads não têm registro em customers para gravar).
+  canEditTags?: boolean;
 }
 
 function fmtDate(dateStr: string | null): string {
@@ -153,13 +159,60 @@ const S = {
   }),
 };
 
-export default function ClientLeftSidebar({ customer, stats }: Props) {
+export default function ClientLeftSidebar({ customer, stats, onUpdate, canEditTags = true }: Props) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   // Mostra a foto recém-enviada antes do refresh (route handler invalida server cache).
   const [optimisticPhoto, setOptimisticPhoto] = useState<string | null>(null);
+
+  // ── Tags ──
+  const tags = customer.tags ?? [];
+  const [addingTag, setAddingTag] = useState(false);
+  const [tagDraft, setTagDraft] = useState('');
+  const [savingTags, setSavingTags] = useState(false);
+
+  async function persistTags(next: string[]): Promise<void> {
+    const previous = customer.tags ?? [];
+    onUpdate({ tags: next }); // otimista
+    setSavingTags(true);
+    try {
+      const res = await fetch(`/api/internal/customers/${customer.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tags: next }),
+      });
+      if (!res.ok) {
+        onUpdate({ tags: previous }); // reverte
+        notify.error('Falha ao salvar tags', 'Tente novamente.');
+      }
+    } catch {
+      onUpdate({ tags: previous });
+      notify.error('Erro de rede', 'Não foi possível salvar as tags.');
+    } finally {
+      setSavingTags(false);
+    }
+  }
+
+  function handleAddTag() {
+    const value = tagDraft.trim().slice(0, MAX_TAG_LEN);
+    if (!value) { setAddingTag(false); setTagDraft(''); return; }
+    if (tags.length >= MAX_TAGS) {
+      notify.error('Limite de tags', `Máximo de ${MAX_TAGS} tags por cliente.`);
+      return;
+    }
+    if (tags.some((t) => t.toLowerCase() === value.toLowerCase())) {
+      setTagDraft('');
+      return;
+    }
+    void persistTags([...tags, value]);
+    setTagDraft('');
+  }
+
+  function handleRemoveTag(tag: string) {
+    void persistTags(tags.filter((t) => t !== tag));
+  }
 
   const ini = getInitials(customer.name);
   const ltv = stats?.ltv_cents ?? customer.ltv_cents ?? customer.lifetime_value_cents ?? 0;
@@ -381,19 +434,78 @@ export default function ClientLeftSidebar({ customer, stats }: Props) {
       <div style={S.section}>
         <div style={S.sTitle}>
           <span>Tags</span>
-          <button type="button" style={{ fontSize: '10px', color: '#C8A97A', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>+</button>
+          {canEditTags && (
+            <button
+              type="button"
+              onClick={() => setAddingTag((v) => !v)}
+              disabled={savingTags || tags.length >= MAX_TAGS}
+              aria-label="Adicionar tag"
+              title={tags.length >= MAX_TAGS ? `Máximo de ${MAX_TAGS} tags` : 'Adicionar tag'}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#C8A97A', background: 'none', border: 'none',
+                cursor: savingTags || tags.length >= MAX_TAGS ? 'not-allowed' : 'pointer',
+                padding: 0, opacity: tags.length >= MAX_TAGS ? 0.4 : 1,
+              }}
+            >
+              <Plus size={13} />
+            </button>
+          )}
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-          {customer.preferred_channel && (
-            <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 500, background: '#202026', border: '1px solid rgba(255,255,255,0.10)', color: '#C8C4BE' }}>{customer.preferred_channel}</span>
-          )}
-          {customer.preferred_metal && (
-            <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 500, background: '#202026', border: '1px solid rgba(255,255,255,0.10)', color: '#C8C4BE' }}>{customer.preferred_metal}</span>
-          )}
-          {!customer.preferred_channel && !customer.preferred_metal && (
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                padding: '2px 5px 2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 500,
+                background: 'rgba(200,169,122,0.10)', border: '1px solid rgba(200,169,122,0.25)', color: '#C8A97A',
+              }}
+            >
+              {tag}
+              {canEditTags && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTag(tag)}
+                  disabled={savingTags}
+                  aria-label={`Remover tag ${tag}`}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'none', border: 'none', padding: 0, color: '#C8A97A',
+                    cursor: savingTags ? 'not-allowed' : 'pointer', opacity: 0.7,
+                  }}
+                >
+                  <X size={10} />
+                </button>
+              )}
+            </span>
+          ))}
+          {tags.length === 0 && !addingTag && (
             <span style={{ fontSize: '11px', color: '#7A7774' }}>Nenhuma tag</span>
           )}
         </div>
+
+        {addingTag && (
+          <input
+            autoFocus
+            value={tagDraft}
+            maxLength={MAX_TAG_LEN}
+            onChange={(e) => setTagDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); }
+              else if (e.key === 'Escape') { setAddingTag(false); setTagDraft(''); }
+            }}
+            onBlur={handleAddTag}
+            placeholder="Nova tag e Enter"
+            style={{
+              marginTop: '6px', width: '100%', height: '26px', boxSizing: 'border-box',
+              background: '#1A1A1E', border: '1px solid rgba(200,169,122,0.30)', borderRadius: '5px',
+              padding: '0 8px', fontSize: '11px', color: '#F0EDE8', outline: 'none',
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          />
+        )}
       </div>
 
       {/* ── ACESSOS ── */}
