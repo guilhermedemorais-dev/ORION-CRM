@@ -114,7 +114,7 @@ export default function PedidosClient({ initialOrders, initialStats, canCommerci
     ]), [stats]);
 
     return (
-        <div style={{ background: '#0A0A0B', color: '#EDE8E0', minHeight: '100%', fontFamily: 'Inter, sans-serif' }}>
+        <div className="-m-6" style={{ background: '#0A0A0B', color: '#EDE8E0', minHeight: 'calc(100% + 48px)', fontFamily: 'Inter, sans-serif' }}>
             {/* KPI Row */}
             <div className="grid grid-cols-4 gap-3 p-6 pb-4">
                 {kpis.map((k) => (
