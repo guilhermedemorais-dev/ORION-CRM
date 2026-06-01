@@ -92,6 +92,14 @@ jobs:
             # Puxa as novas imagens
             docker compose pull api web nginx
 
+            # Atualiza docs/ do host a partir da imagem nova (a timeline lê
+            # docs/releases.md via bind-mount ./docs:/app/docs:ro). Sem isso o
+            # mount servia um changelog velho e a Linha do Tempo ficava resumida.
+            API_IMG="${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.REPO }}/api:latest"
+            cid=$(docker create "$API_IMG")
+            docker cp "$cid:/app/docs/." ./docs/
+            docker rm "$cid"
+
             # Recria só os containers que mudaram (banco e redis ficam intactos)
             docker compose up -d --no-build api web nginx
 
