@@ -16,6 +16,7 @@ uploads/
 .opencode/
 .claude/
 .playwright-mcp/
+AGENTS.md
 
 # Screenshots soltos na raiz (capturas manuais durante testes)
 /*.png
