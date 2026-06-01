@@ -111,7 +111,8 @@ function getEventConfig(type: string): EventConfig {
     whatsapp:           { icon: <MessageCircle size={13} />, color: '#3FB87A', bg: 'rgba(63,184,122,0.12)',    border: 'rgba(63,184,122,0.25)',    category: 'WhatsApp' },
     feedback:           { icon: <Star size={13} />,          color: '#C8A97A', bg: 'rgba(200,169,122,0.12)',   border: 'rgba(200,169,122,0.25)',   category: 'Feedback' },
   };
-  return configs[type] ?? {
+  // Lookup via Map (.get) — evita acesso por colchete em chave dinâmica.
+  return new Map(Object.entries(configs)).get(type) ?? {
     icon: <Circle size={10} />,
     color: '#7A7774', bg: 'rgba(122,119,116,0.10)', border: 'rgba(122,119,116,0.20)', category: 'Sistema',
   };
@@ -129,6 +130,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Feedback':     '#C8A97A',
   'Sistema':      '#7A7774',
 };
+const CATEGORY_COLOR_MAP = new Map(Object.entries(CATEGORY_COLORS));
 
 // ── Metadata renderer ─────────────────────────────────────────────────────────
 //
@@ -176,6 +178,7 @@ const DETAIL_LABELS: Record<string, string> = {
   tracking_code: 'Código de rastreio',
   so_number: 'OS nº',
 };
+const DETAIL_LABEL_MAP = new Map(Object.entries(DETAIL_LABELS));
 
 // Tradução de valores enumerados conhecidos.
 const VALUE_LABELS: Record<string, string> = {
@@ -201,6 +204,7 @@ const VALUE_LABELS: Record<string, string> = {
   email: 'E-mail',
   instagram: 'Instagram',
 };
+const VALUE_LABEL_MAP = new Map(Object.entries(VALUE_LABELS));
 
 const MONEY_KEYS = new Set(['final_amount_cents', 'total_cents', 'deposit_cents', 'amount_cents']);
 const DATE_KEYS = new Set(['paused_at', 'resumed_at', 'cancelled_at']);
@@ -214,7 +218,7 @@ function translateValue(key: string, value: unknown): string {
     return fmtDate(value);
   }
   const raw = String(value);
-  return VALUE_LABELS[raw] ?? raw;
+  return VALUE_LABEL_MAP.get(raw) ?? raw;
 }
 
 // Extrai pares {label, value} legíveis a partir do metadata do evento.
@@ -229,7 +233,7 @@ function buildDetailRows(meta: Record<string, unknown>): Array<{ key: string; la
     if (HIDDEN_DETAIL_KEYS.has(key)) continue;
     if (value === null || value === undefined || value === '') continue;
     if (typeof value === 'object') continue; // ignora objetos/arrays aninhados (ruído)
-    const label = DETAIL_LABELS[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const label = DETAIL_LABEL_MAP.get(key) ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
     rows.push({ key, label, value: translateValue(key, value) });
   }
   return rows;
@@ -256,7 +260,7 @@ function TimelineEntry({ item, isLast }: { item: LogItem; isLast: boolean }) {
   const cfg = getEventConfig(item.type);
   const detailRows = item.metadata ? buildDetailRows(item.metadata) : [];
   const hasDetail = detailRows.length > 0;
-  const catColor = CATEGORY_COLORS[cfg.category] ?? '#7A7774';
+  const catColor = CATEGORY_COLOR_MAP.get(cfg.category) ?? '#7A7774';
 
   return (
     <div style={{ display: 'flex', gap: '0', position: 'relative' }}>
@@ -457,7 +461,7 @@ function FilterChips({ active, onChange, available }: { active: string; onChange
     <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', flexWrap: 'wrap' }}>
       {visible.map((cat) => {
         const isActive = active === cat;
-        const color = CATEGORY_COLORS[cat] ?? '#7A7774';
+        const color = CATEGORY_COLOR_MAP.get(cat) ?? '#7A7774';
         return (
           <button
             key={cat}
