@@ -74,6 +74,13 @@ export const HELP_CONTENT: Record<HelpContext, HelpContextData> = {
         ],
       },
       {
+        title: 'Responsável (coluna esquerda)',
+        items: [
+          { icon: <User size={13} />,  label: 'Começou a atender', description: 'Quem registrou a primeira atividade do cliente (pedido, conversa ou bloco de atendimento mais antigo). Calculado automaticamente.' },
+          { icon: <User size={13} />,  label: 'Atendendo agora',   description: 'Quem registrou a atividade mais recente. Se for a mesma pessoa que começou, aparece uma linha única com a data de início.' },
+        ],
+      },
+      {
         title: 'Tags do cliente',
         items: [
           { icon: <Tag size={13} />,          label: 'O que são',     description: 'Marcadores livres na coluna esquerda da ficha para classificar o cliente (ex.: "VIP", "Aniversário em maio", "Indicação"). Aparecem em destaque dourado.' },

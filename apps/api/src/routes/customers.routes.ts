@@ -444,6 +444,27 @@ router.get(
 
             // Leitura aberta — escopo de carteira aplica só na escrita.
 
+            // Responsável derivado: cruza pedidos, conversas e blocos de atendimento.
+            // "Começou a atender" = atividade mais antiga; "atendendo agora" = a mais recente.
+            type Attendant = { id: string; name: string | null; at: string } | null;
+            const attendantsRes = await query<{ first_attendant: Attendant; current_attendant: Attendant }>(
+                `WITH acts AS (
+                    SELECT assigned_to AS uid, created_at AS ts FROM orders WHERE customer_id = $1 AND assigned_to IS NOT NULL
+                    UNION ALL
+                    SELECT assigned_to, COALESCE(assigned_at, created_at) FROM conversations WHERE customer_id = $1 AND assigned_to IS NOT NULL
+                    UNION ALL
+                    SELECT created_by, created_at FROM attendance_blocks WHERE customer_id = $1 AND created_by IS NOT NULL
+                 )
+                 SELECT
+                    (SELECT json_build_object('id', f.uid, 'name', uf.name, 'at', f.ts)
+                       FROM (SELECT uid, ts FROM acts ORDER BY ts ASC LIMIT 1) f
+                       LEFT JOIN users uf ON uf.id = f.uid) AS first_attendant,
+                    (SELECT json_build_object('id', l.uid, 'name', ul.name, 'at', l.ts)
+                       FROM (SELECT uid, ts FROM acts ORDER BY ts DESC LIMIT 1) l
+                       LEFT JOIN users ul ON ul.id = l.uid) AS current_attendant`,
+                [req.params['id']]
+            );
+
             res.json({
                 ...customer,
                 // birth_date vem do Postgres como DATE; força YYYY-MM-DD para o <input type="date">.
@@ -453,6 +474,8 @@ router.get(
                 assigned_to: customer.assigned_to && customer.assigned_user_name
                     ? { id: customer.assigned_to, name: customer.assigned_user_name }
                     : null,
+                first_attendant: attendantsRes.rows[0]?.first_attendant ?? null,
+                current_attendant: attendantsRes.rows[0]?.current_attendant ?? null,
             });
         } catch (err) { next(err); }
     }

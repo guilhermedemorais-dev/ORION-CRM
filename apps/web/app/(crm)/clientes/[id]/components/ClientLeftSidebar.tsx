@@ -29,6 +29,36 @@ function fmtDate(dateStr: string | null): string {
   }
 }
 
+function fmtAttDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  try {
+    return new Date(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return '';
+  }
+}
+
+// Linha de atendente (avatar + rótulo + nome + data) usada na seção Responsável.
+function AttendantRow({ label, name, at }: { label: string; name: string | null; at?: string | null }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '8px' }}>
+      <div style={{
+        width: '26px', height: '26px', borderRadius: '50%',
+        background: 'linear-gradient(135deg,#1a3a2a,#2a5a3a)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '10px', fontWeight: 700, color: '#3FB87A', flexShrink: 0,
+      }}>
+        {getInitials(name ?? '?')}
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: '9px', color: '#7A7774', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+        <div style={{ fontSize: '11px', fontWeight: 600, color: '#F0EDE8' }}>{name ?? '—'}</div>
+        {at ? <div style={{ fontSize: '10px', color: '#7A7774' }}>{fmtAttDate(at)}</div> : null}
+      </div>
+    </div>
+  );
+}
+
 const S = {
   sb: {
     width: '224px',
@@ -408,26 +438,27 @@ export default function ClientLeftSidebar({ customer, stats, onUpdate, canEditTa
       {/* ── RESPONSÁVEL ── */}
       <div style={S.section}>
         <div style={S.sTitle}>Responsável</div>
-        {customer.assigned_to ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-            <div style={{
-              width: '26px', height: '26px', borderRadius: '50%',
-              background: 'linear-gradient(135deg,#1a3a2a,#2a5a3a)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '10px', fontWeight: 700, color: '#3FB87A', flexShrink: 0,
-            }}>
-              {getInitials(customer.assigned_to.name)}
-            </div>
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: 600, color: '#F0EDE8' }}>{customer.assigned_to.name}</div>
-              {customer.assigned_to.role && (
-                <div style={{ fontSize: '10px', color: '#7A7774' }}>{customer.assigned_to.role}</div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div style={{ fontSize: '11px', color: '#7A7774' }}>Sem responsável</div>
-        )}
+        {(() => {
+          const first = customer.first_attendant;
+          const current = customer.current_attendant
+            ?? (customer.assigned_to ? { id: customer.assigned_to.id, name: customer.assigned_to.name, at: null } : null);
+
+          if (!first && !current) {
+            return <div style={{ fontSize: '11px', color: '#7A7774' }}>Sem responsável</div>;
+          }
+
+          // Mesma pessoa começou e atende agora → mostra uma linha só.
+          if (first && current && first.id === current.id) {
+            return <AttendantRow label="Responsável · desde" name={current.name} at={first.at} />;
+          }
+
+          return (
+            <>
+              {current && <AttendantRow label="Atendendo agora" name={current.name} at={current.at} />}
+              {first && <AttendantRow label="Começou a atender" name={first.name} at={first.at} />}
+            </>
+          );
+        })()}
       </div>
 
       {/* ── TAGS ── */}

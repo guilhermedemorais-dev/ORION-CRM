@@ -37,6 +37,9 @@ export interface CustomerFull {
   created_at: string;
   updated_at: string;
   assigned_to: { id: string; name: string; role?: string } | null;
+  // Responsável derivado de pedidos/conversas/atendimentos (calculado no GET /full).
+  first_attendant: { id: string; name: string | null; at: string } | null;
+  current_attendant: { id: string; name: string | null; at: string } | null;
 }
 
 export interface CustomerStats {

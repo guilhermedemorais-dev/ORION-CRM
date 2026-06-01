@@ -52,6 +52,8 @@ export default async function LeadDetailPage({
         origin: lead.source,
         notes: lead.notes,
         tags: null,
+        first_attendant: null,
+        current_attendant: null,
         is_converted: false,
         lifetime_value_cents: lead.estimated_value ?? 0,
         ltv_cents: lead.estimated_value ?? 0,
