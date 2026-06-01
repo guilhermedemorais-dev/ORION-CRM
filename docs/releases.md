@@ -6,6 +6,69 @@
 
 ---
 
+## [v1.11.0] — 1 de junho de 2026
+### Ficha do cliente: salvamento corrigido, etiquetas (tags), responsável automático e histórico em português
+
+#### Em poucas palavras
+A ficha do cliente agora salva de verdade. Tinha um problema sério: cliente sem e-mail não conseguia salvar nada — a data de nascimento e outras informações simplesmente sumiam ao recarregar. Isso foi corrigido. Além disso, a ficha ganhou etiquetas (tags), passou a mostrar quem começou e quem está atendendo o cliente, e o histórico ficou todo em português claro.
+
+#### O que melhora pra você
+Antes, se o cliente não tivesse e-mail preenchido, ao clicar em "Salvar" o sistema recusava tudo de uma vez e parecia que a ficha não salvava — você digitava data de nascimento, endereço, e ao voltar estava tudo apagado. Agora os campos vazios são tratados corretamente e o salvamento funciona mesmo sem e-mail, CPF ou qualquer campo opcional.
+
+A data de nascimento também não some mais: ela voltava num formato que o campo de data descartava. Corrigido na origem e na tela.
+
+O botão "Salvar alterações" agora fica fixo no rodapé (não some no fim do formulário), só fica ativo quando há algo novo pra salvar, mostra um aviso de "alterações não salvas" e avisa antes de você fechar a aba sem salvar. CPF, CNPJ, telefone e CEP agora têm máscara automática enquanto você digita.
+
+A coluna da esquerda agora mostra o **responsável**: quem começou a atender o cliente e quem está atendendo agora — calculado automaticamente a partir dos pedidos, conversas e atendimentos, sem você precisar marcar nada. E você pode adicionar **etiquetas (tags)** ao cliente (ex.: "VIP", "Aniversário em maio") clicando no "+".
+
+Por fim, a aba **Histórico** parou de mostrar termos técnicos em inglês (como "RESUME_ORDER", "Entity Type: orders"). Os detalhes de cada evento agora aparecem traduzidos e bem explicados.
+
+#### Novidades
+
+- **Salvamento da ficha corrigido**: campos opcionais vazios (e-mail, CPF etc.) não bloqueiam mais o salvamento. Antes, e-mail em branco derrubava o salvamento inteiro.
+- **Data de nascimento** volta a aparecer corretamente após salvar.
+- **Botão Salvar fixo** no rodapé, com indicador de "alterações não salvas", desabilitado quando nada mudou e aviso ao sair sem salvar.
+- **Máscaras automáticas** em CPF, CNPJ, telefone fixo e CEP.
+- **Etiquetas (tags)** por cliente: criar com o "+" (Enter confirma), remover no "×". Salvamento automático.
+- **Responsável automático** na coluna esquerda: "Começou a atender" (atividade mais antiga) e "Atendendo agora" (mais recente). Quando é a mesma pessoa, mostra uma linha única com a data de início.
+- **Histórico em português**: detalhes dos eventos traduzidos (status, motivos, valores em R$, datas), escondendo identificadores técnicos.
+
+#### Detalhes técnicos
+- **Migration**: `059_customers_tags.sql` (coluna `tags JSONB` em customers).
+- **PATCH /customers/:id**: converte strings vazias em `null` antes da validação (evita `z.string().email()` rejeitar `""` e derrubar o save com 400); aceita `tags` (array, normalizado/deduplicado, gravado como JSONB).
+- **GET /customers/:id/full**: retorna `birth_date` como `YYYY-MM-DD` (`TO_CHAR`) e calcula `first_attendant`/`current_attendant` via UNION de `orders.assigned_to`, `conversations.assigned_to` e `attendance_blocks.created_by` (mais antigo/mais recente).
+- **Frontend**: `ClientFichaTab.tsx` (normalização de data, máscaras, dirty-tracking, botão fixo); `ClientLeftSidebar.tsx` (tags editáveis + responsável derivado); `ClientHistoricoTab.tsx` (tradução PT-BR dos detalhes e troca de acesso por colchete por `Map.get`).
+- Central de ajuda atualizada com Tags e Responsável.
+
+#### Atenção
+O responsável é **derivado** dos dados existentes; não há atribuição manual nesta versão. Se nenhum pedido, conversa ou atendimento tiver responsável registrado, a ficha mostra "Sem responsável".
+
+---
+
+## [v1.10.1] — 29 de maio de 2026
+### Agenda mais completa, foto do cliente e ajustes no pipeline
+
+#### Em poucas palavras
+A agenda ganhou melhorias (duração padrão de agendamento e um resumo do dia ao clicar na data), você passou a poder enviar a foto do cliente direto na ficha, e o pipeline recebeu refinamentos.
+
+#### O que melhora pra você
+Na agenda, criar e visualizar agendamentos ficou mais prático: dá pra definir uma duração padrão em Ajustes, e ao clicar num dia aparece um resumo com os compromissos daquele dia. A ficha do cliente agora aceita foto — é só clicar no avatar e enviar (PNG, JPEG ou WebP até 5 MB). O pipeline e alguns pontos de produtos/configurações também foram refinados.
+
+#### Novidades
+
+- **Foto do cliente**: upload direto pelo avatar na coluna esquerda da ficha, com validação de tipo e tamanho.
+- **Duração padrão de agendamento** configurável em Ajustes → Agenda.
+- **Resumo do dia** (popover) ao clicar numa data no calendário.
+- Refinamentos visuais e de comportamento nos componentes da agenda (pílula do compromisso, painel lateral, diálogo de criação, visão mensal e por horário).
+- Ajustes no pipeline e em rotas de produtos/configurações.
+
+#### Detalhes técnicos
+- **Migrations**: `055_settings_default_appointment_duration.sql`, `056_customers_photo_url.sql`.
+- **Backend**: `lib/uploads.ts` (upload com validação por magic bytes), `appointments.routes.ts`, `pipelines.routes.ts`, `products.routes.ts`, `settings.routes.ts`.
+- **Frontend**: componentes da agenda (`AppointmentPill`, `AppointmentSheet`, `CreateAppointmentDialog`, `DayPopover`, `MonthView`, `TimeGridView`, `page.tsx`), `ClientLeftSidebar.tsx` (foto) e lista de clientes.
+
+---
+
 ## [v1.10.0] — 27 de maio de 2026
 ### Pedidos com Fluxo configurável, regras de pagamento e histórico completo na ficha
 
