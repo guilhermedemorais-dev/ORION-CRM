@@ -33,7 +33,9 @@ jobs:
 
       # ── API ──────────────────────────────────────────────
       - name: Copy docs into API context
-        run: cp -r docs apps/api/docs
+        # apps/api/docs já existe (tem .keep); `cp -r docs apps/api/docs` aninharia
+        # em apps/api/docs/docs/. Copiar o conteúdo garante apps/api/docs/releases.md.
+        run: cp -r docs/. apps/api/docs/
 
       - name: Build & push API
         uses: docker/build-push-action@v5
