@@ -134,6 +134,44 @@ export const HELP_CONTENT: Record<HelpContext, HelpContextData> = {
     ],
   },
 
+  producao: {
+    pageTitle: 'Produção',
+    sections: [
+      {
+        title: 'O que este módulo faz',
+        items: [
+          { icon: <Eye size={13} />,    label: 'Painel da bancada',        description: 'Lista todas as ordens de produção no mesmo padrão do módulo Pedidos: KPIs, busca, filtros e tabela com progresso por etapa.' },
+          { icon: <Wrench size={13} />, label: 'Operar sem sair do CRM',   description: 'Clique numa ordem para abrir o painel lateral e avançar/reprovar etapa, atribuir o ourives e pausar/retomar a produção.' },
+        ],
+      },
+      {
+        title: 'KPIs do topo',
+        items: [
+          { icon: <BarChart2 size={13} />,  label: 'Em andamento', description: 'Ordens ativas na bancada (não pausadas e dentro do prazo).' },
+          { icon: <AlertCircle size={13} />, label: 'Atrasadas',   description: 'Ordens com prazo estourado — ganham destaque vermelho.' },
+          { icon: <Clock size={13} />,      label: 'Pausadas',     description: 'Ordens pausadas aguardando retomada.' },
+          { icon: <CheckCircle size={13} />, label: 'Concluídas',  description: 'Produção finalizada.' },
+        ],
+      },
+      {
+        title: 'Painel lateral (abas)',
+        items: [
+          { icon: <Gem size={13} />,        label: 'Especificações',  description: 'Dados essenciais da bancada: descrição do design, metal, peso, pedras e imagens do design.' },
+          { icon: <CheckCircle size={13} />, label: 'Etapas',         description: 'Timeline das etapas concluídas (solda, modelagem, cravação, polimento, controle de qualidade) com autor e data.' },
+        ],
+      },
+      {
+        title: 'Operações',
+        items: [
+          { icon: <CheckCircle size={13} />, label: 'Avançar etapa',     description: 'Move a ordem para a próxima etapa. Ao chegar em "Concluído", a produção é finalizada.' },
+          { icon: <AlertCircle size={13} />, label: 'Reprovar etapa',    description: 'Volta uma etapa exigindo o motivo (mínimo 5 caracteres), registrado no histórico.' },
+          { icon: <User size={13} />,        label: 'Atribuir ourives',  description: 'Define o responsável pela ordem (somente gestores). A lista vem dos usuários de Produção.' },
+          { icon: <Clock size={13} />,       label: 'Pausar / Retomar',  description: 'Pausa a ordem com motivo (sobreposição — não altera a etapa real). Ao retomar, volta de onde parou.' },
+        ],
+      },
+    ],
+  },
+
   pedidos: {
     pageTitle: 'Pedidos',
     sections: [
@@ -389,38 +427,6 @@ export const HELP_CONTENT: Record<HelpContext, HelpContextData> = {
           { icon: <Clock size={13} />,   label: 'Janela de 24h',        description: 'Após a mensagem do cliente, você tem 24h para responder livremente. Depois disso, só com template aprovado.' },
           { icon: <FileText size={13} />, label: 'Templates',            description: 'Mensagens padronizadas aprovadas pela Meta. Use quando a janela de 24h expirar.' },
           { icon: <AlertCircle size={13} />, label: 'Limite de envio', description: '80 mensagens/segundo (limite da Meta). O sistema gerencia automaticamente.' },
-        ],
-      },
-    ],
-  },
-
-  producao: {
-    pageTitle: 'Produção — Controle de Ordens de Serviço',
-    sections: [
-      {
-        title: 'Como usar o módulo de Produção',
-        items: [
-          { icon: <Gem size={13} />,       label: 'Ordens de Serviço (OS)',   description: 'Joias sob encomenda criadas a partir da ficha do cliente. Cada OS tem especificações técnicas, prazo e etapas.' },
-          { icon: <Package size={13} />,   label: 'Lista de OS',              description: 'Todas as ordens de serviço com status, prazo e responsável. Use filtros para encontrar rapidamente.' },
-        ],
-      },
-      {
-        title: 'Etapas de Produção',
-        items: [
-          { icon: <Circle size={13} color="#C8A97A" />, label: 'Modelagem',     description: 'Criação do modelo 3D ou físico da joia. O designer 3D recebe as especificações técnicas.' },
-          { icon: <Circle size={13} color="#A78BFA" />, label: 'Fundição',      description: 'Derretimento e molde do metal. Etapa registrada com fotos de evidência.' },
-          { icon: <Circle size={13} color="#5B9CF6" />, label: 'Cravação',      description: 'Incrustação de pedras e gemas. Registrado com fotos para controle de qualidade.' },
-          { icon: <Circle size={13} color="#2DD4BF" />, label: 'Acabamento',    description: 'Polimento, limpeza e revisão final. Última etapa antes da entrega.' },
-          { icon: <Circle size={13} color="#3FB87A" />, label: 'Concluída',     description: 'Peça finalizada e aprovada. Aguardando retirada ou envio ao cliente.' },
-        ],
-      },
-      {
-        title: 'Ações na OS',
-        items: [
-          { icon: <Camera size={13} />,      label: 'Registrar evidência',  description: 'Tire foto da peça na etapa atual. As fotos ficam no histórico para controle de qualidade.' },
-          { icon: <ChevronRight size={13} />, label: 'Avançar etapa',       description: 'Move a OS para a próxima etapa de produção. Registra automaticamente quem fez e quando.' },
-          { icon: <MessageSquare size={13} />, label: 'Observação',         description: 'Adicione uma nota interna na OS. Útil para comunicar detalhes ao próximo joalheiro.' },
-          { icon: <Eye size={13} />,         label: 'Detalhes da OS',       description: 'Veja especificações técnicas, metal, pedras, tamanho, peso estimado e fotos de cada etapa.' },
         ],
       },
     ],

@@ -224,6 +224,9 @@ export interface ProductionOrderRecord {
     notes: string | null;
     created_at: string;
     updated_at: string;
+    paused_at: string | null;
+    paused_reason: string | null;
+    paused_by: { id: string; name: string } | null;
     assigned_to: { id: string; name: string } | null;
     order: {
         id: string;
@@ -234,6 +237,15 @@ export interface ProductionOrderRecord {
     progress_percent: number;
     is_overdue: boolean;
     steps?: ProductionStepRecord[];
+    specs?: ProductionSpecs | null;
+}
+
+export interface ProductionSpecs {
+    design_description: string | null;
+    metal_type: string | null;
+    metal_weight_grams: number | null;
+    stones: unknown;
+    design_images: string[];
 }
 
 export interface PublicSettings {

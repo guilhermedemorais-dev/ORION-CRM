@@ -36,6 +36,10 @@ interface ProductionOrderRow {
     notes: string | null;
     created_at: Date;
     updated_at: Date;
+    paused_at: Date | null;
+    paused_reason: string | null;
+    paused_by_user_id: string | null;
+    paused_by_user_name: string | null;
     assigned_user_id: string | null;
     assigned_user_name: string | null;
     order_number: string;
@@ -114,6 +118,11 @@ function mapProductionOrder(row: ProductionOrderRow) {
         notes: row.notes,
         created_at: row.created_at,
         updated_at: row.updated_at,
+        paused_at: row.paused_at,
+        paused_reason: row.paused_reason,
+        paused_by: row.paused_by_user_id && row.paused_by_user_name
+            ? { id: row.paused_by_user_id, name: row.paused_by_user_name }
+            : null,
         assigned_to: row.assigned_user_id && row.assigned_user_name
             ? {
                 id: row.assigned_user_id,
@@ -127,7 +136,7 @@ function mapProductionOrder(row: ProductionOrderRow) {
             customer_name: row.customer_name,
         },
         progress_percent: progressPercent,
-        is_overdue: Boolean(row.deadline && row.deadline.getTime() < Date.now() && row.status !== 'CONCLUIDA'),
+        is_overdue: Boolean(row.deadline && row.deadline.getTime() < Date.now() && row.status !== 'CONCLUIDA' && !row.paused_at),
     };
 }
 
@@ -142,6 +151,10 @@ async function fetchProductionOrder(productionOrderId: string): Promise<Producti
             po.notes,
             po.created_at,
             po.updated_at,
+            po.paused_at,
+            po.paused_reason,
+            pu.id AS paused_by_user_id,
+            pu.name AS paused_by_user_name,
             u.id AS assigned_user_id,
             u.name AS assigned_user_name,
             o.order_number,
@@ -151,6 +164,7 @@ async function fetchProductionOrder(productionOrderId: string): Promise<Producti
           INNER JOIN orders o ON o.id = po.order_id
           INNER JOIN customers c ON c.id = o.customer_id
           LEFT JOIN users u ON u.id = po.assigned_to
+          LEFT JOIN users pu ON pu.id = po.paused_by
           WHERE po.id = $1
           LIMIT 1`,
         [productionOrderId]
@@ -235,6 +249,10 @@ router.get(
                     po.notes,
                     po.created_at,
                     po.updated_at,
+                    po.paused_at,
+                    po.paused_reason,
+                    pu.id AS paused_by_user_id,
+                    pu.name AS paused_by_user_name,
                     u.id AS assigned_user_id,
                     u.name AS assigned_user_name,
                     o.order_number,
@@ -244,6 +262,7 @@ router.get(
                   INNER JOIN orders o ON o.id = po.order_id
                   INNER JOIN customers c ON c.id = o.customer_id
                   LEFT JOIN users u ON u.id = po.assigned_to
+                  LEFT JOIN users pu ON pu.id = po.paused_by
                   ${whereClause}
                   ORDER BY po.deadline ASC NULLS LAST, po.updated_at DESC
                   LIMIT $${limitIndex} OFFSET $${offsetIndex}`,
@@ -283,8 +302,31 @@ router.get(
             assertCanAccessProduction(req, productionOrder.assigned_user_id);
             const steps = await fetchProductionSteps(productionOrder.id);
 
+            // Especificações essenciais da bancada (do pedido vinculado).
+            const specsResult = await query<{
+                design_description: string | null;
+                metal_type: string | null;
+                metal_weight_grams: string | null;
+                stones: unknown;
+                design_images: string[] | null;
+            }>(
+                `SELECT design_description, metal_type, metal_weight_grams, stones, design_images
+                   FROM custom_order_details WHERE order_id = $1 LIMIT 1`,
+                [productionOrder.order_id]
+            );
+            const specsRow = specsResult.rows[0] ?? null;
+
             res.json({
                 ...mapProductionOrder(productionOrder),
+                specs: specsRow
+                    ? {
+                        design_description: specsRow.design_description,
+                        metal_type: specsRow.metal_type,
+                        metal_weight_grams: specsRow.metal_weight_grams !== null ? Number(specsRow.metal_weight_grams) : null,
+                        stones: specsRow.stones ?? null,
+                        design_images: specsRow.design_images ?? [],
+                    }
+                    : null,
                 steps: steps.map((step) => ({
                     id: step.id,
                     step_name: step.step_name,
@@ -441,6 +483,165 @@ router.post(
         } catch (error) {
             next(error);
         }
+    }
+);
+
+const assignSchema = z.object({ assigned_to: z.string().uuid().nullable() });
+const pauseSchema = z.object({ reason: z.string().trim().min(3).max(500) });
+
+async function respondWithProductionDetail(res: Response, productionOrderId: string): Promise<void> {
+    const updated = await fetchProductionOrder(productionOrderId);
+    const steps = await fetchProductionSteps(productionOrderId);
+    res.json({
+        ...mapProductionOrder(updated as ProductionOrderRow),
+        steps: steps.map((step) => ({
+            id: step.id,
+            step_name: step.step_name,
+            completed_at: step.completed_at,
+            notes: step.notes,
+            approved: step.approved,
+            rejection_reason: step.rejection_reason,
+            completed_by: { id: step.completed_by_user_id, name: step.completed_by_user_name },
+        })),
+    });
+}
+
+// PATCH /:id/assign — atribui (ou remove) o ourives responsável. Ação gerencial.
+router.patch(
+    '/:id/assign',
+    authenticate,
+    requireRole(['ADMIN']),
+    rateLimit({ windowMs: 60 * 1000, max: 60, name: 'production-assign' }),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const productionOrderId = String(req.params['id'] ?? '');
+            const parsed = assignSchema.safeParse(req.body);
+            if (!parsed.success) {
+                next(AppError.badRequest('Dados inválidos.', parsed.error.errors.map((e) => ({ field: e.path.join('.'), message: e.message }))));
+                return;
+            }
+
+            const productionOrder = await fetchProductionOrder(productionOrderId);
+            if (!productionOrder) { next(AppError.notFound('Ordem de produção não encontrada.')); return; }
+
+            if (parsed.data.assigned_to) {
+                const userRes = await query<{ role: string }>(
+                    `SELECT role FROM users WHERE id = $1 AND status = 'active' LIMIT 1`,
+                    [parsed.data.assigned_to]
+                );
+                const role = userRes.rows[0]?.role;
+                if (!role) { next(AppError.badRequest('Usuário não encontrado ou inativo.')); return; }
+                if (role !== 'PRODUCAO' && role !== 'ADMIN') {
+                    next(AppError.badRequest('O responsável deve ser um usuário de Produção.'));
+                    return;
+                }
+            }
+
+            await query(
+                `UPDATE production_orders SET assigned_to = $2, updated_at = NOW() WHERE id = $1`,
+                [productionOrderId, parsed.data.assigned_to]
+            );
+
+            if (req.user) {
+                await createAuditLog({
+                    userId: req.user.id,
+                    action: 'ASSIGN',
+                    entityType: 'production_orders',
+                    entityId: productionOrderId,
+                    oldValue: { assigned_to: productionOrder.assigned_user_id },
+                    newValue: { assigned_to: parsed.data.assigned_to },
+                    req,
+                });
+            }
+
+            await respondWithProductionDetail(res, productionOrderId);
+        } catch (error) { next(error); }
+    }
+);
+
+// POST /:id/pause — pausa a ordem (overlay, não muda o status real).
+router.post(
+    '/:id/pause',
+    authenticate,
+    requireRole(['ADMIN', 'PRODUCAO']),
+    rateLimit({ windowMs: 60 * 1000, max: 60, name: 'production-pause' }),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const productionOrderId = String(req.params['id'] ?? '');
+            const parsed = pauseSchema.safeParse(req.body);
+            if (!parsed.success) {
+                next(AppError.badRequest('Informe o motivo da pausa (mínimo 3 caracteres).', parsed.error.errors.map((e) => ({ field: e.path.join('.'), message: e.message }))));
+                return;
+            }
+
+            const productionOrder = await fetchProductionOrder(productionOrderId);
+            if (!productionOrder) { next(AppError.notFound('Ordem de produção não encontrada.')); return; }
+            assertCanAccessProduction(req, productionOrder.assigned_user_id);
+
+            if (productionOrder.paused_at) {
+                next(AppError.conflict('PRODUCTION_ALREADY_PAUSED', 'Esta ordem de produção já está pausada.'));
+                return;
+            }
+
+            await query(
+                `UPDATE production_orders SET paused_at = NOW(), paused_reason = $2, paused_by = $3, updated_at = NOW() WHERE id = $1`,
+                [productionOrderId, parsed.data.reason, req.user?.id ?? null]
+            );
+
+            if (req.user) {
+                await createAuditLog({
+                    userId: req.user.id,
+                    action: 'PAUSE',
+                    entityType: 'production_orders',
+                    entityId: productionOrderId,
+                    oldValue: null,
+                    newValue: { paused_reason: parsed.data.reason },
+                    req,
+                });
+            }
+
+            await respondWithProductionDetail(res, productionOrderId);
+        } catch (error) { next(error); }
+    }
+);
+
+// POST /:id/resume — retoma a ordem pausada.
+router.post(
+    '/:id/resume',
+    authenticate,
+    requireRole(['ADMIN', 'PRODUCAO']),
+    rateLimit({ windowMs: 60 * 1000, max: 60, name: 'production-resume' }),
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const productionOrderId = String(req.params['id'] ?? '');
+            const productionOrder = await fetchProductionOrder(productionOrderId);
+            if (!productionOrder) { next(AppError.notFound('Ordem de produção não encontrada.')); return; }
+            assertCanAccessProduction(req, productionOrder.assigned_user_id);
+
+            if (!productionOrder.paused_at) {
+                next(AppError.conflict('PRODUCTION_NOT_PAUSED', 'Esta ordem de produção não está pausada.'));
+                return;
+            }
+
+            await query(
+                `UPDATE production_orders SET paused_at = NULL, paused_reason = NULL, paused_by = NULL, updated_at = NOW() WHERE id = $1`,
+                [productionOrderId]
+            );
+
+            if (req.user) {
+                await createAuditLog({
+                    userId: req.user.id,
+                    action: 'RESUME',
+                    entityType: 'production_orders',
+                    entityId: productionOrderId,
+                    oldValue: { paused_reason: productionOrder.paused_reason },
+                    newValue: null,
+                    req,
+                });
+            }
+
+            await respondWithProductionDetail(res, productionOrderId);
+        } catch (error) { next(error); }
     }
 );
 

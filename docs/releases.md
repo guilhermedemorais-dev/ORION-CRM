@@ -6,6 +6,37 @@
 
 ---
 
+## [v1.12.0] — 1 de junho de 2026
+### Produção repaginada no padrão Pedidos: tabela, painel lateral e operações da bancada
+
+#### Em poucas palavras
+A tela de Produção saiu do "página em construção" e ganhou a mesma cara do módulo Pedidos: KPIs no topo, busca, filtros e uma tabela com o progresso de cada ordem. Clicando numa ordem abre um painel lateral com abas para ver as especificações da peça e as etapas, e botões para avançar/reprovar etapa, definir o ourives e pausar/retomar a produção.
+
+#### O que melhora pra você
+Antes a Produção mostrava um pop-up de "em construção" e um layout antigo. Agora o ourives e o gestor acompanham toda a bancada num painel único: quantas ordens estão em andamento, atrasadas, pausadas e concluídas. A busca acha pela ordem ou pelo cliente, e os filtros separam por situação.
+
+Ao abrir uma ordem, a aba **Especificações** mostra o essencial da bancada (descrição do design, metal, peso, pedras e imagens), e a aba **Etapas** mostra a timeline do que já foi feito. Dá pra **avançar** ou **reprovar** a etapa atual (com motivo), **atribuir o ourives responsável** e **pausar/retomar** a ordem com motivo registrado — tudo sem sair do CRM e com histórico de auditoria.
+
+#### Novidades
+
+- **Pop-up "em construção" removido** da página de Produção.
+- **Painel no padrão Pedidos**: 4 KPIs (Em andamento · Atrasadas · Pausadas · Concluídas), busca, filtro de status e tabela densa com barra de progresso por etapa (dourado = ativo · laranja = pausado · vermelho = atrasado).
+- **Painel lateral com abas**: Especificações (design, metal, peso, pedras, imagens) e Etapas (timeline com autor e data).
+- **Avançar / reprovar etapa** direto no painel, com observações da bancada e motivo de reprovação.
+- **Atribuir ourives** responsável (somente gestores), a partir dos usuários de Produção.
+- **Pausar / retomar** a ordem com motivo — sobreposição que não altera a etapa real; ao retomar, volta de onde parou.
+
+#### Detalhes técnicos
+- **Migration**: `060_production_pause.sql` (paused_at, paused_reason, paused_by + índice parcial em production_orders).
+- **Rotas novas**: `PATCH /production-orders/:id/assign` (ADMIN), `POST /production-orders/:id/pause` e `/resume` (ADMIN/PRODUCAO), com audit log. `GET /production-orders/:id` passou a retornar as specs da bancada (de `custom_order_details`) e os campos de pause.
+- **Frontend**: `components/modules/producao/ProducaoClient.tsx` (KPIs, toolbar, tabela e drawer com abas/operações) e `app/(crm)/producao/page.tsx` reescrita (sem `UnderConstruction`). Tipos de produção atualizados em `lib/api.ts`.
+- Central de ajuda do módulo Produção reescrita para o novo fluxo.
+
+#### Atenção
+A pausa de produção é uma sobreposição (igual a de pedidos): não muda a etapa nem o status real da ordem, apenas sinaliza "Pausada". Ordens já concluídas não exibem ações de avanço/pausa.
+
+---
+
 ## [v1.11.0] — 1 de junho de 2026
 ### Ficha do cliente: salvamento corrigido, etiquetas (tags), responsável automático e histórico em português
 
