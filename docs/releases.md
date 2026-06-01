@@ -6,6 +6,25 @@
 
 ---
 
+## [v1.12.1] — 1 de junho de 2026
+### Mensagem clara ao registrar atendimento/OS de um lead
+
+#### Em poucas palavras
+Ao tentar registrar um atendimento ou OS para um cadastro que ainda é um lead (não convertido em cliente), o sistema mostrava um "Erro interno" sem explicação. Agora aparece uma mensagem clara dizendo o que fazer.
+
+#### O que melhora pra você
+Atendimentos e ordens de serviço só podem ser registrados em clientes. Quando o cadastro ainda era um lead, o salvamento falhava com um erro técnico genérico. Agora a mensagem é direta: "Este cadastro ainda é um lead. Converta o lead em cliente (preencha e salve a aba Ficha) antes de registrar atendimento ou OS."
+
+#### Novidades
+
+- **Erro claro** ao criar atendimento/OS em um lead não convertido (antes era "Erro interno").
+- Validação de existência do cliente antes de gravar o atendimento.
+
+#### Detalhes técnicos
+- `POST /customers/:id/blocks`: valida o cliente antes do INSERT; se o id for de um lead, retorna 400 com mensagem orientando a conversão; se não existir, 404. Evita o 500 por violação de FK em `attendance_blocks.customer_id`.
+
+---
+
 ## [v1.12.0] — 1 de junho de 2026
 ### Produção repaginada no padrão Pedidos: tabela, painel lateral e operações da bancada
 

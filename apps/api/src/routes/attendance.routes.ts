@@ -130,6 +130,25 @@ router.post(
 
             const userId = req.user!.id;
 
+            // O cliente precisa existir (attendance_blocks.customer_id é NOT NULL com FK).
+            // Sem isso, um lead ainda não convertido gerava um 500 opaco ("Erro interno").
+            const customerExists = await query<{ id: string }>(
+                'SELECT id FROM customers WHERE id = $1 LIMIT 1',
+                [customerId]
+            );
+            if (!customerExists.rows[0]) {
+                const leadRow = await query<{ id: string }>(
+                    'SELECT id FROM leads WHERE id = $1 LIMIT 1',
+                    [customerId]
+                );
+                if (leadRow.rows[0]) {
+                    next(AppError.badRequest('Este cadastro ainda é um lead. Converta o lead em cliente (preencha e salve a aba "Ficha") antes de registrar atendimento ou OS.'));
+                    return;
+                }
+                next(AppError.notFound('Cliente não encontrado.'));
+                return;
+            }
+
             // Validate for OS transition
             let soNumber: string | null = null;
             let soApprovedAt: string | null = null;
