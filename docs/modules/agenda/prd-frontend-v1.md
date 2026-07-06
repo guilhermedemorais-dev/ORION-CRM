@@ -2,8 +2,8 @@
 
 **Versão:** 1.0  
 **Data:** 2026-03-23  
-**Dependência backend:** `ORION-PRD-AGENDA-v1.md` (migration, service, routes)  
-**Referência visual:** `mockup-01` a `mockup-04`  
+**Dependência backend:** PRD backend da Agenda, não localizado no repositório em 2026-06-09
+**Referência visual:** `../../design/mockups/agenda/`
 
 ---
 
@@ -20,7 +20,7 @@
 
 # TELA 1 — Página `/agenda` (View Mensal)
 
-**Mockup:** `mockup-01-agenda-mensal.html`  
+**Mockup:** `../../design/mockups/agenda/month-view.html`
 **Arquivo principal:** `apps/web/app/(crm)/agenda/page.tsx`  
 **Rota:** `/agenda` ou `/agenda?view=month&date=2026-03-01`
 
@@ -253,7 +253,7 @@ Import: `import { CalendarDays } from 'lucide-react';`
 
 # TELA 2 — Agenda com Sheet de Detalhe (Lateral Direita)
 
-**Mockup:** `mockup-02-agenda-com-sheet.html`  
+**Mockup:** `../../design/mockups/agenda/month-view-with-sheet.html`
 **Arquivo:** mesmo `page.tsx` da Tela 1 (renderização condicional)  
 **Rota:** `/agenda?view=month&selected=uuid-123`
 
@@ -345,7 +345,7 @@ Pill colorida com label do tipo:
 </span>
 ```
 
-`APPOINTMENT_TYPE_LABELS` e `APPOINTMENT_TYPE_COLORS` definidos no PRD backend (seção 6 de `ORION-PRD-AGENDA-v1.md`).
+`APPOINTMENT_TYPE_LABELS` e `APPOINTMENT_TYPE_COLORS` dependem do PRD backend da Agenda, atualmente ausente.
 
 ### Seção 3 — Cliente (após `<Separator />`)
 
@@ -487,7 +487,7 @@ const KNOWN_FIELDS: Record<string, { icon: string; label: string }> = {
 
 # TELA 3 — Aba "Agenda" no Perfil do Lead/Cliente
 
-**Mockup:** `mockup-03-lead-aba-agenda.html`  
+**Mockup:** `../../design/mockups/agenda/lead-agenda-tab.html`
 **Arquivo (lead):** editar `apps/web/app/(crm)/leads/page.tsx` ou componente de detalhe do lead  
 **Arquivo (cliente):** editar `apps/web/app/(crm)/clientes/[id]/page.tsx`
 
@@ -629,7 +629,7 @@ Inserir APÓS "Nova OS" e ANTES de "Novo Bloco" (ou no final da lista se esses n
 
 # TELA 4 — Modal "Criar Agendamento"
 
-**Mockup:** `mockup-04-criar-agendamento.html`  
+**Mockup:** `../../design/mockups/agenda/create-event.html`
 **Arquivo:** `apps/web/app/(crm)/agenda/components/CreateAppointmentDialog.tsx`
 
 ---

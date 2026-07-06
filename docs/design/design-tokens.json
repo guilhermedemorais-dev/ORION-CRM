@@ -1,0 +1,42 @@
+{
+  "source": "apps/web/app/globals.css",
+  "captured_at": "2026-06-09",
+  "colors": {
+    "gold": "#bfa06a",
+    "gold_light": "#d4b87e",
+    "gold_dark": "#8b7145",
+    "void": "#080809",
+    "base": "#0f0f11",
+    "surface": "#131316",
+    "elevated": "#1a1a1e",
+    "nav": "#0a0a0c",
+    "text": "#f0ebe3",
+    "text_secondary": "#a09a94",
+    "text_muted": "#4a4a54",
+    "green": "#4caf82",
+    "red": "#e05252",
+    "amber": "#f0a040",
+    "blue": "#4a9eff",
+    "purple": "#9c6fde"
+  },
+  "layout": {
+    "sidebar_width": "220px",
+    "density": "compact",
+    "content_min_width_rule": "min-w-0"
+  },
+  "radius": {
+    "control": "6px",
+    "card": "8px",
+    "panel": "12px"
+  },
+  "borders": {
+    "subtle": "rgba(255,255,255,0.04)",
+    "low": "rgba(255,255,255,0.06)",
+    "mid": "rgba(255,255,255,0.10)",
+    "strong": "rgba(255,255,255,0.16)"
+  },
+  "typography": {
+    "sans": "Inter",
+    "serif": "Playfair Display"
+  }
+}

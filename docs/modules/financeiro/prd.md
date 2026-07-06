@@ -6,7 +6,7 @@
 ---
 
 ## Referência Visual
-Mockup aprovado: `PRD.DOCS/mockup-financeiro.html`
+Mockup aprovado: `../../design/mockups/financeiro/overview.html`
 
 ⚠️ O mockup usa SVG/CSS puro para simular os gráficos.
 **NÃO copiar o código dos gráficos do mockup.**
@@ -232,7 +232,7 @@ Implemente APENAS:
 - Seletor de período funcional
 
 ⚠️ Usar Recharts. Não usar SVG manual. Não copiar código do mockup.
-Compare layout e cores com `mockup-financeiro.html`.
+Compare layout e cores com `../../design/mockups/financeiro/overview.html`.
 ⛔ Aguarde aprovação antes de continuar.
 
 ---
@@ -243,7 +243,7 @@ Implemente APENAS:
 - Tabela de lançamentos com filtros, busca e paginação
 - Badge de tipo (receita/despesa/pendente)
 - Link de comprovante
-Compare com `mockup-financeiro.html`.
+Compare com `../../design/mockups/financeiro/overview.html`.
 ⛔ Aguarde aprovação antes de continuar.
 
 ---

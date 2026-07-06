@@ -9,8 +9,8 @@
 
 | Arquivo | O que mostra |
 |---------|-------------|
-| `mockup-pipeline-builder.html` | Menu novo + página do builder (visão MESTRE) |
-| `mockup-kanban-funcionario.html` | Kanban rico (visão FUNCIONÁRIO) |
+| `../../design/mockups/pipeline/builder.html` | Menu novo + página do builder (visão MESTRE) |
+| `../../design/mockups/pipeline/kanban.html` | Kanban rico (visão FUNCIONÁRIO) |
 
 Abrir ambos antes de implementar qualquer componente.
 
@@ -274,7 +274,7 @@ Implemente APENAS:
 - Hover revela ✏️ ⏸ 🗑 (só pro role MESTRE)
 - Botão "+ Novo pipeline" (só pro role MESTRE)
 - Pipeline desativado: visível só pro Mestre, opaco
-Compare pixel a pixel com `mockup-pipeline-builder.html` (sidebar esquerda).
+Compare pixel a pixel com `../../design/mockups/pipeline/builder.html` (sidebar esquerda).
 ⛔ Aguarde aprovação antes de continuar.
 
 ---
@@ -287,7 +287,7 @@ Implemente APENAS:
 - LeadCard rico com todos os 6 elementos
 - Badge `✦ IA` nos cards movidos pela IA
 - Drag-and-drop com @dnd-kit + otimistic update
-Compare com `mockup-kanban-funcionario.html`.
+Compare com `../../design/mockups/pipeline/kanban.html`.
 ⛔ Aguarde aprovação antes de continuar.
 
 ---
@@ -300,7 +300,7 @@ Implemente APENAS:
 - Auto-save do flow_json a cada 30s
 - Chat IA lateral com placeholder funcional
 - Botão Publicar (salva e ativa o pipeline)
-Compare com `mockup-pipeline-builder.html`.
+Compare com `../../design/mockups/pipeline/builder.html`.
 ⛔ Aguarde aprovação antes de continuar.
 
 ---

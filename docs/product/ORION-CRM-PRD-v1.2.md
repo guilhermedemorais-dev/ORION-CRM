@@ -1227,7 +1227,7 @@ Set-Cookie: `refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=60480
 ### POST /api/v1/orders
 **Auth**: Bearer JWT (ADMIN, ATENDENTE)
 
-**Request Body**: Ver seção completa na documentação de API extendida (referência: `references/api-extended.md` — a ser criado na Fase 2).
+**Request Body**: ver documentação de API estendida, ainda pendente de criação na Fase 2.
 
 ---
 

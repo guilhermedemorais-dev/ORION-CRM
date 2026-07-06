@@ -1,7 +1,7 @@
 # PRD-PDV-01 — Recibo de Finalização Melhorado
 
 ## Referência visual
-`PRD.DOCS/mockup-recibo.html` (dark + print 80mm)
+`docs/design/mockups/pdv/receipt.html` (dark + print 80mm)
 
 ## Leia antes de implementar
 - `apps/web/app/(crm)/pdv/` — componente de recibo atual

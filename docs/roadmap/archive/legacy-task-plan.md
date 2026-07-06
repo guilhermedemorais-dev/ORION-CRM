@@ -8,10 +8,10 @@
   - `b9697d4` `fix(a11y): add aria-label to icon-only close buttons`
   - `a69aca9` `fix(a11y): add aria-label to form elements and suppress no-inline-styles webhint`
   - `0539d6d` `feat(web): add HelpPanel and helpContent components`
-- Fonte funcional do roadmap atual: `PRD.DOCS`
+- Fonte funcional original do roadmap: antiga raiz de PRDs, hoje migrada para `docs/`.
 - Fonte visual canônica do projeto:
-  - `PRD.DOCS/Designer Systems/ORION-DESIGN-SYSTEM.html`
-  - todo mockup `.html` salvo dentro de `PRD.DOCS/`
+  - `docs/design/design-system/ORION-DESIGN-SYSTEM.html`
+  - todo mockup `.html` salvo dentro de `docs/`
 - Estado honesto do projeto:
   - Base histórica dos blocos 1-10: concluída
   - Phase 0: concluída
@@ -26,9 +26,9 @@
 - `Frontend/UI`: páginas, componentes, widgets e mudanças visuais navegáveis
 
 ## Regra Visual do Projeto
-- A pasta `PRD.DOCS/Designer Systems/` agora faz parte do canon do ORION.
-- O arquivo `PRD.DOCS/Designer Systems/ORION-DESIGN-SYSTEM.html` define o design system base.
-- Todo mockup anexado em `PRD.DOCS/` deve ser seguido como especificação visual da tela correspondente.
+- A pasta `docs/design/design-system/` agora faz parte do canon do ORION.
+- O arquivo `docs/design/design-system/ORION-DESIGN-SYSTEM.html` define o design system base.
+- Todo mockup anexado em `docs/` deve ser seguido como especificação visual da tela correspondente.
 - Qualquer diferença entre código e mockup deve ser tratada como gap, não como liberdade criativa.
 
 ## Mapa Rápido Por Camada
@@ -294,9 +294,9 @@ Status: concluída
 - [x] Canon definido com base nos PRDs salvos no workspace
 
 Arquivos gerados:
-- `docs/roadmap/orion-master-roadmap.md`
-- `docs/roadmap/orion-prd-traceability.md`
-- `docs/roadmap/lote-1-pipeline-foundation.md`
+- `docs/roadmap/master-roadmap.md`
+- `docs/roadmap/prd-traceability.md`
+- `docs/modules/pipeline/implementation/lote-1-foundation.md`
 
 ### Fase 1 — Pipeline Foundation
 Status: concluída
@@ -533,7 +533,7 @@ Pendências que requerem validação no browser:
 Nota QA antes: **4.5 / 10** — Nota esperada após: **7.5+ / 10**
 
 ## Observações
-- Os arquivos de `PRD.DOCS` continuam fora dos commits de código.
+- Os PRDs agora são versionados sob `docs/` junto das mudanças documentais.
 - O roadmap novo está avançado, mas ainda não está 100% encerrado.
 - Este arquivo deve ser atualizado sempre que uma fase parcial virar concluída ou quando uma pendência operacional for eliminada.
 

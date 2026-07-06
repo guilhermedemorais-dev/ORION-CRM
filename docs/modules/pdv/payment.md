@@ -1,7 +1,7 @@
 # PRD-PDV-04 — Modal de Pagamento + Botão "Venda Concluída"
 
 ## Referência visual
-`PRD.DOCS/mockup-pdv-pagamento.html` — 4 estados (PIX, Dinheiro, Crédito, Sinal)
+`docs/design/mockups/pdv/payment.html` — 4 estados (PIX, Dinheiro, Crédito, Sinal)
 
 ## Leia antes de implementar
 - `apps/web/app/(crm)/pdv/` — fluxo de finalização atual

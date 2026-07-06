@@ -2,7 +2,7 @@
 
 Data: 2026-05-09
 Responsavel: pipeline-backend-codex
-Fonte de verdade: `PRD.DOCS/Build Pipeline/PRD-PIPELINE-BUILDER-V2.md`
+Fonte de verdade: `docs/modules/pipeline/builder-prd-v2.md`
 
 ## Resumo executivo
 

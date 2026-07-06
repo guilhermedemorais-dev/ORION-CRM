@@ -2,8 +2,8 @@
 
 ## Canon
 
-- Source of truth: latest saved PRDs under `PRD.DOCS/`
-- Out of canon: `PRD.DOCS/Papiline Feature/05-03-26/12-PIPELINE-UPGRADE.md` because it is not saved in this workspace
+- Source of truth: latest saved PRDs under `docs/`
+- Out of canon: o documento histórico `12-PIPELINE-UPGRADE.md` não está salvo neste workspace
 - Runtime model: single-tenant instance
 - Governance: manual docs and checkpoints because `factory-workflow/` is not present in this repo
 

@@ -17,6 +17,12 @@ interface ProductOption {
     category: string | null;
 }
 
+interface TeamUser {
+  id: string;
+  name: string;
+  status?: string;
+}
+
 interface DraftMaterial {
     tempId: string;
     productId: string;
@@ -35,6 +41,10 @@ function formatCentsBRInput(cents: number): string {
 
 interface Props {
   customerId: string;
+  attendanceBlockId?: string;
+  embedded?: boolean;
+  submitBlocked?: boolean;
+  onBeforeCreate?: () => Promise<string>;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -87,7 +97,15 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function ServiceOrderModal({ customerId, onClose, onSaved }: Props) {
+export default function ServiceOrderModal({
+  customerId,
+  attendanceBlockId,
+  embedded = false,
+  submitBlocked = false,
+  onBeforeCreate,
+  onClose,
+  onSaved,
+}: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -112,16 +130,44 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
   const [materialFilter, setMaterialFilter] = useState<'all' | 'raw' | 'finished'>('all');
   const [searchResults, setSearchResults] = useState<ProductOption[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [laborCentsStr, setLaborCentsStr] = useState('');
+  const [productionUsers, setProductionUsers] = useState<TeamUser[]>([]);
+  const [teamLoading, setTeamLoading] = useState(true);
+  const [teamError, setTeamError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (embedded) return;
     function handleKey(e: KeyboardEvent) {
       if (e.key === 'Escape' && !saving) onClose();
     }
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
-  }, [onClose, saving]);
+  }, [embedded, onClose, saving]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadProductionUsers() {
+      setTeamLoading(true);
+      setTeamError(null);
+      try {
+        const res = await fetch('/api/internal/users?role=PRODUCAO');
+        if (!res.ok) throw new Error('Falha ao carregar equipe');
+        const data = await res.json();
+        const users: TeamUser[] = Array.isArray(data) ? data : (data.data ?? []);
+        if (active) setProductionUsers(users.filter((user) => user.status !== 'inactive'));
+      } catch {
+        if (active) setTeamError('Não foi possível carregar a equipe de produção.');
+      } finally {
+        if (active) setTeamLoading(false);
+      }
+    }
+
+    loadProductionUsers();
+    return () => { active = false; };
+  }, []);
 
   // Busca produtos com debounce para autocomplete de materiais
   useEffect(() => {
@@ -131,19 +177,21 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
       return;
     }
     setSearching(true);
+    setSearchError(null);
     const handle = setTimeout(async () => {
       try {
         const params = new URLSearchParams({ q: materialSearch.trim(), limit: '12', active_only: 'true' });
         if (materialFilter === 'raw') params.set('is_raw_material', 'true');
         if (materialFilter === 'finished') params.set('is_raw_material', 'false');
         const res = await fetch(`/api/internal/products?${params.toString()}`);
-        if (res.ok) {
-          const data = await res.json();
-          setSearchResults(Array.isArray(data?.data) ? data.data : []);
-          setShowSearchResults(true);
-        }
+        if (!res.ok) throw new Error('Falha ao buscar produtos');
+        const data = await res.json();
+        setSearchResults(Array.isArray(data?.data) ? data.data : []);
+        setShowSearchResults(true);
       } catch {
-        // silently fail
+        setSearchResults([]);
+        setShowSearchResults(false);
+        setSearchError('Não foi possível buscar materiais. Tente novamente.');
       } finally {
         setSearching(false);
       }
@@ -218,12 +266,17 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
     setSaving(true);
     setError(null);
     try {
+      const resolvedAttendanceBlockId = onBeforeCreate
+        ? await onBeforeCreate()
+        : attendanceBlockId;
+
       // 1) Cria a OS primeiro (sem materiais ainda).
       const res = await fetch('/api/internal/service-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customer_id: customerId,
+          attendance_block_id: resolvedAttendanceBlockId,
           product_name: form.product_name,
           priority: form.priority,
           designer_id: form.designer_id || undefined,
@@ -240,9 +293,14 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
           notes: form.notes || undefined,
         }),
       });
-      if (!res.ok) throw new Error('Falha ao criar OS');
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.message ?? 'Falha ao criar OS');
+      }
       const created = await res.json().catch(() => null);
       const osId = created?.id ?? created?.data?.id ?? null;
+      if (!osId) throw new Error('A API não retornou o identificador da OS criada.');
+      const partialFailures: string[] = [];
 
       // 2) Se temos OS criada e materiais selecionados, anexa cada um.
       // Falhas individuais não derrubam a OS toda — usuário pode reanexar depois.
@@ -251,13 +309,14 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
           const qty = parseFloat(m.quantity.replace(',', '.'));
           if (!qty || qty <= 0) continue;
           try {
-            await fetch(`/api/internal/service-orders/${osId}/materials`, {
+            const materialRes = await fetch(`/api/internal/service-orders/${osId}/materials`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ product_id: m.productId, quantity: qty }),
             });
+            if (!materialRes.ok) partialFailures.push(`material ${m.productName}`);
           } catch {
-            // continua tentando os outros
+            partialFailures.push(`material ${m.productName}`);
           }
         }
       }
@@ -265,22 +324,56 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
       // 3) Se mão de obra foi informada, registra agora (recálculo total).
       if (osId && laborCents > 0) {
         try {
-          await fetch(`/api/internal/service-orders/${osId}/labor`, {
+          const laborRes = await fetch(`/api/internal/service-orders/${osId}/labor`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ labor_cents: laborCents }),
           });
+          if (!laborRes.ok) partialFailures.push('mão de obra');
         } catch {
-          // ignora — pode editar depois
+          partialFailures.push('mão de obra');
         }
       }
 
-      notify.success('Ordem de serviço criada', form.product_name);
+      if (resolvedAttendanceBlockId) {
+        try {
+          const weight = Number.parseFloat(form.weight.replace(',', '.'));
+          const blockRes = await fetch(`/api/internal/blocks/${resolvedAttendanceBlockId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              product_name: form.product_name,
+              due_date: form.due_date || undefined,
+              metal: form.metal || undefined,
+              stone: form.stone || undefined,
+              ring_size: form.ring_size || undefined,
+              weight_grams: Number.isFinite(weight) ? weight : undefined,
+              tech_notes: form.notes || undefined,
+              designer_id: form.designer_id || undefined,
+              jeweler_id: form.jeweler_id || undefined,
+              deposit_cents: parseCents(form.deposit_cents_str),
+              total_cents: parseCents(form.total_cents_str),
+            }),
+          });
+          if (!blockRes.ok) partialFailures.push('vínculo com o atendimento');
+        } catch {
+          partialFailures.push('vínculo com o atendimento');
+        }
+      }
+
+      if (partialFailures.length > 0) {
+        notify.warning(
+          'OS criada parcialmente',
+          `Revise: ${partialFailures.join(', ')}. A OS principal foi preservada.`,
+        );
+      } else {
+        notify.success('Ordem de serviço criada', form.product_name);
+      }
       onSaved();
       router.refresh();
       onClose();
-    } catch {
-      setError('Erro ao criar OS. Tente novamente.');
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Erro ao criar OS. Tente novamente.');
     } finally {
       setSaving(false);
     }
@@ -289,32 +382,33 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
   return (
     <div
       style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.75)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '20px',
+        position: embedded ? 'static' : 'fixed',
+        inset: embedded ? undefined : 0,
+        background: embedded ? 'transparent' : 'rgba(0,0,0,0.75)',
+        display: embedded ? 'block' : 'flex',
+        alignItems: embedded ? undefined : 'center',
+        justifyContent: embedded ? undefined : 'center',
+        zIndex: embedded ? undefined : 1000,
+        padding: embedded ? 0 : '20px',
       }}
-      onClick={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}
+      onClick={(e) => { if (!embedded && e.target === e.currentTarget && !saving) onClose(); }}
     >
       <div
         style={{
-          background: '#141417',
-          border: '1px solid rgba(255,255,255,0.10)',
-          borderRadius: '12px',
+          background: embedded ? 'rgba(45,212,191,0.025)' : '#141417',
+          border: embedded ? '1px solid rgba(45,212,191,0.18)' : '1px solid rgba(255,255,255,0.10)',
+          borderTop: embedded ? 'none' : undefined,
+          borderRadius: embedded ? '0 0 8px 8px' : '12px',
           width: '100%',
-          maxWidth: '680px',
-          maxHeight: '90vh',
-          overflowY: 'auto',
+          maxWidth: embedded ? 'none' : '680px',
+          maxHeight: embedded ? 'none' : '90vh',
+          overflowY: embedded ? 'visible' : 'auto',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
         {/* Header */}
-        <div
+        {!embedded && <div
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -355,10 +449,10 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
           >
             ✕
           </button>
-        </div>
+        </div>}
 
         {/* Body */}
-        <div style={{ padding: '20px 24px', flex: 1 }}>
+        <div style={{ padding: embedded ? '16px' : '20px 24px', flex: 1 }}>
           {/* Produto */}
           <div style={{ marginBottom: '22px' }}>
             <SectionTitle>Produto</SectionTitle>
@@ -411,13 +505,20 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
           <div style={{ marginBottom: '22px' }}>
             <SectionTitle>Equipe</SectionTitle>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <FieldGroup label="Designer (ID)">
-                <input style={inputStyle} value={form.designer_id} onChange={handleChange('designer_id')} placeholder="ID do designer" />
+              <FieldGroup label="Designer">
+                <select aria-label="Designer" style={{ ...inputStyle, cursor: 'pointer' }} value={form.designer_id} onChange={handleChange('designer_id')} disabled={teamLoading}>
+                  <option value="">{teamLoading ? 'Carregando equipe...' : 'Não atribuído'}</option>
+                  {productionUsers.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
+                </select>
               </FieldGroup>
-              <FieldGroup label="Ourives (ID)">
-                <input style={inputStyle} value={form.jeweler_id} onChange={handleChange('jeweler_id')} placeholder="ID do ourives" />
+              <FieldGroup label="Ourives">
+                <select aria-label="Ourives" style={{ ...inputStyle, cursor: 'pointer' }} value={form.jeweler_id} onChange={handleChange('jeweler_id')} disabled={teamLoading}>
+                  <option value="">{teamLoading ? 'Carregando equipe...' : 'Não atribuído'}</option>
+                  {productionUsers.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
+                </select>
               </FieldGroup>
             </div>
+            {teamError && <p style={{ fontSize: '10px', color: '#E05252', marginTop: '6px' }}>{teamError}</p>}
           </div>
 
           {/* Materiais consumidos */}
@@ -464,6 +565,11 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
                 placeholder="Buscar produto por nome ou código..."
                 onFocus={() => { if (searchResults.length > 0) setShowSearchResults(true); }}
               />
+              {searchError && (
+                <div style={{ marginTop: '6px', color: '#E05252', fontSize: '11px' }}>
+                  {searchError}
+                </div>
+              )}
               {showSearchResults && (
                 <div
                   style={{
@@ -685,7 +791,7 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !form.product_name.trim()}
+            disabled={saving || submitBlocked || !form.product_name.trim()}
             style={{
               height: '34px',
               padding: '0 20px',
@@ -695,11 +801,11 @@ export default function ServiceOrderModal({ customerId, onClose, onSaved }: Prop
               color: '#5B9CF6',
               fontSize: '12px',
               fontWeight: 600,
-              cursor: saving || !form.product_name.trim() ? 'not-allowed' : 'pointer',
-              opacity: saving || !form.product_name.trim() ? 0.7 : 1,
+              cursor: saving || submitBlocked || !form.product_name.trim() ? 'not-allowed' : 'pointer',
+              opacity: saving || submitBlocked || !form.product_name.trim() ? 0.7 : 1,
             }}
           >
-            {saving ? 'Criando...' : 'Criar OS'}
+            {saving ? 'Criando...' : embedded ? 'Salvar atendimento e criar OS' : 'Criar OS'}
           </button>
         </div>
       </div>

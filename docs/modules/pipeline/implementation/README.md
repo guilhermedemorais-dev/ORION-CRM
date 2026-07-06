@@ -1,6 +1,6 @@
 # PAINEL DO CLIENTE — ÍNDICE DE TASKS
 **Deadline: domingo 15/03/2026 23:59**
-**Referência visual obrigatória: `mockup-painel-completo.html`**
+**Referência visual obrigatória: `../../../design/mockups/pipeline/full-panel.html`**
 **Stack: Next.js 14 + Express + PostgreSQL + Prisma/Knex**
 
 ---
@@ -53,7 +53,7 @@ Após cada task: tsc --noEmit deve passar limpo
 ## COMANDO PARA CADA TASK
 
 ```bash
-claude "leia PRD.DOCS/14-03-26/TASK-XX-NOME.md e PRD.DOCS/14-03-26/mockup-painel-completo.html — implemente exatamente. tsc --noEmit ao final."
+claude "leia docs/modules/pipeline/implementation/task-XX-name.md e docs/design/mockups/pipeline/full-panel.html — implemente exatamente. tsc --noEmit ao final."
 ```
 
 ---

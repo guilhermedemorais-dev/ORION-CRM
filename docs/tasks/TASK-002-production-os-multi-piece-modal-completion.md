@@ -1,13 +1,33 @@
-# TASK-002: Concluir modal de OS multi-pecas no Atendimento
+# 🟡 TASK-002: Concluir modal de OS multi-pecas no Atendimento
 
 ## Status
-A fazer
+Pronta para desenvolvimento
 
 ## Tipo
 Frontend/UI
 
 ## Prioridade
 Alta
+
+## Estimativa
+- Analise tecnica e mapeamento da implementacao atual: `0,5 dia`
+- Refatoracao do estado para projeto com multiplas pecas: `1,0 a 1,5 dia`
+- Montagem da UI multi-pecas e blocos por peca: `1,0 a 1,5 dia`
+- Ajustes de materiais, custodia e regras visuais de preco: `0,5 a 1,0 dia`
+- Validacao manual, evidencias e acabamento final: `0,5 dia`
+- Estimativa total: `3,5 a 5,0 dias uteis`
+
+## Janela de entrega sugerida
+- Melhor caso: `3,5 dias uteis`
+- Faixa realista: `4 a 5 dias uteis`
+- Considera que nao sera necessario alterar contrato de backend
+
+## Project fields
+- `Status`: `Ready for Dev`
+- `Type`: `Feature`
+- `Priority`: `High`
+- `Approval`: `Approved`
+- `Labels`: `feature`
 
 ## Issue GitHub
 Issue criada: `#9` — `https://github.com/guilhermedemorais-dev/ORION-CRM/issues/9`
@@ -21,6 +41,19 @@ Obrigatorio. Nao aprovar sem evidencias visuais e checklist validado.
 ## Responsavel
 Execucao: dev implementador
 Revisao: humano/orquestrador
+
+## Definition of Entry
+- Spec canonica aprovada e localizada em `docs/specs/production/os-multi-piece-proposal/`.
+- Mockup de referencia existente.
+- Task vinculada a issue do GitHub.
+- Escopo restrito ao modal e seus componentes auxiliares diretos.
+
+## Definition of Exit
+- Modal multi-pecas funcional no fluxo de Atendimento.
+- Preco da peca em leitura apenas.
+- Custos ocultos no modal tecnico.
+- Evidencias visuais e checklist manual anexados no PR.
+- Lacunas de backend, se existirem, devolvidas formalmente sem invencao de contrato.
 
 ## Objetivo da task
 Concluir a construcao do modal de OS tecnica multi-pecas dentro do fluxo de
@@ -53,6 +86,10 @@ alinhada ao mockup e as regras fechadas na spec.
 - Implementar carrinho lateral do PDV
 - Implementar ordem de Producao final
 - Alterar contratos de backend sem justificativa formal em nova spec/task
+
+## Dependencias
+- `TASK-001-production-os-multi-piece-spec-consolidation`
+- Specs canonicas da feature em `docs/specs/production/os-multi-piece-proposal/`
 
 ## Estado atual encontrado
 - O modal real atual esta concentrado em `ServiceOrderModal.tsx`.
@@ -119,6 +156,53 @@ alinhada ao mockup e as regras fechadas na spec.
 9. Definir explicitamente na implementacao os comportamentos dos botoes que ja
    existem no modal, sem deixar acao ambigua ou placeholder silencioso.
 
+## Checklist de execucao
+- [ ] Ler integralmente esta task e as specs obrigatorias.
+- [ ] Confirmar Definition of Entry antes de codar.
+- [ ] Mapear o estado atual de `AttendancePopup.tsx` e `ServiceOrderModal.tsx`.
+- [ ] Implementar suporte a projeto com multiplas pecas.
+- [ ] Implementar ficha tecnica por peca com categoria como unico dropdown tecnico.
+- [ ] Implementar selecao obrigatoria de materiais por peca.
+- [ ] Separar claramente `Estoque proprio · loja` e `Custodia · cliente`.
+- [ ] Remover semantica de edicao do preco da peca.
+- [ ] Remover exposicao de custo no modal tecnico.
+- [ ] Validar o fluxo `Atendimento -> OS tecnica -> Proposta`.
+- [ ] Executar checklist manual dos testes obrigatorios.
+- [ ] Anexar evidencias visuais no PR.
+- [ ] Atualizar esta task com relatorio final detalhado.
+
+## Prompt recomendado para IA executora
+```text
+Use Dev Workflow Standard e Dev Implementation Standard.
+
+Execute somente esta task: TASK-002-production-os-multi-piece-modal-completion.
+Antes de agir:
+1. Leia integralmente esta task.
+2. Leia todas as specs e docs obrigatorios citados nela.
+3. Mapeie os arquivos permitidos antes de editar.
+
+Regras obrigatorias:
+- Nao sair do escopo desta task.
+- Nao criar migrations, endpoints ou contratos novos sem devolver a lacuna.
+- Nao expor custo, margem ou custo medio no modal tecnico.
+- Tratar o preco da peca como leitura apenas.
+- Seguir TDD na pratica: implementar, validar, registrar evidencias e corrigir.
+
+Fluxo de execucao:
+1. Ler task e specs
+2. Mapear implementacao atual
+3. Implementar incrementalmente
+4. Validar com testes/checklist
+5. Registrar relatorio final nesta task
+
+Ao final:
+- Atualize o status desta task
+- Escreva relatorio detalhado do que foi feito
+- Liste arquivos alterados
+- Liste testes executados
+- Liste bloqueios ou riscos remanescentes
+```
+
 ## Testes obrigatorios
 - Abrir modal a partir do `AttendancePopup`.
 - Adicionar 1 peca e preencher materiais.
@@ -169,3 +253,19 @@ Obrigatoria via checklist manual e evidencia visual.
 - Pode haver tensao entre mockup multi-pecas e payload atual do modal.
 - Se o frontend depender de contrato novo para persistencia multi-pecas, esta
   task deve parar e devolver a lacuna formalmente em vez de inventar payload.
+
+## Template de relatorio final
+### Resumo
+Descreva objetivamente o que foi entregue.
+
+### Arquivos alterados
+- Liste os arquivos reais alterados
+
+### Testes executados
+- Liste testes manuais e automatizados executados
+
+### Evidencias
+- Liste capturas, videos ou links do PR
+
+### Bloqueios ou riscos remanescentes
+- Liste o que ficou pendente ou exige nova task

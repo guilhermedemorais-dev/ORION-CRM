@@ -3,7 +3,7 @@
 ## Referência visual
 - Print 1 da sessão → listagem atual de clientes
 - Print 2 da sessão → painel de lead (mesmo painel a reusar para clientes)
-- `PRD.DOCS/mockup-pdv-comprovante.html` → seção de histórico no perfil
+- `docs/design/mockups/pdv/receipt.html` → seção de histórico no perfil
 
 ## Leia antes de implementar
 - `apps/web/app/(crm)/clientes/` — módulo atual

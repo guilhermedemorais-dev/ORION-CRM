@@ -1,8 +1,8 @@
 # PRD-PDV-03 — Pedido Personalizado no PDV
 
 ## Referência visual
-`PRD.DOCS/mockup-pdv-painel.html` — Estado B (busca) e Estado C (puxado)
-`PRD.DOCS/mockup-pdv-pagamento.html` — Estado "Personalizado — sinal"
+`docs/design/mockups/pdv/panel.html` — Estado B (busca) e Estado C (puxado)
+`docs/design/mockups/pdv/payment.html` — Estado "Personalizado — sinal"
 
 ## Leia antes de implementar
 - `apps/web/app/(crm)/pdv/` — painel direito e modal de pagamento

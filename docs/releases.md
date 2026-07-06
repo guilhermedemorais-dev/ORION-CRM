@@ -154,7 +154,7 @@ A aba "Pedidos" da ficha do cliente também ficou no mesmo padrão visual, filtr
 - **applyApprovedPaymentEffects** chama syncOrderPaymentStatus — ponto canônico cobre PDV / Mercado Pago / baixa manual.
 - **POST /orders** detecta `flows.active_module='pedidos'` e auto-popula `flow_id` + `current_stage_id` (primeira etapa) na mesma transaction.
 - **Frontend**: `components/system/ErrorModal.tsx` (novo padrão obrigatório); `components/modules/pedidos/{PedidosClient,shared}.tsx`; `components/modules/settings/FluxoTab.tsx`; `ClientPedidosTab.tsx` e `ClientHistoricoTab.tsx` atualizados.
-- **Design System** (`PRD.DOCS/Designer Systems/ORION-DESIGN-SYSTEM.html`): nova seção documentando o padrão Error Dialog com spec visual e regras de quando usar.
+- **Design System** (`docs/design/design-system/ORION-DESIGN-SYSTEM.html`): nova seção documentando o padrão Error Dialog com spec visual e regras de quando usar.
 
 #### Atenção
 A coluna `current_stage_id` dos pedidos antigos fica NULL — eles continuam usando o caminho legado (transições do enum `order_status`) até serem associados a um fluxo. Pedidos novos já entram no fluxo ativo automaticamente. Pra retroativar pedidos antigos, basta um UPDATE manual associando `flow_id` e `current_stage_id`.

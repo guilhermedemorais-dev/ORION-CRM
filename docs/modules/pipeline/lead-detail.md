@@ -1,6 +1,6 @@
 # 15-B — PIPELINE · LEAD DETAIL PAGE
 **ORION CRM · PRD v1.0 · 08/03/2026**
-> Adendo ao `15-PIPELINE-MODULE.md` — página de detalhe aberta ao clicar em um card do Kanban
+> Adendo ao [`prd.md`](prd.md) — página de detalhe aberta ao clicar em um card do Kanban
 
 ---
 

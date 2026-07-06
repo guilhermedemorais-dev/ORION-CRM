@@ -1,13 +1,20 @@
-# TASK-001: Consolidar spec canonica da OS multi-pecas
+# 🟢 TASK-001: Consolidar spec canonica da OS multi-pecas
 
 ## Status
-Em revisao humana
+Concluida
 
 ## Tipo
 Docs
 
 ## Prioridade
 Alta
+
+## Project fields
+- `Status`: `Done`
+- `Type`: `Feature`
+- `Priority`: `High`
+- `Approval`: `Approved`
+- `Labels`: `feature`
 
 ## Issue GitHub
 Issue criada: `#8` — `https://github.com/guilhermedemorais-dev/ORION-CRM/issues/8`
@@ -21,6 +28,17 @@ Abrir PR somente se houver decisao de versionar o checkpoint documental isoladam
 ## Responsavel
 Execucao: IA/dev
 Revisao: humano/orquestrador
+
+## Definition of Entry
+- Specs de origem e mockup existentes e localizados.
+- Task vinculada a uma issue do GitHub.
+- Escopo limitado a consolidacao documental, sem codigo de produto.
+
+## Definition of Exit
+- Specs canonicas criadas/atualizadas em `docs/specs/`.
+- Contradicoes e decisoes pendentes registradas.
+- Resultado da execucao documentado na propria task.
+- Task pronta para servir de base para a execucao tecnica seguinte.
 
 ## Objetivo da task
 Migrar a feature de OS multi-pecas do estado atual em `docs/modules/production`
@@ -99,6 +117,37 @@ N/A nesta task para implementacao. Apenas usar o mockup como referencia visual.
 - Nao criar `database.md` ou `api.md` antes de aprovacao humana.
 - Nao transformar mockup em verdade de backend sem decisao expressa.
 - Se houver contradicao entre mockup e regra de negocio, registrar em `Decisoes pendentes`.
+
+## Checklist de execucao
+- [x] Ler specs e docs obrigatorios.
+- [x] Consolidar a spec canonica em `docs/specs/`.
+- [x] Registrar regras e limites da feature sem implementar codigo.
+- [x] Registrar decisoes pendentes e bloqueios reais.
+- [x] Vincular a task a issue correspondente.
+- [x] Escrever relatorio final nesta task.
+
+## Prompt recomendado para IA executora
+```text
+Use Dev Workflow Standard e Dev Implementation Standard.
+
+Execute somente esta task: TASK-001-production-os-multi-piece-spec-consolidation.
+Antes de agir:
+1. Leia integralmente esta task.
+2. Leia todas as specs e docs obrigatorios citados nela.
+3. Respeite o escopo e o fora de escopo.
+
+Regras de execucao:
+- Nao implemente codigo de produto.
+- Nao altere Banco, API, migrations ou contratos.
+- Registre contradicoes, lacunas e decisoes pendentes na documentacao.
+- Ao concluir, atualize esta task com relatorio detalhado do que foi feito.
+
+Fluxo obrigatorio:
+1. Ler contexto
+2. Consolidar documentacao
+3. Validar consistencia entre spec, mockup e regras
+4. Registrar resultado da execucao
+```
 
 ## Resultado da execucao
 

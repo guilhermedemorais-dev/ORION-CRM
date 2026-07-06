@@ -16,7 +16,6 @@ uploads/
 .opencode/
 .claude/
 .playwright-mcp/
-AGENTS.md
 
 # Cópia de build do changelog — o CI gera via `cp -r docs apps/api/docs`; canônico fica em docs/releases.md
 apps/api/docs/releases.md

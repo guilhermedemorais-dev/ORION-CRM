@@ -537,8 +537,8 @@ N8N_API_KEY=          # gerar em n8n Settings → API → Create API Key
 
 **Ler antes de implementar este módulo:**
 ```bash
-cat prd.docs/10-AUTOMATION-MODULE.md   ← este arquivo
-cat prd.docs/00-STACK-RULES.md
+cat docs/modules/automations/prd.md   ← este arquivo
+cat docs/DEVELOPMENT_STANDARDS.md
 ```
 
 **Ordem de implementação:**

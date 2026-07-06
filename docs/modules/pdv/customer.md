@@ -1,7 +1,7 @@
 # PRD-PDV-02 — Cliente no PDV (Banco Unificado)
 
 ## Referência visual
-`PRD.DOCS/mockup-pdv-painel.html` — Estado A (padrão) e Estado B (vinculado)
+`docs/design/mockups/pdv/panel.html` — Estado A (padrão) e Estado B (vinculado)
 
 ## Leia antes de implementar
 - `apps/web/app/(crm)/pdv/` — painel direito atual

@@ -1,6 +1,6 @@
 # Backlog de Execução Crítica — Produção
 
-Baseado em: [QA-Auditoria-Geral-Backend-Banco-Arquitetura.md](/home/guimp/Documentos/Orion-CRM/docs/qa/QA-Auditoria-Geral-Backend-Banco-Arquitetura.md)
+Baseado em: [QA-Auditoria-Geral-Backend-Banco-Arquitetura.md](/home/guimp/Documentos/Orion-CRM/docs/qa/reports/architecture/backend-database-audit.md)
 
 ## Prompt Inicial Obrigatório
 Use este prompt no início de qualquer execução deste backlog.
@@ -149,7 +149,7 @@ Trabalhe só nos arquivos n8n.routes.ts, inbox.service.ts, inbox.routes.ts e mig
 - Objetivo: corrigir a aba de histórico e a aba WhatsApp do cliente
 - Ler apenas:
   - [apps/api/src/routes/customers.routes.ts](/home/guimp/Documentos/Orion-CRM/apps/api/src/routes/customers.routes.ts:524)
-  - [apps/web/app/(crm)/clientes/[id]/components/tabs/ClientHistoricoTab.tsx](/home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/clientes/[id]/components/tabs/ClientHistoricoTab.tsx:405)
+  - [apps/web/app/(crm)/clientes/[id]/components/tabs/ClientHistoricoTab.tsx](</home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/clientes/[id]/components/tabs/ClientHistoricoTab.tsx:405>)
   - [apps/api/src/db/migrations/004_conversations_messages.sql](/home/guimp/Documentos/Orion-CRM/apps/api/src/db/migrations/004_conversations_messages.sql:24)
   - [apps/api/src/db/migrations/018_inbox_multichannel_foundation.sql](/home/guimp/Documentos/Orion-CRM/apps/api/src/db/migrations/018_inbox_multichannel_foundation.sql:91)
 - Entregáveis:
@@ -192,8 +192,8 @@ Analise apenas rbac.ts e customers.routes.ts. Objetivo: unificar RBAC do módulo
 - LLM recomendado: `Codex CLI`
 - Ler apenas:
   - [apps/api/src/routes/attendance.routes.ts](/home/guimp/Documentos/Orion-CRM/apps/api/src/routes/attendance.routes.ts:83)
-  - [apps/web/app/(crm)/clientes/[id]/components/attendance/AttendancePopup.tsx](/home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/clientes/[id]/components/attendance/AttendancePopup.tsx:145)
-  - [apps/web/app/(crm)/clientes/[id]/components/attendance/AttendanceBlock.tsx](/home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/clientes/[id]/components/attendance/AttendanceBlock.tsx:131)
+  - [apps/web/app/(crm)/clientes/[id]/components/attendance/AttendancePopup.tsx](</home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/clientes/[id]/components/attendance/AttendancePopup.tsx:145>)
+  - [apps/web/app/(crm)/clientes/[id]/components/attendance/AttendanceBlock.tsx](</home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/clientes/[id]/components/attendance/AttendanceBlock.tsx:131>)
 - Entregáveis:
   - sanitização server-side de `content`
   - renderização segura do conteúdo
@@ -206,7 +206,7 @@ Analise apenas rbac.ts e customers.routes.ts. Objetivo: unificar RBAC do módulo
 - Prioridade: Alta
 - LLM recomendado: `Codex CLI`
 - Ler apenas:
-  - [apps/web/app/(crm)/clientes/[id]/components/ClientPanelShell.tsx](/home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/clientes/[id]/components/ClientPanelShell.tsx:40)
+  - [apps/web/app/(crm)/clientes/[id]/components/ClientPanelShell.tsx](</home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/clientes/[id]/components/ClientPanelShell.tsx:40>)
   - [apps/api/src/index.ts](/home/guimp/Documentos/Orion-CRM/apps/api/src/index.ts:113)
   - [apps/api/src/routes/attendance.routes.ts](/home/guimp/Documentos/Orion-CRM/apps/api/src/routes/attendance.routes.ts:30)
 - Entregáveis:
@@ -223,7 +223,7 @@ Analise apenas rbac.ts e customers.routes.ts. Objetivo: unificar RBAC do módulo
 - Prioridade: Alta
 - LLM recomendado: `Codex CLI`
 - Ler apenas:
-  - [apps/web/app/(crm)/clientes/[id]/components/attendance/AttendancePopup.tsx](/home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/clientes/[id]/components/attendance/AttendancePopup.tsx:190)
+  - [apps/web/app/(crm)/clientes/[id]/components/attendance/AttendancePopup.tsx](</home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/clientes/[id]/components/attendance/AttendancePopup.tsx:190>)
   - [apps/api/src/routes/users.routes.ts](/home/guimp/Documentos/Orion-CRM/apps/api/src/routes/users.routes.ts:16)
   - [apps/api/src/types/entities.ts](/home/guimp/Documentos/Orion-CRM/apps/api/src/types/entities.ts:8)
 - Entregáveis:
@@ -255,9 +255,9 @@ Analise apenas rbac.ts e customers.routes.ts. Objetivo: unificar RBAC do módulo
 - Ler apenas:
   - [apps/api/src/routes/pipelines.routes.ts](/home/guimp/Documentos/Orion-CRM/apps/api/src/routes/pipelines.routes.ts:302)
   - [apps/api/src/services/pipelines.service.ts](/home/guimp/Documentos/Orion-CRM/apps/api/src/services/pipelines.service.ts:14)
-  - [apps/web/app/(crm)/pipeline/actions.ts](/home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/pipeline/actions.ts:8)
-  - [apps/web/app/(crm)/pipeline/[slug]/builder/page.tsx](/home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/pipeline/[slug]/builder/page.tsx:31)
-  - [apps/web/app/(crm)/pipeline/[slug]/builder/_components/BuilderCanvas.tsx](/home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/pipeline/[slug]/builder/_components/BuilderCanvas.tsx:438)
+  - [apps/web/app/(crm)/pipeline/actions.ts](</home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/pipeline/actions.ts:8>)
+  - [apps/web/app/(crm)/pipeline/[slug]/builder/page.tsx](</home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/pipeline/[slug]/builder/page.tsx:31>)
+  - [apps/web/app/(crm)/pipeline/[slug]/builder/_components/BuilderCanvas.tsx](</home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/pipeline/[slug]/builder/_components/BuilderCanvas.tsx:438>)
 - Entregáveis:
   - criar pipeline novo
   - salvar `flow_json`
@@ -275,7 +275,7 @@ Analise apenas rbac.ts e customers.routes.ts. Objetivo: unificar RBAC do módulo
 - LLM recomendado: `Codex CLI`
 - Ler apenas:
   - [apps/api/src/routes/pipelines.routes.ts](/home/guimp/Documentos/Orion-CRM/apps/api/src/routes/pipelines.routes.ts:543)
-  - [apps/web/app/(crm)/pipeline/[slug]/builder/_components/BuilderCanvas.tsx](/home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/pipeline/[slug]/builder/_components/BuilderCanvas.tsx:805)
+  - [apps/web/app/(crm)/pipeline/[slug]/builder/_components/BuilderCanvas.tsx](</home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/pipeline/[slug]/builder/_components/BuilderCanvas.tsx:805>)
 - Entregáveis:
   - validar se o UI atual já expõe stage CRUD suficiente
   - se faltar, completar create/update/delete/reorder visível no builder ou página de apoio
@@ -304,7 +304,7 @@ Analise apenas rbac.ts e customers.routes.ts. Objetivo: unificar RBAC do módulo
 - LLM recomendado: `Blackbox/Minimax` para fallback de UI, `Codex CLI` para backend se decidir implementar
 - Ler apenas:
   - [apps/api/src/routes/customers.routes.ts](/home/guimp/Documentos/Orion-CRM/apps/api/src/routes/customers.routes.ts:572)
-  - [apps/web/app/(crm)/clientes/[id]/components/tabs/ClientHistoricoTab.tsx](/home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/clientes/[id]/components/tabs/ClientHistoricoTab.tsx:417)
+  - [apps/web/app/(crm)/clientes/[id]/components/tabs/ClientHistoricoTab.tsx](</home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/clientes/[id]/components/tabs/ClientHistoricoTab.tsx:417>)
 - Opção A:
   - esconder aba até existir backend real
 - Opção B:
@@ -314,7 +314,7 @@ Analise apenas rbac.ts e customers.routes.ts. Objetivo: unificar RBAC do módulo
 - Prioridade: Média
 - LLM recomendado: `Blackbox/Minimax` para esconder/rotular UI, `Claude Code` se for aprofundar arquitetura
 - Ler apenas:
-  - [apps/web/app/(crm)/clientes/[id]/components/attendance/AI3DSection.tsx](/home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/clientes/[id]/components/attendance/AI3DSection.tsx:214)
+  - [apps/web/app/(crm)/clientes/[id]/components/attendance/AI3DSection.tsx](</home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/clientes/[id]/components/attendance/AI3DSection.tsx:214>)
   - [apps/api/src/routes/renders.routes.ts](/home/guimp/Documentos/Orion-CRM/apps/api/src/routes/renders.routes.ts:25)
 - Recomendação:
   - em produção, esconder ou marcar explicitamente como “beta interno” até existir geração real
@@ -324,7 +324,7 @@ Analise apenas rbac.ts e customers.routes.ts. Objetivo: unificar RBAC do módulo
 - LLM recomendado: `Blackbox/Minimax` para copy/UI, `Codex CLI` para ajuste de naming e estados
 - Ler apenas:
   - [apps/api/src/routes/orders.routes.ts](/home/guimp/Documentos/Orion-CRM/apps/api/src/routes/orders.routes.ts:580)
-  - [apps/web/app/(crm)/pedidos/actions.ts](/home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/pedidos/actions.ts:313)
+  - [apps/web/app/(crm)/pedidos/actions.ts](</home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/pedidos/actions.ts:313>)
   - [apps/web/components/modules/pdv/ReceiptModal.tsx](/home/guimp/Documentos/Orion-CRM/apps/web/components/modules/pdv/ReceiptModal.tsx:368)
 - Recomendação:
   - trocar wording de “emitir/enviar” para “solicitar/preparar” até a automação existir
@@ -361,7 +361,7 @@ Analise apenas rbac.ts e customers.routes.ts. Objetivo: unificar RBAC do módulo
 - Definir CRUDs finais por contexto de domínio
 
 Essas tasks foram movidas para:
-- [QA-Planejamento-Microservicos-CRUDs.md](/home/guimp/Documentos/Orion-CRM/docs/qa/QA-Planejamento-Microservicos-CRUDs.md)
+- [QA-Planejamento-Microservicos-CRUDs.md](/home/guimp/Documentos/Orion-CRM/docs/qa/reports/architecture/microservices-crud-plan.md)
 
 ---
 

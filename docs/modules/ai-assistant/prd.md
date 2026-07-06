@@ -396,8 +396,8 @@ Modelo: `claude-sonnet-4-5` (~$3/M input tokens, ~$15/M output tokens)
 
 **Ler antes de implementar:**
 ```bash
-cat prd.docs/11-AI-ASSISTANT.md   ← este arquivo
-cat prd.docs/00-STACK-RULES.md
+cat docs/modules/ai-assistant/prd.md   ← este arquivo
+cat docs/DEVELOPMENT_STANDARDS.md
 ```
 
 **Ordem de implementação:**

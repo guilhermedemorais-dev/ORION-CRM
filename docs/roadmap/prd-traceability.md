@@ -4,13 +4,13 @@
 
 | Module | Canonical PRD | Supporting files | Current code status | Target phase |
 | --- | --- | --- | --- | --- |
-| Pipeline | `PRD.DOCS/Papiline Feature/07-03-26/15-PIPELINE-MODULE.md` | `15-B-LEAD-DETAIL.md`, `mockup-kanban-funcionario.html`, `mockup-pipeline-builder.html`, `mockup-lead-detail.html`, `CODEX-PIPELINE-PROMPT.md` | Partial lead pipeline exists; no canonical `pipelines` model; sidebar static; no builder route | Phase 1 |
-| Inbox | `PRD.DOCS/Inbo Feature/03-08-26/16-INBOX-MODULE.md` | `mockup-inbox-v2.html`, `CODEX-INBOX-PROMPT.md` | Reduced WhatsApp-focused inbox exists; no multichannel model or realtime layer | Phase 2 |
-| Automations | `PRD.DOCS/10-AUTOMATION-MODULE.md` | n/a | n8n CRUD exists; UI is JSON editor, not visual builder | Phase 2 |
-| Finance | `PRD.DOCS/Financeiro feature/F-05-03-26/14-FINANCEIRO.md` | `mockup-financeiro.html`, `CODEX-FINANCEIRO-PROMPT.md` | Basic entries page exists; no PRD dashboard, filters, upload, or commissions ranking | Phase 3 |
-| E-commerce | `PRD.DOCS/E-commerce Feature/03-08-26/17-ECOMMERCE-MODULE.md` | `15-B-LEAD-DETAIL.md`, `mockup-ecommerce-web.html`, `mockup-ecommerce-mobile.html`, `mockup-settings-loja.html` | Public catalog exists; no store config, public product route, or store order model | Phase 3 |
-| Analytics | `PRD.DOCS/Analytics feature/03-08-26/18-ANALYTICS-MODULE.md` | `mockup-analytics.html` | Placeholder page only | Phase 4 |
-| AI Assistant | `PRD.DOCS/11-AI-ASSISTANT.md` | n/a | Heuristic assistant exists; no tool-calling contract or PRD function surface | Phase 4 |
+| Pipeline | `docs/modules/pipeline/prd.md` | `docs/modules/pipeline/lead-detail.md`, `docs/modules/pipeline/builder-prd-v2.md`, `docs/design/mockups/pipeline/`, `.project-ai/prompts/archive/pipeline.md` | Partial lead pipeline exists; no canonical `pipelines` model; sidebar static; no builder route | Phase 1 |
+| Inbox | `docs/modules/inbox/prd-v2.md` | `docs/modules/inbox/current-state.md`, `docs/design/mockups/inbox/v2.html`, `.project-ai/prompts/archive/inbox-v1.md` | Reduced WhatsApp-focused inbox exists; no multichannel model or realtime layer | Phase 2 |
+| Automations | `docs/modules/automations/prd.md` | n/a | n8n CRUD exists; UI is JSON editor, not visual builder | Phase 2 |
+| Finance | `docs/modules/financeiro/prd.md` | `docs/design/mockups/financeiro/overview.html`, `.project-ai/prompts/archive/financeiro.md` | Basic entries page exists; no PRD dashboard, filters, upload, or commissions ranking | Phase 3 |
+| E-commerce | `docs/modules/ecommerce/prd.md` | `docs/design/mockups/ecommerce/` | Public catalog exists; no store config, public product route, or store order model | Phase 3 |
+| Analytics | `docs/modules/analytics/prd.md` | `docs/design/mockups/analytics/overview.html` | Placeholder page only | Phase 4 |
+| AI Assistant | `docs/modules/ai-assistant/prd.md` | n/a | Heuristic assistant exists; no tool-calling contract or PRD function surface | Phase 4 |
 
 ## Current Code Gaps
 
@@ -56,6 +56,6 @@
 
 ## Explicit Non-Canon Inputs
 
-- `PRD.DOCS/Papiline Feature/05-03-26/12-PIPELINE-UPGRADE.md`
+- Documento histórico `12-PIPELINE-UPGRADE.md`
   - Not present on disk in this workspace
   - Treated as editor-local draft, not implementation canon

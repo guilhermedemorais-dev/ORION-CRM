@@ -64,8 +64,8 @@ Status:
 
 Evidências:
 - [apps/api/src/routes/pipelines.routes.ts](/home/guimp/Documentos/Orion-CRM/apps/api/src/routes/pipelines.routes.ts:464)
-- [apps/web/app/(crm)/pipeline/actions.ts](/home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/pipeline/actions.ts:63)
-- [apps/web/app/(crm)/pipeline/[slug]/builder/_components/BuilderCanvas.tsx](/home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/pipeline/[slug]/builder/_components/BuilderCanvas.tsx:618)
+- [apps/web/app/(crm)/pipeline/actions.ts](</home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/pipeline/actions.ts:63>)
+- [apps/web/app/(crm)/pipeline/[slug]/builder/_components/BuilderCanvas.tsx](</home/guimp/Documentos/Orion-CRM/apps/web/app/(crm)/pipeline/[slug]/builder/_components/BuilderCanvas.tsx:618>)
 
 Decisões que você precisa tomar:
 - Um lead/cliente pode pertencer a mais de um pipeline ao mesmo tempo?

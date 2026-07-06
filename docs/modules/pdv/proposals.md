@@ -1,8 +1,8 @@
 # PRD-PROPOSTAS — Propostas Comerciais com QR PIX
 
 ## Referência visual
-- `PRD.DOCS/mockup-proposta.html` — proposta digital + impressa 80mm
-- `PRD.DOCS/mockup-gerar-proposta.html` — modal de geração + confirmação no PDV
+- `../../design/mockups/pdv/proposal.html` — proposta digital + impressa 80mm
+- `../../design/mockups/pdv/create-proposal.html` — modal de geração + confirmação no PDV
 
 ## Leia antes de implementar
 - `apps/api/src/routes/` — rotas existentes (especialmente webhook MP)
@@ -22,6 +22,16 @@ Documento gerado **antes** da venda ser confirmada. Contém:
 
 O estoque **não é reservado** ao criar a proposta.
 O estoque só é baixado ao confirmar a venda.
+
+> **Extensão aprovada para OS personalizada com múltiplas peças (2026-06-15):**
+> consultar `../production/spec-multi-piece-proposal-sales-flow.md`. Nesse fluxo,
+> a proposta contém itens vinculados às peças da OS técnica e deve aparecer na
+> aba Propostas do cliente. A ação `Fazer venda` carregará a versão aprovada em
+> um carrinho lateral. Para peças personalizadas, confirmar pagamento libera a
+> produção e as reservas; não baixa o consumo de matéria-prima nesse momento.
+> A baixa acontece na conclusão da produção. Portanto, a regra genérica abaixo
+> de `createOrderFromProposal` para pronta entrega não pode ser aplicada sem
+> distinguir o tipo de item/proposta.
 
 ---
 
@@ -124,7 +134,7 @@ Confirmação manual (fallback).
 Cancelar. Só funciona se status = PENDENTE. Cancelar PIX na API do banco se possível.
 
 ### `GET /api/v1/proposals/:id/pdf`
-Gerar PDF baseado no template da proposta (`mockup-proposta.html`).
+Gerar PDF baseado no template da proposta (`../../design/mockups/pdv/proposal.html`).
 Retornar `application/pdf`.
 
 ### `POST /api/v1/webhooks/mercadopago` (handler adicional)

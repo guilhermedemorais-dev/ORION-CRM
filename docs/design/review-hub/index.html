@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ORIN CRM | Espelho visual do runtime</title>
+  <style>
+    :root{--gold:#bfa06a;--void:#080809;--base:#0f0f11;--surface:#131316;--elevated:#1a1a1e;--text:#f0ebe3;--muted:#a09a94;--line:rgba(255,255,255,.1);--danger:#e05252}
+    *{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;background:var(--void);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,sans-serif;overflow:hidden}button,input,textarea{font:inherit}
+    .app{position:relative;width:100%;height:100%;display:grid;place-items:center;background:#050506}
+    .frame{position:relative;width:min(100vw,1600px);aspect-ratio:16/10;max-height:100vh;overflow:hidden;background:var(--void);box-shadow:0 0 0 1px rgba(255,255,255,.06),0 30px 80px rgba(0,0,0,.5)}
+    .screen{display:block;width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
+    .hotspot{position:absolute;left:0;width:13.75%;height:4.4%;border:0;background:transparent;cursor:pointer}.hotspot:hover{background:rgba(191,160,106,.07);box-shadow:inset 2px 0 var(--gold)}
+    .marker{position:absolute;width:28px;height:28px;margin:-14px 0 0 -14px;border:2px solid #fff;border-radius:50%;background:var(--danger);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;box-shadow:0 5px 18px rgba(0,0,0,.55);cursor:pointer;z-index:5}
+    .floating{position:fixed;z-index:30;display:flex;gap:8px;right:16px;bottom:16px}.floating button,.drawer button,.panel button{border:1px solid var(--line);border-radius:8px;background:rgba(19,19,22,.94);color:var(--text);padding:9px 12px;cursor:pointer;box-shadow:0 8px 28px rgba(0,0,0,.35)}.floating button:hover,.drawer button:hover,.panel button:hover{border-color:rgba(191,160,106,.4);color:var(--gold)}.floating .active{background:var(--gold);color:#090909;border-color:var(--gold)}
+    .drawer{position:fixed;z-index:40;right:16px;bottom:64px;width:280px;max-height:calc(100vh - 88px);padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(15,15,17,.98);box-shadow:0 24px 70px rgba(0,0,0,.65);overflow:auto;display:none}.drawer.open{display:block}.drawer h2{font-family:Georgia,serif;font-size:18px;margin:4px 6px 10px}.drawer small{display:block;margin:12px 6px 5px;color:#625f5a;font-size:9px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}.drawer button{display:flex;width:100%;justify-content:space-between;margin:3px 0;text-align:left;background:transparent;box-shadow:none}.drawer button.current{background:rgba(191,160,106,.1);border-color:rgba(191,160,106,.28);color:var(--gold)}.drawer .runtime{font-size:10px;color:#625f5a}
+    .panel{position:fixed;z-index:45;top:16px;right:16px;width:350px;max-height:calc(100vh - 32px);border:1px solid var(--line);border-radius:12px;background:rgba(15,15,17,.98);box-shadow:0 24px 70px rgba(0,0,0,.65);overflow:hidden;display:none}.panel.open{display:flex;flex-direction:column}.panel header{padding:16px;border-bottom:1px solid var(--line)}.panel h2{font-family:Georgia,serif;font-size:19px;margin:0 0 4px}.panel p{font-size:11px;color:#6f6b66;margin:0}.panel main{padding:14px;overflow:auto}.panel label{display:block;margin:12px 0 6px;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.panel input,.panel textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);padding:10px;outline:0}.panel textarea{min-height:105px;resize:vertical}.panel input:focus,.panel textarea:focus{border-color:rgba(191,160,106,.45);box-shadow:0 0 0 3px rgba(191,160,106,.08)}.panel footer{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line)}.panel footer button{flex:1}.panel .primary{background:var(--gold);border-color:var(--gold);color:#090909;font-weight:800}.panel .danger{color:#ff8a86}.note-list{display:grid;gap:8px;margin-top:14px}.note{border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px;background:var(--surface);cursor:pointer}.note strong{color:var(--gold)}.note span{display:block;margin-top:4px;color:var(--muted);font-size:11px}.empty{padding:12px;border:1px dashed var(--line);border-radius:8px;text-align:center;color:#625f5a;font-size:11px}
+    .mode-hint{position:fixed;left:50%;bottom:18px;z-index:32;transform:translateX(-50%);padding:8px 12px;border:1px solid rgba(224,82,82,.35);border-radius:999px;background:rgba(42,13,15,.95);color:#ffaaa7;font-size:11px;display:none}.mode-hint.show{display:block}
+    @media(max-width:760px){.floating{right:8px;bottom:8px}.floating button{padding:8px}.panel{inset:8px;width:auto;max-height:none}.drawer{left:8px;right:8px;bottom:54px;width:auto}.frame{width:100vw;height:auto}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div id="frame" class="frame">
+      <img id="screen" class="screen" alt="Tela real do ORIN CRM">
+      <button class="hotspot" style="top:15.5%" data-go="dashboard" aria-label="Abrir Dashboard"></button>
+      <button class="hotspot" style="top:19.9%" data-go="inbox" aria-label="Abrir Inbox"></button>
+      <button class="hotspot" style="top:23.9%" data-go="clientes" aria-label="Abrir Clientes"></button>
+      <button class="hotspot" style="top:30.0%" data-go="pipeline-leads" aria-label="Abrir Pipeline"></button>
+      <div id="markers"></div>
+    </div>
+  </main>
+
+  <div class="floating">
+    <button id="routesBtn" title="Navegar pelas telas">Telas</button>
+    <button id="reviewBtn" title="Marcar ponto de correção">Apontar correção</button>
+  </div>
+  <div id="modeHint" class="mode-hint">Clique no ponto exato da tela que precisa de correção</div>
+  <nav id="drawer" class="drawer" aria-label="Telas mapeadas"></nav>
+
+  <aside id="panel" class="panel">
+    <header><h2>Correção visual</h2><p id="panelContext">Selecione um ponto na tela.</p></header>
+    <main>
+      <input id="area" placeholder="Área ou componente (ex.: KPI, filtro, tabela)">
+      <label for="note">O que precisa mudar</label>
+      <textarea id="note" placeholder="Descreva o problema e o resultado esperado."></textarea>
+      <div id="noteList" class="note-list"></div>
+    </main>
+    <footer><button id="closePanel">Fechar</button><button id="deleteNote" class="danger">Excluir</button><button id="saveNote" class="primary">Salvar</button></footer>
+  </aside>
+
+  <script>
+    const groups=[
+      {name:'Visão geral',items:[['dashboard','Dashboard']]},
+      {name:'Relacionamento',items:[['inbox','Inbox'],['clientes','Clientes'],['cliente-360','Cliente 360'],['pipeline-leads','Pipeline — Leads'],['lead-detail','Detalhe do lead']]},
+      {name:'Operação',items:[['agenda','Agenda'],['pedidos','Pedidos'],['producao','Produção'],['estoque','Estoque'],['financeiro','Financeiro'],['pdv','PDV']]},
+      {name:'Sistema',items:[['analytics','Analytics'],['ajustes','Ajustes'],['automacoes','Automações'],['suporte','Suporte']]}
+    ];
+    const labels=Object.fromEntries(groups.flatMap(group=>group.items));
+    const base='../references/runtime-2026-06-09/';
+    const storageKey='orin-runtime-review-v2';
+    const state=JSON.parse(localStorage.getItem(storageKey)||'{}');
+    let current=(location.hash||'#dashboard').slice(1);if(!labels[current])current='dashboard';
+    let reviewMode=false;let editingId=null;let pendingPoint=null;
+    const $=id=>document.getElementById(id);const screen=$('screen'),frame=$('frame'),markers=$('markers'),drawer=$('drawer'),panel=$('panel');
+    function notes(){return state[current]||[]}
+    function persist(){localStorage.setItem(storageKey,JSON.stringify(state))}
+    function renderDrawer(){drawer.innerHTML='<h2>Navegação do CRM</h2>'+groups.map(group=>`<small>${group.name}</small>${group.items.map(([id,label])=>`<button data-screen="${id}" class="${id===current?'current':''}"><span>${label}</span><span class="runtime">${(state[id]||[]).length||''}</span></button>`).join('')}`).join('')+'<small>Documentação</small><button id="componentsLink"><span>Inventário de componentes</span><span class="runtime">guia</span></button><button id="exportBtn"><span>Exportar correções</span><span class="runtime">.md</span></button>';drawer.querySelectorAll('[data-screen]').forEach(button=>button.onclick=()=>selectScreen(button.dataset.screen));$('componentsLink').onclick=()=>location.href='../component-inventory.md';$('exportBtn').onclick=exportNotes}
+    function selectScreen(id){current=id;location.hash=id;screen.src=base+id+'.png';screen.alt=`${labels[id]} — captura do runtime em 09/06/2026`;drawer.classList.remove('open');editingId=null;pendingPoint=null;renderDrawer();renderMarkers();renderNoteList()}
+    function renderMarkers(){markers.innerHTML='';notes().forEach((item,index)=>{const marker=document.createElement('button');marker.className='marker';marker.style.left=`${item.x}%`;marker.style.top=`${item.y}%`;marker.textContent=index+1;marker.title=item.area||item.note;marker.onclick=event=>{event.stopPropagation();openNote(item.id)};markers.appendChild(marker)})}
+    function renderNoteList(){const list=$('noteList');const items=notes();list.innerHTML=items.length?items.map((item,index)=>`<div class="note" data-note="${item.id}"><strong>${index+1}. ${escapeHtml(item.area||'Ponto marcado')}</strong><span>${escapeHtml(item.note||'Sem descrição')}</span></div>`).join(''):'<div class="empty">Nenhuma correção registrada nesta tela.</div>';list.querySelectorAll('[data-note]').forEach(item=>item.onclick=()=>openNote(item.dataset.note))}
+    function openNote(id){const item=notes().find(note=>note.id===id);if(!item)return;editingId=id;pendingPoint={x:item.x,y:item.y};$('area').value=item.area||'';$('note').value=item.note||'';$('panelContext').textContent=`${labels[current]} · ponto ${notes().indexOf(item)+1}`;panel.classList.add('open');renderNoteList()}
+    function startNewNote(x,y){editingId=null;pendingPoint={x,y};$('area').value='';$('note').value='';$('panelContext').textContent=`${labels[current]} · novo ponto`;$('panel').classList.add('open');$('area').focus();setReviewMode(false);renderNoteList()}
+    function setReviewMode(value){reviewMode=value;$('reviewBtn').classList.toggle('active',value);$('modeHint').classList.toggle('show',value);frame.style.cursor=value?'crosshair':'default'}
+    function saveNote(){if(!pendingPoint)return;const item={id:editingId||crypto.randomUUID(),x:pendingPoint.x,y:pendingPoint.y,area:$('area').value.trim(),note:$('note').value.trim(),updatedAt:new Date().toISOString()};state[current]=notes().filter(note=>note.id!==item.id).concat(item);persist();editingId=item.id;renderMarkers();renderDrawer();renderNoteList();panel.classList.remove('open')}
+    function deleteNote(){if(editingId){state[current]=notes().filter(note=>note.id!==editingId);persist();renderMarkers();renderDrawer();renderNoteList()}editingId=null;pendingPoint=null;panel.classList.remove('open')}
+    function exportNotes(){const lines=['# Revisão visual ORIN CRM','',`Gerado em ${new Date().toLocaleString('pt-BR')}.`,''];Object.entries(state).forEach(([id,items])=>{if(!items.length)return;lines.push(`## ${labels[id]||id}`,'');items.forEach((item,index)=>lines.push(`${index+1}. **${item.area||'Ponto marcado'}** (${item.x.toFixed(1)}%, ${item.y.toFixed(1)}%): ${item.note||'Sem descrição'}`));lines.push('')});const blob=new Blob([lines.join('\n')],{type:'text/markdown'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='revisao-visual-orin-crm.md';link.click();URL.revokeObjectURL(link.href)}
+    function escapeHtml(value){return String(value).replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}
+    frame.onclick=event=>{if(!reviewMode||event.target.closest('.marker')||event.target.closest('.hotspot'))return;const rect=frame.getBoundingClientRect();startNewNote(((event.clientX-rect.left)/rect.width)*100,((event.clientY-rect.top)/rect.height)*100)};
+    document.querySelectorAll('[data-go]').forEach(button=>button.onclick=()=>selectScreen(button.dataset.go));
+    $('routesBtn').onclick=()=>drawer.classList.toggle('open');$('reviewBtn').onclick=()=>setReviewMode(!reviewMode);$('closePanel').onclick=()=>panel.classList.remove('open');$('saveNote').onclick=saveNote;$('deleteNote').onclick=deleteNote;
+    window.addEventListener('hashchange',()=>{const id=location.hash.slice(1);if(labels[id]&&id!==current)selectScreen(id)});
+    renderDrawer();selectScreen(current);
+  </script>
+</body>
+</html>

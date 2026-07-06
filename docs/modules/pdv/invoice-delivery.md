@@ -1,7 +1,7 @@
 # PRD-PDV-05 — NF-e (Stub) + Envio de Comprovante
 
 ## Referência visual
-`PRD.DOCS/mockup-pdv-comprovante.html` — botões NF-e / WhatsApp / E-mail
+`docs/design/mockups/pdv/receipt.html` — botões NF-e / WhatsApp / E-mail
 
 ## Leia antes de implementar
 - `apps/api/src/routes/orders.ts`

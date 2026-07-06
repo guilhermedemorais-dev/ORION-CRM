@@ -2,7 +2,7 @@
 
 ## Escopo deste diagnóstico
 
-Fonte canônica: `PRD.DOCS/Inbo Feature/09-05-26/prd_refatoracao_inbox_whatsapp_crm (1).md`.
+Fonte canônica: `docs/modules/inbox/prd-v2.md`.
 
 Este arquivo é o checkpoint obrigatório antes de qualquer alteração de produto no Inbox. O objetivo é registrar o estado atual do Inbox WhatsApp, suas conexões com CRM, riscos de quebra e uma rota segura de migração para a refatoração final.
 

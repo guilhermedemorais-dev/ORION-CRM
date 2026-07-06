@@ -248,7 +248,7 @@ function RoadmapItemCard({
     };
 
     // Baixa o item como arquivo .md (frontmatter + conteúdo). Serve pra você
-    // mandar pra IA versionar no Git em PRD.DOCS/roadmap/.
+    // mandar pra IA versionar no Git em docs/roadmap/.
     const downloadMarkdown = () => {
         const slug = item.title
             .toLowerCase()

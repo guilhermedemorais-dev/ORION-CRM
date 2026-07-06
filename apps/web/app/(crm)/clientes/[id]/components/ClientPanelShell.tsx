@@ -143,7 +143,20 @@ export default function ClientPanelShell({
     findLead();
   }, [customerId, customer.whatsapp_number]);
 
-  function handleStageChange(stageId: string) {
+  async function handleStageChange(stageId: string): Promise<void> {
+    if (!lead?.id || stageId === currentStageId) return;
+
+    const res = await fetch(`/api/internal/leads/${lead.id}/stage`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stageId }),
+    });
+
+    if (!res.ok) {
+      const errorBody = await res.json().catch(() => ({}));
+      throw new Error(errorBody.message ?? 'Não foi possível mover o card no pipeline.');
+    }
+
     setCurrentStageId(stageId);
   }
 
@@ -223,6 +236,10 @@ export default function ClientPanelShell({
             {activeTab === 'atendimento' && can('ficha.atendimento.view') && (
               <ClientAtendimentoTab
                 customerId={customerId}
+                pipelineStages={stages}
+                currentStageId={currentStageId}
+                leadId={lead?.id ?? null}
+                onStageChange={handleStageChange}
                 onOSCreated={handleOSCreated}
               />
             )}

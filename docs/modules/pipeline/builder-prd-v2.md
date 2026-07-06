@@ -499,7 +499,7 @@ O desenho final deve evitar duplicar informacao ja existente.
 
 Entregavel:
 
-- documento curto `PIPELINE_BUILDER_CURRENT_STATE.md`;
+- documento curto `builder-current-state.md`;
 - tabelas existentes;
 - endpoints existentes;
 - actions frontend atuais;
@@ -699,7 +699,7 @@ Antes de implementar qualquer frontend, execute:
 
 1. Leia este PRD.
 2. Mapeie o estado atual do pipeline.
-3. Crie `PIPELINE_BUILDER_CURRENT_STATE.md`.
+3. Atualize `builder-current-state.md`.
 4. Implemente backend primeiro.
 5. Rode testes backend.
 6. So avance para frontend se nao houver P0/P1.

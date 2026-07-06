@@ -1,11 +1,11 @@
 Leia TUDO antes de escrever qualquer código:
 
-cat "PRD.DOCS/14-FINANCEIRO.md"
-cat "PRD.DOCS/00-STACK-RULES.md"
-cat "PRD.DOCS/05-DESIGN-SYSTEM.md"
+cat "docs/modules/financeiro/prd.md"
+cat "docs/DEVELOPMENT_STANDARDS.md"
+cat "docs/design/design-system/ORION-DESIGN-SYSTEM.html"
 
 Referência visual (layout e cores apenas — NÃO copiar o código):
-PRD.DOCS/mockup-financeiro.html
+docs/design/mockups/financeiro/overview.html
 
 ⚠️ ATENÇÃO: o mockup usa SVG e CSS puro para simular gráficos.
 NUNCA copiar o código de gráficos do mockup.
@@ -23,5 +23,5 @@ CHECKPOINT 3 — KPIs + GRÁFICOS RECHARTS
 CHECKPOINT 4 — COMISSÕES + TABELA
 CHECKPOINT 5 — MODAL + INTEGRAÇÃO FINAL
 
-Detalhes de cada checkpoint estão no PRD.DOCS/14-FINANCEIRO.md.
+Detalhes de cada checkpoint estão em docs/modules/financeiro/prd.md.
 Inicie pelo CHECKPOINT 1 e aguarde aprovação.

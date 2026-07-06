@@ -193,7 +193,7 @@ A arquitetura deve permitir expansão futura, mas a entrega atual deve ser profu
 Antes de alterar código de produto, o agente/desenvolvedor deve gerar o arquivo:
 
 ```txt
-INBOX_CURRENT_STATE.md
+docs/modules/inbox/current-state.md
 ```
 
 ### 7.1 O diagnóstico deve mapear
@@ -1524,7 +1524,7 @@ Uma fase só pode ser considerada pronta quando:
 
 Entregáveis:
 
-- `INBOX_CURRENT_STATE.md`;
+- `current-state.md`;
 - mapa de tabelas;
 - mapa de endpoints;
 - mapa de componentes;
@@ -1713,7 +1713,7 @@ Regras obrigatórias:
 18. Documentar decisões técnicas.
 
 Primeira entrega obrigatória:
-Crie o arquivo `INBOX_CURRENT_STATE.md` documentando:
+Atualize o arquivo `current-state.md` documentando:
 - tabelas atuais;
 - endpoints atuais;
 - componentes frontend;

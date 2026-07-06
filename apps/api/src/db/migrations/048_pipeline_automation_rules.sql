@@ -1,5 +1,5 @@
 -- Migration 048: Pipeline Builder V2 — defaults, regras simples, links e execuções
--- PRD: PRD.DOCS/Build Pipeline/PRD-PIPELINE-BUILDER-V2.md
+-- PRD: docs/modules/pipeline/builder-prd-v2.md
 -- Não altera schema do pipeline atual; adiciona camada segura de configuração.
 
 CREATE TABLE IF NOT EXISTS pipeline_stage_settings (
