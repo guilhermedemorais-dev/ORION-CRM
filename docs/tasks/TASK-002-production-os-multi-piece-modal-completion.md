@@ -1,8 +1,8 @@
 # 🟡 TASK-002: Concluir modal de OS multi-pecas no Atendimento
 
 ## Status
-Em andamento (frontend com estado local; specs database.md/api.md definem o contrato;
-persistencia real depende da TASK-005 backend). Issue #9.
+🧪 A TESTAR (rodar localmente) — frontend do modal multi-peca implementado e typecheck limpo.
+Aguardando Guilherme rodar a app e testar. Persistencia real depende da TASK-005 backend. Issue #9.
 
 ## Tipo
 Frontend/UI
@@ -158,19 +158,19 @@ alinhada ao mockup e as regras fechadas na spec.
    existem no modal, sem deixar acao ambigua ou placeholder silencioso.
 
 ## Checklist de execucao
-- [ ] Ler integralmente esta task e as specs obrigatorias.
-- [ ] Confirmar Definition of Entry antes de codar.
-- [ ] Mapear o estado atual de `AttendancePopup.tsx` e `ServiceOrderModal.tsx`.
-- [ ] Implementar suporte a projeto com multiplas pecas.
-- [ ] Implementar ficha tecnica por peca com categoria como unico dropdown tecnico.
-- [ ] Implementar selecao obrigatoria de materiais por peca.
-- [ ] Separar claramente `Estoque proprio · loja` e `Custodia · cliente`.
-- [ ] Remover semantica de edicao do preco da peca.
-- [ ] Remover exposicao de custo no modal tecnico.
-- [ ] Validar o fluxo `Atendimento -> OS tecnica -> Proposta`.
-- [ ] Executar checklist manual dos testes obrigatorios.
-- [ ] Anexar evidencias visuais no PR.
-- [ ] Atualizar esta task com relatorio final detalhado.
+- [x] Ler integralmente esta task e as specs obrigatorias.
+- [x] Confirmar Definition of Entry antes de codar.
+- [x] Mapear o estado atual de `AttendancePopup.tsx` e `ServiceOrderModal.tsx`.
+- [x] Implementar suporte a projeto com multiplas pecas.
+- [x] Implementar ficha tecnica por peca com categoria como unico dropdown tecnico.
+- [x] Implementar selecao obrigatoria de materiais por peca.
+- [x] Separar claramente `Estoque proprio · loja` e `Custodia · cliente`.
+- [x] Remover semantica de edicao do preco da peca.
+- [x] Remover exposicao de custo no modal tecnico.
+- [ ] 🧪 A TESTAR (voce, local): Validar o fluxo `Atendimento -> OS tecnica -> Proposta`.
+- [ ] 🧪 A TESTAR (voce, local): Executar checklist manual dos testes obrigatorios.
+- [ ] 🧪 A TESTAR (voce, local): Anexar evidencias visuais no PR.
+- [x] Atualizar esta task com relatorio final detalhado.
 
 ## Prompt recomendado para IA executora
 ```text

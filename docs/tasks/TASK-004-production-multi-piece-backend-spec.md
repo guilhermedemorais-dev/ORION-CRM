@@ -71,12 +71,12 @@ backend (TASK-005) e religar o frontend (TASK-002) sem inventar payload.
 - Material obrigatorio para a peca entrar na proposta.
 
 ## Checklist de execucao
-1. Leitura da task e specs
-2. Redigir `database.md`
-3. Redigir `api.md`
-4. Validar coerencia com validation-rules e mockup
-5. Atualizar o relatorio
-6. Handoff para revisao do orquestrador + gate de seguranca
+- [x] Leitura da task e specs
+- [x] Redigir `database.md`
+- [x] Redigir `api.md`
+- [x] Validar coerencia com validation-rules e mockup
+- [x] Atualizar o relatorio
+- [ ] Handoff para revisao do orquestrador + gate de seguranca (entrega documental; sem teste de runtime)
 
 ## Prompt para o executor
 Use esta task como contrato operacional. Voce e o sdd-spec-factory. Produza apenas

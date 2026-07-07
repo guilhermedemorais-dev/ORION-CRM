@@ -1,8 +1,8 @@
 # TASK-005: Implementar backend do multi-peca/proposta
 
 ## Status visual
-- Status visual: 🟡 Em andamento
-- Status Kanban: In Progress
+- Status visual: 🧪 A TESTAR (rodar localmente) — backend implementado, typecheck limpo, NAO validado em runtime
+- Status Kanban: In Review (aguardando teste local do Guilherme)
 - Responsável: dev-implementation-standard / revisão orquestrador + security-standard
 - Issue criada / vinculada: `#12` - https://github.com/guilhermedemorais-dev/ORION-CRM/issues/12
 - Branch sugerida: `feat/os-multi-piece-spec-task-issues`
@@ -51,12 +51,14 @@ Implementar o contrato de backend especificado na TASK-004 para que `Gerar Propo
 - Material obrigatorio por peca para registrar (RN-04). Custodia separada do estoque (RN-07).
 
 ## Checklist de execucao
-1. Leitura da task e specs
-2. Migration 061
-3. Rotas proposals + registro no index
-4. Typecheck / validacao
-5. Atualizacao do relatorio
-6. Handoff para review (security-standard)
+- [x] Leitura da task e specs
+- [x] Migration 061 (3 tabelas)
+- [x] Rotas proposals + registro no index
+- [x] Typecheck (`tsc --noEmit`: 0 erros)
+- [x] Atualizacao do relatorio
+- [ ] 🧪 A TESTAR (voce, local): aplicar migration 061 no banco
+- [ ] 🧪 A TESTAR (voce, local): POST/GET `/api/internal/proposals` com a app no ar
+- [ ] Handoff para review (security-standard)
 
 ## Prompt para o executor
 Use esta task como contrato. Implemente apenas o contrato da TASK-004 (database.md/api.md),
