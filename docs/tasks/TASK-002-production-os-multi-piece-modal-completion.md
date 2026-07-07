@@ -1,7 +1,7 @@
-# 🟡 TASK-002: Concluir modal de OS multi-pecas no Atendimento
+# 🔴 TASK-002: Concluir modal de OS multi-pecas no Atendimento
 
 ## Status
-Pronta para desenvolvimento
+Bloqueada (lacuna de backend devolvida ao orquestrador em 2026-07-06)
 
 ## Tipo
 Frontend/UI
@@ -269,3 +269,46 @@ Descreva objetivamente o que foi entregue.
 
 ### Bloqueios ou riscos remanescentes
 - Liste o que ficou pendente ou exige nova task
+
+---
+
+## Resultado da execucao (2026-07-06)
+
+### Diagnostico
+- Confirmado que a TASK-002 estava **no marco zero**: `ServiceOrderModal.tsx` ainda
+  segue modelo de OS unica (`product_name`, `metal`, `stone`, `ring_size`, `weight`),
+  sem nenhuma estrutura de projeto/multi-peca. O WIP nao-commitado deixado pelo dev
+  anterior era de outra frente (integracao OS/Atendimento/Producao + governanca), nao
+  do modal multi-peca. Esse WIP foi isolado no commit de checkpoint `a0fba1b`.
+- Definition of Entry validada: as 3 specs, o mockup e os 3 docs de modulo existem;
+  TASK-001 concluida; issue #9 vinculada.
+
+### Bloqueio (lacuna de backend devolvida)
+A task nao pode ser concluida como escrita sem alterar contrato de backend, o que a
+propria secao `Riscos/Lacunas` proibe ("devolver a lacuna em vez de inventar payload").
+Evidencias nas specs obrigatorias:
+- `module-spec.md > Banco`: "Nao aprovado nesta etapa. Modelo atual de `service_orders`
+  e `service_order_materials` trata a OS como item unico."
+- `module-spec.md > API/Backend`: "Nao aprovado nesta etapa. Contrato atual precisa ser
+  revisado para suportar pecas, materiais por peca, proposta versionada."
+- `module-spec.md > Decisoes pendentes #1`: modelo da proposta multi-peca (entidade nova
+  vs extensao) ainda **nao decidido**.
+- `page-spec.md > Fora do escopo`: "Implementar persistencia."
+- Conflito: a task manda terminar "no registro da proposta na aba Propostas", mas isso e
+  persistencia sem contrato aprovado. O preco por peca tambem depende do backend como
+  fonte de verdade e nao tem contrato multi-peca.
+
+### O que e necessario para desbloquear (devolvido ao orquestrador / sdd-spec-factory)
+1. Aprovar e especificar `database.md` + `api.md` da feature multi-peca: modelo de peca,
+   materiais por peca, custodia por peca, proposta (entidade/versao), calculo de preco.
+2. Fechar as decisoes pendentes bloqueantes: module-spec #1 e #2; page-spec #1.
+3. Reescopar a TASK-002 apos o contrato existir, OU autorizar formalmente uma entrega
+   **frontend-only** (estado local, sem persistencia real) com a lacuna de backend
+   documentada e `Gerar Proposta` parando na fronteira de persistencia.
+
+### Arquivos alterados
+- Nenhum arquivo de produto alterado (bloqueio antes de codar).
+- `docs/tasks/TASK-002-*.md`: status -> Bloqueada + este relatorio.
+
+### Testes executados
+- Nenhum (implementacao nao iniciada por bloqueio de contrato).
