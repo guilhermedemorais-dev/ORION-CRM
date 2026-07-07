@@ -4,7 +4,7 @@
 - Status visual: A definir
 - Status Kanban: Discovery / SDD
 - Responsavel: sdd-spec-factory (executor de spec) / orquestrador (revisao)
-- Issue criada / vinculada: a criar
+- Issue criada / vinculada: `#11` - https://github.com/guilhermedemorais-dev/ORION-CRM/issues/11
 - Branch sugerida: `docs/multi-piece-backend-spec`
 - Milestone: Producao - OS multi-peca
 - Labels sugeridas: `feature`, `needs-info`
