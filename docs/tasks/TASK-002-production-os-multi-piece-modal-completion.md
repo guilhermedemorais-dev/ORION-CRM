@@ -1,7 +1,8 @@
-# 🔴 TASK-002: Concluir modal de OS multi-pecas no Atendimento
+# 🟡 TASK-002: Concluir modal de OS multi-pecas no Atendimento
 
 ## Status
-Bloqueada (lacuna de backend devolvida ao orquestrador em 2026-07-06)
+Em andamento (frontend com estado local; specs database.md/api.md definem o contrato;
+persistencia real depende da TASK-005 backend). Issue #9.
 
 ## Tipo
 Frontend/UI
@@ -312,3 +313,38 @@ Evidencias nas specs obrigatorias:
 
 ### Testes executados
 - Nenhum (implementacao nao iniciada por bloqueio de contrato).
+
+---
+
+## Resultado da execucao (2026-07-07) — frontend implementado
+
+### Resumo
+`ServiceOrderModal.tsx` reescrito de OS unica para **projeto multi-peca** com estado local,
+seguindo page-spec/validation-rules/api.md:
+- Cabecalho do projeto (nome, prazo, responsavel) + abas `Anotacoes e fotos` / `Cotacao`.
+- Lista de pecas como cards expansiveis; adicionar/remover/duplicar/recolher peca.
+- Ficha tecnica por peca com `Categoria` como unico dropdown; demais campos digitaveis e opcionais (RN-02/03).
+- Bloco de materiais por peca separando `ESTOQUE · LOJA` (busca em `/api/internal/products`,
+  `is_raw_material`) e `CUSTODIA · CLIENTE` (rotulo manual; subsistema de custodia ainda inexistente).
+- Preco por peca e total como **somente leitura** (RN-08); custo/margem nunca exibidos (RN-06).
+- Resumo fixo (sticky) com pecas anexadas, subtotal, credito do cliente e total da proposta.
+- `Gerar Proposta` habilitado so com >=1 peca e nenhuma peca sem material (RN-04); posta no
+  contrato de `api.md` (`POST /api/internal/proposals`).
+- Props preservadas -> abertura via `AttendancePopup` (embedded) intacta.
+
+### Arquivos alterados
+- `apps/web/app/(crm)/clientes/[id]/components/os/ServiceOrderModal.tsx` (reescrito).
+
+### Testes executados
+- `npx tsc --noEmit` no `apps/web`: **0 erros** (projeto inteiro; modal e AttendancePopup limpos).
+
+### Pendencias para fechar a task (nao concluida)
+- **Backend (TASK-005):** endpoints de `api.md` nao existem; `Gerar Proposta` so persiste apos eles.
+- **Preco real:** hoje o modal calcula preview local (qtd x preco unitario); o backend deve ser
+  a fonte de verdade do preco (regra de precificacao — decisao pendente em `api.md`).
+- **Custodia:** entra como rotulo manual ate `customer_material_custody` existir.
+- **Evidencias visuais:** faltam capturas/video (exigem app rodando) e QA visual do `ui-ux-standard`.
+
+### Status
+Frontend pronto e typecheck limpo; task segue `Em andamento` ate backend (TASK-005), evidencia
+visual e QA do ui-ux-standard.
