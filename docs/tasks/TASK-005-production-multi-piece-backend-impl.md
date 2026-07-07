@@ -97,7 +97,31 @@ Typecheck ok. Validacao runtime depende de aplicar a migration e subir a API. Ga
 - Migration precisa ser aplicada no banco (runner de migrations do projeto).
 
 ## Resultado da execucao
-- Migration `061_proposals_multi_piece.sql`, `proposals.routes.ts` e registro no `index.ts` criados.
-- `npx tsc --noEmit` no `apps/api`: 0 erros.
-- Pendente: aplicar migration em runtime, teste manual do endpoint, e wiring do
-  `ClientPropostaTab` para exibir as propostas (fecha a Fase 1 ponta a ponta).
+
+### Resumo
+Backend da proposta multi-peca implementado no escopo da TASK-004: 3 tabelas novas e as
+rotas REST em `/api/v1/proposals`. `POST` cria proposta + pecas + materiais em transacao e
+registra (`status='registered'`); `GET` lista por cliente e detalha. Preco calculado no
+backend (fonte de verdade, a partir de `products.price_cents`); nenhuma resposta expoe custo.
+
+### Arquivos alterados
+- `apps/api/src/db/migrations/061_proposals_multi_piece.sql` (novo)
+- `apps/api/src/routes/proposals.routes.ts` (novo)
+- `apps/api/src/index.ts` (registro da rota `/api/v1/proposals`)
+
+### Comandos executados
+- `npx tsc --noEmit` no `apps/api`.
+
+### Resultado dos testes
+- `tsc --noEmit`: **0 erros** no projeto inteiro.
+- Testes de runtime (migration aplicada + POST/GET com a API no ar): **NAO VALIDADO** (pendente).
+
+### Bloqueios
+- Nenhum bloqueio de codigo. Pendencias de validacao/integracao listadas em Observacoes.
+
+### Observacoes
+- **NAO VALIDADO em runtime**: falta aplicar a migration 061 no banco e testar o endpoint com a API no ar.
+- Wiring do `ClientPropostaTab` para exibir as propostas fica como ultimo passo da Fase 1 (frontend).
+- Preco usa `products.price_cents` direto; se houver regra de markup, ajustar em nova spec.
+- Gate pendente: `security-standard` (exposicao de custo / custodia).
+- Commit local `6856389` (branch `feat/os-multi-piece-spec-task-issues`); sem push ate aprovacao.

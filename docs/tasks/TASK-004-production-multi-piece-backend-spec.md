@@ -120,4 +120,28 @@ sobre exposicao de custo e custodia.
   comportamento da aba Propostas.
 
 ## Resultado da execucao
-(a preencher pelo sdd-spec-factory)
+
+### Resumo
+Contrato de backend da OS multi-peca especificado no escopo minimo, com entidade nova
+desacoplada de `service_orders`. Entregue `database.md` (modelo das 3 tabelas) e `api.md`
+(endpoints minimos, preco como fonte de verdade do backend, sem exposicao de custo).
+Destrava a TASK-005 (implementacao) e a religacao da TASK-002 (frontend).
+
+### Arquivos alterados
+- `docs/specs/production/os-multi-piece-proposal/database.md` (novo)
+- `docs/specs/production/os-multi-piece-proposal/api.md` (novo)
+
+### Comandos executados
+- Inspecao de schema real: `service_orders` (030), `service_order_materials` (051),
+  `products` (050), ausencia de `customer_material_custody`. Nenhum comando de build (entrega documental).
+
+### Resultado dos testes
+- N/A (SDD documental). Conferencia manual contra `validation-rules.md` e o mockup: OK.
+
+### Bloqueios
+- Nenhum bloqueio para o proprio SDD. Registradas decisoes pendentes que NAO bloqueiam o
+  escopo minimo: regra de precificacao do estoque, entrega de custodia, origem do credito do cliente.
+
+### Observacoes
+- Custodia do cliente depende do subsistema `customer_material_custody` (inexistente): marcada
+  como dependencia, nao inventada. Decisoes fechadas: D1 (entidade nova), D2 (escopo minimo).
