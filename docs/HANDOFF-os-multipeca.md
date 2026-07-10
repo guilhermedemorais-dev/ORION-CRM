@@ -28,11 +28,20 @@ Fase 2 (aba Propostas: editar/imprimir/PDF/WhatsApp/e-mail) = **deferida, a plan
 | Issue | Task | Board | Estado |
 |---|---|---|---|
 | #8 | TASK-001 spec consolidação | Done | spec |
-| #9 | TASK-002 modal multi-peça (frontend) | **In Review 🧪** | `ServiceOrderModal.tsx` reescrito; `tsc` 0 erros |
+| #9 | TASK-002 modal multi-peça (frontend) | **In Progress** | modal em reescrita p/ fidelidade total ao mockup (ver auditoria 2026-07-10 abaixo) |
 | #11 | TASK-004 spec backend | Done | `database.md` + `api.md` |
 | #12 | TASK-005 backend | **In Review 🧪** | migration 061 + rotas `/api/v1/proposals`; `tsc` 0 erros; NÃO validado runtime |
-| #13 | TASK-006 wiring aba Propostas (frontend) | **Ready for Dev 🛑** | spec `frontend-proposta-tab.md` + task prontas; aguarda "pode executar" do Guilherme (decisões D1/D2/D3 na spec) |
+| #13 | TASK-006 wiring aba Propostas | **Closed** | criada por engano (escopo prematuro); aba Propostas completa = Fase 2 deferida |
 | #10 | TASK-003 (governança da ferramenta) | fora do board | não é escopo do CRM |
+
+## Auditoria 2026-07-10 — modal ≠ mockup
+O `ServiceOrderModal.tsx` estava parcial vs mockup + `page-spec.md` (componentes obrigatórios).
+Decisões fechadas com o Guilherme: **fidelidade total ao mockup**; **backend é a verdade do preço**
+(RN-08 só-leitura, RN-06 sem custo → removidos mão de obra/perda/preço-manual/card comercial de custo);
+**#13 fechada**. Faltavam: editor rico + fotos nas Anotações; ficha técnica completa (Qtd, Pedra, Aro,
+Peso, Largura, Espessura, Referência, Especificações); segmented control + chips + grade de materiais;
+bloco de custódia completo; estados Vazio/Erro/Bloqueado; prévia da proposta; resumo com lista por peça
++ sinal sugerido. Reescrita em andamento nesta sessão.
 
 Branch: `feat/os-multi-piece-spec-task-issues`. Commits LOCAIS (sem push):
 `8c5e712` frontend · `03041ef` specs · `6856389` backend · docs (`7d82fbe`, `7a27585`).
@@ -44,10 +53,10 @@ Branch: `feat/os-multi-piece-spec-task-issues`. Commits LOCAIS (sem push):
 3. `Gerar Proposta` → persistência via `POST /api/internal/proposals`.
 
 ## Pendências / próximos passos
-- **TASK-006 (#13)**: planejada e no board (Ready for Dev) — 🛑 aguarda "pode executar" + decisões D1/D2/D3 (ver `docs/specs/production/os-multi-piece-proposal/frontend-proposta-tab.md`). Fecha Fase 1.
+- **TASK-002 (#9)**: reescrita do modal p/ fidelidade total ao mockup (em andamento nesta sessão) → depois `tsc` + validação visual local + gate `ui-ux-standard`.
 - Gate `security-standard` (exposição de custo / custódia).
 - Push da branch (quando autorizado).
-- Planejar Fase 2 (aba Propostas completa) — só após aprovação no board.
+- Fase 2 (aba Propostas completa + envio/PDF/venda) — só após aprovação no board.
 
 ## Decisões de arquitetura fechadas
 - Proposta = **entidade nova** (`proposals` / `proposal_pieces` / `proposal_piece_materials`), desacoplada de `service_orders`. Escopo **mínimo**.
