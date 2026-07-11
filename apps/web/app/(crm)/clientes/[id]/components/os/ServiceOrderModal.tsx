@@ -4,12 +4,15 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { notify } from '@/lib/toast';
 
-// TASK-002 (#9): modal de OS tecnica multi-pecas (projeto -> pecas -> proposta).
-// LAYOUT: copia 1:1 do mockup docs/design/mockups/production/mockup-2026-06-15-os-multi-piece-proposal.html
-// (mesma estrutura de regioes, paleta e hierarquia). Unicas divergencias aprovadas:
-// preco da peca e SOMENTE LEITURA calculado (RN-08) e nada de custo/mao de obra/perda/
-// preco manual (RN-06) — decisao Guilherme 2026-07-10 "backend e a verdade do preco".
-// Specs: docs/specs/production/os-multi-piece-proposal/{page-spec,validation-rules,api}.md
+// TASK-002 (#9): pane de COTACAO da OS multi-pecas (projeto -> pecas -> proposta).
+// LAYOUT: copia 1:1 da aba "2. Cotacao" do mockup
+// docs/design/mockups/production/mockup-2026-06-15-os-multi-piece-proposal.html.
+// A aba "1. Anotacoes e fotos" pertence ao AttendancePopup (bloco de notas REAL do
+// atendimento) — este componente NAO tem notas proprias para nao duplicar bloco.
+// Embedded: renderiza dentro do AttendancePopup como aba 2. Standalone (ClientOSTab):
+// abre como modal direto na cotacao.
+// Divergencias aprovadas do mockup: preco SOMENTE LEITURA calculado (RN-08) e nada de
+// custo/mao de obra/perda/preco manual (RN-06) — decisao Guilherme 2026-07-10.
 // Persistencia real: POST /api/internal/proposals (TASK-005).
 
 interface ProductOption {
@@ -69,12 +72,6 @@ interface DraftPiece {
   tech: PieceTech;
   materials: DraftMaterial[];
   collapsed: boolean;
-}
-
-interface NotePhoto {
-  id: string;
-  name: string;
-  url: string;
 }
 
 interface Props {
@@ -226,7 +223,6 @@ export default function ServiceOrderModal({
   onSaved,
 }: Props) {
   const router = useRouter();
-  const [tab, setTab] = useState<'notes' | 'cotacao'>('notes');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -234,13 +230,6 @@ export default function ServiceOrderModal({
   // project-bar (dentro da Cotacao, como no mockup)
   const [project, setProject] = useState({ title: '', dueDate: '', responsibleId: '' });
   const [customerCreditStr, setCustomerCreditStr] = useState('');
-
-  // Anotacoes e fotos (contexto do atendimento; nao gera proposta)
-  const notesRef = useRef<HTMLDivElement>(null);
-  const [noteChannel, setNoteChannel] = useState('WhatsApp');
-  const [notePriority, setNotePriority] = useState('Normal');
-  const [photos, setPhotos] = useState<NotePhoto[]>([]);
-  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const [pieces, setPieces] = useState<DraftPiece[]>([newPiece()]);
   const [responsibles, setResponsibles] = useState<TeamUser[]>([]);
@@ -277,8 +266,6 @@ export default function ServiceOrderModal({
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [embedded, onClose, saving, showPreview]);
-
-  useEffect(() => () => { photos.forEach((p) => URL.revokeObjectURL(p.url)); }, [photos]);
 
   useEffect(() => {
     let active = true;
@@ -425,24 +412,6 @@ export default function ServiceOrderModal({
     })));
   }, []);
 
-  // ---- Fotos do atendimento (local; persistencia da galeria = backend futuro) ----
-  const handleAddPhotos = useCallback((files: FileList | null) => {
-    if (!files) return;
-    setPhotos((prev) => {
-      const room = Math.max(0, 8 - prev.length);
-      const next = Array.from(files).slice(0, room).map((f) => ({ id: uid('ph'), name: f.name, url: URL.createObjectURL(f) }));
-      return [...prev, ...next];
-    });
-  }, []);
-
-  const removePhoto = useCallback((id: string) => {
-    setPhotos((prev) => {
-      const target = prev.find((p) => p.id === id);
-      if (target) URL.revokeObjectURL(target.url);
-      return prev.filter((p) => p.id !== id);
-    });
-  }, []);
-
   // ---- Calculos (preco leitura; sem custo) ----
   const pieceHasMaterial = (p: DraftPiece) =>
     p.materials.some((m) => qtyOf(m.quantity) > 0 && (m.origin === 'own_stock' ? !!m.productId : m.label.trim().length > 0));
@@ -510,25 +479,13 @@ export default function ServiceOrderModal({
   function handleGenerateClick() {
     if (!canGenerate) {
       setError('Existe peça sem material selecionado. Selecione a matéria-prima/material obrigatório antes de gerar a proposta.');
-      setTab('cotacao');
       return;
     }
     setError(null);
     setShowPreview(true);
   }
 
-  const toolCss: React.CSSProperties = {
-    minWidth: '29px', height: '29px', border: `1px solid ${V.border}`, background: V.elevated,
-    color: V.secondary, borderRadius: '5px', fontSize: '11px', cursor: 'pointer',
-  };
-  const exec = (cmd: string, value?: string) => {
-    notesRef.current?.focus();
-    document.execCommand(cmd, false, value);
-  };
-
-  const footStatus = tab === 'notes'
-    ? `${photos.length} foto(s) anexada(s)`
-    : `Cotação em rascunho · ${validPieces.length} de ${pieces.length} peça(s) completa(s)`;
+  const footStatus = `Cotação em rascunho · ${validPieces.length} de ${pieces.length} peça(s) completa(s)`;
 
   return (
     <div
@@ -544,19 +501,18 @@ export default function ServiceOrderModal({
       }}
       onClick={(e) => { if (!embedded && e.target === e.currentTarget && !saving) onClose(); }}
     >
-      {/* .modal */}
+      {/* .modal (embedded: pane puro dentro do AttendancePopup, sem chrome proprio) */}
       <div
         style={{
-          background: V.base,
-          border: `1px solid ${embedded ? 'rgba(45,212,191,0.18)' : V.borderMid}`,
-          borderTop: embedded ? 'none' : undefined,
-          borderRadius: embedded ? '0 0 8px 8px' : '12px',
+          background: embedded ? 'transparent' : V.base,
+          border: embedded ? 'none' : `1px solid ${V.borderMid}`,
+          borderRadius: embedded ? 0 : '12px',
           width: '100%',
           maxWidth: embedded ? 'none' : '1080px',
           maxHeight: embedded ? 'none' : '92vh',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden',
+          overflow: embedded ? 'visible' : 'hidden',
         }}
       >
         {/* .modal-head */}
@@ -569,96 +525,13 @@ export default function ServiceOrderModal({
           </div>
         )}
 
-        {/* .workflow-tabs */}
-        <div style={{ display: 'flex', gap: '4px', padding: '9px 18px 0', background: V.strip, borderBottom: `1px solid ${V.border}`, flexShrink: 0 }}>
-          {([{ key: 'notes', label: '1. Anotações e fotos' }, { key: 'cotacao', label: '2. Cotação' }] as const).map((t) => {
-            const active = tab === t.key;
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setTab(t.key)}
-                style={{
-                  minHeight: '35px', padding: '0 16px', borderRadius: '7px 7px 0 0', cursor: 'pointer',
-                  border: `1px solid ${active ? V.goldBorder : 'transparent'}`, borderBottom: 0,
-                  background: active ? V.base : 'transparent',
-                  color: active ? V.gold : V.muted, fontSize: '11px', fontWeight: 800, letterSpacing: '0.04em',
-                }}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* panes (scroll) */}
+        {/* pane Cotacao (scroll) */}
         <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
           {locked ? (
             <div style={{ padding: '30px', textAlign: 'center', margin: '16px 18px', border: `1px dashed ${V.borderMid}`, borderRadius: '9px', color: V.secondary }}>
               <div style={{ fontSize: '30px', marginBottom: '8px' }}>🔒</div>
               <h3 style={{ fontFamily: 'Georgia, serif', color: V.text, margin: '0 0 5px' }}>Proposta já aprovada</h3>
               <p style={{ fontSize: '12px', margin: 0 }}>Esta versão está bloqueada. Para alterar peças ou valores, gere uma nova versão da proposta.</p>
-            </div>
-          ) : tab === 'notes' ? (
-            /* ---------- 1. ANOTACOES E FOTOS (.notes-layout) ---------- */
-            <div style={{ padding: '16px 18px 22px' }}>
-              <div style={{ border: `1px solid ${V.border}`, background: '#101012', borderRadius: '9px', overflow: 'hidden' }}>
-                {/* .notes-toolbar */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 10px', borderBottom: `1px solid ${V.border}`, background: V.surface, flexWrap: 'wrap' }}>
-                  <button type="button" style={toolCss} title="Negrito" onMouseDown={(e) => { e.preventDefault(); exec('bold'); }}><b>B</b></button>
-                  <button type="button" style={toolCss} title="Itálico" onMouseDown={(e) => { e.preventDefault(); exec('italic'); }}><i>I</i></button>
-                  <button type="button" style={toolCss} title="Sublinhado" onMouseDown={(e) => { e.preventDefault(); exec('underline'); }}><u>U</u></button>
-                  <button type="button" style={toolCss} title="Lista" onMouseDown={(e) => { e.preventDefault(); exec('insertUnorderedList'); }}>☷</button>
-                  <button type="button" style={toolCss} title="Lista numerada" onMouseDown={(e) => { e.preventDefault(); exec('insertOrderedList'); }}>1.</button>
-                  <button type="button" style={toolCss} title="Menção" onMouseDown={(e) => { e.preventDefault(); exec('insertText', '@'); }}>@</button>
-                  <span style={{ flex: 1 }} />
-                  <select aria-label="Canal" value={noteChannel} onChange={(e) => setNoteChannel(e.target.value)} style={{ ...control, width: '105px', minHeight: '29px' }}>
-                    <option>WhatsApp</option><option>Presencial</option><option>Telefone</option><option>E-mail</option>
-                  </select>
-                  <select aria-label="Prioridade" value={notePriority} onChange={(e) => setNotePriority(e.target.value)} style={{ ...control, width: '90px', minHeight: '29px' }}>
-                    <option>Normal</option><option>Alta</option><option>Urgente</option>
-                  </select>
-                </div>
-                {/* .editor */}
-                <div
-                  ref={notesRef}
-                  contentEditable
-                  suppressContentEditableWarning
-                  role="textbox"
-                  aria-multiline="true"
-                  aria-label="Anotações do atendimento"
-                  style={{ minHeight: '150px', padding: '15px 20px', color: V.secondary, fontSize: '12px', lineHeight: 1.6, outline: 'none' }}
-                />
-                {/* .photo-section */}
-                <div style={{ borderTop: `1px solid ${V.border}`, padding: '13px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                    <div>
-                      <div style={{ fontSize: '10px', fontWeight: 800, color: V.text }}>Fotos e referências do atendimento</div>
-                      <div style={{ marginTop: '4px', fontSize: '9px', lineHeight: 1.35, color: V.muted }}>Anexe fotos das joias desejadas, desenhos, medidas ou referências enviadas pelo cliente</div>
-                    </div>
-                    <span style={{ fontSize: '9px', color: V.secondary, flexShrink: 0 }}>{photos.length} de 8 fotos</span>
-                  </div>
-                  <input ref={photoInputRef} type="file" accept="image/*" multiple aria-label="Adicionar fotos" style={{ display: 'none' }} onChange={(e) => { handleAddPhotos(e.target.files); if (photoInputRef.current) photoInputRef.current.value = ''; }} />
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                    {photos.map((ph) => (
-                      <div key={ph.id} style={{ position: 'relative', width: '82px', height: '82px', border: `1px solid ${V.borderMid}`, borderRadius: '8px', overflow: 'hidden', backgroundColor: '#171719', backgroundImage: `url(${ph.url})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                        <small style={{ position: 'absolute', left: '4px', right: '4px', bottom: '4px', padding: '2px 4px', borderRadius: '4px', background: 'rgba(0,0,0,0.72)', color: V.secondary, fontSize: '7px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ph.name}</small>
-                        <button type="button" onClick={() => removePhoto(ph.id)} aria-label={`Remover ${ph.name}`} style={{ position: 'absolute', top: '4px', right: '4px', width: '18px', height: '18px', border: 0, borderRadius: '50%', background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: '10px', cursor: 'pointer' }}>×</button>
-                      </div>
-                    ))}
-                    {photos.length < 8 && (
-                      <button type="button" onClick={() => photoInputRef.current?.click()} style={{ width: '82px', height: '82px', border: `1px dashed ${V.goldBorder}`, background: V.goldDim, color: V.gold, borderRadius: '8px', fontSize: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', cursor: 'pointer' }}>
-                        <b style={{ fontSize: '20px', fontWeight: 400 }}>＋</b><span>Adicionar foto</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-              {/* .notes-hint */}
-              <div style={{ display: 'flex', gap: '7px', marginTop: '12px', padding: '9px 10px', border: '1px solid rgba(74,158,255,0.18)', background: 'rgba(74,158,255,0.06)', color: '#82BAFF', borderRadius: '7px', fontSize: '10px', lineHeight: 1.45 }}>
-                <span>→</span>
-                <span>Depois de registrar as informações do atendimento, avance para <strong>Cotação</strong> para criar uma ou mais peças, selecionar materiais e montar a proposta.</span>
-              </div>
             </div>
           ) : (
             /* ---------- 2. COTACAO (.modal-scroll > .os-shell) ---------- */
@@ -1017,8 +890,8 @@ export default function ServiceOrderModal({
           )}
         </div>
 
-        {/* .quote-summary-bar (fixo acima do rodape, so na Cotacao) */}
-        {tab === 'cotacao' && !locked && pieces.length > 0 && (
+        {/* .quote-summary-bar (fixo acima do rodape) */}
+        {!locked && pieces.length > 0 && (
           <div style={{ flexShrink: 0, padding: '10px 18px', borderTop: `1px solid ${V.border}`, background: '#101012' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(280px,0.6fr)', gap: '12px' }}>
               {/* Pecas anexadas a proposta */}
@@ -1067,24 +940,15 @@ export default function ServiceOrderModal({
           <span style={{ color: V.muted, fontSize: '10px' }}>{footStatus}</span>
           <span style={{ flex: 1 }} />
           <button type="button" onClick={onClose} style={btn}>Cancelar</button>
-          {tab === 'notes' ? (
-            <>
-              <button type="button" style={btnBlue} onClick={() => notify.success('Anotações salvas', 'Rascunho do atendimento (local)')}>Salvar anotações</button>
-              <button type="button" style={btnGold} onClick={() => setTab('cotacao')}>Ir para cotação →</button>
-            </>
-          ) : (
-            <>
-              <button type="button" style={btnBlue} onClick={() => notify.success('Cotação salva', 'Rascunho técnico/comercial (local)')}>Salvar cotação</button>
-              <button
-                type="button"
-                onClick={handleGenerateClick}
-                disabled={saving}
-                style={{ ...btnGold, opacity: canGenerate && !saving ? 1 : 0.45, cursor: canGenerate && !saving ? 'pointer' : 'not-allowed' }}
-              >
-                Gerar Proposta
-              </button>
-            </>
-          )}
+          <button type="button" style={btnBlue} onClick={() => notify.success('Cotação salva', 'Rascunho técnico/comercial (local)')}>Salvar cotação</button>
+          <button
+            type="button"
+            onClick={handleGenerateClick}
+            disabled={saving}
+            style={{ ...btnGold, opacity: canGenerate && !saving ? 1 : 0.45, cursor: canGenerate && !saving ? 'pointer' : 'not-allowed' }}
+          >
+            Gerar Proposta
+          </button>
         </div>
       </div>
 

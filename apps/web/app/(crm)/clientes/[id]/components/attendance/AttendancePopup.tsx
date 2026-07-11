@@ -1,10 +1,18 @@
 'use client';
 
 import { useState, useRef, useEffect, type ReactNode } from 'react';
-import { Bold, Italic, Underline, List, ListOrdered, AtSign, Mic, MicOff, MessageCircle, AlertCircle, X } from 'lucide-react';
+import { Bold, Italic, Underline, List, ListOrdered, AtSign, Mic, MicOff, X } from 'lucide-react';
+import { notify } from '@/lib/toast';
 import type { AttendanceBlock, PipelineStage } from '../types';
 import AI3DSection from './AI3DSection';
 import ServiceOrderModal from '../os/ServiceOrderModal';
+
+// TASK-002 (#9): o popup de Atendimento E o modal do mockup
+// docs/design/mockups/production/mockup-2026-06-15-os-multi-piece-proposal.html,
+// dividido nas 2 abas do fluxo: "1. Anotacoes e fotos" (bloco de notas REAL do
+// atendimento — unico bloco de notas, com persistencia via blocks) e
+// "2. Cotacao" (OS multi-peca, pane do ServiceOrderModal). O layout antigo
+// (editor solto + dropdown "Ordem de Servico") foi REMOVIDO — sem caixas redundantes.
 
 interface TeamUser { id: string; name: string; role: string; status?: string; }
 
@@ -24,6 +32,7 @@ type BlockType = 'atendimento' | 'consulta_peca' | 'ligacao' | 'visita' | 'email
 type PipelineStatus = 'ATENDIMENTO' | 'PROPOSTA' | 'PEDIDO' | 'OS' | 'ENTREGA';
 type Priority = 'normal' | 'urgente';
 type Channel = 'whatsapp' | 'presencial' | 'email';
+type WorkflowTab = 'notes' | 'cotacao';
 
 const CHANNELS: { value: Channel; label: string }[] = [
   { value: 'whatsapp',   label: 'WhatsApp'   },
@@ -32,9 +41,27 @@ const CHANNELS: { value: Channel; label: string }[] = [
 ];
 
 interface PhotoPreview { name: string; dataUrl: string; file: File }
-const MAX_PHOTOS = 5;
+const MAX_PHOTOS = 8;
 const ALLOWED_ATTENDANCE_TAGS = new Set(['A', 'B', 'BR', 'DIV', 'EM', 'I', 'LI', 'OL', 'P', 'SPAN', 'STRONG', 'U', 'UL']);
 const REMOVE_WITH_CONTENT_TAGS = new Set(['BUTTON', 'EMBED', 'FORM', 'IFRAME', 'INPUT', 'MATH', 'OBJECT', 'OPTION', 'SCRIPT', 'SELECT', 'STYLE', 'SVG', 'TEXTAREA']);
+
+// ---- Tokens do mockup (:root do mockup-2026-06-15) ----
+const V = {
+  base: '#0F0F11',
+  surface: '#131316',
+  elevated: '#1A1A1E',
+  gold: '#BFA06A',
+  goldDim: 'rgba(191,160,106,0.11)',
+  goldBorder: 'rgba(191,160,106,0.28)',
+  text: '#F0EBE3',
+  secondary: '#A09A94',
+  muted: '#66616A',
+  border: 'rgba(255,255,255,0.07)',
+  borderMid: 'rgba(255,255,255,0.11)',
+  red: '#E05252',
+  blue: '#4A9EFF',
+  strip: '#111113',
+} as const;
 
 function sanitizeAttendanceHtml(html: string): string {
   if (typeof window === 'undefined') return html;
@@ -103,27 +130,32 @@ function normalizePipelineStatus(raw: string | undefined | null): PipelineStatus
   return valid.includes(up) ? up : 'ATENDIMENTO';
 }
 
-const inputStyle: React.CSSProperties = {
-  height: '32px',
-  background: '#1A1A1E',
-  border: '1px solid rgba(255,255,255,0.10)',
-  borderRadius: '6px',
-  padding: '0 10px',
-  fontSize: '12px',
-  color: '#F0EDE8',
-  boxSizing: 'border-box',
-  fontFamily: "'DM Sans', sans-serif",
+const control: React.CSSProperties = {
+  minHeight: '34px',
+  border: `1px solid ${V.borderMid}`,
+  background: V.elevated,
+  color: V.text,
+  borderRadius: '7px',
+  padding: '0 11px',
   outline: 'none',
+  fontSize: '12px',
+  boxSizing: 'border-box',
   width: '100%',
+  fontFamily: 'Inter, sans-serif',
 };
 
-const labelStyle: React.CSSProperties = {
-  fontSize: '11px',
-  fontWeight: 600,
-  color: '#E8E4DE',
-  display: 'block',
-  marginBottom: '3px',
+const toolCss: React.CSSProperties = {
+  minWidth: '29px', height: '29px', border: `1px solid ${V.border}`, background: V.elevated,
+  color: V.secondary, borderRadius: '5px', fontSize: '11px', cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
+
+const btn: React.CSSProperties = {
+  minHeight: '34px', borderRadius: '7px', padding: '0 13px', fontSize: '11px', fontWeight: 750,
+  border: `1px solid ${V.borderMid}`, background: V.elevated, color: V.secondary, cursor: 'pointer',
+};
+const btnGold: React.CSSProperties = { ...btn, background: V.gold, borderColor: V.gold, color: '#111' };
+const btnBlue: React.CSSProperties = { ...btn, background: 'rgba(74,158,255,0.12)', borderColor: 'rgba(74,158,255,0.25)', color: V.blue };
 
 export default function AttendancePopup({
   customerId,
@@ -138,6 +170,7 @@ export default function AttendancePopup({
 }: Props) {
   const blockType = normalizeBlockType(block?.block_type);
   const blockPipelineStatus = normalizePipelineStatus(block?.pipeline_status);
+  const [tab,            setTab]            = useState<WorkflowTab>('notes');
   const [selectedStageId, setSelectedStageId] = useState(currentStageId ?? '');
   const [title,          setTitle]          = useState(block?.title ?? '');
   const [priority,       setPriority]       = useState<Priority>('normal');
@@ -146,8 +179,6 @@ export default function AttendancePopup({
   const [saving,         setSaving]         = useState(false);
   const [error,          setError]          = useState<string | null>(null);
   const [savedBlockId,   setSavedBlockId]   = useState<string | null>(block?.id ?? null);
-
-  const [serviceOrderExpanded, setServiceOrderExpanded] = useState(false);
   const [aiExpanded, setAiExpanded] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
@@ -188,7 +219,6 @@ export default function AttendancePopup({
   function removePhoto(idx: number) { setPhotos((prev) => prev.filter((_, i) => i !== idx)); }
 
   const [recording, setRecording] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recRef = useRef<{ stop(): void } | null>(null);
 
   // @ mention
@@ -295,20 +325,19 @@ export default function AttendancePopup({
     return blockId;
   }
 
-  async function handleSave() {
-    if (!title.trim()) return;
-
+  // "Salvar anotacoes" = salva o rascunho do atendimento SEM gerar proposta e sem fechar
+  // (page-spec: regras dos botoes da aba Anotacoes).
+  async function handleSaveNotes() {
+    if (!title.trim()) { setError('Informe o título do atendimento.'); return; }
     setSaving(true);
     setError(null);
-
     try {
       await persistAttendance(blockPipelineStatus);
       if (selectedStageId && selectedStageId !== currentStageId) {
         await onStageChange(selectedStageId);
       }
-
       onSaved();
-      onClose();
+      notify.success('Anotações salvas', 'Rascunho do atendimento');
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Falha de conexão com o servidor.');
     } finally {
@@ -327,21 +356,18 @@ export default function AttendancePopup({
   }
 
   const selectedStage = pipelineStages.find((stage) => stage.id === selectedStageId) ?? null;
-  const saveLabel = saving
-    ? 'Salvando...'
-    : 'Salvar';
 
   return (
     <div
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
+      {/* .modal — o popup INTEIRO segue o mockup */}
       <div
-        style={{ background: '#141417', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '12px', width: '100%', maxWidth: serviceOrderExpanded ? '900px' : '720px', maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
+        style={{ background: V.base, border: `1px solid ${V.borderMid}`, borderRadius: '12px', width: '100%', maxWidth: '1080px', maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
       >
-        {/* ── HEADER ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-          {/* Uses the lead's real pipeline stages and persists the move on save. */}
+        {/* .modal-head: etapa da pipeline + titulo do atendimento + fechar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '13px 18px', borderBottom: `1px solid ${V.border}`, flexShrink: 0 }}>
           <select
             aria-label="Etapa da pipeline"
             title={leadId ? 'A etapa será atualizada ao salvar' : 'Cliente sem lead vinculado ao pipeline'}
@@ -349,12 +375,13 @@ export default function AttendancePopup({
             onChange={(e) => setSelectedStageId(e.target.value)}
             disabled={!leadId || pipelineStages.length === 0}
             style={{
-              ...inputStyle,
+              ...control,
               width: '180px',
+              flexShrink: 0,
               cursor: leadId && pipelineStages.length > 0 ? 'pointer' : 'not-allowed',
-              background: selectedStage ? `${selectedStage.color}18` : '#1A1A1E',
-              border: `1px solid ${selectedStage?.color ?? 'rgba(255,255,255,0.10)'}`,
-              color: selectedStage?.color ?? '#7A7774',
+              background: selectedStage ? `${selectedStage.color}18` : V.elevated,
+              border: `1px solid ${selectedStage?.color ?? V.borderMid}`,
+              color: selectedStage?.color ?? V.muted,
               fontWeight: 600,
               opacity: leadId && pipelineStages.length > 0 ? 1 : 0.7,
             }}
@@ -370,195 +397,202 @@ export default function AttendancePopup({
             ))}
           </select>
 
-          {/* title */}
           <input
-            style={{ ...inputStyle, flex: 1 }}
+            style={{ ...control, flex: 1 }}
             placeholder="Título do atendimento..."
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
 
-          <button onClick={onClose} title="Fechar" style={{ width: '28px', height: '28px', background: 'transparent', border: 'none', color: '#7A7774', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '5px', flexShrink: 0 }}><X size={15} /></button>
+          <button onClick={onClose} title="Fechar" style={{ width: '28px', height: '28px', background: 'transparent', border: 'none', color: V.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '5px', flexShrink: 0 }}><X size={15} /></button>
         </div>
 
-        {/* ── TOOLBAR ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, flexWrap: 'wrap' }}>
-          {([
-            { cmd: 'bold',      icon: <Bold size={13} />,      title: 'Negrito (Ctrl+B)'   },
-            { cmd: 'italic',    icon: <Italic size={13} />,    title: 'Itálico (Ctrl+I)'   },
-            { cmd: 'underline', icon: <Underline size={13} />, title: 'Sublinhado (Ctrl+U)' },
-          ] as { cmd: string; icon: ReactNode; title: string }[]).map((b) => (
-            <button key={b.cmd} title={b.title} onMouseDown={(e) => { e.preventDefault(); execCmd(b.cmd); }}
-              style={{ width: '28px', height: '28px', background: '#1A1A1E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px', color: '#C8C4BE', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {b.icon}
-            </button>
-          ))}
-          <div style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.08)', margin: '0 2px' }} />
-          {([
-            { cmd: 'insertUnorderedList', icon: <List size={13} />,        title: 'Lista com marcadores' },
-            { cmd: 'insertOrderedList',   icon: <ListOrdered size={13} />, title: 'Lista numerada'       },
-          ] as { cmd: string; icon: ReactNode; title: string }[]).map((b) => (
-            <button key={b.cmd} title={b.title} onMouseDown={(e) => { e.preventDefault(); execCmd(b.cmd); }}
-              style={{ width: '28px', height: '28px', background: '#1A1A1E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px', color: '#C8C4BE', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {b.icon}
-            </button>
-          ))}
-          <div style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.08)', margin: '0 2px' }} />
-          {/* @ mention */}
-          <div style={{ position: 'relative' }} ref={mentionRef}>
-            <button
-              title="Mencionar colega (@)"
-              onMouseDown={(e) => { e.preventDefault(); handleMention(); }}
-              style={{ width: '28px', height: '28px', background: '#1A1A1E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px', color: '#C8C4BE', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >
-              <AtSign size={13} />
-            </button>
-            {mentionOpen && (
-              <div style={{ position: 'absolute', top: '32px', left: 0, zIndex: 200, background: '#1A1A1E', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', minWidth: '160px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', overflow: 'hidden' }}>
-                {mentionUsers.length === 0 ? (
-                  <div style={{ padding: '8px 12px', fontSize: '11px', color: '#7A7774' }}>Nenhum usuário</div>
-                ) : (
-                  mentionUsers.map((u) => (
-                    <button
-                      key={u.id}
-                      onMouseDown={(e) => { e.preventDefault(); insertMention(u); }}
-                      style={{ width: '100%', textAlign: 'left', padding: '7px 12px', background: 'transparent', border: 'none', color: '#F0EDE8', fontSize: '12px', cursor: 'pointer' }}
-                    >
-                      {u.name}
-                      <span style={{ fontSize: '10px', color: '#7A7774', marginLeft: '6px' }}>{u.role}</span>
+        {/* .workflow-tabs */}
+        <div style={{ display: 'flex', gap: '4px', padding: '9px 18px 0', background: V.strip, borderBottom: `1px solid ${V.border}`, flexShrink: 0 }}>
+          {([{ key: 'notes', label: '1. Anotações e fotos' }, { key: 'cotacao', label: '2. Cotação' }] as const).map((t) => {
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                style={{
+                  minHeight: '35px', padding: '0 16px', borderRadius: '7px 7px 0 0', cursor: 'pointer',
+                  border: `1px solid ${active ? V.goldBorder : 'transparent'}`, borderBottom: 0,
+                  background: active ? V.base : 'transparent',
+                  color: active ? V.gold : V.muted, fontSize: '11px', fontWeight: 800, letterSpacing: '0.04em',
+                }}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {tab === 'notes' ? (
+          <>
+            {/* ---------- 1. ANOTACOES E FOTOS (.notes-layout) — bloco de notas UNICO e real ---------- */}
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '16px 18px 22px' }}>
+              <div style={{ border: `1px solid ${V.border}`, background: '#101012', borderRadius: '9px', overflow: 'hidden' }}>
+                {/* .notes-toolbar */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 10px', borderBottom: `1px solid ${V.border}`, background: V.surface, flexWrap: 'wrap' }}>
+                  {([
+                    { cmd: 'bold',      icon: <Bold size={13} />,      title: 'Negrito (Ctrl+B)'    },
+                    { cmd: 'italic',    icon: <Italic size={13} />,    title: 'Itálico (Ctrl+I)'    },
+                    { cmd: 'underline', icon: <Underline size={13} />, title: 'Sublinhado (Ctrl+U)' },
+                    { cmd: 'insertUnorderedList', icon: <List size={13} />,        title: 'Lista com marcadores' },
+                    { cmd: 'insertOrderedList',   icon: <ListOrdered size={13} />, title: 'Lista numerada'       },
+                  ] as { cmd: string; icon: ReactNode; title: string }[]).map((b) => (
+                    <button key={b.cmd} type="button" title={b.title} onMouseDown={(e) => { e.preventDefault(); execCmd(b.cmd); }} style={toolCss}>
+                      {b.icon}
                     </button>
-                  ))
+                  ))}
+                  {/* @ mention */}
+                  <div style={{ position: 'relative' }} ref={mentionRef}>
+                    <button type="button" title="Mencionar colega (@)" onMouseDown={(e) => { e.preventDefault(); handleMention(); }} style={toolCss}>
+                      <AtSign size={13} />
+                    </button>
+                    {mentionOpen && (
+                      <div style={{ position: 'absolute', top: '32px', left: 0, zIndex: 200, background: V.elevated, border: `1px solid ${V.borderMid}`, borderRadius: '6px', minWidth: '160px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', overflow: 'hidden' }}>
+                        {mentionUsers.length === 0 ? (
+                          <div style={{ padding: '8px 12px', fontSize: '11px', color: V.muted }}>Nenhum usuário</div>
+                        ) : (
+                          mentionUsers.map((u) => (
+                            <button
+                              key={u.id}
+                              onMouseDown={(e) => { e.preventDefault(); insertMention(u); }}
+                              style={{ width: '100%', textAlign: 'left', padding: '7px 12px', background: 'transparent', border: 'none', color: V.text, fontSize: '12px', cursor: 'pointer' }}
+                            >
+                              {u.name}
+                              <span style={{ fontSize: '10px', color: V.muted, marginLeft: '6px' }}>{u.role}</span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {/* gravacao de voz */}
+                  <button
+                    type="button"
+                    title={recording ? 'Parar gravação' : 'Gravar voz (transcreve para texto)'}
+                    onMouseDown={(e) => { e.preventDefault(); toggleRecording(); }}
+                    style={{ ...toolCss, minWidth: undefined, padding: '0 8px', gap: '5px', background: recording ? 'rgba(224,82,82,0.15)' : V.elevated, border: `1px solid ${recording ? 'rgba(224,82,82,0.30)' : V.border}`, color: recording ? V.red : V.secondary }}
+                  >
+                    {recording ? <MicOff size={13} /> : <Mic size={13} />}
+                    <span>{recording ? 'Parar' : 'Gravar'}</span>
+                  </button>
+                  <span style={{ flex: 1 }} />
+                  <select aria-label="Canal de atendimento" title="Canal de atendimento" value={channel} onChange={(e) => setChannel(e.target.value as Channel)} style={{ ...control, width: '105px', minHeight: '29px', cursor: 'pointer' }}>
+                    {CHANNELS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                  <select aria-label="Prioridade" title="Prioridade" value={priority} onChange={(e) => setPriority(e.target.value as Priority)} style={{ ...control, width: '90px', minHeight: '29px', cursor: 'pointer' }}>
+                    <option value="normal">Normal</option>
+                    <option value="urgente">Urgente</option>
+                  </select>
+                </div>
+
+                {/* .editor (real, sanitizado e persistido) */}
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  role="textbox"
+                  aria-multiline="true"
+                  aria-label="Anotações do atendimento"
+                  data-placeholder="Descreva o atendimento, preferências..."
+                  style={{ minHeight: '150px', padding: '15px 20px', color: V.text, fontSize: '12px', lineHeight: 1.6, outline: 'none' }}
+                />
+
+                {/* .photo-section */}
+                <div style={{ borderTop: `1px solid ${V.border}`, padding: '13px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                    <div>
+                      <div style={{ fontSize: '10px', fontWeight: 800, color: V.text }}>Fotos e referências do atendimento</div>
+                      <div style={{ marginTop: '4px', fontSize: '9px', lineHeight: 1.35, color: V.muted }}>Anexe fotos das joias desejadas, desenhos, medidas ou referências enviadas pelo cliente</div>
+                    </div>
+                    <span style={{ fontSize: '9px', color: V.secondary, flexShrink: 0 }}>{photos.length} de {MAX_PHOTOS} fotos</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                    {photos.map((photo, idx) => (
+                      <div key={idx} style={{ position: 'relative', width: '82px', height: '82px', border: `1px solid ${V.borderMid}`, borderRadius: '8px', overflow: 'hidden', backgroundColor: '#171719', backgroundImage: `url(${photo.dataUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                        <small style={{ position: 'absolute', left: '4px', right: '4px', bottom: '4px', padding: '2px 4px', borderRadius: '4px', background: 'rgba(0,0,0,0.72)', color: V.secondary, fontSize: '7px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{photo.name}</small>
+                        <button type="button" onClick={() => removePhoto(idx)} aria-label={`Remover ${photo.name}`} style={{ position: 'absolute', top: '4px', right: '4px', width: '18px', height: '18px', border: 0, borderRadius: '50%', background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: '10px', cursor: 'pointer' }}>×</button>
+                      </div>
+                    ))}
+                    {photos.length < MAX_PHOTOS && (
+                      <label style={{ width: '82px', height: '82px', border: `1px dashed ${V.goldBorder}`, background: V.goldDim, color: V.gold, borderRadius: '8px', fontSize: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <b style={{ fontSize: '20px', fontWeight: 400 }}>＋</b><span>Adicionar foto</span>
+                        <input type="file" accept="image/*" multiple onChange={handlePhotoChange} style={{ display: 'none' }} />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* .notes-hint */}
+              <div style={{ display: 'flex', gap: '7px', marginTop: '12px', padding: '9px 10px', border: '1px solid rgba(74,158,255,0.18)', background: 'rgba(74,158,255,0.06)', color: '#82BAFF', borderRadius: '7px', fontSize: '10px', lineHeight: 1.45 }}>
+                <span>→</span>
+                <span>Depois de registrar as informações do atendimento, avance para <strong>Cotação</strong> para criar uma ou mais peças, selecionar materiais e montar a proposta.</span>
+              </div>
+
+              {/* IA 3D (funcionalidade existente, contexto do atendimento) */}
+              <div style={{ marginTop: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setAiExpanded((v) => !v)}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', border: `1px solid ${V.border}`, borderRadius: aiExpanded ? '8px 8px 0 0' : '8px', padding: '10px 14px', cursor: 'pointer' }}
+                >
+                  <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: V.muted }}>
+                    ✨ Gerar modelo 3D com IA
+                  </span>
+                  <span style={{ fontSize: '12px', color: V.muted }}>{aiExpanded ? '▲' : '▼'}</span>
+                </button>
+                {aiExpanded && (
+                  <div style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${V.border}`, borderTop: 'none', borderRadius: '0 0 8px 8px', padding: '14px' }}>
+                    <AI3DSection blockId={savedBlockId} />
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-          <div style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.08)', margin: '0 2px' }} />
-          <button
-            title={recording ? 'Parar gravação' : 'Gravar voz (transcreve para texto)'}
-            onMouseDown={(e) => { e.preventDefault(); toggleRecording(); }}
-            style={{ height: '28px', padding: '0 8px', background: recording ? 'rgba(224,82,82,0.15)' : '#1A1A1E', border: `1px solid ${recording ? 'rgba(224,82,82,0.30)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '4px', color: recording ? '#E05252' : '#C8C4BE', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
-            {recording ? <MicOff size={13} /> : <Mic size={13} />}
-            <span>{recording ? 'Parar' : 'Gravar'}</span>
-          </button>
-          <div style={{ flex: 1 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <MessageCircle size={12} style={{ color: '#7A7774', flexShrink: 0 }} />
-            <select title="Canal de atendimento" value={channel} onChange={(e) => setChannel(e.target.value as Channel)} style={{ ...inputStyle, width: '100px', cursor: 'pointer' }}>
-              {CHANNELS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-            </select>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <AlertCircle size={12} style={{ color: '#7A7774', flexShrink: 0 }} />
-            <select title="Prioridade" value={priority} onChange={(e) => setPriority(e.target.value as Priority)} style={{ ...inputStyle, width: '84px', cursor: 'pointer' }}>
-              <option value="normal">Normal</option>
-              <option value="urgente">Urgente</option>
-            </select>
-          </div>
-        </div>
 
-        {/* ── EDITOR ── */}
-        <div
-          ref={editorRef}
-          contentEditable
-          suppressContentEditableWarning
-          style={{ minHeight: '100px', padding: '14px 20px', color: '#F0EDE8', fontSize: '13px', lineHeight: 1.6, outline: 'none', fontFamily: "'DM Sans', sans-serif" }}
-          data-placeholder="Descreva o atendimento, preferências..."
-        />
+              {error && (
+                <div style={{ marginTop: '12px', padding: '10px 14px', background: 'rgba(224,82,82,0.10)', border: '1px solid rgba(224,82,82,0.25)', borderRadius: '7px', fontSize: '12px', color: V.red }}>
+                  ⚠️ {error}
+                </div>
+              )}
+            </div>
 
-        {/* ── FOTOS DE REFERÊNCIA ── */}
-        <div style={{ padding: '0 20px 14px' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {photos.map((photo, idx) => (
-              <div key={idx} style={{ position: 'relative', width: '60px', height: '60px', borderRadius: '6px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.10)' }}>
-                <img src={photo.dataUrl} alt={photo.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <button onClick={() => removePhoto(idx)} style={{ position: 'absolute', top: '2px', right: '2px', width: '16px', height: '16px', background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: '50%', color: '#fff', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>×</button>
-              </div>
-            ))}
-            {photos.length < MAX_PHOTOS && (
-              <label style={{ width: '60px', height: '60px', borderRadius: '6px', border: '1px dashed rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7A7774', fontSize: '20px', cursor: 'pointer' }}>
-                +
-                <input type="file" accept="image/*" multiple onChange={handlePhotoChange} style={{ display: 'none' }} />
-              </label>
-            )}
-          </div>
-        </div>
-
-        {/* ── ORDEM DE SERVIÇO (colapsável e independente da etapa) ── */}
-        <div style={{ margin: '0 20px 14px' }}>
-          <button
-            onClick={() => setServiceOrderExpanded((value) => !value)}
-            aria-expanded={serviceOrderExpanded}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: serviceOrderExpanded ? 'rgba(45,212,191,0.05)' : 'rgba(255,255,255,0.03)', border: `1px solid ${serviceOrderExpanded ? 'rgba(45,212,191,0.20)' : 'rgba(255,255,255,0.08)'}`, borderRadius: serviceOrderExpanded ? '8px 8px 0 0' : '8px', padding: '10px 14px', cursor: 'pointer' }}
-          >
-            <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: serviceOrderExpanded ? '#2DD4BF' : '#7A7774' }}>
-              Ordem de Serviço
-            </span>
-            <span style={{ fontSize: '12px', color: '#7A7774' }}>{serviceOrderExpanded ? '▲' : '▼'}</span>
-          </button>
-          {serviceOrderExpanded && (
+            {/* .modal-foot (aba Anotacoes) */}
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 18px', borderTop: `1px solid ${V.border}`, background: V.strip }}>
+              <span style={{ color: V.muted, fontSize: '10px' }}>{photos.length} foto(s) anexada(s)</span>
+              <span style={{ flex: 1 }} />
+              <button type="button" onClick={onClose} style={btn}>Cancelar</button>
+              <button
+                type="button"
+                onClick={handleSaveNotes}
+                disabled={saving || !title.trim()}
+                style={{ ...btnBlue, opacity: saving || !title.trim() ? 0.6 : 1, cursor: saving || !title.trim() ? 'not-allowed' : 'pointer' }}
+              >
+                {saving ? 'Salvando...' : 'Salvar anotações'}
+              </button>
+              <button type="button" onClick={() => setTab('cotacao')} style={btnGold}>Ir para cotação →</button>
+            </div>
+          </>
+        ) : (
+          /* ---------- 2. COTACAO — pane do ServiceOrderModal ocupa o modal inteiro ---------- */
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
             <ServiceOrderModal
               customerId={customerId}
               embedded
               submitBlocked={!title.trim()}
               onBeforeCreate={prepareAttendanceForServiceOrder}
-              onClose={() => setServiceOrderExpanded(false)}
+              onClose={onClose}
               onSaved={() => {
                 onSaved();
                 onOSCreated?.();
               }}
             />
-          )}
-        </div>
-
-        {/* ── IA 3D (colapsável) ── */}
-        <div style={{ margin: '0 20px 14px' }}>
-          <button
-            onClick={() => setAiExpanded((v) => !v)}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: aiExpanded ? '8px 8px 0 0' : '8px', padding: '10px 14px', cursor: 'pointer' }}
-          >
-            <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7A7774' }}>
-              ✨ Gerar modelo 3D com IA
-            </span>
-            <span style={{ fontSize: '12px', color: '#7A7774' }}>{aiExpanded ? '▲' : '▼'}</span>
-          </button>
-          {aiExpanded && (
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: '14px' }}>
-              <AI3DSection blockId={savedBlockId} />
-            </div>
-          )}
-        </div>
-
-        {/* ── ERROR ── */}
-        {error && (
-          <div style={{ margin: '0 20px 12px', padding: '10px 14px', background: 'rgba(224,82,82,0.10)', border: '1px solid rgba(224,82,82,0.25)', borderRadius: '7px', fontSize: '12px', color: '#E05252' }}>
-            ⚠️ {error}
           </div>
         )}
-
-        {/* ── FOOTER ── */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '14px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
-            <button onClick={onClose} style={{ height: '34px', padding: '0 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '7px', color: '#C8C4BE', fontSize: '12px', cursor: 'pointer' }}>
-              Cancelar
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving || !title.trim()}
-              style={{
-                height: '34px', padding: '0 20px',
-                background: 'rgba(200,169,122,0.15)',
-                border: '1px solid rgba(200,169,122,0.30)',
-                borderRadius: '7px',
-                color: '#C8A97A',
-                fontSize: '12px', fontWeight: 600,
-                cursor: saving || !title.trim() ? 'not-allowed' : 'pointer',
-                opacity: saving || !title.trim() ? 0.7 : 1,
-              }}
-            >
-              {saveLabel}
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
