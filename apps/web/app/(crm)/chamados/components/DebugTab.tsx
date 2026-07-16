@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useConfirm } from '@/components/system/ConfirmDialog';
 import { notify } from '@/lib/toast';
+import { downloadTicketsExport } from './exportTickets';
 
 interface SystemErrorRow {
     id: string;
@@ -54,6 +55,7 @@ export default function DebugTab({ userRole }: { userRole: string }) {
     const [sourceFilter, setSourceFilter] = useState<string>('');
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [clearing, setClearing] = useState(false);
+    const [exportingBugs, setExportingBugs] = useState(false);
     const pausedRef = useRef(paused);
     const filtersRef = useRef({ search, sourceFilter });
 
@@ -120,6 +122,18 @@ export default function DebugTab({ userRole }: { userRole: string }) {
         }
     }
 
+    async function handleExportBugs() {
+        setExportingBugs(true);
+        try {
+            await downloadTicketsExport({ mode: 'all', type: 'BUG' });
+            notify.success('Bugs relatados exportados');
+        } catch (err) {
+            notify.error(err instanceof Error ? err.message : 'Falha ao exportar bugs');
+        } finally {
+            setExportingBugs(false);
+        }
+    }
+
     if (!isAdmin) {
         return (
             <div style={{ background: '#0F0F11', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '40px 20px', textAlign: 'center' }}>
@@ -182,6 +196,21 @@ export default function DebugTab({ userRole }: { userRole: string }) {
                     }}
                 >
                     ↻ Atualizar
+                </button>
+                <button
+                    onClick={handleExportBugs}
+                    disabled={exportingBugs}
+                    style={{
+                        height: '36px', padding: '0 14px',
+                        borderRadius: '8px', border: '1px solid rgba(200,169,122,0.5)',
+                        background: exportingBugs ? 'rgba(200,169,122,0.08)' : 'transparent',
+                        color: '#C8A97A',
+                        fontSize: '12px', fontWeight: 600,
+                        cursor: exportingBugs ? 'not-allowed' : 'pointer',
+                        opacity: exportingBugs ? 0.6 : 1,
+                    }}
+                >
+                    {exportingBugs ? 'Baixando...' : 'Baixar bugs relatados'}
                 </button>
                 <button
                     onClick={handleClear}

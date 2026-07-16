@@ -29,6 +29,7 @@ const updateStatusSchema = z.object({
 const exportTicketsSchema = z.object({
     mode: z.enum(['all', 'selected']),
     ticketIds: z.array(z.string().uuid()).max(200).optional(),
+    type: z.enum(['BUG', 'SUGGESTION', 'OTHER']).optional(),
 }).superRefine((value, ctx) => {
     if (value.mode === 'selected' && (!value.ticketIds || value.ticketIds.length === 0)) {
         ctx.addIssue({
@@ -364,22 +365,43 @@ router.post(
                 return;
             }
 
-            const { mode, ticketIds } = parsed.data;
-            const result = mode === 'all'
-                ? await query<TicketExportRow>(
-                    `SELECT t.*, u.name AS user_name, u.email AS user_email
-                     FROM system_tickets t
-                     JOIN users u ON t.user_id = u.id
-                     ORDER BY t.created_at DESC`
-                )
-                : await query<TicketExportRow>(
-                    `SELECT t.*, u.name AS user_name, u.email AS user_email
-                     FROM system_tickets t
-                     JOIN users u ON t.user_id = u.id
-                     WHERE t.id = ANY($1::uuid[])
-                     ORDER BY t.created_at DESC`,
-                    [ticketIds]
-                );
+            const { mode, ticketIds, type } = parsed.data;
+            let result;
+            if (mode === 'all') {
+                result = type
+                    ? await query<TicketExportRow>(
+                        `SELECT t.*, u.name AS user_name, u.email AS user_email
+                         FROM system_tickets t
+                         JOIN users u ON t.user_id = u.id
+                         WHERE t.type = $1
+                         ORDER BY t.created_at DESC`,
+                        [type]
+                    )
+                    : await query<TicketExportRow>(
+                        `SELECT t.*, u.name AS user_name, u.email AS user_email
+                         FROM system_tickets t
+                         JOIN users u ON t.user_id = u.id
+                         ORDER BY t.created_at DESC`
+                    );
+            } else {
+                result = type
+                    ? await query<TicketExportRow>(
+                        `SELECT t.*, u.name AS user_name, u.email AS user_email
+                         FROM system_tickets t
+                         JOIN users u ON t.user_id = u.id
+                         WHERE t.id = ANY($1::uuid[]) AND t.type = $2
+                         ORDER BY t.created_at DESC`,
+                        [ticketIds, type]
+                    )
+                    : await query<TicketExportRow>(
+                        `SELECT t.*, u.name AS user_name, u.email AS user_email
+                         FROM system_tickets t
+                         JOIN users u ON t.user_id = u.id
+                         WHERE t.id = ANY($1::uuid[])
+                         ORDER BY t.created_at DESC`,
+                        [ticketIds]
+                    );
+            }
 
             if (result.rows.length === 0) {
                 next(AppError.notFound('Nenhum incidente encontrado para exportacao.'));
@@ -434,6 +456,7 @@ router.post(
                 oldValue: null,
                 newValue: {
                     mode,
+                    type: type ?? null,
                     ticket_count: result.rows.length,
                     ticket_ids: result.rows.map(ticket => ticket.id),
                 },
@@ -442,8 +465,9 @@ router.post(
 
             const zip = createZip(zipEntries);
             const stamp = new Date().toISOString().slice(0, 10);
+            const prefix = type === 'BUG' ? 'orion-bugs' : 'orion-incidentes';
             res.setHeader('Content-Type', 'application/zip');
-            res.setHeader('Content-Disposition', `attachment; filename="orion-incidentes-${stamp}.zip"`);
+            res.setHeader('Content-Disposition', `attachment; filename="${prefix}-${stamp}.zip"`);
             res.send(zip);
         } catch (err) {
             next(err);

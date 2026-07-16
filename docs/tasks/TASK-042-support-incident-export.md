@@ -34,6 +34,8 @@ backlog.
 - `apps/api/src/routes/tickets.routes.ts`
 - `apps/web/app/api/internal/[...path]/route.ts`
 - `apps/web/app/(crm)/chamados/components/ChamadosClient.tsx`
+- `apps/web/app/(crm)/chamados/components/DebugTab.tsx`
+- `apps/web/app/(crm)/chamados/components/exportTickets.ts`
 
 ## Fora do escopo
 - Criar tasks automaticamente no GitHub.
@@ -50,6 +52,7 @@ backlog.
 ## Resultado esperado
 - Admin/root consegue selecionar incidentes e baixar pacote `.zip`.
 - Admin/root consegue baixar todos os incidentes.
+- ROOT consegue baixar todos os relatos do tipo `BUG` pela aba `Debug ao vivo`.
 - O zip contem `incidents.md` e arquivos de `attachments/`.
 
 ## Regras obrigatorias da implementacao
@@ -63,7 +66,8 @@ backlog.
 2. Gerar ZIP sem dependencia nova.
 3. Ajustar proxy interno para preservar binarios e `Content-Disposition`.
 4. Adicionar selecao e botoes de download na UI de Incidentes.
-5. Rodar typecheck de API e web.
+5. Adicionar atalho de download de bugs relatados em `Debug ao vivo`.
+6. Rodar typecheck e build de API e web.
 
 ## Prompt para o executor
 Use esta task como contrato operacional. Leia a spec obrigatoria e implemente
@@ -78,6 +82,8 @@ automaticamente e nao altere schema de banco.
 ## Testes obrigatorios
 - `npm run typecheck --prefix apps/api`
 - `npm run typecheck --prefix apps/web`
+- `npm run build --prefix apps/api`
+- `npm run build --prefix apps/web`
 
 ## Evidencias esperadas no PR
 - Saida dos typechecks.
@@ -86,6 +92,7 @@ automaticamente e nao altere schema de banco.
 ## Criterios de aceite
 - `Baixar selecionados` funciona com 1+ incidentes selecionados.
 - `Baixar tudo` funciona com a lista completa.
+- `Baixar bugs relatados` funciona na aba `Debug ao vivo` e filtra `type=BUG`.
 - ZIP abre com `incidents.md` e anexos.
 - Usuarios nao admin nao veem os controles.
 
@@ -101,6 +108,8 @@ Controles de selecao e download na aba Incidentes.
 ## Validacao
 - `npm run typecheck --prefix apps/api`: passou.
 - `npm run typecheck --prefix apps/web`: passou.
+- `npm run build --prefix apps/api`: passou.
+- `npm run build --prefix apps/web`: passou.
 - Runtime com incidentes/anexos reais: NAO VALIDADO nesta rodada.
 
 ## Riscos/Lacunas
@@ -116,6 +125,7 @@ Sem alteracao de schema.
 ### API/Backend
 - Criado `POST /api/v1/tickets/export`.
 - Exportacao restrita a `ROOT` e `ADMIN`.
+- Exportacao aceita filtro opcional `type`, usado para baixar apenas `BUG`.
 - Pacote gerado em `.zip` com `incidents.md` e pasta `attachments/`.
 - Anexos sao resolvidos apenas quando apontam para `/uploads/` dentro de
   `UPLOAD_PATH`.
@@ -123,10 +133,13 @@ Sem alteracao de schema.
 ### Frontend/UI
 - Adicionados controles para selecionar incidente individualmente.
 - Adicionados comandos `Selecionar tudo`, `Baixar selecionados` e `Baixar tudo`.
+- Adicionado comando `Baixar bugs relatados` na aba `Debug ao vivo`.
 - Controles aparecem apenas para `ROOT` e `ADMIN`.
 
 ### Validacao
 - Typecheck da API passou.
 - Typecheck da Web passou.
+- Build da API passou.
+- Build da Web passou.
 - Download real com incidente e print do ambiente local ainda precisa ser
   validado manualmente.

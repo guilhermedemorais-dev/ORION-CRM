@@ -11,6 +11,7 @@ revisao externa e conversao em tasks de backlog.
 ## Escopo incluido
 - Selecionar incidentes individualmente na aba `Suporte -> Incidentes`.
 - Selecionar todos os incidentes carregados na lista.
+- Baixar todos os relatos do tipo `BUG` tambem pela aba `Suporte -> Debug ao vivo`.
 - Baixar um pacote `.zip`.
 - Incluir no pacote:
   - `incidents.md`, com todos os relatos em Markdown.
@@ -37,6 +38,8 @@ Body:
   { "mode": "all" }
   ou
   { "mode": "selected", "ticketIds": ["uuid"] }
+  ou
+  { "mode": "all", "type": "BUG" }
 Response:
   application/zip
 ```
@@ -49,6 +52,9 @@ Na aba `Incidentes`, usuarios `ROOT` ou `ADMIN` veem:
 - botao `Baixar tudo`;
 - estado de carregamento e erro.
 
+Na aba `Debug ao vivo`, usuario `ROOT` ve:
+- botao `Baixar bugs relatados`, que exporta apenas tickets `BUG`.
+
 ## Seguranca
 - Endpoint protegido por `authenticate` + `requireRole(['ROOT', 'ADMIN'])`.
 - Caminhos de anexos devem ser resolvidos dentro de `UPLOAD_PATH`.
@@ -58,6 +64,7 @@ Na aba `Incidentes`, usuarios `ROOT` ou `ADMIN` veem:
 ## Criterios de aceite
 - Baixar selecionados gera `.zip` com `incidents.md` e anexos dos incidentes escolhidos.
 - Baixar tudo gera `.zip` com todos os incidentes visiveis para admin/root.
+- Baixar bugs relatados gera `.zip` apenas com tickets de tipo `BUG`.
 - Markdown referencia os anexos locais dentro do pacote.
 - Anexos inexistentes nao quebram a exportacao.
 - Resposta preserva `Content-Disposition` para download no browser.
