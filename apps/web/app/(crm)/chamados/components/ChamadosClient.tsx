@@ -279,8 +279,12 @@ function IncidentsTab({ userRole }: { userRole: string }) {
     const [error, setError] = useState<string | null>(null);
     const [showModal, setShowModal] = useState(false);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
+    const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
+    const [exporting, setExporting] = useState<'all' | 'selected' | null>(null);
 
     const isAdmin = ['ROOT', 'ADMIN'].includes(userRole);
+    const selectedCount = selectedTicketIds.size;
+    const allSelected = tickets.length > 0 && tickets.every(ticket => selectedTicketIds.has(ticket.id));
 
     const fetchTickets = useCallback(async () => {
         setLoading(true);
@@ -302,6 +306,14 @@ function IncidentsTab({ userRole }: { userRole: string }) {
         fetchTickets();
     }, [fetchTickets]);
 
+    useEffect(() => {
+        setSelectedTicketIds(previous => {
+            const visibleIds = new Set(tickets.map(ticket => ticket.id));
+            const next = new Set(Array.from(previous).filter(id => visibleIds.has(id)));
+            return next.size === previous.size ? previous : next;
+        });
+    }, [tickets]);
+
     async function handleStatusChange(id: string, newStatus: string) {
         setUpdatingId(id);
         try {
@@ -318,19 +330,121 @@ function IncidentsTab({ userRole }: { userRole: string }) {
         }
     }
 
+    function toggleTicketSelection(id: string) {
+        setSelectedTicketIds(previous => {
+            const next = new Set(previous);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+            return next;
+        });
+    }
+
+    function toggleAllSelection() {
+        setSelectedTicketIds(previous => {
+            if (tickets.length > 0 && tickets.every(ticket => previous.has(ticket.id))) {
+                return new Set();
+            }
+            return new Set(tickets.map(ticket => ticket.id));
+        });
+    }
+
+    function filenameFromDisposition(disposition: string | null): string {
+        const fallback = 'orion-incidentes.zip';
+        if (!disposition) return fallback;
+        const match = /filename="?([^"]+)"?/i.exec(disposition);
+        return match?.[1] || fallback;
+    }
+
+    async function handleExport(mode: 'all' | 'selected') {
+        if (mode === 'selected' && selectedTicketIds.size === 0) {
+            setError('Selecione ao menos um incidente para baixar.');
+            return;
+        }
+
+        setExporting(mode);
+        setError(null);
+        try {
+            const payload = mode === 'all'
+                ? { mode: 'all' }
+                : { mode: 'selected', ticketIds: Array.from(selectedTicketIds) };
+
+            const res = await fetch('/api/internal/tickets/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                let msg = `[HTTP_${res.status}] Falha ao exportar incidentes.`;
+                try {
+                    const body = await res.json();
+                    msg = `[${body?.error || `HTTP_${res.status}`}] ${body?.message || 'Falha ao exportar incidentes.'}`;
+                } catch { /* keep fallback */ }
+                setError(msg);
+                return;
+            }
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filenameFromDisposition(res.headers.get('content-disposition'));
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            setError(`[NETWORK_ERROR] ${err instanceof Error ? err.message : 'Erro de rede.'}`);
+        } finally {
+            setExporting(null);
+        }
+    }
+
     return (
         <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
                 <div style={{ fontSize: '13px', color: '#7A7774' }}>
                     Registre incidentes, envie prints de erros ou sugira melhorias para o sistema.
                 </div>
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="tck-btn"
-                    style={{ height: '34px', padding: '0 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: '#C8A97A', border: 'none', color: '#000', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '6px', transition: 'background .15s' }}
-                >
-                    + Novo Relato
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    {isAdmin && tickets.length > 0 && (
+                        <>
+                            <button
+                                onClick={toggleAllSelection}
+                                type="button"
+                                style={{ height: '34px', padding: '0 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: '#C8C4BE', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                            >
+                                {allSelected ? 'Limpar seleção' : 'Selecionar tudo'}
+                            </button>
+                            <button
+                                onClick={() => handleExport('selected')}
+                                type="button"
+                                disabled={selectedCount === 0 || exporting !== null}
+                                style={{ height: '34px', padding: '0 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, background: 'transparent', border: '1px solid rgba(200,169,122,0.50)', color: '#C8A97A', cursor: selectedCount === 0 || exporting ? 'not-allowed' : 'pointer', opacity: selectedCount === 0 || exporting ? 0.45 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                            >
+                                {exporting === 'selected' ? 'Baixando...' : `Baixar selecionados${selectedCount ? ` (${selectedCount})` : ''}`}
+                            </button>
+                            <button
+                                onClick={() => handleExport('all')}
+                                type="button"
+                                disabled={exporting !== null}
+                                style={{ height: '34px', padding: '0 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, background: '#1A1A1E', border: '1px solid rgba(255,255,255,0.12)', color: '#F0EDE8', cursor: exporting ? 'not-allowed' : 'pointer', opacity: exporting ? 0.55 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                            >
+                                {exporting === 'all' ? 'Baixando...' : 'Baixar tudo'}
+                            </button>
+                        </>
+                    )}
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="tck-btn"
+                        style={{ height: '34px', padding: '0 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: '#C8A97A', border: 'none', color: '#000', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '6px', transition: 'background .15s' }}
+                    >
+                        + Novo Relato
+                    </button>
+                </div>
             </div>
 
             {loading ? (
@@ -364,6 +478,15 @@ function IncidentsTab({ userRole }: { userRole: string }) {
                         <div key={ticket.id} style={{ background: '#0F0F11', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', gap: '16px' }}>
                                 <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', minWidth: 0, flex: 1 }}>
+                                    {isAdmin && (
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedTicketIds.has(ticket.id)}
+                                            onChange={() => toggleTicketSelection(ticket.id)}
+                                            aria-label={`Selecionar incidente ${ticket.title}`}
+                                            style={{ width: '16px', height: '16px', marginTop: '2px', accentColor: '#C8A97A', flexShrink: 0 }}
+                                        />
+                                    )}
                                     <div style={{ padding: '4px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em', color: '#E8E4DE', flexShrink: 0 }}>
                                         {TYPE_LABELS[ticket.type]}
                                     </div>
