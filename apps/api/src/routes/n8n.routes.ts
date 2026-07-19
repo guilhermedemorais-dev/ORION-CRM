@@ -600,6 +600,7 @@ router.get(
 const availableSlotsQuerySchema = z.object({
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date deve ser YYYY-MM-DD'),
     period: z.enum(['manha', 'tarde']).optional(),
+    next_available: z.coerce.boolean().optional().default(false),
 });
 
 router.get(
@@ -613,61 +614,70 @@ router.get(
                 next(AppError.badRequest('Parâmetros inválidos: ' + parsed.error.issues[0]?.message));
                 return;
             }
-            const { date, period } = parsed.data;
+            const { period, next_available } = parsed.data;
+            let date = parsed.data.date;
+            let dayOfWeek = 0;
+            let top3: string[] = [];
+            const maxAttempts = next_available ? 14 : 1;
 
-            // Determinar horário de funcionamento pelo dia da semana (fuso SP)
-            const dayDate = new Date(`${date}T12:00:00-03:00`);
-            const dayOfWeek = dayDate.getDay(); // 0=dom … 6=sab
+            for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+                // Determinar horário de funcionamento pelo dia da semana (fuso SP)
+                const dayDate = new Date(`${date}T12:00:00-03:00`);
+                dayOfWeek = dayDate.getDay(); // 0=dom … 6=sab
 
-            if (dayOfWeek === 0) {
-                res.json({ date, slots: [], message: 'Aos domingos estamos fechados.' });
-                return;
+                if (dayOfWeek !== 0) {
+                    const openHour = 9;
+                    const closeHour = dayOfWeek === 6 ? 13 : 18;
+
+                    // Gerar todos os slots candidatos (45 min de duração, passo de 60 min)
+                    const allSlots: string[] = [];
+                    let minutesCursor = openHour * 60;
+                    while (minutesCursor + 45 <= closeHour * 60) {
+                        const h = Math.floor(minutesCursor / 60);
+                        const m = minutesCursor % 60;
+                        allSlots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+                        minutesCursor += 60;
+                    }
+
+                    // Buscar appointments do dia que não estejam cancelados
+                    type BusyRow = { starts_at: string; ends_at: string };
+                    const busyResult = await query<BusyRow>(
+                        `SELECT starts_at, ends_at
+                         FROM appointments
+                         WHERE starts_at >= $1::date
+                           AND starts_at <  $1::date + INTERVAL '1 day'
+                           AND status NOT IN ('CANCELADO')`,
+                        [date]
+                    );
+
+                    // Filtrar slots com mais de 1 appointment simultâneo (max 2 por slot)
+                    const available = allSlots.filter(slot => {
+                        const slotStart = new Date(`${date}T${slot}:00-03:00`);
+                        const slotEnd = new Date(slotStart.getTime() + 45 * 60_000);
+                        const concurrent = busyResult.rows.filter(b => {
+                            const bStart = new Date(b.starts_at);
+                            const bEnd = new Date(b.ends_at);
+                            return slotStart < bEnd && slotEnd > bStart;
+                        }).length;
+                        return concurrent < 2;
+                    });
+
+                    // Filtrar por período
+                    const filtered = period === 'manha'
+                        ? available.filter(s => parseInt(s.split(':')[0] ?? '0', 10) < 12)
+                        : period === 'tarde'
+                            ? available.filter(s => parseInt(s.split(':')[0] ?? '0', 10) >= 12)
+                            : available;
+
+                    top3 = filtered.slice(0, 3);
+                    if (top3.length > 0 || !next_available) break;
+                }
+
+                if (attempt >= maxAttempts - 1) break;
+                const nextDate = new Date(`${date}T12:00:00-03:00`);
+                nextDate.setDate(nextDate.getDate() + 1);
+                date = nextDate.toISOString().slice(0, 10);
             }
-
-            const openHour = 9;
-            const closeHour = dayOfWeek === 6 ? 13 : 18;
-
-            // Gerar todos os slots candidatos (45 min de duração, passo de 60 min)
-            const allSlots: string[] = [];
-            let minutesCursor = openHour * 60;
-            while (minutesCursor + 45 <= closeHour * 60) {
-                const h = Math.floor(minutesCursor / 60);
-                const m = minutesCursor % 60;
-                allSlots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-                minutesCursor += 60;
-            }
-
-            // Buscar appointments do dia que não estejam cancelados
-            type BusyRow = { starts_at: string; ends_at: string };
-            const busyResult = await query<BusyRow>(
-                `SELECT starts_at, ends_at
-                 FROM appointments
-                 WHERE starts_at >= $1::date
-                   AND starts_at <  $1::date + INTERVAL '1 day'
-                   AND status NOT IN ('CANCELADO')`,
-                [date]
-            );
-
-            // Filtrar slots com mais de 1 appointment simultâneo (max 2 por slot)
-            const available = allSlots.filter(slot => {
-                const slotStart = new Date(`${date}T${slot}:00-03:00`);
-                const slotEnd = new Date(slotStart.getTime() + 45 * 60_000);
-                const concurrent = busyResult.rows.filter(b => {
-                    const bStart = new Date(b.starts_at);
-                    const bEnd = new Date(b.ends_at);
-                    return slotStart < bEnd && slotEnd > bStart;
-                }).length;
-                return concurrent < 2;
-            });
-
-            // Filtrar por período
-            const filtered = period === 'manha'
-                ? available.filter(s => parseInt(s.split(':')[0] ?? '0', 10) < 12)
-                : period === 'tarde'
-                    ? available.filter(s => parseInt(s.split(':')[0] ?? '0', 10) >= 12)
-                    : available;
-
-            const top3 = filtered.slice(0, 3);
 
             const dayNames = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
             const day_name = dayNames[dayOfWeek] ?? '';
@@ -699,6 +709,9 @@ const createAppointmentN8nSchema = z.object({
     type: z.string().trim().min(1).max(50),
     starts_at: z.string().min(1, 'starts_at obrigatório'),
     ends_at: z.string().min(1, 'ends_at obrigatório'),
+    customer_name: z.string().trim().max(255).optional().nullable(),
+    customer_email: z.string().trim().email().max(255).optional().nullable(),
+    visit_reason: z.string().trim().max(1000).optional().nullable(),
     notes: z.string().trim().max(4000).optional().nullable(),
     ai_context: z.record(z.unknown()).optional().nullable(),
 });
@@ -716,6 +729,18 @@ router.post(
             }
             const { whatsapp_number, type, starts_at, ends_at, notes, ai_context } = parsed.data;
             const number = normalizeWhatsapp(whatsapp_number);
+            const resolvedName = parsed.data.customer_name
+                ?? (typeof ai_context?.['customer_name'] === 'string' ? ai_context['customer_name'] : null);
+            const resolvedEmail = parsed.data.customer_email
+                ?? (typeof ai_context?.['customer_email'] === 'string' ? ai_context['customer_email'] : null);
+            const resolvedVisitReason = parsed.data.visit_reason
+                ?? (typeof ai_context?.['visit_reason'] === 'string' ? ai_context['visit_reason'] : null);
+            const enrichedAiContext = {
+                ...(ai_context ?? {}),
+                customer_name: resolvedName ?? null,
+                customer_email: resolvedEmail ?? null,
+                visit_reason: resolvedVisitReason ?? null,
+            };
 
             const { appointmentId, leadId } = await transaction(async (client) => {
                 // Buscar pipeline 'leads' padrão e stage_id de QUALIFICADO
@@ -733,12 +758,15 @@ router.post(
 
                 // Upsert lead — criar como NOVO se não existir
                 const leadUpsert = await client.query<{ id: string }>(
-                    `INSERT INTO leads (whatsapp_number, stage, pipeline_id, last_interaction_at)
-                     VALUES ($1, 'NOVO'::lead_stage, $2, NOW())
+                    `INSERT INTO leads (whatsapp_number, name, email, stage, pipeline_id, last_interaction_at)
+                     VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), 'NOVO'::lead_stage, $4, NOW())
                      ON CONFLICT (whatsapp_number, pipeline_id) DO UPDATE
-                       SET last_interaction_at = NOW(), updated_at = NOW()
+                       SET name = COALESCE(NULLIF(EXCLUDED.name, ''), leads.name),
+                           email = COALESCE(NULLIF(EXCLUDED.email, ''), leads.email),
+                           last_interaction_at = NOW(),
+                           updated_at = NOW()
                      RETURNING id`,
-                    [number, pipelineId]
+                    [number, resolvedName ?? '', resolvedEmail ?? '', pipelineId]
                 );
                 const resolvedLeadId = leadUpsert.rows[0]?.id ?? null;
 
@@ -747,7 +775,7 @@ router.post(
                     `INSERT INTO appointments (type, status, source, starts_at, ends_at, notes, lead_id, pipeline_id, ai_context)
                      VALUES ($1, 'AGENDADO', 'WHATSAPP_BOT', $2::timestamptz, $3::timestamptz, $4, $5, $6, $7)
                      RETURNING id`,
-                    [type, starts_at, ends_at, notes ?? null, resolvedLeadId, pipelineId, ai_context ? JSON.stringify(ai_context) : null]
+                    [type, starts_at, ends_at, notes ?? null, resolvedLeadId, pipelineId, JSON.stringify(enrichedAiContext)]
                 );
                 const resolvedApptId = apptResult.rows[0]?.id;
                 if (!resolvedApptId) throw AppError.internal('Falha ao criar agendamento.');
