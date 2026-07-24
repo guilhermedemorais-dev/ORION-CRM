@@ -98,8 +98,9 @@ export function Topbar({
                     <button
                         type="button"
                         onClick={onMenuClick}
-                        className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-[color:var(--orion-border-low)] bg-white/5 text-[color:var(--orion-text-secondary)] outline-none transition-colors duration-120 hover:border-[color:var(--orion-border-mid)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)] lg:hidden"
-                        aria-label="Abrir menu de navegação"
+                        className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-[color:var(--orion-border-low)] bg-white/5 text-[color:var(--orion-text-secondary)] outline-none transition-colors duration-120 hover:border-[color:var(--orion-border-mid)] hover:text-[color:var(--orion-text)] hover:bg-[color:var(--orion-hover)] lg:min-h-0 lg:h-9 lg:w-9 lg:min-w-0"
+                        aria-label="Mostrar ou ocultar menu lateral"
+                        title="Mostrar/ocultar menu lateral"
                     >
                         <Menu className="h-4 w-4" />
                     </button>

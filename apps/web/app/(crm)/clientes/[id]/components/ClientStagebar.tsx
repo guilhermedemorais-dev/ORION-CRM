@@ -6,19 +6,14 @@ interface Props {
   stages: PipelineStage[];
   currentStageId: string | null;
   leadId: string | null;
-  onStageChange: (stageId: string) => void;
+  onStageChange: (stageId: string) => Promise<void>;
 }
 
 export default function ClientStagebar({ stages, currentStageId, leadId, onStageChange }: Props) {
   async function handleStageClick(stageId: string) {
     if (!leadId || stageId === currentStageId) return;
     try {
-      await fetch(`/api/internal/leads/${leadId}/stage`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stage_id: stageId }),
-      });
-      onStageChange(stageId);
+      await onStageChange(stageId);
     } catch {
       // silently fail — user can retry
     }

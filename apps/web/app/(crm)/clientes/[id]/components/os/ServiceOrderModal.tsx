@@ -1,708 +1,1010 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { parseCurrencyToCents } from '@/lib/financeiro';
 import { notify } from '@/lib/toast';
 
+// TASK-002 (#9): pane de COTACAO da OS multi-pecas (projeto -> pecas -> proposta).
+// LAYOUT: copia 1:1 da aba "2. Cotacao" do mockup
+// docs/design/mockups/production/mockup-2026-06-15-os-multi-piece-proposal.html.
+// A aba "1. Anotacoes e fotos" pertence ao AttendancePopup (bloco de notas REAL do
+// atendimento) — este componente NAO tem notas proprias para nao duplicar bloco.
+// Embedded: renderiza dentro do AttendancePopup como aba 2. Standalone (ClientOSTab):
+// abre como modal direto na cotacao.
+// Divergencias aprovadas do mockup: preco SOMENTE LEITURA calculado (RN-08) e nada de
+// custo/mao de obra/perda/preco manual (RN-06) — decisao Guilherme 2026-07-10.
+// Persistencia real: POST /api/internal/proposals (TASK-005).
+
 interface ProductOption {
-    id: string;
-    code: string;
-    name: string;
-    price_cents: number;
-    cost_price_cents: number;
-    stock_quantity: number;
-    is_raw_material: boolean;
-    metal: string | null;
-    category: string | null;
+  id: string;
+  code: string;
+  name: string;
+  price_cents: number;
+  is_raw_material: boolean;
+  category: string | null;
+  stock_quantity?: number | null;
 }
+
+interface TeamUser {
+  id: string;
+  name: string;
+  status?: string;
+}
+
+type MaterialOrigin = 'own_stock' | 'customer_custody';
+type MaterialTab = 'store' | 'custody';
+type CustodySubTab = 'existing' | 'new';
+type StockFilter = 'all' | 'metais' | 'pedras' | 'insumos' | 'prontas';
 
 interface DraftMaterial {
-    tempId: string;
-    productId: string;
-    productCode: string;
-    productName: string;
-    isRawMaterial: boolean;
-    quantity: string;
-    unitPriceCents: number;
-    unitCostCents: number;
-    stockAtAdd: number;
+  tempId: string;
+  origin: MaterialOrigin;
+  productId?: string;
+  productCode?: string;
+  label: string;
+  detail: string;
+  quantity: string;
+  unit: string;
+  unitPriceCents: number; // preco unitario (leitura). Custo NAO trafega aqui.
+  creditCents: number; // custodia: credito negociado (soma no credito da proposta)
 }
 
-function formatCentsBRInput(cents: number): string {
-  return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+interface PieceTech {
+  quantidade: string;
+  metal: string;
+  pedra: string;
+  aroMedida: string;
+  peso: string;
+  largura: string;
+  espessura: string;
+  acabamento: string;
+  corBanho: string;
+  cravacao: string;
+  gravacao: string;
+  referencia: string;
+  especificacoes: string;
+}
+
+interface DraftPiece {
+  tempId: string;
+  category: string; // unico dropdown tecnico da peca (RN-02)
+  title: string;
+  tech: PieceTech;
+  materials: DraftMaterial[];
+  collapsed: boolean;
 }
 
 interface Props {
   customerId: string;
+  attendanceBlockId?: string;
+  embedded?: boolean;
+  submitBlocked?: boolean;
+  locked?: boolean; // proposta ja registrada/aprovada (edicao = Fase 2)
+  onBeforeCreate?: () => Promise<string>;
   onClose: () => void;
   onSaved: () => void;
 }
 
-const inputStyle: React.CSSProperties = {
-  height: '35px',
-  background: '#1A1A1E',
-  border: '1px solid rgba(255,255,255,0.10)',
+// ---- Tokens do mockup (:root do mockup-2026-06-15) ----
+const V = {
+  base: '#0F0F11',
+  surface: '#131316',
+  elevated: '#1A1A1E',
+  gold: '#BFA06A',
+  goldDim: 'rgba(191,160,106,0.11)',
+  goldBorder: 'rgba(191,160,106,0.28)',
+  text: '#F0EBE3',
+  secondary: '#A09A94',
+  muted: '#66616A',
+  border: 'rgba(255,255,255,0.07)',
+  borderMid: 'rgba(255,255,255,0.11)',
+  green: '#4CAF82',
+  greenText: '#8CC9AA',
+  red: '#E05252',
+  amber: '#F0A040',
+  blue: '#4A9EFF',
+  purple: '#9C6FDE',
+  purpleLight: '#C6A9F3',
+  strip: '#111113',
+} as const;
+
+const control: React.CSSProperties = {
+  minHeight: '34px',
+  border: `1px solid ${V.borderMid}`,
+  background: V.elevated,
+  color: V.text,
   borderRadius: '7px',
   padding: '0 11px',
-  fontSize: '12px',
-  color: '#F0EDE8',
-  width: '100%',
-  boxSizing: 'border-box',
-  fontFamily: "'DM Sans', sans-serif",
   outline: 'none',
+  width: '100%',
+  fontSize: '12px',
+  boxSizing: 'border-box',
+  fontFamily: 'Inter, sans-serif',
 };
 
-const labelStyle: React.CSSProperties = {
-  fontSize: '11px',
-  fontWeight: 700,
-  color: '#E8E4DE',
+const labelCss: React.CSSProperties = {
   display: 'block',
-  marginBottom: '4px',
+  margin: '0 0 5px',
+  fontSize: '9px',
+  color: V.muted,
+  fontWeight: 800,
+  letterSpacing: '0.09em',
+  textTransform: 'uppercase',
 };
 
-function FieldGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label style={labelStyle}>{label}</label>
-      {children}
-    </div>
-  );
+const btn: React.CSSProperties = {
+  minHeight: '34px',
+  borderRadius: '7px',
+  padding: '0 13px',
+  fontSize: '11px',
+  fontWeight: 750,
+  border: `1px solid ${V.borderMid}`,
+  background: V.elevated,
+  color: V.secondary,
+  cursor: 'pointer',
+};
+const btnGold: React.CSSProperties = { ...btn, background: V.gold, borderColor: V.gold, color: '#111' };
+const btnGoldSoft: React.CSSProperties = { ...btn, background: V.goldDim, borderColor: V.goldBorder, color: V.gold };
+const btnBlue: React.CSSProperties = { ...btn, background: 'rgba(74,158,255,0.12)', borderColor: 'rgba(74,158,255,0.25)', color: V.blue };
+const btnDanger: React.CSSProperties = { ...btn, color: V.red, borderColor: 'rgba(224,82,82,0.2)', background: 'rgba(224,82,82,0.07)' };
+const iconBtn: React.CSSProperties = {
+  width: '28px', height: '28px', border: `1px solid ${V.border}`, background: V.elevated,
+  color: V.secondary, borderRadius: '6px', cursor: 'pointer', fontSize: '11px',
+};
+
+const CATEGORY_OPTIONS = ['Anel', 'Aliança', 'Colar', 'Pingente', 'Brinco', 'Pulseira', 'Cordão', 'Outro'];
+const STOCK_FILTERS: { key: StockFilter; label: string }[] = [
+  { key: 'all', label: 'Todos' },
+  { key: 'metais', label: 'Metais' },
+  { key: 'pedras', label: 'Pedras' },
+  { key: 'insumos', label: 'Insumos' },
+  { key: 'prontas', label: 'Peças prontas' },
+];
+
+function brl(cents: number): string {
+  return `R$ ${(cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      fontSize: '11px',
-      fontWeight: 700,
-      letterSpacing: '0.10em',
-      textTransform: 'uppercase' as const,
-      color: '#7A7774',
-      marginBottom: '10px',
-      paddingBottom: '6px',
-      borderBottom: '1px solid rgba(255,255,255,0.06)',
-    }}>
-      {children}
-    </div>
-  );
+function centsFromInput(str: string): number {
+  const onlyNums = str.replace(/\D/g, '');
+  return onlyNums ? Number(onlyNums) : 0;
 }
 
-export default function ServiceOrderModal({ customerId, onClose, onSaved }: Props) {
+function qtyOf(str: string): number {
+  return parseFloat(str.replace(',', '.')) || 0;
+}
+
+function uid(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function emptyTech(): PieceTech {
+  return {
+    quantidade: '1', metal: '', pedra: '', aroMedida: '', peso: '', largura: '',
+    espessura: '', acabamento: '', corBanho: '', cravacao: '', gravacao: '',
+    referencia: '', especificacoes: '',
+  };
+}
+
+function newPiece(): DraftPiece {
+  return {
+    tempId: uid('p'), category: '', title: '', tech: emptyTech(), materials: [], collapsed: false,
+  };
+}
+
+// Chips do mockup (Metais/Pedras/Insumos/Pecas prontas) sobre o cadastro real
+// (backend so tem is_raw_material + texto) -> classificacao client-side.
+function matchesStockFilter(p: ProductOption, filter: StockFilter): boolean {
+  if (filter === 'all') return true;
+  if (filter === 'prontas') return !p.is_raw_material;
+  if (!p.is_raw_material) return false;
+  const hay = `${p.name} ${p.category ?? ''}`.toLowerCase();
+  if (filter === 'metais') return /(ouro|prata|platina|paladio|bronze|metal|\bau\b|\bag\b)/.test(hay);
+  if (filter === 'pedras') return /(pedra|diamante|safira|rubi|esmeralda|zirc|cristal|brilhante|topazio|ametista)/.test(hay);
+  return !/(ouro|prata|platina|metal|diamante|safira|rubi|esmeralda|pedra|zirc|cristal)/.test(hay);
+}
+
+function inventoryIcon(p: ProductOption): string {
+  const n = p.name.toLowerCase();
+  if (/ouro/.test(n)) return 'Au';
+  if (/prata/.test(n)) return 'Ag';
+  if (/(diamante|pedra|safira|rubi|esmeralda|zirc|cristal|brilhante)/.test(n)) return '◇';
+  return '◆';
+}
+
+export default function ServiceOrderModal({
+  customerId,
+  attendanceBlockId,
+  embedded = false,
+  submitBlocked = false,
+  locked = false,
+  onBeforeCreate,
+  onClose,
+  onSaved,
+}: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    product_name: '',
-    priority: 'normal',
-    designer_id: '',
-    jeweler_id: '',
-    due_date: '',
-    deposit_cents_str: '',
-    total_cents_str: '',
-    metal: '',
-    stone: '',
-    ring_size: '',
-    weight: '',
-    notes: '',
-  });
+  const [showPreview, setShowPreview] = useState(false);
 
-  // Materiais a serem adicionados na OS após criação
-  const [materials, setMaterials] = useState<DraftMaterial[]>([]);
+  // project-bar (dentro da Cotacao, como no mockup)
+  const [project, setProject] = useState({ title: '', dueDate: '', responsibleId: '' });
+  const [customerCreditStr, setCustomerCreditStr] = useState('');
+
+  const [pieces, setPieces] = useState<DraftPiece[]>([newPiece()]);
+  const [responsibles, setResponsibles] = useState<TeamUser[]>([]);
+  const [teamLoading, setTeamLoading] = useState(true);
+
+  // Origem do material por peca (segmented) + busca de estoque direcionada
+  const [matTab, setMatTab] = useState<Record<string, MaterialTab>>({});
+  const [materialTarget, setMaterialTarget] = useState<string | null>(null);
   const [materialSearch, setMaterialSearch] = useState('');
-  const [materialFilter, setMaterialFilter] = useState<'all' | 'raw' | 'finished'>('all');
+  const [stockFilter, setStockFilter] = useState<StockFilter>('all');
   const [searchResults, setSearchResults] = useState<ProductOption[]>([]);
   const [searching, setSearching] = useState(false);
-  const [showSearchResults, setShowSearchResults] = useState(false);
-  const [laborCentsStr, setLaborCentsStr] = useState('');
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchNonce, setSearchNonce] = useState(0);
+  const [feedback, setFeedback] = useState<{ pieceId: string; msg: string } | null>(null);
+
+  // Custodia (subsistema de lotes inexistente -> registro manual local)
+  const [custodySubTab, setCustodySubTab] = useState<Record<string, CustodySubTab>>({});
+  const [custodyForm, setCustodyForm] = useState({
+    tipo: 'Metal / matéria-prima', material: '', pesoBruto: '', pesoLiquido: '',
+    descricao: '', valorRef: '', creditoStr: '', observacoes: '',
+  });
+  const [custodyFiles, setCustodyFiles] = useState<string[]>([]);
+  const custodyFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (embedded) return;
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape' && !saving) onClose();
+      if (e.key === 'Escape' && !saving) {
+        if (showPreview) setShowPreview(false);
+        else onClose();
+      }
     }
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
-  }, [onClose, saving]);
+  }, [embedded, onClose, saving, showPreview]);
 
-  // Busca produtos com debounce para autocomplete de materiais
   useEffect(() => {
-    if (!materialSearch.trim()) {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/internal/users?role=PRODUCAO');
+        if (!res.ok) throw new Error('team');
+        const data = await res.json();
+        const users: TeamUser[] = Array.isArray(data) ? data : (data.data ?? []);
+        if (active) setResponsibles(users.filter((u) => u.status !== 'inactive'));
+      } catch {
+        /* equipe opcional */
+      } finally {
+        if (active) setTeamLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  // Busca de produtos (estoque proprio) com debounce
+  useEffect(() => {
+    if (!materialTarget || !materialSearch.trim()) {
       setSearchResults([]);
-      setShowSearchResults(false);
       return;
     }
     setSearching(true);
+    setSearchError(null);
     const handle = setTimeout(async () => {
       try {
-        const params = new URLSearchParams({ q: materialSearch.trim(), limit: '12', active_only: 'true' });
-        if (materialFilter === 'raw') params.set('is_raw_material', 'true');
-        if (materialFilter === 'finished') params.set('is_raw_material', 'false');
+        const params = new URLSearchParams({ q: materialSearch.trim(), limit: '18', active_only: 'true' });
+        if (stockFilter === 'prontas') params.set('is_raw_material', 'false');
+        else if (stockFilter !== 'all') params.set('is_raw_material', 'true');
         const res = await fetch(`/api/internal/products?${params.toString()}`);
-        if (res.ok) {
-          const data = await res.json();
-          setSearchResults(Array.isArray(data?.data) ? data.data : []);
-          setShowSearchResults(true);
-        }
+        if (!res.ok) throw new Error('search');
+        const data = await res.json();
+        const rows: ProductOption[] = Array.isArray(data?.data) ? data.data : [];
+        setSearchResults(rows.filter((p) => matchesStockFilter(p, stockFilter)));
       } catch {
-        // silently fail
+        setSearchResults([]);
+        setSearchError('Não foi possível carregar os materiais. A OS foi preservada.');
       } finally {
         setSearching(false);
       }
     }, 250);
     return () => clearTimeout(handle);
-  }, [materialSearch, materialFilter]);
+  }, [materialTarget, materialSearch, stockFilter, searchNonce]);
 
-  const addMaterial = useCallback((product: ProductOption) => {
-    setMaterials((prev) => {
-      if (prev.some((m) => m.productId === product.id)) {
-        return prev;
-      }
-      return [
-        ...prev,
-        {
-          tempId: `${product.id}-${Date.now()}`,
-          productId: product.id,
-          productCode: product.code,
-          productName: product.name,
-          isRawMaterial: product.is_raw_material,
-          quantity: '1',
-          unitPriceCents: product.price_cents,
-          unitCostCents: product.cost_price_cents ?? 0,
-          stockAtAdd: product.stock_quantity,
-        },
-      ];
+  useEffect(() => {
+    if (!feedback) return;
+    const t = setTimeout(() => setFeedback(null), 2200);
+    return () => clearTimeout(t);
+  }, [feedback]);
+
+  // ---- Pecas ----
+  const setPieceMatTab = useCallback((pieceId: string, value: MaterialTab) => {
+    setMatTab((prev) => ({ ...prev, [pieceId]: value }));
+  }, []);
+
+  const addPiece = useCallback(() => setPieces((prev) => [...prev, newPiece()]), []);
+  const removePiece = useCallback((id: string) => setPieces((prev) => prev.filter((p) => p.tempId !== id)), []);
+  const duplicatePiece = useCallback((id: string) => {
+    setPieces((prev) => {
+      const src = prev.find((p) => p.tempId === id);
+      if (!src) return prev;
+      return [...prev, {
+        ...src,
+        tempId: uid('p'),
+        title: src.title ? `${src.title} (cópia)` : '',
+        tech: { ...src.tech },
+        materials: src.materials.map((m) => ({ ...m, tempId: uid('m') })),
+        collapsed: false,
+      }];
     });
-    setMaterialSearch('');
-    setSearchResults([]);
-    setShowSearchResults(false);
+  }, []);
+  const patchPiece = useCallback((id: string, patch: Partial<DraftPiece>) => {
+    setPieces((prev) => prev.map((p) => (p.tempId === id ? { ...p, ...patch } : p)));
+  }, []);
+  const patchPieceTech = useCallback((id: string, key: keyof PieceTech, value: string) => {
+    setPieces((prev) => prev.map((p) => (p.tempId === id ? { ...p, tech: { ...p.tech, [key]: value } } : p)));
   }, []);
 
-  const removeMaterial = useCallback((tempId: string) => {
-    setMaterials((prev) => prev.filter((m) => m.tempId !== tempId));
+  // ---- Materiais ----
+  const addOwnStockMaterial = useCallback((pieceId: string, product: ProductOption) => {
+    setPieces((prev) => prev.map((p) => {
+      if (p.tempId !== pieceId) return p;
+      if (p.materials.some((m) => m.origin === 'own_stock' && m.productId === product.id)) return p;
+      const unit = product.is_raw_material ? 'g' : 'un';
+      const stock = typeof product.stock_quantity === 'number' ? `${product.stock_quantity} ${unit} disponíveis` : 'Estoque próprio';
+      return {
+        ...p,
+        materials: [...p.materials, {
+          tempId: uid('m'), origin: 'own_stock',
+          productId: product.id, productCode: product.code,
+          label: product.name, detail: `${product.code} · ${stock}`,
+          quantity: '1', unit, unitPriceCents: product.price_cents, creditCents: 0,
+        }],
+      };
+    }));
+    setFeedback({ pieceId, msg: `${product.name} adicionado à peça. Ajuste a quantidade na lista.` });
   }, []);
 
-  const updateMaterialQuantity = useCallback((tempId: string, value: string) => {
-    setMaterials((prev) => prev.map((m) => m.tempId === tempId ? { ...m, quantity: value } : m));
-  }, []);
-
-  // Cálculo: subtotal materiais + mão de obra = total preview
-  const materialsSubtotalCents = materials.reduce((sum, m) => {
-    const qty = parseFloat(m.quantity.replace(',', '.')) || 0;
-    return sum + Math.round(qty * m.unitPriceCents);
-  }, 0);
-  const laborCents = parseCents(laborCentsStr);
-  const previewTotalCents = materialsSubtotalCents + laborCents;
-
-  function handleChange(field: keyof typeof form) {
-    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-      setForm((prev) => ({ ...prev, [field]: e.target.value }));
-    };
-  }
-
-  function handleCurrencyChange(field: 'deposit_cents_str' | 'total_cents_str') {
-    return (e: React.ChangeEvent<HTMLInputElement>) => {
-      const onlyNums = e.target.value.replace(/\D/g, '');
-      const next = onlyNums ? formatCentsBRInput(Number(onlyNums)) : '';
-      setForm((prev) => ({ ...prev, [field]: next }));
-    };
-  }
-
-  function parseCents(str: string): number {
-    return parseCurrencyToCents(str) ?? 0;
-  }
-
-  async function handleSave() {
-    if (!form.product_name.trim()) {
-      setError('Informe o nome do produto.');
+  const registerCustodyMaterial = useCallback((pieceId: string) => {
+    const label = custodyForm.material.trim() || custodyForm.descricao.trim();
+    if (!label || !custodyForm.descricao.trim()) {
+      setError('Preencha a descrição da joia/material do cliente antes de registrar a custódia.');
       return;
     }
+    const credit = centsFromInput(custodyForm.creditoStr);
+    setPieces((prev) => prev.map((p) => {
+      if (p.tempId !== pieceId) return p;
+      return {
+        ...p,
+        materials: [...p.materials, {
+          tempId: uid('m'), origin: 'customer_custody',
+          label,
+          detail: `${custodyForm.descricao.trim()}${custodyForm.pesoBruto ? ` · bruto ${custodyForm.pesoBruto}` : ''} · custódia separada do estoque`,
+          quantity: custodyForm.pesoLiquido || '1',
+          unit: custodyForm.tipo.startsWith('Pedra') ? 'un' : 'g',
+          unitPriceCents: 0,
+          creditCents: credit,
+        }],
+      };
+    }));
+    if (credit > 0) {
+      setCustomerCreditStr((prevStr) => {
+        const total = centsFromInput(prevStr) + credit;
+        return (total / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      });
+    }
+    setCustodyForm({ tipo: 'Metal / matéria-prima', material: '', pesoBruto: '', pesoLiquido: '', descricao: '', valorRef: '', creditoStr: '', observacoes: '' });
+    setCustodyFiles([]);
+    setError(null);
+  }, [custodyForm]);
+
+  const patchMaterial = useCallback((pieceId: string, matId: string, patch: Partial<DraftMaterial>) => {
+    setPieces((prev) => prev.map((p) => (p.tempId !== pieceId ? p : {
+      ...p, materials: p.materials.map((m) => (m.tempId === matId ? { ...m, ...patch } : m)),
+    })));
+  }, []);
+
+  const removeMaterial = useCallback((pieceId: string, matId: string) => {
+    setPieces((prev) => prev.map((p) => (p.tempId !== pieceId ? p : {
+      ...p, materials: p.materials.filter((m) => m.tempId !== matId),
+    })));
+  }, []);
+
+  // ---- Calculos (preco leitura; sem custo) ----
+  const pieceHasMaterial = (p: DraftPiece) =>
+    p.materials.some((m) => qtyOf(m.quantity) > 0 && (m.origin === 'own_stock' ? !!m.productId : m.label.trim().length > 0));
+
+  const piecePriceCents = (p: DraftPiece) =>
+    p.materials.reduce((sum, m) => sum + Math.round(qtyOf(m.quantity) * m.unitPriceCents), 0);
+
+  const subtotalCents = useMemo(() => pieces.reduce((sum, p) => sum + piecePriceCents(p), 0), [pieces]);
+  const customerCreditCents = centsFromInput(customerCreditStr);
+  const totalCents = Math.max(0, subtotalCents - customerCreditCents);
+  const sinalCents = Math.round(totalCents * 0.5); // RN-10: sinal minimo inicial 50%
+
+  const validPieces = pieces.filter(pieceHasMaterial);
+  const piecesMissingMaterial = pieces.filter((p) => !pieceHasMaterial(p));
+  const canGenerate = pieces.length > 0 && piecesMissingMaterial.length === 0 && !submitBlocked && !locked;
+
+  async function handleConfirmProposal() {
     setSaving(true);
     setError(null);
     try {
-      // 1) Cria a OS primeiro (sem materiais ainda).
-      const res = await fetch('/api/internal/service-orders', {
+      const resolvedAttendanceBlockId = onBeforeCreate ? await onBeforeCreate() : attendanceBlockId;
+      const res = await fetch('/api/internal/proposals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customer_id: customerId,
-          product_name: form.product_name,
-          priority: form.priority,
-          designer_id: form.designer_id || undefined,
-          jeweler_id: form.jeweler_id || undefined,
-          due_date: form.due_date || undefined,
-          deposit_cents: parseCents(form.deposit_cents_str),
-          total_cents: parseCents(form.total_cents_str),
-          specs: {
-            metal: form.metal || undefined,
-            stone: form.stone || undefined,
-            ring_size: form.ring_size || undefined,
-            weight: form.weight || undefined,
-          },
-          notes: form.notes || undefined,
+          attendance_block_id: resolvedAttendanceBlockId,
+          title: project.title || undefined,
+          due_date: project.dueDate || undefined,
+          responsible_user_id: project.responsibleId || undefined,
+          customer_credit_cents: customerCreditCents,
+          pieces: pieces.map((p) => ({
+            category: p.category || undefined,
+            title: p.title || undefined,
+            tech_specs: p.tech,
+            materials: p.materials
+              .filter((m) => qtyOf(m.quantity) > 0)
+              .map((m) => ({
+                origin: m.origin,
+                product_id: m.origin === 'own_stock' ? m.productId : undefined,
+                material_label: m.origin === 'customer_custody' ? m.label : undefined,
+                quantity: qtyOf(m.quantity),
+                unit: m.unit,
+              })),
+          })),
         }),
       });
-      if (!res.ok) throw new Error('Falha ao criar OS');
-      const created = await res.json().catch(() => null);
-      const osId = created?.id ?? created?.data?.id ?? null;
-
-      // 2) Se temos OS criada e materiais selecionados, anexa cada um.
-      // Falhas individuais não derrubam a OS toda — usuário pode reanexar depois.
-      if (osId && materials.length > 0) {
-        for (const m of materials) {
-          const qty = parseFloat(m.quantity.replace(',', '.'));
-          if (!qty || qty <= 0) continue;
-          try {
-            await fetch(`/api/internal/service-orders/${osId}/materials`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ product_id: m.productId, quantity: qty }),
-            });
-          } catch {
-            // continua tentando os outros
-          }
-        }
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.message ?? `Backend da proposta indisponível (HTTP ${res.status}).`);
       }
-
-      // 3) Se mão de obra foi informada, registra agora (recálculo total).
-      if (osId && laborCents > 0) {
-        try {
-          await fetch(`/api/internal/service-orders/${osId}/labor`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ labor_cents: laborCents }),
-          });
-        } catch {
-          // ignora — pode editar depois
-        }
-      }
-
-      notify.success('Ordem de serviço criada', form.product_name);
+      notify.success('Proposta registrada', project.title || 'Projeto multi-peças');
+      setShowPreview(false);
       onSaved();
       router.refresh();
       onClose();
-    } catch {
-      setError('Erro ao criar OS. Tente novamente.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao gerar proposta.');
+      setShowPreview(false);
     } finally {
       setSaving(false);
     }
   }
 
+  function handleGenerateClick() {
+    if (!canGenerate) {
+      setError('Existe peça sem material selecionado. Selecione a matéria-prima/material obrigatório antes de gerar a proposta.');
+      return;
+    }
+    setError(null);
+    setShowPreview(true);
+  }
+
+  const footStatus = `Cotação em rascunho · ${validPieces.length} de ${pieces.length} peça(s) completa(s)`;
+
   return (
     <div
       style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.75)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '20px',
+        position: embedded ? 'static' : 'fixed',
+        inset: embedded ? undefined : 0,
+        background: embedded ? 'transparent' : 'rgba(0,0,0,0.75)',
+        display: embedded ? 'block' : 'flex',
+        alignItems: embedded ? undefined : 'center',
+        justifyContent: embedded ? undefined : 'center',
+        zIndex: embedded ? undefined : 1000,
+        padding: embedded ? 0 : '20px',
       }}
-      onClick={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}
+      onClick={(e) => { if (!embedded && e.target === e.currentTarget && !saving) onClose(); }}
     >
+      {/* .modal (embedded: pane puro dentro do AttendancePopup, sem chrome proprio) */}
       <div
         style={{
-          background: '#141417',
-          border: '1px solid rgba(255,255,255,0.10)',
-          borderRadius: '12px',
+          background: embedded ? 'transparent' : V.base,
+          border: embedded ? 'none' : `1px solid ${V.borderMid}`,
+          borderRadius: embedded ? 0 : '12px',
           width: '100%',
-          maxWidth: '680px',
-          maxHeight: '90vh',
-          overflowY: 'auto',
+          maxWidth: embedded ? 'none' : '1080px',
+          maxHeight: embedded ? 'none' : '92vh',
           display: 'flex',
           flexDirection: 'column',
+          overflow: embedded ? 'visible' : 'hidden',
         }}
       >
-        {/* Header */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '18px 24px',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
-            flexShrink: 0,
-          }}
-        >
-          <div>
-            <h2
-              style={{
-                fontFamily: "'Playfair Display', serif",
-                fontSize: '18px',
-                color: '#F0EDE8',
-                fontWeight: 600,
-                margin: 0,
-              }}
-            >
-              Nova Ordem de Serviço
+        {/* .modal-head */}
+        {!embedded && (
+          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '10px', padding: '13px 18px', borderBottom: `1px solid ${V.border}` }}>
+            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '16px', color: V.text, fontWeight: 600, margin: 0, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Atendimento · OS técnica multi-peças
             </h2>
+            <button onClick={onClose} aria-label="Fechar" style={{ width: '28px', height: '28px', border: 0, background: 'transparent', color: V.muted, fontSize: '17px', borderRadius: '5px', cursor: 'pointer', flexShrink: 0 }}>×</button>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              width: '28px',
-              height: '28px',
-              background: 'transparent',
-              border: 'none',
-              color: '#7A7774',
-              fontSize: '16px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '5px',
-            }}
-          >
-            ✕
-          </button>
-        </div>
+        )}
 
-        {/* Body */}
-        <div style={{ padding: '20px 24px', flex: 1 }}>
-          {/* Produto */}
-          <div style={{ marginBottom: '22px' }}>
-            <SectionTitle>Produto</SectionTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <FieldGroup label="Nome do produto / peça *">
-                  <input style={inputStyle} value={form.product_name} onChange={handleChange('product_name')} placeholder="Ex: Anel solitário ouro 18k" />
-                </FieldGroup>
+        {/* pane Cotacao (scroll) */}
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+          {locked ? (
+            <div style={{ padding: '30px', textAlign: 'center', margin: '16px 18px', border: `1px dashed ${V.borderMid}`, borderRadius: '9px', color: V.secondary }}>
+              <div style={{ fontSize: '30px', marginBottom: '8px' }}>🔒</div>
+              <h3 style={{ fontFamily: 'Georgia, serif', color: V.text, margin: '0 0 5px' }}>Proposta já aprovada</h3>
+              <p style={{ fontSize: '12px', margin: 0 }}>Esta versão está bloqueada. Para alterar peças ou valores, gere uma nova versão da proposta.</p>
+            </div>
+          ) : (
+            /* ---------- 2. COTACAO (.modal-scroll > .os-shell) ---------- */
+            <div style={{ padding: '16px 18px 22px' }}>
+              {/* .project-bar */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.7fr 0.7fr', gap: '10px', marginBottom: '12px' }}>
+                <label>
+                  <span style={labelCss}>Nome do projeto</span>
+                  <input style={control} value={project.title} onChange={(e) => setProject((p) => ({ ...p, title: e.target.value }))} placeholder="Ex: Conjunto casamento" />
+                </label>
+                <label>
+                  <span style={labelCss}>Prazo desejado</span>
+                  <input aria-label="Prazo desejado" style={{ ...control, colorScheme: 'dark' }} type="date" value={project.dueDate} onChange={(e) => setProject((p) => ({ ...p, dueDate: e.target.value }))} />
+                </label>
+                <label>
+                  <span style={labelCss}>Responsável</span>
+                  <select aria-label="Responsável" style={{ ...control, cursor: 'pointer' }} value={project.responsibleId} onChange={(e) => setProject((p) => ({ ...p, responsibleId: e.target.value }))} disabled={teamLoading}>
+                    <option value="">{teamLoading ? 'Carregando...' : 'Não atribuído'}</option>
+                    {responsibles.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                  </select>
+                </label>
               </div>
-              <FieldGroup label="Prioridade">
-                <select aria-label="Prioridade" style={{ ...inputStyle, cursor: 'pointer' }} value={form.priority} onChange={handleChange('priority')}>
-                  <option value="normal">Normal</option>
-                  <option value="alta">Alta</option>
-                  <option value="urgente">Urgente</option>
-                </select>
-              </FieldGroup>
-              <FieldGroup label="Prazo">
-                <input style={inputStyle} type="date" value={form.due_date} onChange={handleChange('due_date')} />
-              </FieldGroup>
-            </div>
-          </div>
 
-          {/* Specs */}
-          <div style={{ marginBottom: '22px' }}>
-            <SectionTitle>Especificações</SectionTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <FieldGroup label="Metal">
-                <select aria-label="Metal" style={{ ...inputStyle, cursor: 'pointer' }} value={form.metal} onChange={handleChange('metal')}>
-                  <option value="">Selecionar...</option>
-                  <option value="Ouro 18k amarelo">Ouro 18k amarelo</option>
-                  <option value="Ouro 18k branco">Ouro 18k branco</option>
-                  <option value="Ouro 18k rosé">Ouro 18k rosé</option>
-                  <option value="Prata 950">Prata 950</option>
-                  <option value="Platina">Platina</option>
-                </select>
-              </FieldGroup>
-              <FieldGroup label="Pedra principal">
-                <input style={inputStyle} value={form.stone} onChange={handleChange('stone')} placeholder="Ex: Diamante 0.30ct H/SI1" />
-              </FieldGroup>
-              <FieldGroup label="Tamanho do aro">
-                <input style={inputStyle} value={form.ring_size} onChange={handleChange('ring_size')} placeholder="Ex: 16" />
-              </FieldGroup>
-              <FieldGroup label="Peso estimado (g)">
-                <input style={inputStyle} value={form.weight} onChange={handleChange('weight')} placeholder="Ex: 4.5" />
-              </FieldGroup>
-            </div>
-          </div>
-
-          {/* Equipe */}
-          <div style={{ marginBottom: '22px' }}>
-            <SectionTitle>Equipe</SectionTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <FieldGroup label="Designer (ID)">
-                <input style={inputStyle} value={form.designer_id} onChange={handleChange('designer_id')} placeholder="ID do designer" />
-              </FieldGroup>
-              <FieldGroup label="Ourives (ID)">
-                <input style={inputStyle} value={form.jeweler_id} onChange={handleChange('jeweler_id')} placeholder="ID do ourives" />
-              </FieldGroup>
-            </div>
-          </div>
-
-          {/* Materiais consumidos */}
-          <div style={{ marginBottom: '22px' }}>
-            <SectionTitle>Materiais</SectionTitle>
-            <p style={{ fontSize: '11px', color: '#7A7774', marginTop: '-4px', marginBottom: '10px' }}>
-              Adicione matérias-primas ou peças prontas do estoque que serão consumidas na produção.
-              O subtotal soma o preço de venda de cada item.
-            </p>
-
-            {/* Filtros + busca */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-              {([
-                { key: 'all', label: 'Tudo' },
-                { key: 'raw', label: 'Matéria-prima' },
-                { key: 'finished', label: 'Peças prontas' },
-              ] as const).map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  onClick={() => setMaterialFilter(opt.key)}
-                  style={{
-                    height: '26px',
-                    padding: '0 10px',
-                    background: materialFilter === opt.key ? 'rgba(200,169,122,0.15)' : 'transparent',
-                    border: `1px solid ${materialFilter === opt.key ? 'rgba(200,169,122,0.35)' : 'rgba(255,255,255,0.10)'}`,
-                    borderRadius: '6px',
-                    color: materialFilter === opt.key ? '#C8A97A' : '#A8A4A0',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-
-            <div style={{ position: 'relative', marginBottom: '10px' }}>
-              <input
-                style={inputStyle}
-                value={materialSearch}
-                onChange={(e) => setMaterialSearch(e.target.value)}
-                placeholder="Buscar produto por nome ou código..."
-                onFocus={() => { if (searchResults.length > 0) setShowSearchResults(true); }}
-              />
-              {showSearchResults && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '38px',
-                    left: 0,
-                    right: 0,
-                    background: '#1A1A1E',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    borderRadius: '7px',
-                    maxHeight: '220px',
-                    overflowY: 'auto',
-                    zIndex: 10,
-                    boxShadow: '0 6px 24px rgba(0,0,0,0.45)',
-                  }}
-                >
-                  {searching && (
-                    <div style={{ padding: '10px 12px', fontSize: '11px', color: '#7A7774' }}>Buscando...</div>
-                  )}
-                  {!searching && searchResults.length === 0 && (
-                    <div style={{ padding: '10px 12px', fontSize: '11px', color: '#7A7774' }}>Nenhum produto encontrado.</div>
-                  )}
-                  {!searching && searchResults.map((product) => (
-                    <button
-                      key={product.id}
-                      type="button"
-                      onClick={() => addMaterial(product)}
-                      style={{
-                        width: '100%',
-                        textAlign: 'left',
-                        padding: '8px 12px',
-                        background: 'transparent',
-                        border: 'none',
-                        borderBottom: '1px solid rgba(255,255,255,0.04)',
-                        color: '#E8E4DE',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '8px',
-                      }}
-                    >
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontWeight: 600 }}>{product.name}</span>
-                          {product.is_raw_material && (
-                            <span style={{ fontSize: '9px', fontWeight: 700, color: '#C8A97A', background: 'rgba(200,169,122,0.14)', padding: '1px 5px', borderRadius: '4px' }}>MP</span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '10px', color: '#7A7774' }}>
-                          {product.code} · Estoque: {product.stock_quantity} · R$ {(product.price_cents / 100).toFixed(2)}
-                        </div>
-                      </div>
-                      <span style={{ color: '#C8A97A', fontSize: '14px' }}>+</span>
-                    </button>
-                  ))}
+              {pieces.length === 0 ? (
+                /* .state-panel vazio */
+                <div style={{ padding: '30px', textAlign: 'center', border: `1px dashed ${V.borderMid}`, borderRadius: '9px', color: V.secondary }}>
+                  <div style={{ fontSize: '30px', marginBottom: '8px' }}>◇</div>
+                  <h3 style={{ fontFamily: 'Georgia, serif', color: V.text, margin: '0 0 5px' }}>Nenhuma peça adicionada</h3>
+                  <p style={{ fontSize: '12px', margin: '0 0 12px' }}>Adicione a primeira peça para montar a ficha técnica e o orçamento.</p>
+                  <button type="button" onClick={addPiece} style={btnGoldSoft}>＋ Nova peça</button>
                 </div>
+              ) : (
+                <>
+                  {/* .piece-list */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
+                    {pieces.map((p, idx) => {
+                      const ready = pieceHasMaterial(p);
+                      const active = !p.collapsed;
+                      const activeMatTab: MaterialTab = matTab[p.tempId] ?? 'store';
+                      const storeMaterials = p.materials.filter((m) => m.origin === 'own_stock');
+                      const custodyMaterials = p.materials.filter((m) => m.origin === 'customer_custody');
+                      const subTab: CustodySubTab = custodySubTab[p.tempId] ?? 'existing';
+                      const meta = [
+                        p.category, p.tech.metal, p.tech.pedra,
+                        p.tech.aroMedida && `Aro ${p.tech.aroMedida}`,
+                        ready ? 'Materiais definidos' : null,
+                      ].filter(Boolean).join(' · ') || 'Preencha a ficha técnica e selecione os materiais';
+                      return (
+                        <article key={p.tempId} style={{ border: `1px solid ${active ? V.goldBorder : V.borderMid}`, background: V.surface, borderRadius: '9px', overflow: 'hidden', boxShadow: active ? '0 0 0 1px rgba(191,160,106,0.06)' : undefined }}>
+                          {/* .piece-head */}
+                          <div style={{ display: 'grid', gridTemplateColumns: '34px minmax(0,1fr) auto auto auto', alignItems: 'center', gap: '9px', padding: '10px 12px' }}>
+                            <div style={{ width: '30px', height: '30px', display: 'grid', placeItems: 'center', borderRadius: '7px', background: V.goldDim, border: `1px solid ${V.goldBorder}`, color: V.gold, fontFamily: 'Georgia, serif', fontWeight: 800 }}>{idx + 1}</div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: '12px', fontWeight: 750, color: V.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title || `Nova peça sem título`}</div>
+                              <div style={{ fontSize: '10px', color: V.muted, marginTop: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta}</div>
+                            </div>
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '999px',
+                              padding: '4px 8px', fontSize: '9px', fontWeight: 800, whiteSpace: 'nowrap',
+                              color: ready ? V.greenText : V.gold,
+                              border: `1px solid ${ready ? 'rgba(76,175,130,0.22)' : V.goldBorder}`,
+                              background: ready ? 'rgba(76,175,130,0.08)' : V.goldDim,
+                            }}>
+                              {ready ? 'Pronta para proposta' : 'Sem material'}
+                            </span>
+                            <div style={{ textAlign: 'right' }}>
+                              <strong style={{ display: 'block', color: V.gold, fontFamily: 'Georgia, serif', fontSize: '15px' }}>{brl(piecePriceCents(p))}</strong>
+                              <span style={{ color: V.muted, fontSize: '9px' }}>calculado · leitura</span>
+                            </div>
+                            <button type="button" onClick={() => patchPiece(p.tempId, { collapsed: !p.collapsed })} aria-label={active ? `Recolher peça ${idx + 1}` : `Expandir peça ${idx + 1}`} style={iconBtn}>{active ? '▲' : '▼'}</button>
+                          </div>
+
+                          {/* .piece-body */}
+                          {active && (
+                            <div style={{ borderTop: `1px solid ${V.border}`, padding: '13px', background: '#111114' }}>
+                              {/* ficha tecnica: grid 4 colunas do mockup */}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: '10px' }}>
+                                <label style={{ gridColumn: 'span 2' }}>
+                                  <span style={labelCss}>Nome da peça</span>
+                                  <input style={control} value={p.title} onChange={(e) => patchPiece(p.tempId, { title: e.target.value })} placeholder="Digite o nome da peça" />
+                                </label>
+                                <label>
+                                  <span style={labelCss}>Categoria</span>
+                                  <select aria-label={`Categoria da peça ${idx + 1}`} style={{ ...control, cursor: 'pointer' }} value={p.category} onChange={(e) => patchPiece(p.tempId, { category: e.target.value })}>
+                                    <option value="">Selecionar...</option>
+                                    {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+                                  </select>
+                                </label>
+                                <label><span style={labelCss}>Quantidade</span><input style={control} value={p.tech.quantidade} onChange={(e) => patchPieceTech(p.tempId, 'quantidade', e.target.value)} /></label>
+                                <label><span style={labelCss}>Metal</span><input style={control} value={p.tech.metal} onChange={(e) => patchPieceTech(p.tempId, 'metal', e.target.value)} placeholder="Ouro amarelo 18k" /></label>
+                                <label><span style={labelCss}>Pedra</span><input style={control} value={p.tech.pedra} onChange={(e) => patchPieceTech(p.tempId, 'pedra', e.target.value)} placeholder="Diamante 0,30 ct" /></label>
+                                <label><span style={labelCss}>Aro / medida</span><input style={control} value={p.tech.aroMedida} onChange={(e) => patchPieceTech(p.tempId, 'aroMedida', e.target.value)} placeholder="17" /></label>
+                                <label><span style={labelCss}>Peso estimado</span><input style={control} value={p.tech.peso} onChange={(e) => patchPieceTech(p.tempId, 'peso', e.target.value)} placeholder="4,20 g" /></label>
+                                <label><span style={labelCss}>Largura</span><input style={control} value={p.tech.largura} onChange={(e) => patchPieceTech(p.tempId, 'largura', e.target.value)} placeholder="2,2 mm" /></label>
+                                <label><span style={labelCss}>Espessura</span><input style={control} value={p.tech.espessura} onChange={(e) => patchPieceTech(p.tempId, 'espessura', e.target.value)} placeholder="1,6 mm" /></label>
+                                <label><span style={labelCss}>Acabamento</span><input style={control} value={p.tech.acabamento} onChange={(e) => patchPieceTech(p.tempId, 'acabamento', e.target.value)} placeholder="Polido" /></label>
+                                <label><span style={labelCss}>Cor / banho</span><input style={control} value={p.tech.corBanho} onChange={(e) => patchPieceTech(p.tempId, 'corBanho', e.target.value)} placeholder="Ouro amarelo" /></label>
+                                <label><span style={labelCss}>Cravação</span><input style={control} value={p.tech.cravacao} onChange={(e) => patchPieceTech(p.tempId, 'cravacao', e.target.value)} placeholder="Garra 6 pontas" /></label>
+                                <label><span style={labelCss}>Gravação</span><input style={control} value={p.tech.gravacao} onChange={(e) => patchPieceTech(p.tempId, 'gravacao', e.target.value)} placeholder="M&L · 20.08.2026" /></label>
+                                <label style={{ gridColumn: 'span 2' }}><span style={labelCss}>Referência / modelo</span><input style={control} value={p.tech.referencia} onChange={(e) => patchPieceTech(p.tempId, 'referencia', e.target.value)} placeholder="Solitário clássico, aro delicado" /></label>
+                                <label style={{ gridColumn: '1 / -1' }}>
+                                  <span style={labelCss}>Especificações técnicas</span>
+                                  <textarea value={p.tech.especificacoes} onChange={(e) => patchPieceTech(p.tempId, 'especificacoes', e.target.value)} style={{ ...control, minHeight: '66px', resize: 'vertical', padding: '9px 11px', height: 'auto' }} />
+                                </label>
+                              </div>
+
+                              {/* .subhead: MATERIAIS DESTA PECA + segmented */}
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '15px 0 8px', gap: '10px', flexWrap: 'wrap' }}>
+                                <div style={{ fontSize: '10px', color: V.secondary, fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  Materiais desta peça
+                                  <span style={{ color: V.gold, fontSize: '9px', fontWeight: 800, border: `1px solid ${V.goldBorder}`, background: V.goldDim, borderRadius: '999px', padding: '3px 7px', textTransform: 'none', letterSpacing: 'normal' }}>Obrigatório</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  {([{ k: 'store', l: 'Estoque próprio · loja' }, { k: 'custody', l: 'Custódia · cliente' }] as const).map((seg) => {
+                                    const segActive = activeMatTab === seg.k;
+                                    return (
+                                      <button key={seg.k} type="button" onClick={() => setPieceMatTab(p.tempId, seg.k)} style={{
+                                        border: `1px solid ${segActive ? V.goldBorder : V.border}`, color: segActive ? V.gold : V.muted,
+                                        background: segActive ? V.goldDim : 'transparent', borderRadius: '6px', padding: '5px 8px', fontSize: '10px', cursor: 'pointer',
+                                      }}>{seg.l}</button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              <div style={{ margin: '-2px 0 8px', color: V.gold, fontSize: '9px' }}>
+                                Selecione a matéria-prima, metal, pedra ou material que será usado na fabricação desta peça.
+                              </div>
+
+                              {activeMatTab === 'store' ? (
+                                <>
+                                  {/* .material-source (estoque) */}
+                                  <div style={{ border: `1px solid ${V.border}`, background: '#0D0D0F', borderRadius: '8px', padding: '10px', marginBottom: '8px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}>
+                                      <div>
+                                        <div style={{ fontSize: '10px', fontWeight: 800, color: V.text }}>Selecionar matéria-prima do estoque</div>
+                                        <div style={{ marginTop: '4px', fontSize: '9px', lineHeight: 1.35, color: V.muted }}>Busca produtos, matéria-prima e pedras pelo cadastro real do estoque</div>
+                                      </div>
+                                      <span style={{ fontSize: '9px', color: V.green, flexShrink: 0 }}>● Estoque disponível</span>
+                                    </div>
+                                    {/* .search-line */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: '7px' }}>
+                                      <div style={{ position: 'relative' }}>
+                                        <span style={{ position: 'absolute', left: '10px', top: '7px', color: V.muted, fontSize: '14px', pointerEvents: 'none' }}>⌕</span>
+                                        <input
+                                          style={{ ...control, paddingLeft: '29px' }}
+                                          value={materialTarget === p.tempId ? materialSearch : ''}
+                                          onFocus={() => setMaterialTarget(p.tempId)}
+                                          onChange={(e) => { setMaterialTarget(p.tempId); setMaterialSearch(e.target.value); }}
+                                          placeholder="Buscar ouro, prata, pedra, código ou descrição..."
+                                        />
+                                      </div>
+                                      <button type="button" style={btnGoldSoft} onClick={() => { setMaterialTarget(p.tempId); setSearchNonce((n) => n + 1); }}>Buscar</button>
+                                    </div>
+                                    {/* .filter-row */}
+                                    <div style={{ display: 'flex', gap: '5px', margin: '8px 0', flexWrap: 'wrap' }}>
+                                      {STOCK_FILTERS.map((f) => {
+                                        const fActive = stockFilter === f.key;
+                                        return (
+                                          <button key={f.key} type="button" onClick={() => { setStockFilter(f.key); setMaterialTarget(p.tempId); }} style={{
+                                            border: `1px solid ${fActive ? V.goldBorder : V.border}`, background: fActive ? V.goldDim : V.elevated,
+                                            color: fActive ? V.gold : V.muted, borderRadius: '20px', padding: '4px 8px', fontSize: '9px', cursor: 'pointer',
+                                          }}>{f.label}</button>
+                                        );
+                                      })}
+                                    </div>
+                                    {/* resultados */}
+                                    {materialTarget === p.tempId && searchError && (
+                                      <div style={{ padding: '12px', textAlign: 'center', border: `1px dashed ${V.borderMid}`, borderRadius: '8px' }}>
+                                        <div style={{ color: V.red, fontSize: '11px', marginBottom: '8px' }}>! {searchError}</div>
+                                        <button type="button" style={btnDanger} onClick={() => setSearchNonce((n) => n + 1)}>Tentar novamente</button>
+                                      </div>
+                                    )}
+                                    {materialTarget === p.tempId && !searchError && (
+                                      <>
+                                        {searching && <div style={{ color: V.muted, fontSize: '11px', padding: '4px 0' }}>Buscando...</div>}
+                                        {!searching && !materialSearch.trim() && <div style={{ color: V.muted, fontSize: '10px', padding: '4px 0' }}>Digite para buscar no estoque.</div>}
+                                        {!searching && materialSearch.trim() && searchResults.length === 0 && <div style={{ color: V.muted, fontSize: '11px', padding: '4px 0' }}>Nenhum produto encontrado.</div>}
+                                        {!searching && searchResults.length > 0 && (
+                                          /* .inventory-results 3 colunas */
+                                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: '6px' }}>
+                                            {searchResults.map((product) => {
+                                              const unit = product.is_raw_material ? 'g' : 'un';
+                                              return (
+                                                <div key={product.id} style={{ minWidth: 0, display: 'grid', gridTemplateColumns: '28px minmax(0,1fr) auto', gap: '7px', alignItems: 'center', border: `1px solid ${V.border}`, background: V.surface, borderRadius: '7px', padding: '7px' }}>
+                                                  <div style={{ width: '28px', height: '28px', display: 'grid', placeItems: 'center', borderRadius: '6px', background: V.goldDim, color: V.gold, fontSize: '12px' }}>{inventoryIcon(product)}</div>
+                                                  <div style={{ minWidth: 0 }}>
+                                                    <div style={{ fontSize: '10px', fontWeight: 750, color: V.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.name}</div>
+                                                    <div style={{ fontSize: '8px', color: V.muted, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.code}{typeof product.stock_quantity === 'number' ? ` · ${product.stock_quantity} ${unit} disponíveis` : ''}</div>
+                                                  </div>
+                                                  <button type="button" onClick={() => addOwnStockMaterial(p.tempId, product)} aria-label={`Adicionar ${product.name}`} style={{ width: '25px', height: '25px', border: `1px solid ${V.goldBorder}`, background: V.goldDim, color: V.gold, borderRadius: '5px', fontWeight: 800, cursor: 'pointer' }}>＋</button>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
+                                    {/* .material-feedback */}
+                                    {feedback?.pieceId === p.tempId && (
+                                      <div style={{ marginTop: '7px', padding: '7px 9px', border: '1px solid rgba(76,175,130,0.18)', background: 'rgba(76,175,130,0.06)', color: V.greenText, borderRadius: '6px', fontSize: '9px' }}>{feedback.msg}</div>
+                                    )}
+                                  </div>
+
+                                  {/* .selected-label + .material-row (estoque) */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px', color: V.secondary, fontSize: '9px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '9px 0 6px' }}>
+                                    Materiais selecionados nesta peça
+                                    <span style={{ flex: 1, height: '1px', background: V.border }} />
+                                  </div>
+                                  {storeMaterials.length === 0 && (
+                                    <div style={{ fontSize: '10px', color: V.muted, padding: '4px 0 8px' }}>Nenhum material do estoque selecionado nesta peça.</div>
+                                  )}
+                                  {storeMaterials.map((m) => (
+                                    <div key={m.tempId} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) 88px 120px 28px', gap: '7px', alignItems: 'center', padding: '8px', background: V.elevated, border: `1px solid ${V.border}`, borderRadius: '7px', marginBottom: '6px' }}>
+                                      <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontSize: '11px', fontWeight: 700, color: V.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.label}</div>
+                                        <div style={{ color: V.muted, fontSize: '9px', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.detail}</div>
+                                      </div>
+                                      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', alignItems: 'center', border: `1px solid ${V.border}`, background: V.strip, borderRadius: '5px', overflow: 'hidden' }}>
+                                        <input aria-label={`Quantidade de ${m.label}`} inputMode="decimal" style={{ height: '29px', border: 0, background: 'transparent', color: V.text, textAlign: 'right', width: '100%', padding: '0 8px', fontSize: '10px', outline: 'none', boxSizing: 'border-box' }} value={m.quantity} onChange={(e) => patchMaterial(p.tempId, m.tempId, { quantity: e.target.value.replace(/[^\d.,]/g, '') })} />
+                                        <span style={{ padding: '0 8px', color: V.gold, fontSize: '10px', fontWeight: 800, borderLeft: `1px solid ${V.border}` }}>{m.unit}</span>
+                                      </div>
+                                      <div style={{ fontSize: '10px', color: V.secondary, textAlign: 'right' }}>{brl(Math.round(qtyOf(m.quantity) * m.unitPriceCents))}</div>
+                                      <button type="button" onClick={() => removeMaterial(p.tempId, m.tempId)} aria-label="Remover material" style={iconBtn}>×</button>
+                                    </div>
+                                  ))}
+                                </>
+                              ) : (
+                                /* .custody-box (roxa, como no mockup) */
+                                <div style={{ padding: '10px', border: '1px solid rgba(156,111,222,0.22)', background: 'rgba(156,111,222,0.06)', borderRadius: '8px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}>
+                                    <div>
+                                      <div style={{ fontSize: '10px', fontWeight: 800, color: V.text }}>Material ou joia do cliente em custódia</div>
+                                      <div style={{ marginTop: '4px', fontSize: '9px', lineHeight: 1.35, color: V.muted }}>Use um lote já recebido ou registre agora o item entregue pelo cliente</div>
+                                    </div>
+                                    <span style={{ fontSize: '9px', color: V.purpleLight, flexShrink: 0 }}>Patrimônio do cliente</span>
+                                  </div>
+                                  {/* .custody-tabs */}
+                                  <div style={{ display: 'flex', gap: '5px', marginBottom: '9px' }}>
+                                    {([{ k: 'existing', l: 'Selecionar custódia existente' }, { k: 'new', l: '＋ Adicionar material/joia' }] as const).map((ct) => {
+                                      const ctActive = subTab === ct.k;
+                                      return (
+                                        <button key={ct.k} type="button" onClick={() => setCustodySubTab((prev) => ({ ...prev, [p.tempId]: ct.k }))} style={{
+                                          flex: 1, minHeight: '31px', border: `1px solid rgba(156,111,222,${ctActive ? '0.38' : '0.22'})`,
+                                          background: ctActive ? 'rgba(156,111,222,0.12)' : 'transparent',
+                                          color: ctActive ? V.purpleLight : V.secondary, borderRadius: '6px', fontSize: '10px', cursor: 'pointer',
+                                        }}>{ct.l}</button>
+                                      );
+                                    })}
+                                  </div>
+                                  {subTab === 'existing' ? (
+                                    <div>
+                                      <div style={{ position: 'relative' }}>
+                                        <span style={{ position: 'absolute', left: '10px', top: '7px', color: V.muted, fontSize: '14px', pointerEvents: 'none' }}>⌕</span>
+                                        <input style={{ ...control, paddingLeft: '29px' }} disabled placeholder="Buscar lote por material, descrição ou código..." />
+                                      </div>
+                                      <div style={{ marginTop: '8px', padding: '12px', textAlign: 'center', border: '1px dashed rgba(156,111,222,0.3)', borderRadius: '7px', color: V.secondary, fontSize: '10px', lineHeight: 1.5 }}>
+                                        Nenhum lote de custódia disponível — o cadastro de lotes recebidos (avaliação/consignação) ainda não existe no sistema.
+                                        Use <strong style={{ color: V.purpleLight }}>＋ Adicionar material/joia</strong> para registrar agora o item entregue pelo cliente.
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: '10px' }}>
+                                      <label>
+                                        <span style={labelCss}>Tipo de item *</span>
+                                        <select aria-label="Tipo de item em custódia" style={{ ...control, cursor: 'pointer' }} value={custodyForm.tipo} onChange={(e) => setCustodyForm((f) => ({ ...f, tipo: e.target.value }))}>
+                                          <option>Metal / matéria-prima</option><option>Joia para derreter</option><option>Pedra / cristal</option><option>Sucata</option>
+                                        </select>
+                                      </label>
+                                      <label><span style={labelCss}>Material / teor</span><input style={control} value={custodyForm.material} onChange={(e) => setCustodyForm((f) => ({ ...f, material: e.target.value }))} placeholder="Ex: Ouro 18k" /></label>
+                                      <label><span style={labelCss}>Peso bruto *</span><input style={control} value={custodyForm.pesoBruto} onChange={(e) => setCustodyForm((f) => ({ ...f, pesoBruto: e.target.value }))} placeholder="0,00 g" /></label>
+                                      <label><span style={labelCss}>Peso líquido *</span><input style={control} value={custodyForm.pesoLiquido} onChange={(e) => setCustodyForm((f) => ({ ...f, pesoLiquido: e.target.value }))} placeholder="0,00 g" /></label>
+                                      <label style={{ gridColumn: 'span 2' }}><span style={labelCss}>Descrição da joia/material *</span><input style={control} value={custodyForm.descricao} onChange={(e) => setCustodyForm((f) => ({ ...f, descricao: e.target.value }))} placeholder="Ex: cordão antigo com fecho quebrado" /></label>
+                                      <label><span style={labelCss}>Valor de referência</span><input style={control} value={custodyForm.valorRef} onChange={(e) => setCustodyForm((f) => ({ ...f, valorRef: e.target.value }))} placeholder="R$ por g/un" /></label>
+                                      <label><span style={labelCss}>Crédito negociado</span><input style={control} inputMode="numeric" value={custodyForm.creditoStr} onChange={(e) => { const n = e.target.value.replace(/\D/g, ''); setCustodyForm((f) => ({ ...f, creditoStr: n ? (Number(n) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '' })); }} placeholder="R$ 0,00" /></label>
+                                      <label style={{ gridColumn: 'span 2' }}>
+                                        <span style={labelCss}>Observações do recebimento</span>
+                                        <textarea value={custodyForm.observacoes} onChange={(e) => setCustodyForm((f) => ({ ...f, observacoes: e.target.value }))} placeholder="Estado, marcas, avarias, acordo com o cliente..." style={{ ...control, minHeight: '66px', resize: 'vertical', padding: '9px 11px', height: 'auto' }} />
+                                      </label>
+                                      <div style={{ gridColumn: 'span 2' }}>
+                                        <span style={labelCss}>Fotos / evidências</span>
+                                        <input ref={custodyFileRef} type="file" accept="image/*" multiple aria-label="Fotos do material recebido" style={{ display: 'none' }} onChange={(e) => { const names = Array.from(e.target.files ?? []).map((f) => f.name); setCustodyFiles((prev) => [...prev, ...names]); if (custodyFileRef.current) custodyFileRef.current.value = ''; }} />
+                                        <button type="button" onClick={() => custodyFileRef.current?.click()} style={{ width: '100%', minHeight: '54px', border: '1px dashed rgba(156,111,222,0.3)', borderRadius: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#B797E7', fontSize: '10px', background: 'rgba(156,111,222,0.035)', cursor: 'pointer' }}>
+                                          ＋ {custodyFiles.length > 0 ? `${custodyFiles.length} foto(s) selecionada(s)` : 'Adicionar fotos do material recebido'}
+                                        </button>
+                                      </div>
+                                      <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}>
+                                        <button type="button" onClick={() => registerCustodyMaterial(p.tempId)} style={btnGoldSoft}>Registrar em custódia e vincular à peça</button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* .selected-label + custody rows */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px', color: V.secondary, fontSize: '9px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '9px 0 6px' }}>
+                                    Custódia vinculada à peça
+                                    <span style={{ flex: 1, height: '1px', background: V.border }} />
+                                  </div>
+                                  {custodyMaterials.length === 0 ? (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: '7px', alignItems: 'center', padding: '8px', background: V.elevated, border: `1px solid ${V.border}`, borderRadius: '7px' }}>
+                                      <div>
+                                        <div style={{ fontSize: '11px', fontWeight: 700, color: V.text }}>Nenhum material de custódia selecionado</div>
+                                        <div style={{ color: V.muted, fontSize: '9px', marginTop: '2px' }}>Selecione um lote existente ou registre um novo recebimento</div>
+                                      </div>
+                                      <div style={{ fontSize: '10px', color: V.purple }}>Crédito: —</div>
+                                    </div>
+                                  ) : custodyMaterials.map((m) => (
+                                    <div key={m.tempId} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) 88px 120px 28px', gap: '7px', alignItems: 'center', padding: '8px', background: V.elevated, border: '1px solid rgba(156,111,222,0.22)', borderRadius: '7px', marginBottom: '6px' }}>
+                                      <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontSize: '11px', fontWeight: 700, color: V.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.label}</div>
+                                        <div style={{ color: V.muted, fontSize: '9px', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.detail}</div>
+                                      </div>
+                                      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', alignItems: 'center', border: `1px solid ${V.border}`, background: V.strip, borderRadius: '5px', overflow: 'hidden' }}>
+                                        <input aria-label={`Quantidade de ${m.label}`} inputMode="decimal" style={{ height: '29px', border: 0, background: 'transparent', color: V.text, textAlign: 'right', width: '100%', padding: '0 8px', fontSize: '10px', outline: 'none', boxSizing: 'border-box' }} value={m.quantity} onChange={(e) => patchMaterial(p.tempId, m.tempId, { quantity: e.target.value.replace(/[^\d.,]/g, '') })} />
+                                        <span style={{ padding: '0 8px', color: V.purpleLight, fontSize: '10px', fontWeight: 800, borderLeft: `1px solid ${V.border}` }}>{m.unit}</span>
+                                      </div>
+                                      <div style={{ fontSize: '10px', color: V.purple, textAlign: 'right' }}>{m.creditCents > 0 ? `Crédito: ${brl(m.creditCents)}` : 'Crédito: pendente'}</div>
+                                      <button type="button" onClick={() => removeMaterial(p.tempId, m.tempId)} aria-label="Remover material" style={iconBtn}>×</button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* .piece-actions */}
+                              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '7px', marginTop: '12px' }}>
+                                <button type="button" onClick={() => removePiece(p.tempId)} style={btnDanger}>Remover peça</button>
+                                <button type="button" onClick={() => duplicatePiece(p.tempId)} style={btn}>Duplicar</button>
+                                <button type="button" onClick={() => patchPiece(p.tempId, { collapsed: true })} style={btnGoldSoft}>Salvar e recolher peça</button>
+                              </div>
+                            </div>
+                          )}
+                        </article>
+                      );
+                    })}
+                  </div>
+
+                  {/* .add-piece */}
+                  <button type="button" onClick={addPiece} style={{ width: '100%', marginTop: '9px', minHeight: '45px', border: `1px dashed ${V.goldBorder}`, background: 'rgba(191,160,106,0.035)', color: V.gold, borderRadius: '8px', fontSize: '11px', fontWeight: 750, cursor: 'pointer' }}>
+                    ＋ Nova peça neste projeto
+                  </button>
+
+                  {/* .proposal-alert */}
+                  {piecesMissingMaterial.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '10px', padding: '9px 10px', border: `1px solid ${V.goldBorder}`, background: V.goldDim, color: V.gold, borderRadius: '7px', fontSize: '10px', lineHeight: 1.45 }}>
+                      <span>!</span>
+                      <span>Existe peça sem material selecionado. Selecione a matéria-prima/material obrigatório antes de gerar a proposta.</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
-
-            {/* Lista de materiais adicionados */}
-            {materials.length === 0 ? (
-              <div style={{ border: '1px dashed rgba(255,255,255,0.08)', borderRadius: '7px', padding: '14px', textAlign: 'center', color: '#7A7774', fontSize: '11px' }}>
-                Nenhum material adicionado ainda.
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {materials.map((m) => {
-                  const qty = parseFloat(m.quantity.replace(',', '.')) || 0;
-                  const lineCents = Math.round(qty * m.unitPriceCents);
-                  const insufficient = qty > m.stockAtAdd;
-                  return (
-                    <div
-                      key={m.tempId}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 90px 90px 28px',
-                        gap: '8px',
-                        alignItems: 'center',
-                        padding: '8px 10px',
-                        background: '#1A1A1E',
-                        border: `1px solid ${insufficient ? 'rgba(224,82,82,0.35)' : 'rgba(255,255,255,0.08)'}`,
-                        borderRadius: '7px',
-                      }}
-                    >
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '12px', color: '#E8E4DE', fontWeight: 600 }}>{m.productName}</span>
-                          {m.isRawMaterial && (
-                            <span style={{ fontSize: '9px', fontWeight: 700, color: '#C8A97A', background: 'rgba(200,169,122,0.14)', padding: '1px 5px', borderRadius: '4px' }}>MP</span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '10px', color: insufficient ? '#E05252' : '#7A7774' }}>
-                          {m.productCode} · Estoque: {m.stockAtAdd}{insufficient ? ` (insuficiente para ${qty})` : ''}
-                        </div>
-                      </div>
-                      <input
-                        style={{ ...inputStyle, height: '30px', fontSize: '11px', textAlign: 'right' }}
-                        value={m.quantity}
-                        onChange={(e) => updateMaterialQuantity(m.tempId, e.target.value)}
-                        placeholder="Qtd"
-                        aria-label={`Quantidade de ${m.productName}`}
-                      />
-                      <div style={{ fontSize: '11px', color: '#C8A97A', fontWeight: 600, textAlign: 'right' }}>
-                        R$ {(lineCents / 100).toFixed(2)}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeMaterial(m.tempId)}
-                        aria-label={`Remover ${m.productName}`}
-                        style={{ width: '28px', height: '28px', background: 'transparent', border: '1px solid rgba(224,82,82,0.25)', borderRadius: '5px', color: '#E05252', cursor: 'pointer', fontSize: '13px' }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  );
-                })}
-
-                {/* Resumo */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', marginTop: '4px', background: 'rgba(200,169,122,0.06)', border: '1px solid rgba(200,169,122,0.15)', borderRadius: '7px' }}>
-                  <span style={{ fontSize: '11px', color: '#A8A4A0', fontWeight: 600 }}>Subtotal materiais</span>
-                  <span style={{ fontSize: '12px', color: '#C8A97A', fontWeight: 700 }}>R$ {(materialsSubtotalCents / 100).toFixed(2)}</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Valores */}
-          <div style={{ marginBottom: '22px' }}>
-            <SectionTitle>Valores</SectionTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <FieldGroup label="Sinal / Entrada (R$)">
-                <input style={inputStyle} inputMode="numeric" value={form.deposit_cents_str} onChange={handleCurrencyChange('deposit_cents_str')} placeholder="0,00" />
-              </FieldGroup>
-              <FieldGroup label="Mão de obra (R$)">
-                <input
-                  style={inputStyle}
-                  inputMode="numeric"
-                  value={laborCentsStr}
-                  onChange={(e) => {
-                    const onlyNums = e.target.value.replace(/\D/g, '');
-                    setLaborCentsStr(onlyNums ? formatCentsBRInput(Number(onlyNums)) : '');
-                  }}
-                  placeholder="0,00"
-                />
-              </FieldGroup>
-              <FieldGroup label="Total da OS (R$)">
-                <input style={inputStyle} inputMode="numeric" value={form.total_cents_str} onChange={handleCurrencyChange('total_cents_str')} placeholder="0,00" />
-              </FieldGroup>
-              <div>
-                <label style={labelStyle}>Total calculado (preview)</label>
-                <div style={{ ...inputStyle, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', color: '#C8A97A', fontWeight: 700, background: 'rgba(200,169,122,0.06)' }}>
-                  R$ {(previewTotalCents / 100).toFixed(2)}
-                </div>
-              </div>
-            </div>
-            <p style={{ fontSize: '10px', color: '#7A7774', marginTop: '6px' }}>
-              O preview mostra subtotal de materiais + mão de obra. O campo "Total" é o valor cobrado do cliente (pode incluir markup adicional).
-            </p>
-          </div>
-
-          {/* Notas */}
-          <div style={{ marginBottom: '12px' }}>
-            <SectionTitle>Observações</SectionTitle>
-            <textarea
-              value={form.notes}
-              onChange={handleChange('notes')}
-              placeholder="Observações para produção, preferências do cliente..."
-              style={{
-                minHeight: '68px',
-                background: '#1A1A1E',
-                border: '1px solid rgba(255,255,255,0.10)',
-                borderRadius: '7px',
-                padding: '8px 11px',
-                fontSize: '12px',
-                color: '#F0EDE8',
-                width: '100%',
-                boxSizing: 'border-box',
-                resize: 'vertical',
-                fontFamily: "'DM Sans', sans-serif",
-                outline: 'none',
-              }}
-            />
-          </div>
+          )}
 
           {error && (
-            <div style={{ background: 'rgba(224,82,82,0.10)', border: '1px solid rgba(224,82,82,0.25)', borderRadius: '7px', padding: '10px 12px', color: '#E05252', fontSize: '12px', marginBottom: '12px' }}>
+            <div style={{ margin: '0 18px 14px', background: 'rgba(224,82,82,0.10)', border: '1px solid rgba(224,82,82,0.25)', borderRadius: '7px', padding: '10px 12px', color: V.red, fontSize: '12px' }}>
               {error}
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: '8px',
-            padding: '14px 24px',
-            borderTop: '1px solid rgba(255,255,255,0.06)',
-            flexShrink: 0,
-          }}
-        >
+        {/* .quote-summary-bar (fixo acima do rodape) */}
+        {!locked && pieces.length > 0 && (
+          <div style={{ flexShrink: 0, padding: '10px 18px', borderTop: `1px solid ${V.border}`, background: '#101012' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(280px,0.6fr)', gap: '12px' }}>
+              {/* Pecas anexadas a proposta */}
+              <div style={{ border: `1px solid ${V.border}`, background: V.surface, borderRadius: '9px', padding: '12px' }}>
+                <div style={{ fontSize: '10px', color: V.secondary, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '8px' }}>Peças anexadas à proposta</div>
+                <div style={{ maxHeight: '96px', overflowY: 'auto' }}>
+                  {pieces.map((p, idx) => (
+                    <div key={p.tempId} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '7px 0', borderBottom: `1px solid ${V.border}`, fontSize: '11px', color: V.secondary }}>
+                      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{idx + 1}. {p.title || 'Nova peça sem título'}</span>
+                      <span style={{ color: V.text, fontWeight: 700, flexShrink: 0 }}>{brl(piecePriceCents(p))}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: '7px', alignItems: 'flex-start', border: '1px solid rgba(76,175,130,0.18)', background: 'rgba(76,175,130,0.06)', color: V.greenText, padding: '7px 9px', borderRadius: '7px', fontSize: '10px', lineHeight: 1.45, marginTop: '10px' }}>
+                  <span>✓</span>
+                  <span>Ao gerar, a proposta salva uma versão destas peças. Alterações posteriores na OS não modificam a proposta já enviada.</span>
+                </div>
+              </div>
+              {/* Resumo comercial */}
+              <div style={{ border: `1px solid ${V.border}`, background: V.surface, borderRadius: '9px', padding: '12px' }}>
+                <div style={{ fontSize: '10px', color: V.secondary, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '8px' }}>Resumo comercial</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', color: V.secondary, fontSize: '10px', padding: '3px 0' }}>
+                  <span>Subtotal das peças</span><strong style={{ color: V.text }}>{brl(subtotalCents)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center', color: V.secondary, fontSize: '10px', padding: '3px 0' }}>
+                  <span>Crédito material cliente</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <strong style={{ color: V.purple }}>−</strong>
+                    <input aria-label="Crédito material do cliente" style={{ ...control, minHeight: '26px', height: '26px', width: '96px', textAlign: 'right', color: V.purpleLight, fontSize: '10px', padding: '0 8px' }} inputMode="numeric" value={customerCreditStr} onChange={(e) => { const n = e.target.value.replace(/\D/g, ''); setCustomerCreditStr(n ? (Number(n) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''); }} placeholder="0,00" />
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', color: V.secondary, fontSize: '10px', padding: '3px 0' }}>
+                  <span>Sinal sugerido (50%)</span><strong style={{ color: V.text }}>{brl(sinalCents)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: `1px solid ${V.goldBorder}`, marginTop: '8px', paddingTop: '10px' }}>
+                  <span style={{ fontSize: '11px', color: V.secondary }}>Total da proposta</span>
+                  <strong style={{ fontFamily: 'Georgia, serif', color: V.gold, fontSize: '21px' }}>{brl(totalCents)}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* .modal-foot */}
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 18px', borderTop: `1px solid ${V.border}`, background: V.strip }}>
+          <span style={{ color: V.muted, fontSize: '10px' }}>{footStatus}</span>
+          <span style={{ flex: 1 }} />
+          <button type="button" onClick={onClose} style={btn}>Cancelar</button>
+          <button type="button" style={btnBlue} onClick={() => notify.success('Cotação salva', 'Rascunho técnico/comercial (local)')}>Salvar cotação</button>
           <button
-            onClick={onClose}
-            style={{
-              height: '34px',
-              padding: '0 16px',
-              background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.10)',
-              borderRadius: '7px',
-              color: '#C8C4BE',
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
+            type="button"
+            onClick={handleGenerateClick}
+            disabled={saving}
+            style={{ ...btnGold, opacity: canGenerate && !saving ? 1 : 0.45, cursor: canGenerate && !saving ? 'pointer' : 'not-allowed' }}
           >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !form.product_name.trim()}
-            style={{
-              height: '34px',
-              padding: '0 20px',
-              background: 'rgba(91,156,246,0.15)',
-              border: '1px solid rgba(91,156,246,0.30)',
-              borderRadius: '7px',
-              color: '#5B9CF6',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: saving || !form.product_name.trim() ? 'not-allowed' : 'pointer',
-              opacity: saving || !form.product_name.trim() ? 0.7 : 1,
-            }}
-          >
-            {saving ? 'Criando...' : 'Criar OS'}
+            Gerar Proposta
           </button>
         </div>
       </div>
+
+      {/* .proposal-preview */}
+      {showPreview && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Prévia da proposta"
+          style={{ position: 'fixed', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,0.74)', padding: '24px', zIndex: 1100 }}
+          onClick={(e) => { if (e.target === e.currentTarget && !saving) setShowPreview(false); }}
+        >
+          <div style={{ width: 'min(760px, 100%)', maxHeight: '90vh', overflow: 'auto', background: V.base, border: `1px solid ${V.goldBorder}`, borderRadius: '12px', boxShadow: '0 30px 100px #000' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', padding: '18px 20px', borderBottom: `1px solid ${V.border}` }}>
+              <div>
+                <div style={{ color: V.gold, fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em' }}>PRÉVIA · AINDA NÃO SALVA</div>
+                <h2 style={{ fontFamily: 'Georgia, serif', margin: '4px 0 0', fontSize: '19px', color: V.text }}>{project.title ? `Proposta — ${project.title}` : 'Proposta multi-peças'}</h2>
+              </div>
+              <button type="button" onClick={() => setShowPreview(false)} aria-label="Fechar prévia" style={{ width: '28px', height: '28px', border: 0, background: 'transparent', color: V.muted, fontSize: '17px', cursor: 'pointer' }}>×</button>
+            </div>
+            <div style={{ padding: '16px 20px' }}>
+              <div style={{ fontSize: '10px', color: V.secondary, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '8px' }}>Itens da proposta</div>
+              {pieces.map((p, idx) => (
+                <div key={p.tempId} style={{ display: 'grid', gridTemplateColumns: '36px 1fr auto', gap: '10px', alignItems: 'center', border: `1px solid ${V.border}`, background: V.surface, borderRadius: '8px', padding: '10px', marginBottom: '8px' }}>
+                  <div style={{ width: '30px', height: '30px', display: 'grid', placeItems: 'center', borderRadius: '7px', background: V.goldDim, border: `1px solid ${V.goldBorder}`, color: V.gold, fontFamily: 'Georgia, serif', fontWeight: 800 }}>{idx + 1}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '12px', fontWeight: 750, color: V.text }}>{p.title || `Peça ${idx + 1}`}</div>
+                    <div style={{ fontSize: '10px', color: V.muted, marginTop: '3px' }}>{[p.category, p.tech.metal, p.tech.pedra, p.tech.gravacao && 'gravação'].filter(Boolean).join(' · ') || 'Ficha técnica em rascunho'}</div>
+                  </div>
+                  <strong style={{ color: V.gold, fontFamily: 'Georgia, serif' }}>{brl(piecePriceCents(p))}</strong>
+                </div>
+              ))}
+              <div style={{ border: `1px solid ${V.border}`, background: V.surface, borderRadius: '9px', padding: '12px', marginTop: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', color: V.secondary, fontSize: '10px', padding: '3px 0' }}>
+                  <span>Subtotal das peças</span><strong style={{ color: V.text }}>{brl(subtotalCents)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', color: V.secondary, fontSize: '10px', padding: '3px 0' }}>
+                  <span>Crédito negociado</span><strong style={{ color: V.purple }}>− {brl(customerCreditCents)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: `1px solid ${V.goldBorder}`, marginTop: '8px', paddingTop: '10px' }}>
+                  <span style={{ fontSize: '11px', color: V.secondary }}>Total da proposta</span>
+                  <strong style={{ fontFamily: 'Georgia, serif', color: V.gold, fontSize: '21px' }}>{brl(totalCents)}</strong>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '7px', alignItems: 'flex-start', border: '1px solid rgba(76,175,130,0.18)', background: 'rgba(76,175,130,0.06)', color: V.greenText, padding: '9px 10px', borderRadius: '7px', fontSize: '10px', lineHeight: 1.45, marginTop: '10px' }}>
+                <span>→</span>
+                <span>Depois de salva, esta proposta aparecerá na aba <strong>Propostas</strong>. Envio por PDF/WhatsApp/e-mail e “Fazer venda” são etapas posteriores.</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '12px 20px', borderTop: `1px solid ${V.border}` }}>
+              <button type="button" onClick={() => setShowPreview(false)} disabled={saving} style={btn}>Voltar e editar</button>
+              <button type="button" onClick={handleConfirmProposal} disabled={saving} style={{ ...btnGold, opacity: saving ? 0.7 : 1, cursor: saving ? 'not-allowed' : 'pointer' }}>{saving ? 'Gerando...' : 'Confirmar geração da proposta'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

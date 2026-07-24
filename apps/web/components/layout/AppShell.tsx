@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Bell, HelpCircle, Sparkles } from 'lucide-react';
 import { AssistantDock } from '@/components/layout/AssistantDock';
@@ -30,6 +30,25 @@ export function AppShell({
     };
 }) {
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+    // Colapso da sidebar no desktop — persiste entre sessões.
+    const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+    useEffect(() => {
+        setDesktopCollapsed(localStorage.getItem('orion:sidebar-collapsed') === '1');
+    }, []);
+
+    // O hambúrguer é responsivo: no mobile abre/fecha o drawer, no desktop
+    // recolhe/expande a sidebar fixa (liberando espaço para o conteúdo).
+    const toggleSidebar = () => {
+        if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches) {
+            setDesktopCollapsed((prev) => {
+                const next = !prev;
+                localStorage.setItem('orion:sidebar-collapsed', next ? '1' : '0');
+                return next;
+            });
+        } else {
+            setMobileSidebarOpen((prev) => !prev);
+        }
+    };
 
     return (
         <div className="flex h-screen overflow-hidden bg-[color:var(--orion-void)]" style={{ fontFamily: 'var(--font-orion-sans)' }}>
@@ -41,6 +60,7 @@ export function AppShell({
                 userRole={user.role}
                 mobileOpen={mobileSidebarOpen}
                 onCloseMobile={() => setMobileSidebarOpen(false)}
+                desktopCollapsed={desktopCollapsed}
             />
             {mobileSidebarOpen ? (
                 <button
@@ -50,8 +70,8 @@ export function AppShell({
                     onClick={() => setMobileSidebarOpen(false)}
                 />
             ) : null}
-            <div className="flex min-h-screen min-w-0 flex-1 flex-col bg-[color:var(--orion-void)] lg:ml-[220px]">
-                <Topbar userName={user.name} onMenuClick={() => setMobileSidebarOpen((prev) => !prev)} />
+            <div className={`flex min-h-screen min-w-0 flex-1 flex-col bg-[color:var(--orion-void)] transition-[margin] duration-200 ease-out ${desktopCollapsed ? 'lg:ml-0' : 'lg:ml-[220px]'}`}>
+                <Topbar userName={user.name} onMenuClick={toggleSidebar} />
                 <MainWrapper>{children}</MainWrapper>
             </div>
             <div className="fixed bottom-4 right-4 z-40 lg:hidden">

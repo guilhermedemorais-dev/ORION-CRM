@@ -28,7 +28,7 @@ export interface ErrorModalProps {
 /**
  * Modal de erro padrão do sistema.
  *
- * Padrão visual definido em PRD.DOCS/Designer Systems:
+ * Padrão visual definido em docs/design/design-system:
  *  - Header com ícone vermelho + título em PT-BR
  *  - Body com lista de violations (borda esquerda vermelha)
  *  - Botão "+ Detalhes técnicos" colapsável (mono font)

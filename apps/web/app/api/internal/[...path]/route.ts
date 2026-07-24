@@ -98,6 +98,10 @@ async function forward(request: Request, params: { path: string[] }) {
     if (retryAfter) {
         forwardHeaders.set('retry-after', retryAfter);
     }
+    const contentDisposition = response.headers.get('content-disposition');
+    if (contentDisposition) {
+        forwardHeaders.set('content-disposition', contentDisposition);
+    }
 
     if (response.status === 204 || response.status === 304) {
         return new NextResponse(null, {
@@ -106,11 +110,11 @@ async function forward(request: Request, params: { path: string[] }) {
         });
     }
 
-    const payload = await response.text();
     const responseContentType = response.headers.get('content-type');
     if (responseContentType) {
         forwardHeaders.set('content-type', responseContentType);
     }
+    const payload = await response.arrayBuffer();
 
     return new NextResponse(payload, {
         status: response.status,

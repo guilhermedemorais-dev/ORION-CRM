@@ -70,7 +70,7 @@ export interface ListErrorsParams {
 }
 
 export async function listSystemErrors(params: ListErrorsParams): Promise<SystemErrorRow[]> {
-    const limit = Math.min(Math.max(params.limit ?? 100, 1), 500);
+    const limit = Math.min(Math.max(params.limit ?? 100, 1), 2000);
     const conditions: string[] = [];
     const values: unknown[] = [];
 

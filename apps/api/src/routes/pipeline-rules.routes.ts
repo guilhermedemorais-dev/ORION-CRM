@@ -16,7 +16,7 @@ import {
     type RuleNormalized,
 } from '../services/pipeline-rules.service.js';
 
-// PRD: PRD.DOCS/Build Pipeline/PRD-PIPELINE-BUILDER-V2.md §8.4 / §9
+// PRD: docs/modules/pipeline/builder-prd-v2.md §8.4 / §9
 // Rotas CRUD + dry-run de simulação para regras simples entre pipelines.
 // Não dispara o executor real (Fase 3) — apenas configura e valida.
 

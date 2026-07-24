@@ -1,12 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { AttendanceBlock } from '../types';
+import type { AttendanceBlock, PipelineStage } from '../types';
 import AttendanceBlockCard from '../attendance/AttendanceBlock';
 import AttendancePopup from '../attendance/AttendancePopup';
 
 interface Props {
   customerId: string;
+  pipelineStages: PipelineStage[];
+  currentStageId: string | null;
+  leadId: string | null;
+  onStageChange: (stageId: string) => Promise<void>;
   onOSCreated?: () => void;
 }
 
@@ -23,7 +27,14 @@ function Skeleton() {
   );
 }
 
-export default function ClientAtendimentoTab({ customerId, onOSCreated }: Props) {
+export default function ClientAtendimentoTab({
+  customerId,
+  pipelineStages,
+  currentStageId,
+  leadId,
+  onStageChange,
+  onOSCreated,
+}: Props) {
   const [blocks, setBlocks] = useState<AttendanceBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -227,6 +238,10 @@ export default function ClientAtendimentoTab({ customerId, onOSCreated }: Props)
         <AttendancePopup
           customerId={customerId}
           block={editingBlock}
+          pipelineStages={pipelineStages}
+          currentStageId={currentStageId}
+          leadId={leadId}
+          onStageChange={onStageChange}
           onClose={handlePopupClose}
           onSaved={fetchBlocks}
           onOSCreated={onOSCreated}

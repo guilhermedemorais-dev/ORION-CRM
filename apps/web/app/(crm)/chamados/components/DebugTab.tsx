@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useConfirm } from '@/components/system/ConfirmDialog';
 import { notify } from '@/lib/toast';
+import { downloadSystemErrorsExport, type SystemErrorExportMode } from './exportSystemErrors';
 
 interface SystemErrorRow {
     id: string;
@@ -54,8 +55,12 @@ export default function DebugTab({ userRole }: { userRole: string }) {
     const [sourceFilter, setSourceFilter] = useState<string>('');
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [clearing, setClearing] = useState(false);
+    const [selectedErrorIds, setSelectedErrorIds] = useState<Set<string>>(new Set());
+    const [exportingErrors, setExportingErrors] = useState<SystemErrorExportMode | null>(null);
     const pausedRef = useRef(paused);
     const filtersRef = useRef({ search, sourceFilter });
+    const selectedCount = selectedErrorIds.size;
+    const allSelected = rows.length > 0 && rows.every(row => selectedErrorIds.has(row.id));
 
     useEffect(() => {
         pausedRef.current = paused;
@@ -84,6 +89,14 @@ export default function DebugTab({ userRole }: { userRole: string }) {
             setLoading(false);
         }
     }, []);
+
+    useEffect(() => {
+        setSelectedErrorIds(previous => {
+            const visibleIds = new Set(rows.map(row => row.id));
+            const next = new Set(Array.from(previous).filter(id => visibleIds.has(id)));
+            return next.size === previous.size ? previous : next;
+        });
+    }, [rows]);
 
     useEffect(() => {
         fetchRows();
@@ -117,6 +130,49 @@ export default function DebugTab({ userRole }: { userRole: string }) {
             notify.error('Falha ao limpar');
         } finally {
             setClearing(false);
+        }
+    }
+
+    function toggleErrorSelection(id: string) {
+        setSelectedErrorIds(previous => {
+            const next = new Set(previous);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+            return next;
+        });
+    }
+
+    function toggleAllSelection() {
+        setSelectedErrorIds(previous => {
+            if (rows.length > 0 && rows.every(row => previous.has(row.id))) {
+                return new Set();
+            }
+            return new Set(rows.map(row => row.id));
+        });
+    }
+
+    async function handleExportErrors(mode: SystemErrorExportMode) {
+        if (mode === 'selected' && selectedErrorIds.size === 0) {
+            notify.error('Selecione ao menos um erro para exportar');
+            return;
+        }
+
+        setExportingErrors(mode);
+        try {
+            await downloadSystemErrorsExport({
+                mode,
+                errorIds: mode === 'selected' ? Array.from(selectedErrorIds) : undefined,
+                source: mode === 'all' ? sourceFilter : undefined,
+                search: mode === 'all' ? search : undefined,
+            });
+            notify.success('Erros exportados');
+        } catch (err) {
+            notify.error(err instanceof Error ? err.message : 'Falha ao exportar erros');
+        } finally {
+            setExportingErrors(null);
         }
     }
 
@@ -184,6 +240,51 @@ export default function DebugTab({ userRole }: { userRole: string }) {
                     ↻ Atualizar
                 </button>
                 <button
+                    onClick={toggleAllSelection}
+                    disabled={rows.length === 0 || exportingErrors !== null}
+                    style={{
+                        height: '36px', padding: '0 14px',
+                        borderRadius: '8px', border: '1px solid rgba(255,255,255,0.15)',
+                        background: 'transparent',
+                        color: '#C8C4BE',
+                        fontSize: '12px', fontWeight: 600,
+                        cursor: rows.length === 0 || exportingErrors ? 'not-allowed' : 'pointer',
+                        opacity: rows.length === 0 || exportingErrors ? 0.45 : 1,
+                    }}
+                >
+                    {allSelected ? 'Limpar seleção' : 'Selecionar tudo'}
+                </button>
+                <button
+                    onClick={() => void handleExportErrors('selected')}
+                    disabled={selectedCount === 0 || exportingErrors !== null}
+                    style={{
+                        height: '36px', padding: '0 14px',
+                        borderRadius: '8px', border: '1px solid rgba(200,169,122,0.5)',
+                        background: 'transparent',
+                        color: '#C8A97A',
+                        fontSize: '12px', fontWeight: 600,
+                        cursor: selectedCount === 0 || exportingErrors ? 'not-allowed' : 'pointer',
+                        opacity: selectedCount === 0 || exportingErrors ? 0.45 : 1,
+                    }}
+                >
+                    {exportingErrors === 'selected' ? 'Baixando...' : `Baixar selecionados${selectedCount ? ` (${selectedCount})` : ''}`}
+                </button>
+                <button
+                    onClick={() => void handleExportErrors('all')}
+                    disabled={rows.length === 0 || exportingErrors !== null}
+                    style={{
+                        height: '36px', padding: '0 14px',
+                        borderRadius: '8px', border: '1px solid rgba(200,169,122,0.5)',
+                        background: '#1A1A1E',
+                        color: '#C8A97A',
+                        fontSize: '12px', fontWeight: 600,
+                        cursor: rows.length === 0 || exportingErrors ? 'not-allowed' : 'pointer',
+                        opacity: rows.length === 0 || exportingErrors ? 0.55 : 1,
+                    }}
+                >
+                    {exportingErrors === 'all' ? 'Baixando...' : 'Baixar tudo'}
+                </button>
+                <button
                     onClick={handleClear}
                     disabled={clearing || rows.length === 0}
                     style={{
@@ -249,55 +350,66 @@ export default function DebugTab({ userRole }: { userRole: string }) {
                                     overflow: 'hidden',
                                 }}
                             >
-                                <button
-                                    onClick={() => setExpandedId(expanded ? null : row.id)}
-                                    style={{
-                                        width: '100%', padding: '10px 14px',
-                                        background: 'transparent', border: 'none',
-                                        cursor: 'pointer', textAlign: 'left',
-                                        display: 'flex', alignItems: 'center', gap: '12px',
-                                        fontFamily: "'DM Sans', sans-serif",
-                                    }}
-                                >
-                                    <div style={{ fontSize: '10px', color: '#7A7774', fontFamily: 'monospace', flexShrink: 0, width: '64px' }}>
-                                        <div>{formatTime(row.occurred_at)}</div>
-                                        <div style={{ opacity: 0.6 }}>{formatDate(row.occurred_at)}</div>
+                                <div style={{ display: 'flex', alignItems: 'stretch' }}>
+                                    <div style={{ width: '42px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.04)' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedErrorIds.has(row.id)}
+                                            onChange={() => toggleErrorSelection(row.id)}
+                                            aria-label={`Selecionar erro ${row.message}`}
+                                            style={{ width: '16px', height: '16px', accentColor: '#C8A97A' }}
+                                        />
                                     </div>
-                                    <div style={{
-                                        flexShrink: 0, width: '52px',
-                                        padding: '2px 6px', borderRadius: '4px',
-                                        background: `${sourceColor}22`,
-                                        color: sourceColor,
-                                        fontSize: '10px', fontWeight: 700,
-                                        textAlign: 'center', textTransform: 'uppercase',
-                                    }}>
-                                        {row.source}
-                                    </div>
-                                    {row.status_code != null && (
+                                    <button
+                                        onClick={() => setExpandedId(expanded ? null : row.id)}
+                                        style={{
+                                            width: '100%', padding: '10px 14px',
+                                            background: 'transparent', border: 'none',
+                                            cursor: 'pointer', textAlign: 'left',
+                                            display: 'flex', alignItems: 'center', gap: '12px',
+                                            fontFamily: "'DM Sans', sans-serif",
+                                        }}
+                                    >
+                                        <div style={{ fontSize: '10px', color: '#7A7774', fontFamily: 'monospace', flexShrink: 0, width: '64px' }}>
+                                            <div>{formatTime(row.occurred_at)}</div>
+                                            <div style={{ opacity: 0.6 }}>{formatDate(row.occurred_at)}</div>
+                                        </div>
                                         <div style={{
-                                            flexShrink: 0, padding: '2px 6px', borderRadius: '4px',
-                                            background: `${sevColor}22`, color: sevColor,
-                                            fontSize: '10px', fontWeight: 700, fontFamily: 'monospace',
+                                            flexShrink: 0, width: '52px',
+                                            padding: '2px 6px', borderRadius: '4px',
+                                            background: `${sourceColor}22`,
+                                            color: sourceColor,
+                                            fontSize: '10px', fontWeight: 700,
+                                            textAlign: 'center', textTransform: 'uppercase',
                                         }}>
-                                            {row.status_code}
+                                            {row.source}
                                         </div>
-                                    )}
-                                    <div style={{ minWidth: 0, flex: 1 }}>
-                                        <div style={{ fontSize: '12px', color: '#F0EDE8', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {row.message}
-                                        </div>
-                                        {(row.method || row.path) && (
-                                            <div style={{ fontSize: '10px', color: '#7A7774', fontFamily: 'monospace', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {row.method ? `${row.method} ` : ''}{row.path ?? ''}
+                                        {row.status_code != null && (
+                                            <div style={{
+                                                flexShrink: 0, padding: '2px 6px', borderRadius: '4px',
+                                                background: `${sevColor}22`, color: sevColor,
+                                                fontSize: '10px', fontWeight: 700, fontFamily: 'monospace',
+                                            }}>
+                                                {row.status_code}
                                             </div>
                                         )}
-                                    </div>
-                                    <div style={{ fontSize: '11px', color: '#7A7774', flexShrink: 0 }}>
-                                        {expanded ? '▾' : '▸'}
-                                    </div>
-                                </button>
+                                        <div style={{ minWidth: 0, flex: 1 }}>
+                                            <div style={{ fontSize: '12px', color: '#F0EDE8', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {row.message}
+                                            </div>
+                                            {(row.method || row.path) && (
+                                                <div style={{ fontSize: '10px', color: '#7A7774', fontFamily: 'monospace', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {row.method ? `${row.method} ` : ''}{row.path ?? ''}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: '#7A7774', flexShrink: 0 }}>
+                                            {expanded ? '▾' : '▸'}
+                                        </div>
+                                    </button>
+                                </div>
                                 {expanded && (
-                                    <div style={{ padding: '0 14px 14px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <div style={{ padding: '0 14px 14px 56px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                                         <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '6px 16px', fontSize: '11px', marginTop: '12px' }}>
                                             {row.request_id && (<>
                                                 <div style={{ color: '#7A7774' }}>requestId</div>

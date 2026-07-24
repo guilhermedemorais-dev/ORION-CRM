@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ORION — OS multi-peças e geração de proposta</title>
+  <style>
+    :root {
+      --void:#080809; --base:#0f0f11; --surface:#131316; --elevated:#1a1a1e;
+      --gold:#bfa06a; --gold-light:#d4b87e; --gold-dim:rgba(191,160,106,.11);
+      --gold-border:rgba(191,160,106,.28); --text:#f0ebe3; --secondary:#a09a94;
+      --muted:#66616a; --border:rgba(255,255,255,.07); --border-mid:rgba(255,255,255,.11);
+      --green:#4caf82; --red:#e05252; --amber:#f0a040; --blue:#4a9eff; --purple:#9c6fde;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:radial-gradient(circle at 50% -20%,#222018 0,transparent 34%),var(--void); color:var(--text); font-family:Inter,Arial,sans-serif; }
+    button,input,select,textarea { font:inherit; }
+    button { cursor:pointer; }
+    .page { padding:24px; min-height:100vh; }
+    .page-head { max-width:1180px; margin:0 auto 14px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .eyebrow { color:var(--gold); text-transform:uppercase; letter-spacing:.16em; font-size:10px; font-weight:800; }
+    .page-title { font-family:"Playfair Display",Georgia,serif; font-size:20px; margin:3px 0 0; }
+    .state-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+    .state-tab { border:1px solid var(--border-mid); background:var(--surface); color:var(--secondary); border-radius:7px; padding:7px 10px; font-size:11px; }
+    .state-tab.active { color:var(--gold); border-color:var(--gold-border); background:var(--gold-dim); }
+    .overlay { max-width:1180px; min-height:760px; margin:auto; border:1px solid var(--border); background:rgba(0,0,0,.44); border-radius:14px; padding:18px; box-shadow:0 24px 80px rgba(0,0,0,.46); }
+    .modal { min-height:720px; max-height:calc(100vh - 100px); display:flex; flex-direction:column; overflow:hidden; background:var(--base); border:1px solid var(--border-mid); border-radius:12px; }
+    .modal-head { flex:none; display:grid; grid-template-columns:180px 1fr 28px; gap:10px; padding:13px 18px; border-bottom:1px solid var(--border); align-items:center; }
+    .control { min-height:34px; border:1px solid var(--border-mid); background:var(--elevated); color:var(--text); border-radius:7px; padding:0 11px; outline:none; width:100%; font-size:12px; }
+    .control:focus { border-color:var(--gold-border); box-shadow:0 0 0 2px rgba(191,160,106,.08); }
+    .date-field { position:relative; }
+    .date-field input { padding-right:36px; color-scheme:dark; }
+    .date-field input::-webkit-calendar-picker-indicator { opacity:0; width:30px; height:30px; cursor:pointer; }
+    .date-icon { position:absolute; right:12px; bottom:10px; width:13px; height:13px; border:1.5px solid var(--gold); border-radius:3px; pointer-events:none; opacity:.9; }
+    .date-icon::before { content:''; position:absolute; left:0; right:0; top:3px; border-top:1.5px solid var(--gold); }
+    .date-icon::after { content:''; position:absolute; left:3px; top:-3px; width:5px; height:4px; border-left:1.5px solid var(--gold); border-right:1.5px solid var(--gold); }
+    textarea.control { min-height:66px; resize:vertical; padding:9px 11px; }
+    .close { width:28px; height:28px; border:0; background:transparent; color:var(--muted); font-size:17px; border-radius:5px; }
+    .toolbar { display:flex; align-items:center; gap:5px; padding:8px 18px; border-bottom:1px solid var(--border); background:#111113; }
+    .tool { min-width:29px; height:29px; border:1px solid var(--border); background:var(--elevated); color:var(--secondary); border-radius:5px; font-size:11px; }
+    .tool.wide { padding:0 10px; }
+    .toolbar-spacer { flex:1; }
+    .workflow-tabs { display:flex; gap:4px; padding:9px 18px 0; background:#111113; border-bottom:1px solid var(--border); }
+    .workflow-tab { min-height:35px; padding:0 16px; border:1px solid transparent; border-bottom:0; background:transparent; color:var(--muted); border-radius:7px 7px 0 0; font-size:11px; font-weight:800; letter-spacing:.04em; }
+    .workflow-tab.active { color:var(--gold); border-color:var(--gold-border); background:var(--base); }
+    .workflow-pane { display:none; flex:1; min-height:0; overflow:auto; }
+    .workflow-pane.active { display:block; }
+    .editor { min-height:150px; padding:15px 20px; color:var(--secondary); font-size:12px; line-height:1.6; outline:none; }
+    .notes-layout { padding:16px 18px 22px; }
+    .notes-card { border:1px solid var(--border); background:#101012; border-radius:9px; overflow:hidden; }
+    .notes-toolbar { display:flex; align-items:center; gap:5px; padding:8px 10px; border-bottom:1px solid var(--border); background:var(--surface); }
+    .photo-section { border-top:1px solid var(--border); padding:13px; }
+    .photo-grid { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .photo-card { position:relative; width:82px; height:82px; border:1px solid var(--border-mid); background:linear-gradient(145deg,#2b2722,#171719); border-radius:8px; overflow:hidden; display:grid; place-items:center; color:var(--gold); font-size:22px; }
+    .photo-card small { position:absolute; inset:auto 4px 4px; padding:2px 4px; border-radius:4px; background:rgba(0,0,0,.72); color:var(--secondary); font-size:7px; }
+    .photo-remove { position:absolute; top:4px; right:4px; width:18px; height:18px; border:0; border-radius:50%; background:rgba(0,0,0,.75); color:#fff; font-size:10px; }
+    .photo-add { width:82px; height:82px; border:1px dashed var(--gold-border); background:var(--gold-dim); color:var(--gold); border-radius:8px; font-size:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+    .photo-add b { font-size:20px; font-weight:400; }
+    .notes-hint { display:flex; gap:7px; margin-top:12px; padding:9px 10px; border:1px solid rgba(74,158,255,.18); background:rgba(74,158,255,.06); color:#82baff; border-radius:7px; font-size:10px; line-height:1.45; }
+    .modal-scroll { flex:1; min-height:0; overflow:auto; padding:16px 18px 22px; }
+    .os-shell { border:0; background:transparent; padding:0; }
+    .project-bar { display:grid; grid-template-columns:1.4fr .7fr .7fr; gap:10px; margin-bottom:12px; }
+    .label { display:block; margin:0 0 5px; font-size:9px; color:var(--muted); font-weight:800; letter-spacing:.09em; text-transform:uppercase; }
+    .piece-list { display:flex; flex-direction:column; gap:9px; }
+    .piece-card { border:1px solid var(--border-mid); background:var(--surface); border-radius:9px; overflow:hidden; }
+    .piece-card.active { border-color:var(--gold-border); box-shadow:0 0 0 1px rgba(191,160,106,.06); }
+    .piece-head { display:grid; grid-template-columns:34px minmax(0,1fr) auto auto auto; align-items:center; gap:9px; padding:10px 12px; }
+    .piece-index { width:30px; height:30px; display:grid; place-items:center; border-radius:7px; background:var(--gold-dim); border:1px solid var(--gold-border); color:var(--gold); font-family:Georgia,serif; font-weight:800; }
+    .piece-name { font-size:12px; font-weight:750; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .piece-meta { font-size:10px; color:var(--muted); margin-top:3px; }
+    .piece-status { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:4px 8px; font-size:9px; font-weight:800; white-space:nowrap; }
+    .piece-status.ready { color:#8cc9aa; border:1px solid rgba(76,175,130,.22); background:rgba(76,175,130,.08); }
+    .piece-status.missing { color:var(--gold); border:1px solid var(--gold-border); background:var(--gold-dim); }
+    .piece-price { text-align:right; }
+    .piece-price strong { display:block; color:var(--gold); font-family:Georgia,serif; font-size:15px; }
+    .piece-price span { color:var(--muted); font-size:9px; }
+    .icon-btn { width:28px; height:28px; border:1px solid var(--border); background:var(--elevated); color:var(--secondary); border-radius:6px; }
+    .piece-body { display:none; border-top:1px solid var(--border); padding:13px; background:#111114; }
+    .piece-card.active .piece-body { display:block; }
+    .grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+    .span-2 { grid-column:span 2; } .span-4 { grid-column:1/-1; }
+    .subhead { display:flex; align-items:center; justify-content:space-between; margin:15px 0 8px; }
+    .subhead-title { font-size:10px; color:var(--secondary); font-weight:800; letter-spacing:.09em; text-transform:uppercase; }
+    .segmented { display:flex; gap:4px; }
+    .segment { border:1px solid var(--border); color:var(--muted); background:transparent; border-radius:6px; padding:5px 8px; font-size:10px; }
+    .segment.active { color:var(--gold); border-color:var(--gold-border); background:var(--gold-dim); }
+    .material-row { display:grid; grid-template-columns:minmax(0,1.3fr) 88px 120px 28px; gap:7px; align-items:center; padding:8px; background:var(--elevated); border:1px solid var(--border); border-radius:7px; margin-bottom:6px; }
+    .material-name { font-size:11px; font-weight:700; }
+    .material-detail { color:var(--muted); font-size:9px; margin-top:2px; }
+    .mini-input { height:29px; border:1px solid var(--border); background:#111113; color:var(--text); border-radius:5px; padding:0 8px; width:100%; font-size:10px; }
+    .qty-field { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; border:1px solid var(--border); background:#111113; border-radius:5px; overflow:hidden; }
+    .qty-field .mini-input { border:0; border-radius:0; background:transparent; text-align:right; }
+    .qty-unit { padding:0 8px; color:var(--gold); font-size:10px; font-weight:800; border-left:1px solid var(--border); }
+    .custody-box { display:none; padding:10px; border:1px solid rgba(156,111,222,.22); background:rgba(156,111,222,.06); border-radius:8px; }
+    .custody-box.show { display:block; }
+    .material-source { border:1px solid var(--border); background:#0d0d0f; border-radius:8px; padding:10px; margin-bottom:8px; }
+    .source-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+    .source-title { font-size:10px; font-weight:800; color:var(--text); }
+    .source-help { margin-top:4px; font-size:9px; line-height:1.35; color:var(--muted); }
+    .search-line { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:7px; }
+    .search-wrap { position:relative; }
+    .search-wrap::before { content:'⌕'; position:absolute; left:10px; top:7px; color:var(--muted); font-size:14px; }
+    .search-wrap .control { padding-left:29px; }
+    .filter-row { display:flex; gap:5px; margin:8px 0; flex-wrap:wrap; }
+    .filter-chip { border:1px solid var(--border); background:var(--elevated); color:var(--muted); border-radius:20px; padding:4px 8px; font-size:9px; }
+    .filter-chip.active { border-color:var(--gold-border); background:var(--gold-dim); color:var(--gold); }
+    .inventory-results { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+    .inventory-item { min-width:0; display:grid; grid-template-columns:28px minmax(0,1fr) auto; gap:7px; align-items:center; border:1px solid var(--border); background:var(--surface); border-radius:7px; padding:7px; }
+    .inventory-icon { width:28px; height:28px; display:grid; place-items:center; border-radius:6px; background:var(--gold-dim); color:var(--gold); font-size:13px; }
+    .inventory-name { font-size:10px; font-weight:750; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .inventory-meta { font-size:8px; color:var(--muted); margin-top:2px; }
+    .add-material { width:25px; height:25px; border:1px solid var(--gold-border); background:var(--gold-dim); color:var(--gold); border-radius:5px; font-weight:800; }
+    .selected-label { display:flex; align-items:center; gap:7px; color:var(--secondary); font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; margin:9px 0 6px; }
+    .selected-label::after { content:''; flex:1; height:1px; background:var(--border); }
+    .custody-tabs { display:flex; gap:5px; margin-bottom:9px; }
+    .custody-tab { flex:1; min-height:31px; border:1px solid rgba(156,111,222,.22); background:transparent; color:var(--secondary); border-radius:6px; font-size:10px; }
+    .custody-tab.active { background:rgba(156,111,222,.12); color:#c6a9f3; border-color:rgba(156,111,222,.38); }
+    .custody-pane { display:none; }
+    .custody-pane.active { display:block; }
+    .upload-area { min-height:54px; border:1px dashed rgba(156,111,222,.3); border-radius:7px; display:flex; align-items:center; justify-content:center; gap:8px; color:#b797e7; font-size:10px; background:rgba(156,111,222,.035); }
+    .material-feedback { display:none; margin-top:7px; padding:7px 9px; border:1px solid rgba(76,175,130,.18); background:rgba(76,175,130,.06); color:#8cc9aa; border-radius:6px; font-size:9px; }
+    .material-feedback.show { display:block; }
+    .calc-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+    .calc-card { border:1px solid var(--border); background:var(--elevated); border-radius:7px; padding:10px; }
+    .calc-row { display:flex; justify-content:space-between; gap:10px; color:var(--secondary); font-size:10px; padding:3px 0; }
+    .calc-row strong { color:var(--text); }
+    .calc-total { border-top:1px solid var(--border); margin-top:5px; padding-top:7px; font-size:11px; }
+    .calc-total strong { color:var(--gold); font-family:Georgia,serif; font-size:15px; }
+    .piece-actions { display:flex; justify-content:flex-end; gap:7px; margin-top:12px; }
+    .btn { min-height:34px; border-radius:7px; padding:0 13px; font-size:11px; font-weight:750; border:1px solid var(--border-mid); background:var(--elevated); color:var(--secondary); }
+    .btn.gold { background:var(--gold); border-color:var(--gold); color:#111; }
+    #nextStep, #generateProposal { align-items:center; justify-content:center; text-align:center; white-space:nowrap; }
+    .btn.gold-soft { background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+    .btn.blue { background:rgba(74,158,255,.12); border-color:rgba(74,158,255,.25); color:var(--blue); }
+    .btn.danger { color:var(--red); border-color:rgba(224,82,82,.2); background:rgba(224,82,82,.07); }
+    .required-pill { color:var(--gold); font-size:9px; font-weight:800; border:1px solid var(--gold-border); background:var(--gold-dim); border-radius:999px; padding:3px 7px; }
+    .material-required-note { margin:-2px 0 8px; color:var(--gold); font-size:9px; }
+    .proposal-alert { display:none; align-items:flex-start; gap:8px; margin-top:10px; padding:9px 10px; border:1px solid var(--gold-border); background:var(--gold-dim); color:var(--gold); border-radius:7px; font-size:10px; line-height:1.45; }
+    .proposal-alert.show { display:flex; }
+    .add-piece { width:100%; margin-top:9px; min-height:45px; border:1px dashed var(--gold-border); background:rgba(191,160,106,.035); color:var(--gold); border-radius:8px; font-size:11px; font-weight:750; }
+    .quote-summary-bar { display:none; flex:none; padding:10px 18px; border-top:1px solid var(--border); background:#101012; }
+    .quote-summary-bar.active { display:block; }
+    .summary { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(280px,.6fr); gap:12px; margin-top:13px; }
+    .quote-summary-bar .summary { margin-top:0; }
+    .summary-card { border:1px solid var(--border); background:var(--surface); border-radius:9px; padding:12px; }
+    .summary-title { font-size:10px; color:var(--secondary); font-weight:800; text-transform:uppercase; letter-spacing:.09em; margin-bottom:8px; }
+    .summary-item { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px solid var(--border); font-size:11px; }
+    .summary-item:last-child { border:0; }
+    .summary-item span:last-child { color:var(--text); font-weight:700; }
+    .grand-total { display:flex; justify-content:space-between; align-items:end; border-top:1px solid var(--gold-border); margin-top:8px; padding-top:10px; }
+    .grand-total strong { font-family:Georgia,serif; color:var(--gold); font-size:21px; }
+    .flow-note { display:flex; gap:7px; align-items:flex-start; border:1px solid rgba(76,175,130,.18); background:rgba(76,175,130,.06); color:#8cc9aa; padding:9px 10px; border-radius:7px; font-size:10px; line-height:1.45; margin-top:10px; }
+    .quote-summary-bar .flow-note { padding:7px 9px; }
+    .modal-foot { flex:none; display:flex; align-items:center; gap:8px; padding:12px 18px; border-top:1px solid var(--border); background:#111113; }
+    .foot-status { color:var(--muted); font-size:10px; }
+    .foot-spacer { flex:1; }
+    .proposal-preview { position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.74); padding:24px; z-index:20; }
+    .proposal-preview.show { display:grid; }
+    .proposal { width:min(760px,100%); max-height:90vh; overflow:auto; background:var(--base); border:1px solid var(--gold-border); border-radius:12px; box-shadow:0 30px 100px #000; }
+    .proposal-head { display:flex; justify-content:space-between; gap:16px; padding:18px 20px; border-bottom:1px solid var(--border); }
+    .proposal-head h2 { font-family:Georgia,serif; margin:0 0 4px; font-size:19px; }
+    .proposal-code { color:var(--gold); font-size:10px; font-weight:800; letter-spacing:.08em; }
+    .proposal-body { padding:16px 20px; }
+    .proposal-piece { display:grid; grid-template-columns:36px 1fr auto; gap:10px; align-items:center; border:1px solid var(--border); background:var(--surface); border-radius:8px; padding:10px; margin-bottom:8px; }
+    .proposal-foot { display:flex; justify-content:flex-end; gap:8px; padding:12px 20px; border-top:1px solid var(--border); }
+    .state-panel { display:none; padding:30px; text-align:center; border:1px dashed var(--border-mid); border-radius:9px; color:var(--secondary); }
+    .state-panel.show { display:block; }
+    .state-icon { font-size:30px; margin-bottom:8px; }
+    .state-panel h3 { font-family:Georgia,serif; color:var(--text); margin:0 0 5px; }
+    .responsive-note { max-width:1180px; margin:10px auto 0; color:var(--muted); font-size:10px; line-height:1.5; }
+    @media (max-width:800px) {
+      .page { padding:8px; } .overlay { padding:0; border:0; } .modal { max-height:none; min-height:100vh; border-radius:0; }
+      .modal-head { grid-template-columns:1fr 28px; } .modal-head select { display:none; }
+      .workflow-tab { flex:1; padding:0 8px; }
+      .project-bar,.grid,.summary,.calc-grid { grid-template-columns:1fr; } .span-2,.span-4 { grid-column:auto; }
+      .material-row { grid-template-columns:1fr 70px 28px; } .material-row .hide-mobile { display:none; }
+      .inventory-results { grid-template-columns:1fr; } .search-line { grid-template-columns:1fr; }
+      .piece-head { grid-template-columns:34px minmax(0,1fr) auto; } .piece-head .icon-btn { display:none; }
+      .modal-foot { position:sticky; bottom:0; } .foot-status { display:none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="page-head">
+      <div><div class="eyebrow">Mockup para aprovação</div><h1 class="page-title">Atendimento + OS técnica com múltiplas peças</h1></div>
+      <div class="state-tabs" role="tablist">
+        <button class="state-tab active" data-state="filled">2 peças</button>
+        <button class="state-tab" data-state="empty">Estado vazio</button>
+        <button class="state-tab" data-state="error">Erro</button>
+        <button class="state-tab" data-state="locked">Bloqueado</button>
+      </div>
+    </header>
+
+    <div class="overlay">
+      <main class="modal" aria-label="Modal de atendimento e ordem de serviço">
+        <header class="modal-head">
+          <select class="control" aria-label="Lead no pipeline"><option>Maria Fernanda · Qualificado</option></select>
+          <input class="control" value="Projeto alianças + solitário" aria-label="Título do atendimento">
+          <button class="close" aria-label="Fechar">×</button>
+        </header>
+        <nav class="workflow-tabs" aria-label="Etapas do atendimento">
+          <button class="workflow-tab active" data-workflow="notes">1. Anotações e fotos</button>
+          <button class="workflow-tab" data-workflow="quote">2. Cotação</button>
+        </nav>
+
+        <section class="workflow-pane active" data-workflow-pane="notes">
+          <div class="notes-layout">
+            <div class="notes-card">
+              <div class="notes-toolbar"><button class="tool"><b>B</b></button><button class="tool"><i>I</i></button><button class="tool"><u>U</u></button><button class="tool">☷</button><button class="tool">1.</button><button class="tool">@</button><span class="toolbar-spacer"></span><select class="control" style="width:105px"><option>WhatsApp</option></select><select class="control" style="width:90px"><option>Normal</option></select></div>
+              <div class="editor" contenteditable="true">Cliente deseja orçamento conjunto para um anel solitário e um par de alianças. Trouxe 8,4 g de ouro 18k para avaliação e possível uso no projeto. Prefere acabamento polido e peças delicadas.</div>
+              <div class="photo-section">
+                <div class="source-head"><div><div class="source-title">Fotos e referências do atendimento</div><div class="source-help">Anexe fotos das joias desejadas, desenhos, medidas ou referências enviadas pelo cliente</div></div><span id="photoCounter" style="font-size:9px;color:var(--secondary)">2 de 8 fotos</span></div>
+                <div class="photo-grid">
+                  <div class="photo-card">💍<small>anel-referencia.jpg</small><button class="photo-remove">×</button></div>
+                  <div class="photo-card">✎<small>desenho-cliente.jpg</small><button class="photo-remove">×</button></div>
+                  <button class="photo-add" id="addReferencePhoto"><b>＋</b><span>Adicionar foto</span></button>
+                </div>
+              </div>
+            </div>
+            <div class="notes-hint"><span>→</span><span>Depois de registrar as informações do atendimento, avance para <strong>Cotação</strong> para criar uma ou mais peças, selecionar materiais e montar a proposta.</span></div>
+          </div>
+        </section>
+
+        <div class="modal-scroll workflow-pane" data-workflow-pane="quote">
+          <section class="os-shell" id="filledState">
+            <div class="project-bar">
+              <label><span class="label">Nome do projeto</span><input class="control" value="Conjunto casamento Maria e Lucas"></label>
+              <label class="date-field"><span class="label">Prazo desejado</span><input class="control" type="date" value="2026-08-20"><span class="date-icon" aria-hidden="true"></span></label>
+              <label><span class="label">Responsável</span><select class="control"><option>Ana · Atendimento</option></select></label>
+            </div>
+
+            <div class="piece-list" id="pieceList">
+              <article class="piece-card active" data-piece="1" data-material-status="ready">
+                <div class="piece-head">
+                  <div class="piece-index">1</div>
+                  <div><div class="piece-name">Anel solitário ouro 18k</div><div class="piece-meta">Ouro amarelo · Diamante 0,30 ct · Aro 17 · Materiais definidos</div></div>
+                  <span class="piece-status ready">Pronta para proposta</span>
+                  <div class="piece-price"><strong>R$ 4.850,00</strong><span>preço manual</span></div>
+                  <button class="icon-btn piece-toggle" aria-label="Recolher peça 1">▲</button>
+                </div>
+                <div class="piece-body">
+                  <div class="grid">
+                    <label class="span-2"><span class="label">Nome da peça</span><input class="control piece-title-input" value="Anel solitário ouro 18k"></label>
+                    <label><span class="label">Categoria</span><select class="control"><option>Anel</option><option>Pulseira</option><option>Cordão</option><option>Pingente</option></select></label>
+                    <label><span class="label">Quantidade</span><input class="control" value="1"></label>
+                    <label><span class="label">Metal</span><input class="control" value="Ouro amarelo 18k"></label>
+                    <label><span class="label">Pedra</span><input class="control" value="Diamante 0,30 ct"></label>
+                    <label><span class="label">Aro / medida</span><input class="control" value="17"></label>
+                    <label><span class="label">Peso estimado</span><input class="control" value="4,20 g"></label>
+                    <label><span class="label">Largura</span><input class="control" value="2,2 mm"></label>
+                    <label><span class="label">Espessura</span><input class="control" value="1,6 mm"></label>
+                    <label><span class="label">Acabamento</span><input class="control" value="Polido"></label>
+                    <label><span class="label">Cor / banho</span><input class="control" value="Ouro amarelo"></label>
+                    <label><span class="label">Cravação</span><input class="control" value="Garra 6 pontas"></label>
+                    <label><span class="label">Gravação</span><input class="control" value="M&L · 20.08.2026"></label>
+                    <label class="span-2"><span class="label">Referência / modelo</span><input class="control" value="Solitário clássico, aro delicado"></label>
+                    <label class="span-4"><span class="label">Especificações técnicas</span><textarea class="control">Garra alta com 6 pontas, perfil delicado, acabamento polido e gravação interna M&L.</textarea></label>
+                  </div>
+
+                  <div class="subhead"><div class="subhead-title">Materiais desta peça <span class="required-pill">Obrigatório</span></div><div class="segmented"><button class="segment active" data-origin="store">Estoque próprio · loja</button><button class="segment" data-origin="custody">Custódia · cliente</button></div></div>
+                  <div class="material-required-note">Selecione a matéria-prima, metal, pedra ou material que será usado na fabricação desta peça.</div>
+                  <div class="material-source store-materials">
+                    <div class="source-head"><div><div class="source-title">Selecionar matéria-prima do estoque</div><div class="source-help">Busca produtos, matéria-prima e pedras pelo cadastro real do estoque</div></div><span style="font-size:9px;color:var(--green)">● Estoque disponível</span></div>
+                    <div class="search-line"><div class="search-wrap"><input class="control inventory-search" placeholder="Buscar ouro, prata, pedra, código ou descrição..."></div><button class="btn gold-soft">Buscar</button></div>
+                    <div class="filter-row"><button class="filter-chip active">Todos</button><button class="filter-chip">Metais</button><button class="filter-chip">Pedras</button><button class="filter-chip">Insumos</button><button class="filter-chip">Peças prontas</button></div>
+                    <div class="inventory-results">
+                      <div class="inventory-item"><div class="inventory-icon">Au</div><div><div class="inventory-name">Ouro amarelo 18k</div><div class="inventory-meta">MP-OU18 · 84,6 g disponíveis</div></div><button class="add-material" data-add="Ouro amarelo 18k" data-qty="4,20" data-unit="g">＋</button></div>
+                      <div class="inventory-item"><div class="inventory-icon">◇</div><div><div class="inventory-name">Diamante 0,30 ct VS/G</div><div class="inventory-meta">PD-D030 · 6 un disponíveis</div></div><button class="add-material" data-add="Diamante 0,30 ct VS/G" data-qty="1" data-unit="un">＋</button></div>
+                      <div class="inventory-item"><div class="inventory-icon">Ag</div><div><div class="inventory-name">Prata 925 em grão</div><div class="inventory-meta">MP-AG925 · 310 g disponíveis</div></div><button class="add-material" data-add="Prata 925 em grão" data-qty="1,00" data-unit="g">＋</button></div>
+                    </div>
+                    <div class="material-feedback">Material adicionado à peça. Ajuste a quantidade na lista abaixo.</div>
+                  </div>
+                  <div class="selected-label store-materials">Materiais selecionados nesta peça</div>
+                  <div class="material-row store-materials selected-materials">
+                    <div><div class="material-name">Ouro amarelo 18k · matéria-prima</div><div class="material-detail">Disponível 84,6 g</div></div>
+                    <div class="qty-field"><input class="mini-input" inputmode="decimal" value="4,20" aria-label="Quantidade de ouro"><span class="qty-unit">g</span></div>
+                    <div class="hide-mobile" style="font-size:10px;color:var(--secondary)">Quantidade</div>
+                    <button class="icon-btn">×</button>
+                  </div>
+                  <div class="material-row store-materials selected-materials">
+                    <div><div class="material-name">Diamante 0,30 ct · VS/G</div><div class="material-detail">Pedra selecionada do estoque · 1 unidade</div></div>
+                    <div class="qty-field"><input class="mini-input" inputmode="decimal" value="1"><span class="qty-unit">un</span></div>
+                    <div class="hide-mobile" style="font-size:10px;color:var(--secondary)">Quantidade</div>
+                    <button class="icon-btn">×</button>
+                  </div>
+                  <div class="custody-box">
+                    <div class="source-head"><div><div class="source-title">Material ou joia do cliente em custódia</div><div class="source-help">Use um lote já recebido ou registre agora o item entregue pelo cliente</div></div><span style="font-size:9px;color:#c6a9f3">Patrimônio do cliente</span></div>
+                    <div class="custody-tabs"><button class="custody-tab active" data-custody-tab="existing">Selecionar custódia existente</button><button class="custody-tab" data-custody-tab="new">＋ Adicionar material/joia</button></div>
+                    <div class="custody-pane active" data-custody-pane="existing">
+                      <div class="search-wrap"><input class="control" placeholder="Buscar lote por material, descrição ou código..."></div>
+                      <div class="inventory-results" style="margin-top:8px">
+                        <div class="inventory-item"><div class="inventory-icon" style="background:rgba(156,111,222,.12);color:#c6a9f3">Au</div><div><div class="inventory-name">Ouro 18k do cliente</div><div class="inventory-meta">CUST-0042 · 8,40 g disponíveis · avaliado</div></div><button class="add-material custody-add" data-add="Ouro 18k do cliente · CUST-0042">＋</button></div>
+                        <div class="inventory-item"><div class="inventory-icon" style="background:rgba(156,111,222,.12);color:#c6a9f3">💍</div><div><div class="inventory-name">Anel antigo para derreter</div><div class="inventory-meta">CUST-0038 · 5,15 g líquidos · ouro 18k</div></div><button class="add-material custody-add" data-add="Anel antigo para derreter · CUST-0038">＋</button></div>
+                      </div>
+                    </div>
+                    <div class="custody-pane" data-custody-pane="new">
+                      <div class="grid">
+                        <label><span class="label">Tipo de item *</span><select class="control"><option>Metal / matéria-prima</option><option>Joia para derreter</option><option>Pedra / cristal</option><option>Sucata</option></select></label>
+                        <label><span class="label">Material / teor</span><input class="control" placeholder="Ex: Ouro 18k"></label>
+                        <label><span class="label">Peso bruto *</span><input class="control" placeholder="0,00 g"></label>
+                        <label><span class="label">Peso líquido *</span><input class="control" placeholder="0,00 g"></label>
+                        <label class="span-2"><span class="label">Descrição da joia/material *</span><input class="control" placeholder="Ex: cordão antigo com fecho quebrado"></label>
+                        <label><span class="label">Valor de referência</span><input class="control" placeholder="R$ por g/un"></label>
+                        <label><span class="label">Crédito negociado</span><input class="control" placeholder="R$ 0,00"></label>
+                        <label class="span-2"><span class="label">Observações do recebimento</span><textarea class="control" placeholder="Estado, marcas, avarias, acordo com o cliente..."></textarea></label>
+                        <div class="span-2"><span class="label">Fotos / evidências</span><div class="upload-area">＋ Adicionar fotos do material recebido</div></div>
+                      </div>
+                      <div class="piece-actions"><button class="btn gold-soft register-custody">Registrar em custódia e vincular à peça</button></div>
+                    </div>
+                    <div class="selected-label">Custódia vinculada à peça</div>
+                    <div class="material-row custody-selected"><div><div class="material-name">Nenhum material de custódia selecionado</div><div class="material-detail">Selecione um lote existente ou registre um novo recebimento</div></div><input class="mini-input" placeholder="Uso planejado"><div class="hide-mobile" style="font-size:10px;color:var(--secondary)">Crédito: —</div><div class="hide-mobile" style="font-size:10px;color:var(--purple)">Disponível: —</div><button class="icon-btn">×</button></div>
+                  </div>
+
+                  <div class="grid" style="margin-top:11px">
+                    <label><span class="label">Perda estimada</span><input class="control" value="8%"></label>
+                    <label><span class="label">Faixa mínima</span><input class="control" value="6%"></label>
+                    <label><span class="label">Faixa máxima</span><input class="control" value="10%"></label>
+                    <label><span class="label">Mão de obra</span><input class="control" value="R$ 1.250,00"></label>
+                  </div>
+                  <div class="calc-grid">
+                    <div class="calc-card"><div class="summary-title">Controle comercial</div><div class="calc-row"><span>Materiais da peça</span><strong>Selecionados</strong></div><div class="calc-row"><span>Mão de obra</span><strong>R$ 1.250,00</strong></div><div class="calc-row"><span>Preço final</span><strong>Manual</strong></div></div>
+                    <div class="calc-card"><div class="summary-title">Preço comercial da peça</div><label><span class="label">Preço de venda manual *</span><input class="control" value="R$ 4.850,00" style="color:var(--gold);font-family:Georgia,serif;font-size:16px;font-weight:700"></label></div>
+                  </div>
+                  <div class="piece-actions"><button class="btn danger">Remover peça</button><button class="btn">Duplicar</button><button class="btn gold-soft save-piece">Salvar e recolher peça</button></div>
+                </div>
+              </article>
+
+              <article class="piece-card" data-piece="2" data-material-status="ready">
+                <div class="piece-head">
+                  <div class="piece-index">2</div>
+                  <div><div class="piece-name">Par de alianças clássicas</div><div class="piece-meta">Ouro amarelo · Perfil meia-cana · Aros 21 e 16 · Custódia parcial</div></div>
+                  <span class="piece-status ready">Pronta para proposta</span>
+                  <div class="piece-price"><strong>R$ 3.600,00</strong><span>preço manual</span></div>
+                  <button class="icon-btn piece-toggle" aria-label="Expandir peça 2">▼</button>
+                </div>
+                <div class="piece-body">
+                  <div class="grid"><label class="span-2"><span class="label">Nome da peça</span><input class="control piece-title-input" value="Par de alianças clássicas"></label><label><span class="label">Categoria</span><select class="control"><option>Aliança</option><option>Anel</option><option>Pulseira</option><option>Cordão</option></select></label><label><span class="label">Quantidade</span><input class="control" value="2"></label><label><span class="label">Metal</span><input class="control" value="Ouro amarelo 18k"></label><label><span class="label">Aros</span><input class="control" value="21 e 16"></label><label><span class="label">Perfil</span><input class="control" value="Meia-cana 4 mm"></label><label><span class="label">Peso estimado</span><input class="control" value="7,80 g"></label><label><span class="label">Gravação</span><input class="control" value="Maria ♥ Lucas"></label></div>
+                  <div class="subhead"><div class="subhead-title">Material em custódia desta peça</div><span style="font-size:9px;color:var(--purple)">Lote CUST-0042</span></div>
+                  <div class="custody-box show"><div class="grid"><label class="span-2"><span class="label">Material</span><input class="control" value="Ouro 18k entregue pelo cliente · peso líquido 8,40 g"></label><label><span class="label">Uso planejado</span><input class="control" value="7,80 g"></label><label><span class="label">Crédito aprovado</span><input class="control" value="R$ 2.340,00"></label></div></div>
+                  <div class="calc-grid"><div class="calc-card"><div class="summary-title">Controle comercial</div><div class="calc-row"><span>Material do cliente</span><strong>Custódia vinculada</strong></div><div class="calc-row"><span>Mão de obra</span><strong>R$ 1.600,00</strong></div><div class="calc-row"><span>Preço final</span><strong>Manual</strong></div></div><div class="calc-card"><div class="summary-title">Preço comercial da peça</div><label><span class="label">Preço de venda manual *</span><input class="control" value="R$ 3.600,00" style="color:var(--gold);font-family:Georgia,serif;font-size:16px;font-weight:700"></label><div class="calc-row"><span>Crédito negociado</span><strong style="color:var(--purple)">− R$ 2.340,00</strong></div></div></div>
+                  <div class="piece-actions"><button class="btn danger">Remover peça</button><button class="btn">Duplicar</button><button class="btn gold-soft save-piece">Salvar e recolher peça</button></div>
+                </div>
+              </article>
+            </div>
+
+            <button class="add-piece" id="addPiece">＋ Nova peça neste projeto</button>
+
+            <div class="proposal-alert" id="proposalAlert"><span>!</span><span>Existe peça sem material selecionado. Selecione a matéria-prima/material obrigatório antes de gerar a proposta.</span></div>
+
+          </section>
+
+          <section class="state-panel" id="emptyState"><div class="state-icon">◇</div><h3>Nenhuma peça adicionada</h3><p>Adicione a primeira peça para montar a ficha técnica e o orçamento.</p><button class="btn gold-soft">＋ Nova peça</button></section>
+          <section class="state-panel" id="errorState"><div class="state-icon">!</div><h3>Não foi possível carregar os materiais</h3><p>A OS foi preservada. Tente novamente para consultar estoque e custódia.</p><button class="btn danger">Tentar novamente</button></section>
+          <section class="state-panel" id="lockedState"><div class="state-icon">🔒</div><h3>Proposta já aprovada</h3><p>Esta versão está bloqueada. Para alterar peças ou valores, gere uma nova versão da proposta.</p><button class="btn gold-soft">Gerar nova versão</button></section>
+        </div>
+
+        <div class="quote-summary-bar" id="quoteSummaryBar">
+          <div class="summary">
+            <div class="summary-card"><div class="summary-title">Peças anexadas à proposta</div><div class="summary-item"><span>1. Anel solitário ouro 18k</span><span>R$ 4.850,00</span></div><div class="summary-item"><span>2. Par de alianças clássicas</span><span>R$ 3.600,00</span></div><div class="flow-note"><span>✓</span><span>Ao gerar, a proposta salva uma versão destas duas peças. Alterações posteriores na OS não modificam a proposta já enviada.</span></div></div>
+            <div class="summary-card"><div class="summary-title">Resumo comercial</div><div class="calc-row"><span>Subtotal das peças</span><strong>R$ 8.450,00</strong></div><div class="calc-row"><span>Crédito material cliente</span><strong style="color:var(--purple)">− R$ 2.340,00</strong></div><div class="calc-row"><span>Sinal sugerido</span><strong>R$ 1.500,00</strong></div><div class="grand-total"><span>Total da proposta</span><strong>R$ 6.110,00</strong></div></div>
+          </div>
+        </div>
+        <footer class="modal-foot"><span class="foot-status" id="footerStatus">Anotações salvas · 2 fotos anexadas</span><span class="foot-spacer"></span><button class="btn">Cancelar</button><button class="btn blue" id="saveDraft">Salvar anotações</button><button class="btn gold" id="nextStep">Ir para cotação →</button><button class="btn gold" id="generateProposal" style="display:none">Gerar Proposta</button></footer>
+      </main>
+    </div>
+    <p class="responsive-note"><strong>Nota responsiva:</strong> em telas menores, as abas ocupam a largura do modal, dados e campos viram uma coluna e os cards de peça continuam colapsáveis. O rodapé muda conforme a aba: “Salvar anotações / Ir para cotação” ou “Salvar cotação / Gerar proposta”.</p>
+  </div>
+
+  <div class="proposal-preview" id="proposalPreview" role="dialog" aria-modal="true" aria-label="Prévia da proposta">
+    <div class="proposal">
+      <header class="proposal-head"><div><div class="proposal-code">PRÉVIA · AINDA NÃO SALVA</div><h2>Proposta — Conjunto casamento</h2><div style="font-size:11px;color:var(--secondary)">Maria Fernanda Costa · válida por 48 horas</div></div><button class="close" id="closePreview">×</button></header>
+      <div class="proposal-body"><div class="summary-title">Itens da proposta</div><div class="proposal-piece"><div class="piece-index">1</div><div><div class="piece-name">Anel solitário ouro 18k</div><div class="piece-meta">Diamante 0,30 ct · Aro 17 · prazo estimado 25 dias</div></div><strong style="color:var(--gold)">R$ 4.850,00</strong></div><div class="proposal-piece"><div class="piece-index">2</div><div><div class="piece-name">Par de alianças clássicas</div><div class="piece-meta">Ouro 18k do cliente · gravação interna · prazo estimado 20 dias</div></div><strong style="color:var(--gold)">R$ 3.600,00</strong></div><div class="summary-card" style="margin-top:12px"><div class="calc-row"><span>Subtotal das peças</span><strong>R$ 8.450,00</strong></div><div class="calc-row"><span>Crédito negociado</span><strong style="color:var(--purple)">− R$ 2.340,00</strong></div><div class="grand-total"><span>Total da proposta</span><strong>R$ 6.110,00</strong></div></div><div class="flow-note"><span>→</span><span>Depois de salva, esta proposta aparecerá na aba Propostas. O botão “Fazer venda” abrirá o carrinho lateral com estes itens e valores.</span></div></div>
+      <footer class="proposal-foot"><button class="btn" id="backPreview">Voltar e editar</button><button class="btn gold">Confirmar geração da proposta</button></footer>
+    </div>
+  </div>
+
+  <script>
+    const workflowTabs = [...document.querySelectorAll('.workflow-tab')];
+    const workflowPanes = [...document.querySelectorAll('[data-workflow-pane]')];
+    function showWorkflow(name) {
+      workflowTabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.workflow === name));
+      workflowPanes.forEach((pane) => pane.classList.toggle('active', pane.dataset.workflowPane === name));
+      const notes = name === 'notes';
+      document.getElementById('footerStatus').textContent = notes ? 'Anotações salvas · 2 fotos anexadas' : 'Cotação em rascunho · 2 peças completas';
+      document.getElementById('saveDraft').textContent = notes ? 'Salvar anotações' : 'Salvar cotação';
+      document.getElementById('nextStep').style.display = notes ? 'inline-flex' : 'none';
+      document.getElementById('generateProposal').style.display = notes ? 'none' : 'inline-flex';
+      document.getElementById('quoteSummaryBar').classList.toggle('active', !notes);
+    }
+    workflowTabs.forEach((tab) => tab.addEventListener('click', () => showWorkflow(tab.dataset.workflow)));
+    document.getElementById('nextStep').addEventListener('click', () => showWorkflow('quote'));
+    const updatePhotoCounter = () => {
+      const total = document.querySelectorAll('.photo-card').length;
+      document.getElementById('photoCounter').textContent = `${total} de 8 fotos`;
+      document.getElementById('footerStatus').textContent = `Anotações salvas · ${total} fotos anexadas`;
+    };
+    document.getElementById('addReferencePhoto').addEventListener('click', () => {
+      if (document.querySelectorAll('.photo-card').length >= 8) return;
+      const photo = document.createElement('div');
+      photo.className = 'photo-card';
+      photo.innerHTML = '◇<small>nova-referencia.jpg</small><button class="photo-remove">×</button>';
+      document.getElementById('addReferencePhoto').before(photo);
+      updatePhotoCounter();
+    });
+    document.addEventListener('click', (event) => {
+      const photoRemove = event.target.closest('.photo-remove');
+      if (photoRemove) {
+        photoRemove.closest('.photo-card').remove();
+        updatePhotoCounter();
+      }
+    });
+    const cards = [...document.querySelectorAll('.piece-card')];
+    document.querySelectorAll('.piece-toggle').forEach((button) => button.addEventListener('click', () => {
+      const card = button.closest('.piece-card');
+      card.classList.toggle('active');
+      button.textContent = card.classList.contains('active') ? '▲' : '▼';
+    }));
+    document.querySelectorAll('.save-piece').forEach((button) => button.addEventListener('click', () => {
+      const card = button.closest('.piece-card'); card.classList.remove('active'); card.querySelector('.piece-toggle').textContent = '▼';
+    }));
+    document.querySelectorAll('.segment').forEach((button) => button.addEventListener('click', () => {
+      const body = button.closest('.piece-body'); body.querySelectorAll('.segment').forEach((b) => b.classList.remove('active')); button.classList.add('active');
+      body.querySelectorAll('.store-materials').forEach((row) => row.style.display = button.dataset.origin === 'store' ? 'grid' : 'none');
+      body.querySelector('.custody-box').classList.toggle('show', button.dataset.origin === 'custody');
+    }));
+    function setPieceMaterialStatus(card, ready) {
+      card.dataset.materialStatus = ready ? 'ready' : 'missing';
+      const badge = card.querySelector('.piece-status');
+      badge.classList.toggle('ready', ready);
+      badge.classList.toggle('missing', !ready);
+      badge.textContent = ready ? 'Pronta para proposta' : 'Sem material';
+    }
+    document.addEventListener('click', (event) => {
+      const filter = event.target.closest('.filter-chip');
+      if (filter) {
+        filter.closest('.filter-row').querySelectorAll('.filter-chip').forEach((chip) => chip.classList.remove('active'));
+        filter.classList.add('active');
+      }
+
+      const custodyTab = event.target.closest('.custody-tab');
+      if (custodyTab) {
+        const box = custodyTab.closest('.custody-box');
+        box.querySelectorAll('.custody-tab').forEach((tab) => tab.classList.remove('active'));
+        box.querySelectorAll('.custody-pane').forEach((pane) => pane.classList.remove('active'));
+        custodyTab.classList.add('active');
+        box.querySelector(`[data-custody-pane="${custodyTab.dataset.custodyTab}"]`).classList.add('active');
+      }
+
+      const add = event.target.closest('.add-material:not(.custody-add)');
+      if (add) {
+        const body = add.closest('.piece-body');
+        const row = document.createElement('div');
+        row.className = 'material-row store-materials selected-materials';
+        row.innerHTML = `<div><div class="material-name">${add.dataset.add}</div><div class="material-detail">Selecionado do estoque</div></div><div class="qty-field"><input class="mini-input" inputmode="decimal" value="${add.dataset.qty || '1'}"><span class="qty-unit">${add.dataset.unit || 'un'}</span></div><div class="hide-mobile" style="font-size:10px;color:var(--secondary)">Quantidade</div><button class="icon-btn remove-material">×</button>`;
+        const custody = body.querySelector('.custody-box');
+        body.insertBefore(row, custody);
+        const feedback = body.querySelector('.material-feedback');
+        feedback.textContent = `${add.dataset.add} adicionado à peça. Ajuste a quantidade na lista.`;
+        feedback.classList.add('show');
+        setPieceMaterialStatus(body.closest('.piece-card'), true);
+        setTimeout(() => feedback.classList.remove('show'), 2200);
+      }
+
+      const custodyAdd = event.target.closest('.custody-add');
+      if (custodyAdd) {
+        const row = custodyAdd.closest('.custody-box').querySelector('.custody-selected');
+        row.innerHTML = `<div><div class="material-name">${custodyAdd.dataset.add}</div><div class="material-detail">Patrimônio do cliente · custódia separada do estoque próprio</div></div><div class="qty-field"><input class="mini-input" inputmode="decimal" value="4,20"><span class="qty-unit">g</span></div><div class="hide-mobile" style="font-size:10px;color:var(--secondary)">Crédito: R$ 1.260,00</div><div class="hide-mobile" style="font-size:10px;color:var(--purple)">Disponível: 8,40 g</div><button class="icon-btn remove-material">×</button>`;
+        setPieceMaterialStatus(custodyAdd.closest('.piece-card'), true);
+      }
+
+      const register = event.target.closest('.register-custody');
+      if (register) {
+        const box = register.closest('.custody-box');
+        const row = box.querySelector('.custody-selected');
+        row.innerHTML = `<div><div class="material-name">Novo material recebido · CUST-0043</div><div class="material-detail">Custódia registrada e vinculada à peça · aguardando avaliação final</div></div><div class="qty-field"><input class="mini-input" inputmode="decimal" value="0,00"><span class="qty-unit">g</span></div><div class="hide-mobile" style="font-size:10px;color:var(--secondary)">Crédito: pendente</div><div class="hide-mobile" style="font-size:10px;color:var(--purple)">Lote novo</div><button class="icon-btn remove-material">×</button>`;
+        setPieceMaterialStatus(register.closest('.piece-card'), true);
+      }
+
+      const remove = event.target.closest('.remove-material');
+      if (remove) {
+        const card = remove.closest('.piece-card');
+        remove.closest('.material-row').remove();
+        if (!card.querySelector('.selected-materials') && !card.querySelector('.custody-selected .material-name:not(:empty)')) setPieceMaterialStatus(card, false);
+      }
+    });
+    document.addEventListener('input', (event) => {
+      if (event.target.matches('.piece-title-input')) {
+        const card = event.target.closest('.piece-card');
+        const title = event.target.value.trim() || 'Nova peça sem título';
+        card.querySelector('.piece-name').textContent = title;
+      }
+      if (!event.target.matches('.inventory-search')) return;
+      const value = event.target.value.trim().toLowerCase();
+      event.target.closest('.material-source').querySelectorAll('.inventory-item').forEach((item) => {
+        item.style.display = item.textContent.toLowerCase().includes(value) ? 'grid' : 'none';
+      });
+    });
+    document.getElementById('addPiece').addEventListener('click', () => {
+      const clone = cards[0].cloneNode(true); clone.dataset.piece = String(document.querySelectorAll('.piece-card').length + 1); clone.querySelector('.piece-index').textContent = clone.dataset.piece; clone.querySelector('.piece-name').textContent = 'Nova peça sem título'; clone.querySelector('.piece-title-input').value = ''; clone.querySelector('.piece-title-input').placeholder = 'Digite o nome da peça'; clone.querySelector('.piece-meta').textContent = 'Preencha a ficha técnica e selecione os materiais'; clone.querySelector('.piece-price strong').textContent = 'R$ 0,00'; clone.querySelectorAll('.selected-materials').forEach((row) => row.remove()); clone.classList.add('active'); setPieceMaterialStatus(clone, false); document.getElementById('pieceList').appendChild(clone); clone.scrollIntoView({behavior:'smooth',block:'center'});
+    });
+    const preview = document.getElementById('proposalPreview');
+    document.getElementById('generateProposal').addEventListener('click', () => {
+      const missing = document.querySelector('[data-material-status="missing"]');
+      document.getElementById('proposalAlert').classList.toggle('show', Boolean(missing));
+      if (!missing) preview.classList.add('show');
+    });
+    document.getElementById('closePreview').addEventListener('click', () => preview.classList.remove('show'));
+    document.getElementById('backPreview').addEventListener('click', () => preview.classList.remove('show'));
+    document.querySelectorAll('.state-tab').forEach((tab) => tab.addEventListener('click', () => {
+      document.querySelectorAll('.state-tab').forEach((x) => x.classList.remove('active')); tab.classList.add('active');
+      ['filledState','emptyState','errorState','lockedState'].forEach((id) => document.getElementById(id).classList.remove('show'));
+      document.getElementById('filledState').style.display = tab.dataset.state === 'filled' ? 'block' : 'none';
+      if (tab.dataset.state !== 'filled') document.getElementById(tab.dataset.state + 'State').classList.add('show');
+      document.getElementById('generateProposal').disabled = tab.dataset.state !== 'filled';
+      document.getElementById('generateProposal').style.opacity = tab.dataset.state === 'filled' ? '1' : '.45';
+    }));
+  </script>
+</body>
+</html>

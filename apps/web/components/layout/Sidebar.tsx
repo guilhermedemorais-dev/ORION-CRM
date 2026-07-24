@@ -87,6 +87,7 @@ export function Sidebar({
     userRole,
     mobileOpen,
     onCloseMobile,
+    desktopCollapsed = false,
 }: {
     companyName: string;
     logoUrl: string | null;
@@ -95,6 +96,7 @@ export function Sidebar({
     userRole: string;
     mobileOpen: boolean;
     onCloseMobile: () => void;
+    desktopCollapsed?: boolean;
 }) {
     const pathname = usePathname();
     const isActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
@@ -138,9 +140,9 @@ export function Sidebar({
     return (
         <>
         <aside
-            className={`fixed inset-y-0 left-0 z-40 flex w-[220px] flex-col border-r border-[color:var(--orion-border-low)] bg-[color:var(--orion-nav)] text-white transition-transform duration-200 ease-out lg:translate-x-0 ${
+            className={`fixed inset-y-0 left-0 z-40 flex w-[220px] flex-col border-r border-[color:var(--orion-border-low)] bg-[color:var(--orion-nav)] text-white transition-transform duration-200 ease-out ${
                 mobileOpen ? 'translate-x-0' : '-translate-x-full'
-            }`}
+            } ${desktopCollapsed ? 'lg:-translate-x-full' : 'lg:translate-x-0'}`}
             style={{ fontFamily: 'var(--font-orion-sans)' }}
         >
             {/* Logo area */}
