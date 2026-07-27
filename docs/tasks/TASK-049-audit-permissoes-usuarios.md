@@ -1,8 +1,8 @@
 # TASK-049: Auditar modulo de configuracao de usuarios/permissoes
 
 ## Status visual
-- Status visual: A definir
-- Status Kanban: Discovery / SDD
+- Status visual: 🟢 Concluída (diagnóstico)
+- Status Kanban: In Review
 - Responsavel: Claude Code
 - Issue criada / vinculada: #51
 - Branch sugerida: `audit/permissoes-usuarios`
@@ -49,5 +49,41 @@ permissoes (ex.: order.approve — #48).
 ## Criterios de aceite
 - Documento de achados com o mapa toggle->chave->enforcement e a lista de bugs.
 
-## Resultado da execucao
-(a preencher)
+## Resultado da execucao — ACHADOS
+
+Mecanismo funciona: `userCan(user, key)` (ROOT bypassa; senao custom_permissions
+override; senao default da matriz `PERMISSIONS`) + `requirePermission(key)`. As
+custom_permissions NAO vem no JWT — carregar lazy do DB (padrao em customers.routes).
+
+Enforcement real hoje:
+- `requirePermission('pipeline.configure')` — 6 usos (UNICA chave por requirePermission).
+- `clientes_outros` — enforcado em customers.routes (leitura direta de custom_permissions).
+- `ficha.*.view` (8 chaves) — gate no FRONTEND (leads/[id], clientes/[id]) via userCan.
+- Todo o resto do acesso e por `requireRole([...])` (papel), nao por toggle.
+
+Mapa toggle do modal -> enforcado?
+| Toggle | Chave | Enforca? |
+|--------|-------|----------|
+| Editar clientes de outros | clientes_outros | SIM |
+| Ficha: agenda/dados/atendimento/proposta/pedidos/os/entrega/historico | ficha.*.view | SIM (front) |
+| Leads & Pipeline | leads | NAO (cosmetico) |
+| Clientes | clientes | NAO (backend usa client.*) |
+| Pedidos | pedidos | NAO (backend usa order.*) |
+| Producao | producao | NAO (backend usa so.*) |
+| PDV | pdv | NAO |
+| Estoque | estoque | NAO |
+| Financeiro | financeiro | NAO (backend usa financial.*) |
+| Analytics | analytics | NAO |
+| Usuarios | usuarios | NAO (backend usa users.manage) |
+| Assistente IA | assistente_ia | NAO |
+
+## Bugs derivados (viram tasks proprias)
+- P1: ~10 toggles de modulo do modal sao cosmeticos (gravam custom_permissions mas
+  nenhuma rota/tela checa). Decidir: (a) ligar cada um ao enforcement (matriz+rota+
+  front) ou (b) remover os que nao serao usados. Nao corrigido aqui (diagnostico).
+
+## Impacto nas tasks dependentes
+- T-050 e T-046 SAO VIAVEIS: usar o mecanismo que funciona (userCan/custom_permissions
+  carregado lazy + gate no front), com chave NOVA enforcada de verdade — NAO reusar o
+  padrao cosmetico dos toggles de modulo.
+
