@@ -1,8 +1,8 @@
 # TASK-051: Bug — categoria nao salva/exibe no cadastro de produto
 
 ## Status visual
-- Status visual: A definir
-- Status Kanban: Ready for Dev
+- Status visual: 🟢 Concluída (aguardando validação final do usuário)
+- Status Kanban: In Review
 - Responsavel: Claude Code
 - Issue criada / vinculada: #53
 - Branch sugerida: `fix/estoque-categoria`
@@ -51,4 +51,22 @@ Ao selecionar a categoria no cadastro de produto, ela deve ser salva e exibida.
 - Categoria selecionada entra e aparece corretamente.
 
 ## Resultado da execucao
-(a preencher)
+RCA confirmada: dois campos (`category` nome vs `category_id` FK); o form salvava
+so o id e a exibicao (lista/detalhe, sem JOIN) usa o nome -> categoria "sumia".
+
+Fix (products.routes.ts):
+- Helper `resolveCategoryName(categoryId)`; no create e no update o nome `category`
+  e derivado do `category_id` (fonte da verdade). Update: bloco combinado
+  category/category_id (evita dupla atribuicao).
+- Migration `062_backfill_product_category_name.sql`: sincroniza produtos ja
+  cadastrados (id setado, nome nulo).
+
+Verificado ao vivo (container local rebuild + migration aplicada no boot):
+- API: criar produto so com category_id -> resposta `category='ouro 18k'`; lista exibe.
+- UI (Playwright): + Adicionar Produto -> selecionar "ouro 18k" -> Cadastrar ->
+  detalhe/lista mostram Categoria: ouro 18k. Produtos antigos passaram a exibir "ANEIS".
+- `tsc --noEmit` limpo.
+
+Observacao (fora do escopo, virar task): a pagina /estoque loga erros de
+HIDRATACAO React (#418/#423/#425) — pre-existentes, nao quebram a tela.
+

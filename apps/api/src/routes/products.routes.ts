@@ -206,6 +206,19 @@ function mapMovement(movement: StockMovementRow) {
     };
 }
 
+// Resolve o nome da categoria a partir do id. O produto tem dois campos:
+// `category_id` (FK, fonte da verdade) e `category` (nome denormalizado usado
+// na exibicao). Como a UI so envia o id, derivamos o nome aqui para manter os
+// dois em sincronia — sem isso a categoria some da lista/detalhe.
+async function resolveCategoryName(categoryId: string | null | undefined): Promise<string | null> {
+    if (!categoryId) return null;
+    const r = await query<{ name: string }>(
+        'SELECT name FROM product_categories WHERE id = $1 LIMIT 1',
+        [categoryId]
+    );
+    return r.rows[0]?.name ?? null;
+}
+
 async function applyStockMovement(
     productId: string,
     type: 'ENTRADA' | 'SAIDA' | 'AJUSTE' | 'PERDA' | 'DEVOLUCAO' | 'ENTRADA_INICIAL',
@@ -769,6 +782,11 @@ router.post(
 
             const data = parsed.data;
 
+            // Deriva o nome da categoria pelo id (fonte da verdade) para a exibicao.
+            const categoryName = data.category_id
+                ? await resolveCategoryName(data.category_id)
+                : (data.category ?? null);
+
             const result = await query<ProductRow>(
                 `INSERT INTO products (
                     code,
@@ -824,7 +842,7 @@ router.post(
                     data.cost_price_cents ?? 0,
                     data.stock_quantity,
                     data.minimum_stock,
-                    data.category ?? null,
+                    categoryName,
                     data.category_id ?? null,
                     data.collection ?? null,
                     data.metal ?? null,
@@ -968,13 +986,18 @@ router.patch(
                 values.push(data.minimum_stock);
                 updates.push(`minimum_stock = $${values.length}`);
             }
-            if (data.category !== undefined) {
-                values.push(data.category || null);
-                updates.push(`category = $${values.length}`);
-            }
+            // Categoria: o id e a fonte da verdade. Quando o id vem no payload,
+            // gravamos o id E o nome derivado (mantendo os dois em sincronia).
+            // Sem id, aceita so o nome (compat. legado/CSV).
             if (data.category_id !== undefined) {
                 values.push(data.category_id || null);
                 updates.push(`category_id = $${values.length}`);
+                const catName = await resolveCategoryName(data.category_id || null);
+                values.push(catName);
+                updates.push(`category = $${values.length}`);
+            } else if (data.category !== undefined) {
+                values.push(data.category || null);
+                updates.push(`category = $${values.length}`);
             }
             if (data.collection !== undefined) {
                 values.push(data.collection || null);
