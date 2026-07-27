@@ -1,10 +1,12 @@
 # TASK-045: Criar papel GERENTE (RBAC)
 
 ## Status visual
-- Status visual: A definir
-- Status Kanban: Ready for Dev
+- Status visual: 🟢 Cancelada (ja implementado)
+- Status Kanban: Done
 - Responsavel: Claude Code
-- Issue criada / vinculada: #47
+- Issue criada / vinculada: #47 (fechada — GERENTE ja existe via migration 038)
+- NOTA: GERENTE ja existe no enum (038_user_roles_expansion), no tipo UserRole, na
+  matriz permissions.ts e no modal Editar Usuario. Nada a implementar.
 - Branch sugerida: `feat/rbac-gerente`
 - Executor LLM primario: Claude Code
 - Executor secundario/revisor: security-standard
