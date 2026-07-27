@@ -47,10 +47,12 @@ valores sensiveis.
   **Margem de Lucro** (derivada/exibida ao lado do custo).
 - TODO O RESTO e visivel a todos: Preco de Venda, Estoque, Localizacao,
   Especificacoes, etc. NAO e a secao inteira.
-- **Ver = Editar** (uma unica permissao).
-- Papel: **SO ADMIN** ve/edita custo e margem. ROOT sempre pode (bypassa userCan).
-  GERENTE, VENDEDOR, ATENDENTE, PRODUCAO, FINANCEIRO NAO veem custo/margem.
-  (CONFIRMAR: usuario disse "so admin" — validar se GERENTE tambem fica de fora.)
+- **Ver = Editar** (uma unica permissao). Chave sugerida: `product.cost.view`.
+- Default do papel: **SO ADMIN** (ROOT sempre bypassa). GERENTE, VENDEDOR,
+  ATENDENTE, PRODUCAO, FINANCEIRO NAO veem por padrao.
+- **Por usuario (custom_permissions):** expor um **toggle no modal Editar Usuario**
+  ("Ver custo/margem de produto") para o dono liberar pra um gerente especifico
+  quando quiser. O toggle sobrepoe o default (modelo userCan ja existente).
 - Como margem = f(custo, preco), esconder o custo esconde a margem junto (coerente).
 - Escopo de aplicacao: modulo **Estoque** (lista/detalhe/edicao). NAO tocar no PDV/
   catalogo (preco de venda continua necessario pra vender).
