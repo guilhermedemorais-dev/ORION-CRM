@@ -42,17 +42,20 @@ valores sensiveis.
   qualquer role com acesso ao estoque.
 - Modal Editar Produto mostra Custo, Margem, Especificacoes para todos.
 
-## Escopo definido (decisao do usuario)
-- SENSIVEL = da secao **PRECIFICACAO para baixo** no modal Editar Produto:
-  Precificacao (Preco de Venda, Custo, Margem), Estoque (Estoque Atual/Minimo,
-  Localizacao) e Especificacoes (Metal, Peso, Pedras, Tamanho, etc.).
-- Campos NAO sensiveis: topo do modal (nome, codigo, descricao/observacoes, imagens).
+## Escopo definido (decisao do usuario — CORRIGIDO)
+- SENSIVEL = APENAS dois campos: **Custo de Aquisicao** (`cost_price_cents`) e
+  **Margem de Lucro** (derivada/exibida ao lado do custo).
+- TODO O RESTO e visivel a todos: Preco de Venda, Estoque, Localizacao,
+  Especificacoes, etc. NAO e a secao inteira.
 - **Ver = Editar** (uma unica permissao).
-- Papeis: **ADMIN e GERENTE** veem/editam. **ROOT pode tudo** (ja bypassa via userCan).
-  VENDEDOR/ATENDENTE nao veem nem editam esses campos.
-- Escopo de aplicacao: modulo **Estoque** (lista/detalhe/edicao de produto). NAO
-  mexer no caminho de leitura do PDV/catalogo (onde o preco de venda e necessario
-  para vender) — confirmar no SDD para nao quebrar venda.
+- Papel: **SO ADMIN** ve/edita custo e margem. ROOT sempre pode (bypassa userCan).
+  GERENTE, VENDEDOR, ATENDENTE, PRODUCAO, FINANCEIRO NAO veem custo/margem.
+  (CONFIRMAR: usuario disse "so admin" — validar se GERENTE tambem fica de fora.)
+- Como margem = f(custo, preco), esconder o custo esconde a margem junto (coerente).
+- Escopo de aplicacao: modulo **Estoque** (lista/detalhe/edicao). NAO tocar no PDV/
+  catalogo (preco de venda continua necessario pra vender).
+- Enforcement no BACKEND: rotas de produto NAO retornam `cost_price_cents` para
+  quem nao tem a permissao (nem em list nem em detail). Front esconde os 2 campos.
 
 ## Testes obrigatorios
 - API: usuario sem permissao NAO recebe custo/margem/specs (nem em list nem em detail).
