@@ -42,11 +42,17 @@ valores sensiveis.
   qualquer role com acesso ao estoque.
 - Modal Editar Produto mostra Custo, Margem, Especificacoes para todos.
 
-## Ambiguidade / Gate (BLOQUEANTE)
-- Definir o CONJUNTO exato de campos sensiveis. Hipotese: `cost_price_cents`
-  (Custo), Margem, e a secao Especificacoes (metal, peso, pedras, tamanho...).
-  Preco de Venda e Estoque permanecem visiveis ao vendedor.
-- "Ver" e "editar" usam a mesma permissao ou duas (view vs edit)?
+## Escopo definido (decisao do usuario)
+- SENSIVEL = da secao **PRECIFICACAO para baixo** no modal Editar Produto:
+  Precificacao (Preco de Venda, Custo, Margem), Estoque (Estoque Atual/Minimo,
+  Localizacao) e Especificacoes (Metal, Peso, Pedras, Tamanho, etc.).
+- Campos NAO sensiveis: topo do modal (nome, codigo, descricao/observacoes, imagens).
+- **Ver = Editar** (uma unica permissao).
+- Papeis: **ADMIN e GERENTE** veem/editam. **ROOT pode tudo** (ja bypassa via userCan).
+  VENDEDOR/ATENDENTE nao veem nem editam esses campos.
+- Escopo de aplicacao: modulo **Estoque** (lista/detalhe/edicao de produto). NAO
+  mexer no caminho de leitura do PDV/catalogo (onde o preco de venda e necessario
+  para vender) — confirmar no SDD para nao quebrar venda.
 
 ## Testes obrigatorios
 - API: usuario sem permissao NAO recebe custo/margem/specs (nem em list nem em detail).
