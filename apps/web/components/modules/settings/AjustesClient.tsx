@@ -82,6 +82,7 @@ const FIXED_PERMISSION_MODULES: PermissionModule[] = [
     { key: 'clientes', label: 'Clientes', icon: '👤' },
     { key: 'clientes_outros', label: 'Editar clientes de outros atendentes', icon: '🔓' },
     { key: 'pedidos', label: 'Pedidos', icon: '📦' },
+    { key: 'order.approve', label: 'Aprovar pedidos / enviar p/ produção', icon: '✅' },
     { key: 'producao', label: 'Produção', icon: '⚙️' },
     { key: 'pdv', label: 'PDV', icon: '🏪' },
     { key: 'estoque', label: 'Estoque', icon: '📋' },
@@ -129,7 +130,7 @@ const DEFAULT_PERMS_BY_ROLE: Record<UserRoleKey, Record<string, boolean>> = {
         ...Object.fromEntries(FICHA_PERMISSION_MODULES.map(m => [m.key, true])),
     },
     GERENTE: {
-        ...Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['leads', 'clientes', 'pedidos', 'producao', 'pdv', 'estoque', 'analytics', 'assistente_ia'].includes(m.key)])),
+        ...Object.fromEntries(FIXED_PERMISSION_MODULES.map(m => [m.key, ['leads', 'clientes', 'pedidos', 'order.approve', 'producao', 'pdv', 'estoque', 'analytics', 'assistente_ia'].includes(m.key)])),
         ...Object.fromEntries(FICHA_PERMISSION_MODULES.map(m => [m.key, FICHA_DEFAULTS.GERENTE.includes(m.key)])),
     },
     VENDEDOR: {

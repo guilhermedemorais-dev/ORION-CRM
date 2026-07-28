@@ -34,6 +34,9 @@ const PERMISSIONS: Record<string, UserRole[]> = {
     'order.create':             ['ADMIN', 'GERENTE', 'ATENDENTE'],
     'order.edit':               ['ADMIN', 'GERENTE'],
     'order.delete':             ['ADMIN'],
+    // Aprovar pedido / enviar para producao (APROVADO, EM_PRODUCAO).
+    // Default ADMIN e GERENTE; liberavel por usuario via toggle.
+    'order.approve':            ['ADMIN', 'GERENTE'],
 
     // OS
     'so.view':                  ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],

@@ -1,8 +1,8 @@
 # TASK-046: Restringir aprovacao->producao a ADMIN/GERENTE
 
 ## Status visual
-- Status visual: A definir
-- Status Kanban: Ready for Dev (bloqueada por T-045)
+- Status visual: 🟢 Concluída (aguardando validação final do usuário)
+- Status Kanban: In Review
 - Responsavel: Claude Code
 - Issue criada / vinculada: #48
 - Branch sugerida: `feat/aprovacao-producao-rbac`
@@ -50,4 +50,16 @@ entao ATENDENTE consegue aprovar e enviar pra producao.
 - Impossivel ATENDENTE mover pedido para APROVADO/EM_PRODUCAO.
 
 ## Resultado da execucao
-(a preencher)
+Feito via permissao (mais flexivel que requireRole fixo, conforme decisao):
+- `permissions.ts`: nova chave `order.approve` default `['ADMIN','GERENTE']` (ROOT bypassa).
+- `orders.routes.ts`: no PATCH /orders/:id/status, quando o alvo e APROVADO ou
+  EM_PRODUCAO, exige `userCan(user,'order.approve')` (custom_permissions lazy).
+  Demais transicoes seguem o requireRole da rota. 403 claro quando negado.
+- `AjustesClient.tsx`: toggle "Aprovar pedidos / enviar p/ produção" no modal
+  Editar Usuario; default ON para ADMIN/GERENTE, OFF para os demais.
+
+Verificado ao vivo (rebuild api+web):
+- ATENDENTE sem permissao -> APROVADO: HTTP 403 (bloqueado).
+- ATENDENTE com toggle order.approve -> APROVADO: HTTP 200 (status vira APROVADO).
+- UI: toggle aparece no modal (print). `tsc --noEmit` limpo (api + web).
+
