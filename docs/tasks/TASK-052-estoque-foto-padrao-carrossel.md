@@ -38,10 +38,15 @@ saem desalinhadas.
   (nada de foto esticada/deslocada).
 - Suporte a varias fotos + carrossel (adicionar, remover, navegar, definir capa).
 
-## Ambiguidade / Gate (a confirmar no SDD)
-- Aspecto padrao (1:1 quadrado? 4:5?) e tamanho maximo.
-- Recorte no upload (crop/resize server-side) ou so `object-fit` no display?
-- Limite de fotos por produto.
+## Escopo definido (decisao do usuario)
+- **Proporcao padrao: 1:1 (quadrado).**
+- **Mini editor de corte/reposicionamento no upload** (cortar + reenquadrar antes
+  de enviar). Reutilizar lib pronta como referencia (ex.: `react-easy-crop` ou
+  `react-image-crop`) — avaliar licenca/peso; preferir a mais leve.
+- Exibicao: `object-fit: cover` centralizado no card/detalhe.
+- Multiplas fotos + carrossel (adicionar/remover/navegar, definir capa).
+- A confirmar na implementacao: limite de fotos e se o schema/rotas ja suportam
+  multiplas imagens (`images` vs `photo_url`) — estender se preciso.
 
 ## Testes obrigatorios
 - Foto de proporcao aleatoria exibe centralizada, sem distorcao.

@@ -1,8 +1,10 @@
 # TASK-048: Disparar notify_on_enter (WhatsApp) do Fluxo ao entrar na etapa
 
 ## Status visual
-- Status visual: A definir
-- Status Kanban: Discovery / SDD (precisa confirmar contrato de notificacao)
+- Status visual: ❌ Cancelada (fora de escopo)
+- Status Kanban: Done (cancelada)
+- NOTA: cancelada — a comunicacao/notificacao com o cliente sera via Chatwoot
+  integrado ao inbox (comunicacao direta), nao pelo notify_on_enter. Issue #50 fechada.
 - Responsavel: Claude Code
 - Issue criada / vinculada: #50
 - Branch sugerida: `feat/fluxo-notify-on-enter`
