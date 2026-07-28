@@ -7,6 +7,7 @@ import { authenticate } from '../middleware/auth.js';
 import { createAuditLog } from '../middleware/audit.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { requireRole } from '../middleware/rbac.js';
+import { userCan } from '../middleware/permissions.js';
 import multer from 'multer';
 import { promises as fsp } from 'node:fs';
 import { join } from 'node:path';
@@ -120,11 +121,28 @@ interface StockMovementRow {
     created_by_name: string;
 }
 
-function mapProduct(row: ProductRow) {
+function mapProduct(row: ProductRow, canViewCost = true) {
     return {
         ...row,
+        // Custo de aquisicao e dado sensivel: so quem tem product.cost.view ve.
+        // A margem e derivada do custo no front, entao esconder o custo ja a esconde.
+        cost_price_cents: canViewCost ? row.cost_price_cents : null,
         is_low_stock: row.stock_quantity <= row.minimum_stock,
     };
+}
+
+// Custo/margem: ROOT bypassa; ADMIN por default; outros so com o toggle
+// custom_permissions['product.cost.view'] (carregado lazy — o JWT nao traz).
+async function canViewProductCost(req: Request): Promise<boolean> {
+    if (!req.user) return false;
+    const r = await query<{ custom_permissions: Record<string, boolean> | null }>(
+        'SELECT custom_permissions FROM users WHERE id = $1 LIMIT 1',
+        [req.user.id]
+    );
+    return userCan(
+        { role: req.user.role, custom_permissions: r.rows[0]?.custom_permissions ?? {} },
+        'product.cost.view'
+    );
 }
 
 async function fetchProduct(productId: string): Promise<ProductRow | null> {
@@ -381,12 +399,14 @@ router.get(
             );
 
             const row = result.rows[0];
-            if (!row) { res.json({ active: 0, critical: 0, out_of_stock: 0, total_cost_cents: 0 }); return; }
+            const canViewCost = await canViewProductCost(req);
+            if (!row) { res.json({ active: 0, critical: 0, out_of_stock: 0, total_cost_cents: canViewCost ? 0 : null }); return; }
             res.json({
                 active: Number(row.active),
                 critical: Number(row.critical),
                 out_of_stock: Number(row.out_of_stock),
-                total_cost_cents: Number(row.total_cost_cents),
+                // Valor em Estoque (custo agregado) e sensivel: null se sem permissao.
+                total_cost_cents: canViewCost ? Number(row.total_cost_cents) : null,
             });
         } catch (error) {
             next(error);
@@ -747,8 +767,9 @@ router.get(
 
             const total = Number.parseInt(countResult.rows[0]?.total ?? '0', 10);
 
+            const canViewCost = await canViewProductCost(req);
             res.json({
-                data: result.rows.map(mapProduct),
+                data: result.rows.map((row) => mapProduct(row, canViewCost)),
                 meta: {
                     total,
                     page: parsed.data.page,
@@ -882,7 +903,8 @@ router.post(
                 });
             }
 
-            res.status(201).json(mapProduct(product as ProductRow));
+            const canViewCost = await canViewProductCost(req);
+            res.status(201).json(mapProduct(product as ProductRow, canViewCost));
         } catch (error) {
             const databaseError = error as { code?: string };
 
@@ -918,8 +940,9 @@ router.get(
 
             const recentMovements = await fetchRecentStockMovements(product.id);
 
+            const canViewCost = await canViewProductCost(req);
             res.json({
-                ...mapProduct(product),
+                ...mapProduct(product, canViewCost),
                 recent_stock_movements: recentMovements.map(mapMovement),
             });
         } catch (error) {
@@ -1098,7 +1121,8 @@ router.patch(
                 });
             }
 
-            res.json(mapProduct(product as ProductRow));
+            const canViewCost = await canViewProductCost(req);
+            res.json(mapProduct(product as ProductRow, canViewCost));
         } catch (error) {
             const databaseError = error as { code?: string };
 
@@ -1276,8 +1300,9 @@ router.post(
 
             const recentMovements = await fetchRecentStockMovements(params.data.id);
 
+            const canViewCost = await canViewProductCost(req);
             res.status(201).json({
-                ...mapProduct(result.after),
+                ...mapProduct(result.after, canViewCost),
                 recent_stock_movements: recentMovements.map(mapMovement),
             });
         } catch (error) {
@@ -1340,8 +1365,9 @@ router.post(
 
             const recentMovements = await fetchRecentStockMovements(params.data.id);
 
+            const canViewCost = await canViewProductCost(req);
             res.json({
-                ...mapProduct(result.after),
+                ...mapProduct(result.after, canViewCost),
                 recent_stock_movements: recentMovements.map(mapMovement),
             });
         } catch (error) {

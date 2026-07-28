@@ -85,6 +85,7 @@ const FIXED_PERMISSION_MODULES: PermissionModule[] = [
     { key: 'producao', label: 'Produção', icon: '⚙️' },
     { key: 'pdv', label: 'PDV', icon: '🏪' },
     { key: 'estoque', label: 'Estoque', icon: '📋' },
+    { key: 'product.cost.view', label: 'Ver custo/margem de produto', icon: '💵' },
     { key: 'financeiro', label: 'Financeiro', icon: '💰' },
     { key: 'analytics', label: 'Analytics', icon: '📈' },
     { key: 'usuarios', label: 'Usuários', icon: '👥' },

@@ -1,8 +1,8 @@
 # TASK-050: Ocultar dados sensiveis de produto de vendedores/atendentes
 
 ## Status visual
-- Status visual: A definir
-- Status Kanban: Discovery / SDD (ambiguidade de campos pendente)
+- Status visual: 🟢 Concluída (aguardando validação final do usuário)
+- Status Kanban: In Review
 - Responsavel: Claude Code
 - Issue criada / vinculada: #52
 - Branch sugerida: `feat/produto-dados-sensiveis-rbac`
@@ -70,4 +70,26 @@ valores sensiveis.
 - ADMIN/GERENTE ve e edita normalmente; toggle por usuario funciona.
 
 ## Resultado da execucao
-(a preencher)
+Nova permissao `product.cost.view` (permissions.ts, default ADMIN; ROOT bypassa).
+
+Backend (products.routes.ts): helper `canViewProductCost(req)` (carrega
+custom_permissions lazy + userCan). `mapProduct(row, canViewCost)` zera
+cost_price_cents quando sem permissao — aplicado em lista, detalhe, create,
+update e movimentacoes. `/products/stats.total_cost_cents` = null sem permissao.
+Create/update ja sao ADMIN-only (requireRole) — escrita protegida. CSV export e
+ADMIN-only (sem vazamento pra vendedor/atendente).
+
+Frontend: canViewCost derivado de `stats.total_cost_cents !== null`. Escondidos
+para quem nao tem: campos Custo/Margem no modal, card "Valor em Estoque",
+linha "Custo" no detalhe. Toggle "Ver custo/margem de produto" adicionado ao
+modal Editar Usuario (chave product.cost.view — enforcada de verdade, ao
+contrario dos toggles de modulo cosmeticos).
+
+Verificado ao vivo (rebuild api+web):
+- API ROOT: total_cost_cents=0 e cost=0 (ve). ATENDENTE sem toggle: ambos null
+  (nao ve). ATENDENTE COM toggle: total_cost_cents=0 (volta a ver).
+- UI: toggle "Ver custo/margem de produto" aparece no modal (print), OFF p/ atendente.
+- `tsc --noEmit` limpo (api + web).
+
+Nao coberto (fora do escopo/decisao): os ~10 toggles de modulo cosmeticos (issue #55).
+

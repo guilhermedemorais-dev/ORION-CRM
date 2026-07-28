@@ -6,7 +6,7 @@ interface ProductRecord {
   id: string; code: string; name: string;
   category: string | null; category_id: string | null;
   collection: string | null; description: string | null;
-  price_cents: number; cost_price_cents: number;
+  price_cents: number; cost_price_cents: number | null;
   stock_quantity: number; minimum_stock: number;
   metal: string | null; weight_grams: number | null;
   location: string | null; size_info: string | null; stones: string | null;
@@ -16,7 +16,7 @@ interface ProductRecord {
 }
 
 interface StatsRecord {
-  active: number; critical: number; out_of_stock: number; total_cost_cents: number;
+  active: number; critical: number; out_of_stock: number; total_cost_cents: number | null;
 }
 
 export default async function EstoquePage() {

@@ -46,6 +46,11 @@ const PERMISSIONS: Record<string, UserRole[]> = {
     'delivery.view':            ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],
     'delivery.update_status':   ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],
 
+    // Estoque / Produto — dados sensiveis
+    // Custo de aquisicao + margem de lucro. Default so ADMIN (ROOT bypassa).
+    // Liberavel por usuario via toggle no modal (custom_permissions).
+    'product.cost.view':        ['ADMIN'],
+
     // Financeiro / NF-e
     'nfe.emit':                 ['ADMIN', 'GERENTE'],
     'financial.view':           ['ADMIN', 'GERENTE', 'FINANCEIRO'],
