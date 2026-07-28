@@ -44,5 +44,14 @@ Eliminar os erros de hidratacao (#418/#423/#425) na tela /estoque.
 ## Criterios de aceite
 - Zero erro de hidratacao no /estoque; formatacao intacta.
 
-## Resultado da execucao
-(a preencher)
+## Resultado da execucao (parcial — precisa de mais investigacao)
+- 1a tentativa: normalizar espacos especiais (no-break/narrow) nos formatadores
+  Intl (moeda/data). NAO resolveu — os 9 erros (#425 x7, #418, #423) persistiram
+  identicos apos rebuild. Revertido (nao commitado) para nao deixar fix falso.
+- Conclusao: a causa nao e (so) a formatacao de espaco. Erro minificado nao aponta
+  o componente. Diagnostico preciso exige rodar o WEB em modo DEV (`next dev`,
+  build nao-minificado), que mostra o elemento e o texto exato que difere SSR<->client.
+- Hipoteses a checar no dev build: fuso horario no `new Date(d)`/DateTimeFormat
+  (dia deslocado UTC vs local), ou algum valor nao-deterministico no render inicial.
+- P2, NAO quebra a tela. Mantida aberta (#56) para uma sessao dedicada de debug.
+
