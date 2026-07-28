@@ -184,6 +184,52 @@ export function LeadsPipelineClient({
     const [infoMessage, setInfoMessage] = useState<string | null>(null);
     const [showPipelineConfig, setShowPipelineConfig] = useState(initialConfigOpen);
     const [configTab, setConfigTab] = useState<'stages' | 'rules'>('stages');
+    // T-047: renomear / excluir board a partir da config do pipeline.
+    const [renamingBoard, setRenamingBoard] = useState(false);
+    const [renameBoardValue, setRenameBoardValue] = useState(pipelineName);
+    const [confirmDeleteBoard, setConfirmDeleteBoard] = useState(false);
+    const [boardBusy, setBoardBusy] = useState(false);
+
+    const handleRenameBoard = async () => {
+        const name = renameBoardValue.trim();
+        if (name.length < 2) { setErrorMessage('O nome do board precisa ter ao menos 2 caracteres.'); return; }
+        setBoardBusy(true);
+        setErrorMessage(null);
+        try {
+            const res = await fetch(`/api/internal/pipelines/${pipelineId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name }),
+            });
+            if (!res.ok) {
+                const d = await res.json().catch(() => null);
+                throw new Error(d?.message ?? 'Falha ao renomear o board.');
+            }
+            setRenamingBoard(false);
+            window.location.reload();
+        } catch (err) {
+            setErrorMessage(err instanceof Error ? err.message : 'Erro ao renomear o board.');
+        } finally {
+            setBoardBusy(false);
+        }
+    };
+
+    const handleDeleteBoard = async () => {
+        setBoardBusy(true);
+        setErrorMessage(null);
+        try {
+            const res = await fetch(`/api/internal/pipelines/${pipelineId}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const d = await res.json().catch(() => null);
+                throw new Error(d?.message ?? 'Falha ao excluir o board.');
+            }
+            window.location.href = '/dashboard';
+        } catch (err) {
+            setErrorMessage(err instanceof Error ? err.message : 'Erro ao excluir o board.');
+            setConfirmDeleteBoard(false);
+            setBoardBusy(false);
+        }
+    };
     const [savingOrder, setSavingOrder] = useState(false);
     const [savingStageId, setSavingStageId] = useState<string | null>(null);
     const [creatingStage, setCreatingStage] = useState(false);
@@ -1576,15 +1622,67 @@ export function LeadsPipelineClient({
                                     Ajuste etapas e regras de automação sem sair do Kanban.
                                 </p>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => setShowPipelineConfig(false)}
-                                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-white/10 text-[color:var(--orion-text-secondary)] hover:border-[color:var(--orion-gold)] hover:text-[color:var(--orion-gold)]"
-                                aria-label="Fechar configuração do pipeline"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
+                            <div className="flex shrink-0 items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => { setRenameBoardValue(pipelineName); setRenamingBoard(true); }}
+                                    className="inline-flex h-9 items-center gap-1.5 rounded-[8px] border border-white/10 px-3 text-[12px] font-semibold text-[color:var(--orion-text-secondary)] hover:border-[color:var(--orion-gold)] hover:text-[color:var(--orion-gold)]"
+                                >
+                                    Renomear
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteBoard(true)}
+                                    className="inline-flex h-9 items-center gap-1.5 rounded-[8px] border border-[rgba(224,82,82,0.35)] bg-[rgba(224,82,82,0.08)] px-3 text-[12px] font-semibold text-[#E05252] hover:bg-[rgba(224,82,82,0.16)]"
+                                >
+                                    Excluir board
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPipelineConfig(false)}
+                                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-white/10 text-[color:var(--orion-text-secondary)] hover:border-[color:var(--orion-gold)] hover:text-[color:var(--orion-gold)]"
+                                    aria-label="Fechar configuração do pipeline"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
                         </header>
+
+                        {/* T-047: Modal renomear board */}
+                        {renamingBoard && (
+                            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" onClick={(e) => { if (e.target === e.currentTarget && !boardBusy) setRenamingBoard(false); }}>
+                                <div className="w-full max-w-md rounded-[12px] border border-white/10 bg-[#141417] p-5">
+                                    <h3 className="mb-3 text-base font-bold text-[color:var(--orion-text)]">Renomear board</h3>
+                                    <input
+                                        value={renameBoardValue}
+                                        onChange={(e) => setRenameBoardValue(e.target.value)}
+                                        autoFocus
+                                        className="mb-4 h-10 w-full rounded-[8px] border border-white/10 bg-[#1A1A1E] px-3 text-sm text-[color:var(--orion-text)] outline-none focus:border-[color:var(--orion-gold)]"
+                                        placeholder="Nome do board"
+                                    />
+                                    <div className="flex justify-end gap-2">
+                                        <button type="button" disabled={boardBusy} onClick={() => setRenamingBoard(false)} className="h-9 rounded-[8px] border border-white/10 px-4 text-[12px] text-[color:var(--orion-text-secondary)]">Cancelar</button>
+                                        <button type="button" disabled={boardBusy} onClick={() => void handleRenameBoard()} className="h-9 rounded-[8px] bg-[color:var(--orion-gold)] px-4 text-[12px] font-bold text-black disabled:opacity-50">{boardBusy ? 'Salvando…' : 'Salvar'}</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* T-047: Confirmar excluir board */}
+                        {confirmDeleteBoard && (
+                            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" onClick={(e) => { if (e.target === e.currentTarget && !boardBusy) setConfirmDeleteBoard(false); }}>
+                                <div className="w-full max-w-md rounded-[12px] border border-[rgba(224,82,82,0.35)] bg-[#141417] p-5">
+                                    <h3 className="mb-2 text-base font-bold text-[color:var(--orion-text)]">Excluir “{pipelineName}”?</h3>
+                                    <p className="mb-4 text-xs leading-relaxed text-[color:var(--orion-text-secondary)]">
+                                        O board só pode ser excluído se não for o padrão e não tiver etapas ou leads. Não pode ser desfeito.
+                                    </p>
+                                    <div className="flex justify-end gap-2">
+                                        <button type="button" disabled={boardBusy} onClick={() => setConfirmDeleteBoard(false)} className="h-9 rounded-[8px] border border-white/10 px-4 text-[12px] text-[color:var(--orion-text-secondary)]">Cancelar</button>
+                                        <button type="button" disabled={boardBusy} onClick={() => void handleDeleteBoard()} className="h-9 rounded-[8px] bg-[#E05252] px-4 text-[12px] font-bold text-white disabled:opacity-50">{boardBusy ? 'Excluindo…' : 'Excluir board'}</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div role="tablist" aria-label="Configuração do pipeline" className="flex shrink-0 items-center gap-1 border-b border-white/10 bg-[#0f0f11] px-3">
                             {([

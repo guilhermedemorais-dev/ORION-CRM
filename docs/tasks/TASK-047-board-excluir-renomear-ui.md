@@ -1,8 +1,8 @@
 # TASK-047: Botoes excluir/renomear board na UI de configuracao do pipeline
 
 ## Status visual
-- Status visual: A definir
-- Status Kanban: Ready for Dev
+- Status visual: 🟢 Concluída (aguardando validação final do usuário)
+- Status Kanban: In Review
 - Responsavel: Claude Code
 - Issue criada / vinculada: #49
 - Branch sugerida: `feat/board-excluir-renomear-ui`
@@ -51,4 +51,17 @@ RENOMEAR o board. O backend ja existe.
 - ROOT/ADMIN consegue renomear e excluir board pela config, com confirmacao.
 
 ## Resultado da execucao
-(a preencher)
+Frontend (LeadsPipelineClient.tsx): botoes "Renomear" e "Excluir board" no header
+do modal Configuracao do pipeline, com modal de renomear (input) e confirmacao de
+exclusao. Renomear -> PUT /pipelines/:id { name } + reload. Excluir -> DELETE
+/pipelines/:id -> redireciona /dashboard. Erros do backend (padrao/nao-vazio)
+exibidos via setErrorMessage. Backend ja existia.
+
+Verificado ao vivo (rebuild web, Playwright):
+- Botoes aparecem no header da config (print).
+- Renomear board "teste" -> "teste renomeado": PUT ok, DB atualizado (restaurado depois).
+- Excluir board vazio "teste-3": DELETE ok, DB count=0, redirect /dashboard.
+- `tsc --noEmit` limpo.
+
+Nota: board de teste "teste-3" (vazio) foi removido na verificacao (descartavel).
+
