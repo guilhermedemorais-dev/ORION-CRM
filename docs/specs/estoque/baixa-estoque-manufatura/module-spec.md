@@ -70,15 +70,27 @@ as colunas novas + o enum.
 
 | Elemento | Quem vê | Chama | Sucesso | Erro |
 |---|---|---|---|---|
-| Dropdown "Ação de estoque" (por etapa) | **hoje: só ROOT** (ver nota) | POST/PATCH `/api/internal/flows` | grava `stock_action` | toast + retry |
+| Dropdown "Ação de estoque" (por etapa) | ROOT (aba visível) + ADMIN (via `?tab=fluxo`) | POST/PATCH `/api/internal/flows` | grava `stock_action` | toast + retry |
 | Dropdown "Quem pode mover" (por etapa) | idem | idem | grava `min_role_to_move` | idem |
 
-> **Nota de RBAC (pendente após a TASK-054).** O backend já exige
-> `pipeline.configure` (ADMIN/GERENTE; ROOT bypassa), mas a UI ainda não alcança
-> esse público: a aba "Fluxo" é `rootOnly: true` no `AjustesClient.tsx` e a rota
-> `/ajustes` redireciona quem não é ADMIN/ROOT. Alinhar a UI ao
-> `pipeline.configure` é fatia própria — `AjustesClient.tsx` ficou fora dos
-> `locked_paths` da TASK-054. Até lá, "quem vê" na prática é só ROOT.
+> **Nota de RBAC (pendente após a TASK-054).** O backend exige
+> `pipeline.configure` (ADMIN/GERENTE; ROOT bypassa). A UI hoje entrega menos e
+> de forma inconsistente:
+> - `/ajustes` redireciona quem não é ADMIN/ROOT → **GERENTE não chega**, apesar
+>   de ter a permissão.
+> - A flag `rootOnly: true` da aba "Fluxo" filtra apenas `visibleTabs`, ou seja, o
+>   **botão** da aba. O renderizador de conteúdo faz `if (activeTab === 'fluxo')
+>   return <FluxoTab />` **sem checar papel**, e `initialTab` vem de
+>   `searchParams.tab` validado só contra a lista de abas válidas. Logo, um ADMIN
+>   em `/ajustes?tab=fluxo` **renderiza a aba normalmente** (e funciona, porque
+>   tem `pipeline.configure`). Compare com `banco-dados`, que checa
+>   `currentUserRole !== 'ROOT'` no próprio renderizador.
+> - Efeito colateral: o botão **Excluir fluxo** aparece para ADMIN, mas
+>   `DELETE /flows` é ROOT-only → o clique sempre falha com 403.
+>
+> Alinhar isso é fatia própria (`AjustesClient.tsx` ficou fora dos `locked_paths`
+> da TASK-054): expor a aba por `pipeline.configure`, checar papel também no
+> renderizador e esconder a exclusão para quem não é ROOT.
 >
 > Ambos os dropdowns devem ser rotulados como **não aplicados** enquanto a
 > execução não entrar, para não sugerir uma trava de permissão inexistente.

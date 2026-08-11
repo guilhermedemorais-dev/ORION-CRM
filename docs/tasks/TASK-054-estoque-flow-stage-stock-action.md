@@ -336,15 +336,27 @@ Estilo: os 2 selects reusam exatamente as classes dos selects ja existentes
 ("Regra de pagamento" / "Conta como"), no mesmo grid `grid-cols-1 md:grid-cols-2`
 (agora 2x2). Nenhum token novo foi introduzido.
 
-**Gap U2/S8 (fora dos `locked_paths`) — DECIDIDO: vira task seguinte.** A aba
-"Fluxo" esta marcada `rootOnly: true` em `AjustesClient.tsx` e a rota `/ajustes`
-redireciona quem nao e ADMIN/ROOT. O backend agora aceita ADMIN/GERENTE (spec §7),
-mas a UI so expoe a aba para ROOT — a linha §3.2 da spec ("quem ve: ADMIN/GERENTE")
-nao fecha no frontend. Decisao do orquestrador (07/08/2026): **nao ampliar o escopo
-desta task**; abrir fatia propria para alinhar a UI ao `pipeline.configure`, com
-spec e `locked_paths` proprios (`AjustesClient.tsx` + a rota `/ajustes`).
-Ate la, a config permanece acessivel apenas a ROOT pela interface — sem risco de
-exposicao indevida, apenas funcionalidade nao alcancavel por ADMIN/GERENTE.
+**Gap U2/S8 (fora dos `locked_paths`) — DECIDIDO: vira task seguinte.**
+O backend aceita ADMIN/GERENTE (spec §7); a UI entrega menos e de forma
+inconsistente. Mapeamento correto (a primeira versao deste paragrafo dizia
+"a UI so expoe a aba para ROOT" — **estava errado**, corrigido em 11/08/2026
+apos apontamento no review do PR #58):
+- `/ajustes` redireciona quem nao e ADMIN/ROOT -> **GERENTE nao chega**, apesar
+  de ter `pipeline.configure`.
+- `rootOnly: true` filtra apenas `visibleTabs`, isto e, o **botao** da aba. O
+  renderizador faz `if (activeTab === 'fluxo') return <FluxoTab />` sem checar
+  papel, e `initialTab` vem de `searchParams.tab`. Entao **ADMIN alcanca a aba
+  por `/ajustes?tab=fluxo`** e consegue configurar (tem a permissao).
+  `banco-dados` ja faz a checagem certa no renderizador; `fluxo` nao.
+- **Defeito de UX:** o botao "Excluir fluxo" aparece para ADMIN, mas
+  `DELETE /flows` e ROOT-only -> o clique sempre falha com 403.
+
+Nao ha escalonamento de privilegio: quem renderiza a aba tem permissao de
+backend para o que consegue salvar. Decisao do orquestrador (07/08/2026):
+**nao ampliar o escopo desta task**; abrir fatia propria com `locked_paths`
+proprios (`AjustesClient.tsx` + a rota `/ajustes` + `FluxoTab.tsx`) para expor a
+aba por `pipeline.configure`, checar papel no renderizador e esconder a exclusao
+de quem nao e ROOT.
 
 ### Correcoes vindas do review do PR #58 (Codex)
 - **P1 — falsa garantia de autorizacao (procede).** A ajuda e a UI apresentavam
@@ -373,11 +385,20 @@ exposicao indevida, apenas funcionalidade nao alcancavel por ADMIN/GERENTE.
   milissegundos. Criar uma segunda migracao so para `VALIDATE CONSTRAINT` adiciona
   custo permanente sem beneficio mensuravel — contraria o `minimal-implementation-gate`.
 - **Gatear os controles do `FluxoTab` por `pipeline.configure` no proprio componente:**
-  recusado nesta task. Hoje nenhum usuario read-only alcanca o componente: a aba e
-  `rootOnly: true` no `AjustesClient.tsx` e `/ajustes` redireciona quem nao e
-  ADMIN/ROOT. O gate no componente so passa a importar quando a UI for aberta para
-  ADMIN/GERENTE — e essa mudanca vive em `AjustesClient.tsx`, fora dos
-  `locked_paths`. Ja encaminhado como fatia propria (gap U2/S8).
+  recusado nesta task, mas **minha primeira justificativa estava factualmente errada**
+  e fica registrada a correcao. Eu afirmei que "so ROOT alcanca o componente". Falso:
+  a flag `rootOnly: true` filtra apenas `visibleTabs` (o botao da aba); o renderizador
+  faz `if (activeTab === 'fluxo') return <FluxoTab />` **sem checar papel**, e
+  `initialTab` vem de `searchParams.tab` validado so contra a lista de abas validas.
+  Um ADMIN em `/ajustes?tab=fluxo` renderiza a aba normalmente — e funciona, porque
+  ADMIN tem `pipeline.configure`. Nao ha escalonamento de privilegio (o backend
+  autoriza), mas **ha um defeito de UX real**: o botao "Excluir fluxo" aparece para
+  ADMIN e `DELETE /flows` e ROOT-only, entao o clique sempre falha com 403.
+  Segue recusado *nesta task* por escopo: `FluxoTab` nao recebe o papel do usuario
+  (nao tem prop de role) e passa-lo exige editar `AjustesClient.tsx`, fora dos
+  `locked_paths`. Encaminhado para a fatia do gap U2/S8, que ja possui esse arquivo:
+  expor a aba por `pipeline.configure`, checar papel tambem no renderizador (como
+  `banco-dados` ja faz) e esconder a exclusao para quem nao e ROOT.
 
 ### Bloqueios ou riscos remanescentes
 - **Print dos dropdowns pendente com o humano (decidido 07/08/2026):** a aba Fluxo
