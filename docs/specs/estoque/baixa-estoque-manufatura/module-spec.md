@@ -11,7 +11,14 @@ finalização do atendente; a baixa passa a ser dirigida por **configuração de
 etapa** (reserva → backflush) e por **papel** (caixa = gerente/admin). Tudo sobre
 o motor de regras já existente (`flow_stage_rules`), sem setores hardcoded.
 
-## 2. Regra de negócio (fluxo)
+## 2. Regra de negócio (fluxo alvo)
+> **Estado alvo do EPIC, não o comportamento atual.** A TASK-054 entrega apenas a
+> persistência da configuração (`stock_action` + `min_role_to_move`). Nada abaixo é
+> aplicado ainda: `flow-rules.service.ts::checkFlowRules` avalia somente
+> `payment_rule`, e `PATCH /orders/:id/stage` continua aceitando ATENDENTE.
+> Não trate reserva, backflush ou gate de papel como controle ativo até as fatias
+> de execução (§12, itens 2 a 5) entrarem.
+
 - **Atendente** abre o pedido (ficha, cotação, proposta) e **não finaliza**. O pedido entra na etapa de **CAIXA** (via handoff `pipeline_automation_rules`).
 - **Caixa (GERENTE/ADMIN)**: confere; em personalizada, **edita insumos**; **recebe pagamento** (sinal=`parcial` / integral=`pago`); finaliza. → insumos **RESERVADOS**.
 - **Separação**: separa os insumos, confirma.
@@ -37,21 +44,44 @@ ALTER TABLE flow_stage_rules
   ADD COLUMN IF NOT EXISTS checklist_default JSONB NOT NULL DEFAULT '[]'::jsonb,
   ADD COLUMN IF NOT EXISTS required_fields_enter JSONB NOT NULL DEFAULT '[]'::jsonb,
   ADD COLUMN IF NOT EXISTS required_fields_exit JSONB NOT NULL DEFAULT '[]'::jsonb;
-DO $$ BEGIN
-  IF (SELECT count(*) FROM pipeline_stage_settings) > 0 THEN
-    RAISE EXCEPTION 'pipeline_stage_settings NAO esta vazia — migrar antes de dropar';
+-- O LOCK vem ANTES do count: count() sozinho pega só ACCESS SHARE, que não
+-- bloqueia INSERT. Em deploy rolling, uma instância antiga da API poderia inserir
+-- entre o count e o DROP e a linha morreria em silêncio, apesar do guard.
+DO $$
+BEGIN
+  IF to_regclass('pipeline_stage_settings') IS NOT NULL THEN
+    EXECUTE 'LOCK TABLE pipeline_stage_settings IN ACCESS EXCLUSIVE MODE';
+    IF (SELECT count(*) FROM pipeline_stage_settings) > 0 THEN
+      RAISE EXCEPTION 'pipeline_stage_settings NAO esta vazia — migrar antes de dropar';
+    END IF;
   END IF;
 END $$;
 DROP TABLE IF EXISTS pipeline_stage_settings;
 COMMIT;
 ```
-Down: recriar `pipeline_stage_settings` (schema mig 048), remover colunas novas + enum.
+Obs: o `BEGIN`/`COMMIT` acima é ilustrativo — o runner (`migrate.ts`) já envolve
+cada arquivo numa transação, então a migração real não os repete.
+
+Rollback: o runner é **forward-only**, não existe "down". Reverter = migração
+compensatória que recria `pipeline_stage_settings` (schema da mig 048) e remove
+as colunas novas + o enum.
 
 ### 3.2 Matriz de interação UI (FluxoTab.tsx)
+
 | Elemento | Quem vê | Chama | Sucesso | Erro |
 |---|---|---|---|---|
-| Dropdown "Ação de estoque" (por etapa) | ADMIN/GERENTE (`pipeline.configure`) | POST/PATCH `/api/internal/flows` | grava `stock_action` | toast + retry |
+| Dropdown "Ação de estoque" (por etapa) | **hoje: só ROOT** (ver nota) | POST/PATCH `/api/internal/flows` | grava `stock_action` | toast + retry |
 | Dropdown "Quem pode mover" (por etapa) | idem | idem | grava `min_role_to_move` | idem |
+
+> **Nota de RBAC (pendente após a TASK-054).** O backend já exige
+> `pipeline.configure` (ADMIN/GERENTE; ROOT bypassa), mas a UI ainda não alcança
+> esse público: a aba "Fluxo" é `rootOnly: true` no `AjustesClient.tsx` e a rota
+> `/ajustes` redireciona quem não é ADMIN/ROOT. Alinhar a UI ao
+> `pipeline.configure` é fatia própria — `AjustesClient.tsx` ficou fora dos
+> `locked_paths` da TASK-054. Até lá, "quem vê" na prática é só ROOT.
+>
+> Ambos os dropdowns devem ser rotulados como **não aplicados** enquanto a
+> execução não entrar, para não sugerir uma trava de permissão inexistente.
 - Reserva de insumo por pedido: **HIPÓTESE** — nova tabela `stock_reservations (order_id, product_id, quantity, status)` (detalhar na fatia de execução, não na primeira).
 - Movimentos: reutilizar `stock_movements` (`PRODUCAO_CONSUMO` no backflush, `DEVOLUCAO` no retorno de sobra).
 
@@ -65,7 +95,10 @@ Down: recriar `pipeline_stage_settings` (schema mig 048), remover colunas novas 
 - `FluxoTab.tsx`: por etapa, dropdown "Ação de estoque" (`stock_action`) e "Quem pode mover" (`min_role_to_move`), além dos campos atuais. Estados loading/erro/sucesso.
 
 ## 6. Testes
-- Migração aplica/reverte; DROP só com tabela vazia (guard testado com linha → exceção).
+- Migração **aplica** (não há "reverte": runner forward-only; rollback = migração
+  compensatória documentada em §3.1).
+- Guard: DROP só com tabela vazia. Com 1 linha, a migração aborta e **preserva o
+  schema** (testado com linha → exceção + rollback).
 - Config persiste/retorna `stock_action`+`min_role_to_move`; regras antigas intactas.
 - Endpoints mortos → 404. `tsc --noEmit` limpo.
 

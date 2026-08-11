@@ -1,12 +1,13 @@
 # 🟡 TASK-054: Consolidar config por etapa em flow_stage_rules + stock_action + matar pipeline_stage_settings
 
 ## Status
-🟡 EM ANDAMENTO — implementacao concluida no branch `claude/distracted-meitner-9b9576`.
-Aguardando QA de `ui-ux-standard` / `security-standard` e review do orquestrador.
+🟡 EM ANDAMENTO — implementacao concluida e commitada; PR #58 aberto e em review.
+Aguardando o print do QA visual e o review final do orquestrador.
 
 - Status Kanban: In Review — PR #58 aberto em 07/08/2026
 - PR: https://github.com/guilhermedemorais-dev/ORION-CRM/pull/58
-- Branch: `feat/flow-stage-stock-action`
+- Branch canonica: `feat/flow-stage-stock-action` (a implementacao foi feita no
+  worktree `claude/distracted-meitner-9b9576` e commitada nessa branch)
 - Historico do card: o item estava no board **sem Status** (invisivel nas colunas)
   e foi **fechado indevidamente** em 07/08/2026 21:23 UTC. Reaberto, relatorio
   publicado como comentario na issue #57 e Status corrigido.
@@ -32,10 +33,10 @@ P0 — fundacao do fluxo Make-to-Order (EPIC do fluxo Caixa -> Separacao -> Fabr
 - Considera que NAO havera execucao da baixa (reserva/backflush) nesta task — so config.
 
 ## Project fields
-- `Status`: `Discovery / SDD`
+- `Status`: `In Review`
 - `Type`: `Feature + Refactor`
 - `Priority`: `P0`
-- `Approval`: `Pending`
+- `Approval`: `Pending` (aceite final do humano; commit/PR ja autorizados em 07/08/2026)
 - `Labels`: `feature`, `tech-debt`, `high-priority`
 
 ## Issue GitHub
@@ -100,7 +101,13 @@ entram aqui — sao fatias seguintes (reserva/backflush). Esta task so entrega a
 - `apps/api/src/services/flow-rules.service.ts` (apenas tipos)
 - `apps/api/src/types/entities.ts`
 - `apps/web/components/modules/settings/FluxoTab.tsx`
-- Central de Ajuda (arquivo/rota da ajuda de Fluxo — localizar antes de editar)
+- Central de Ajuda (arquivo/rota da ajuda de Fluxo — localizar antes de editar;
+  resolvido para `apps/web/components/help/helpContent.tsx`)
+- `apps/api/src/routes/flows.routes.integration.test.ts` (novo) — **excecao de
+  escopo APROVADA pelo orquestrador humano em 07/08/2026**. Nao constava na lista
+  original; foi adicionado para cumprir a secao "Testes obrigatorios" desta mesma
+  task, que exige testes de contrato e RBAC negativo. Aprovacao registrada junto
+  com a autorizacao de commit + PR.
 
 ## Fora do escopo
 - Executar a `stock_action` na transicao (`checkFlowRules`, `orders.routes.ts:1425`) — fatia seguinte.
@@ -158,9 +165,9 @@ entram aqui — sao fatias seguintes (reserva/backflush). Esta task so entrega a
       `security-standard` = PARTIAL (backend PASS; achado S7 corrigido; falta
       evidencia de UI). `ui-ux-standard` = U1/U2 `NAO VALIDADO` (print pendente,
       exige sessao ROOT), U3/U4 PASS.
-- [ ] Relatorio final preenchido; PR aberto vinculando task + spec + issue #57 —
-      **PARCIAL**: relatorio preenchido nesta task e publicado como comentario na
-      issue #57. **PR ainda NAO aberto** (nada commitado; aguardando decisao).
+- [x] Relatorio final preenchido; PR aberto vinculando task + spec + issue #57.
+      Relatorio nesta task e publicado como comentario na issue #57;
+      **PR #58 aberto** em 07/08/2026 na branch `feat/flow-stage-stock-action`.
 
 ## Prompt recomendado para IA executora
 ```text
@@ -358,6 +365,19 @@ exposicao indevida, apenas funcionalidade nao alcancavel por ADMIN/GERENTE.
   **Atencao no deploy:** a 063 ja consta aplicada no banco de dev, entao la o
   arquivo corrigido nao roda de novo. Producao, que ainda nao aplicou, recebe a
   versao com o LOCK.
+
+### Review do CodeRabbit no PR #58 — itens recusados (com motivo)
+- **FK `default_assignee_id` como `NOT VALID`:** recusado. A regra existe para
+  tabelas grandes; aqui `flow_stage_rules` tem 4 linhas e `users` tem 12, e a
+  coluna nasce toda NULL no mesmo `ALTER`. O scan e o `SHARE ROW EXCLUSIVE` duram
+  milissegundos. Criar uma segunda migracao so para `VALIDATE CONSTRAINT` adiciona
+  custo permanente sem beneficio mensuravel — contraria o `minimal-implementation-gate`.
+- **Gatear os controles do `FluxoTab` por `pipeline.configure` no proprio componente:**
+  recusado nesta task. Hoje nenhum usuario read-only alcanca o componente: a aba e
+  `rootOnly: true` no `AjustesClient.tsx` e `/ajustes` redireciona quem nao e
+  ADMIN/ROOT. O gate no componente so passa a importar quando a UI for aberta para
+  ADMIN/GERENTE — e essa mudanca vive em `AjustesClient.tsx`, fora dos
+  `locked_paths`. Ja encaminhado como fatia propria (gap U2/S8).
 
 ### Bloqueios ou riscos remanescentes
 - **Print dos dropdowns pendente com o humano (decidido 07/08/2026):** a aba Fluxo

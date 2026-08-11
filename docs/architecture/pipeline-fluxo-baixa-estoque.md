@@ -20,7 +20,7 @@ comunicam por regras de handoff. Ver memória `project-pipeline-architecture`.
 ## Decisão de arquitetura (batida)
 1. **Tabela canônica de regra por etapa = `flow_stage_rules`.** Adicionar `stock_action` (enum) + `min_role_to_move`. Aditivo.
 2. **Matar `pipeline_stage_settings`** (dropar com guard de vazio) + remover os 2 endpoints mortos. Migrar só o conceito `min_role_to_move`.
-3. **Não criar setores hardcoded.** Caixa/separação/fabricação = etapas que o cliente cria, com `stock_action`/`min_role_to_move`/`payment_rule` configurados. O motor executa ao entrar na etapa.
+3. **Não criar setores hardcoded.** Caixa/separação/fabricação = etapas que o cliente cria, com `stock_action`/`min_role_to_move`/`payment_rule` configurados. O motor **executará** ao entrar na etapa — **estado alvo, ainda NÃO implementado**: a TASK-054 só persiste a configuração. Hoje `checkFlowRules` avalia apenas `payment_rule`; executar `stock_action` e aplicar o gate de `min_role_to_move` são fatias seguintes do EPIC.
 4. Handoff entre setores permanece em `pipeline_automation_rules`.
 
 ## Gap real
