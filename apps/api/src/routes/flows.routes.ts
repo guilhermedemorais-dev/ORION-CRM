@@ -6,6 +6,8 @@ import { AppError } from '../lib/errors.js';
 import { authenticate } from '../middleware/auth.js';
 import { createAuditLog } from '../middleware/audit.js';
 import { requireRole } from '../middleware/rbac.js';
+import { requirePermission } from '../middleware/permissions.js';
+import type { UserRole } from '../types/entities.js';
 
 const router = Router();
 
@@ -14,13 +16,43 @@ type ActiveModule = typeof ACTIVE_MODULES[number];
 
 const PAYMENT_RULES = ['none', 'not_overdue', 'requires_partial', 'requires_paid_in_full', 'requires_refunded'] as const;
 const STAGE_ROLES = ['none', 'in_production', 'finalized', 'cancelled'] as const;
+const STOCK_ACTIONS = ['none', 'reservar', 'baixar_insumo', 'baixar_peca', 'retornar'] as const;
+// Mesma lista do enum UserRole (types/entities.ts) — min_role_to_move não aceita string livre.
+const USER_ROLES = ['ROOT', 'ADMIN', 'GERENTE', 'VENDEDOR', 'ATENDENTE', 'PRODUCAO', 'FINANCEIRO'] as const satisfies readonly UserRole[];
 
 const stageRuleSchema = z.object({
     stage_id: z.string().uuid(),
     payment_rule: z.enum(PAYMENT_RULES).default('none'),
     stage_role: z.enum(STAGE_ROLES).default('none'),
     notify_on_enter: z.boolean().default(false),
+    stock_action: z.enum(STOCK_ACTIONS).default('none'),
+    min_role_to_move: z.enum(USER_ROLES).nullable().default(null),
 });
+
+/** Regra “vazia” não é persistida — evita linhas inúteis em flow_stage_rules. */
+function isEmptyRule(rule: z.infer<typeof stageRuleSchema>): boolean {
+    return rule.payment_rule === 'none'
+        && rule.stage_role === 'none'
+        && !rule.notify_on_enter
+        && rule.stock_action === 'none'
+        && rule.min_role_to_move === null;
+}
+
+/**
+ * Resumo das regras para o audit log. `min_role_to_move` é um gate de
+ * autorização e `stock_action` mexe em estoque: mudanças precisam ser
+ * rastreáveis por si, não só pela contagem de regras.
+ */
+function auditableRules(rules: Array<z.infer<typeof stageRuleSchema>> | undefined) {
+    if (!rules) return undefined;
+    return rules.filter(r => !isEmptyRule(r)).map(r => ({
+        stage_id: r.stage_id,
+        payment_rule: r.payment_rule,
+        stage_role: r.stage_role,
+        stock_action: r.stock_action,
+        min_role_to_move: r.min_role_to_move,
+    }));
+}
 
 const createFlowSchema = z.object({
     name: z.string().trim().min(2).max(120),
@@ -57,6 +89,8 @@ interface FlowDetailRow extends FlowRow {
         payment_rule: string;
         stage_role: string;
         notify_on_enter: boolean;
+        stock_action: string;
+        min_role_to_move: string | null;
     }>;
 }
 
@@ -85,6 +119,8 @@ async function loadFlowDetail(flowId: string): Promise<FlowDetailRow | null> {
         payment_rule: string;
         stage_role: string;
         notify_on_enter: boolean;
+        stock_action: string;
+        min_role_to_move: string | null;
     }>(
         `SELECT
             s.id AS stage_id,
@@ -93,7 +129,9 @@ async function loadFlowDetail(flowId: string): Promise<FlowDetailRow | null> {
             s.color AS stage_color,
             COALESCE(r.payment_rule::text, 'none') AS payment_rule,
             COALESCE(r.stage_role::text, 'none') AS stage_role,
-            COALESCE(r.notify_on_enter, false) AS notify_on_enter
+            COALESCE(r.notify_on_enter, false) AS notify_on_enter,
+            COALESCE(r.stock_action::text, 'none') AS stock_action,
+            r.min_role_to_move
          FROM pipeline_stages s
          LEFT JOIN flow_stage_rules r ON r.stage_id = s.id AND r.flow_id = $1
          WHERE s.pipeline_id = $2
@@ -108,7 +146,7 @@ async function loadFlowDetail(flowId: string): Promise<FlowDetailRow | null> {
 router.get(
     '/',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'FINANCEIRO', 'PRODUCAO']),
+    requireRole(['ADMIN', 'GERENTE', 'ATENDENTE', 'FINANCEIRO', 'PRODUCAO']),
     async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const result = await query<FlowRow>(
@@ -132,7 +170,7 @@ router.get(
 router.get(
     '/active/:module',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'FINANCEIRO', 'PRODUCAO']),
+    requireRole(['ADMIN', 'GERENTE', 'ATENDENTE', 'FINANCEIRO', 'PRODUCAO']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const moduleKey = String(req.params['module'] ?? '');
@@ -156,7 +194,7 @@ router.get(
 router.get(
     '/:id',
     authenticate,
-    requireRole(['ADMIN', 'ATENDENTE', 'FINANCEIRO', 'PRODUCAO']),
+    requireRole(['ADMIN', 'GERENTE', 'ATENDENTE', 'FINANCEIRO', 'PRODUCAO']),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const flowId = String(req.params['id'] ?? '');
@@ -168,10 +206,12 @@ router.get(
 );
 
 // ── POST /flows ───────────────────────────────────────────────────────────────
+// Config de fluxo/etapas atrás de pipeline.configure (ADMIN/GERENTE; ROOT bypassa)
+// conforme spec §7 — antes era ROOT-only.
 router.post(
     '/',
     authenticate,
-    requireRole(['ROOT']),
+    requirePermission('pipeline.configure'),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const parsed = createFlowSchema.safeParse(req.body);
@@ -209,11 +249,11 @@ router.post(
                 const id = created.rows[0]!.id;
 
                 for (const rule of data.stage_rules) {
-                    if (rule.payment_rule === 'none' && rule.stage_role === 'none' && !rule.notify_on_enter) continue;
+                    if (isEmptyRule(rule)) continue;
                     await client.query(
-                        `INSERT INTO flow_stage_rules (flow_id, stage_id, payment_rule, stage_role, notify_on_enter)
-                         VALUES ($1, $2, $3::flow_payment_rule, $4::flow_stage_role, $5)`,
-                        [id, rule.stage_id, rule.payment_rule, rule.stage_role, rule.notify_on_enter]
+                        `INSERT INTO flow_stage_rules (flow_id, stage_id, payment_rule, stage_role, notify_on_enter, stock_action, min_role_to_move)
+                         VALUES ($1, $2, $3::flow_payment_rule, $4::flow_stage_role, $5, $6::flow_stock_action, $7)`,
+                        [id, rule.stage_id, rule.payment_rule, rule.stage_role, rule.notify_on_enter, rule.stock_action, rule.min_role_to_move]
                     );
                 }
                 return id;
@@ -225,7 +265,12 @@ router.post(
                 entityType: 'flows',
                 entityId: flowId,
                 oldValue: null,
-                newValue: { name: data.name, pipeline_id: data.pipeline_id, active_module: data.active_module },
+                newValue: {
+                    name: data.name,
+                    pipeline_id: data.pipeline_id,
+                    active_module: data.active_module,
+                    stage_rules: auditableRules(data.stage_rules),
+                },
                 req,
             });
 
@@ -239,7 +284,7 @@ router.post(
 router.patch(
     '/:id',
     authenticate,
-    requireRole(['ROOT']),
+    requirePermission('pipeline.configure'),
     async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             const flowId = String(req.params['id'] ?? '');
@@ -282,11 +327,11 @@ router.patch(
                 if (data.stage_rules !== undefined) {
                     await client.query(`DELETE FROM flow_stage_rules WHERE flow_id = $1`, [flowId]);
                     for (const rule of data.stage_rules) {
-                        if (rule.payment_rule === 'none' && rule.stage_role === 'none' && !rule.notify_on_enter) continue;
+                        if (isEmptyRule(rule)) continue;
                         await client.query(
-                            `INSERT INTO flow_stage_rules (flow_id, stage_id, payment_rule, stage_role, notify_on_enter)
-                             VALUES ($1, $2, $3::flow_payment_rule, $4::flow_stage_role, $5)`,
-                            [flowId, rule.stage_id, rule.payment_rule, rule.stage_role, rule.notify_on_enter]
+                            `INSERT INTO flow_stage_rules (flow_id, stage_id, payment_rule, stage_role, notify_on_enter, stock_action, min_role_to_move)
+                             VALUES ($1, $2, $3::flow_payment_rule, $4::flow_stage_role, $5, $6::flow_stock_action, $7)`,
+                            [flowId, rule.stage_id, rule.payment_rule, rule.stage_role, rule.notify_on_enter, rule.stock_action, rule.min_role_to_move]
                         );
                     }
                 }
@@ -298,7 +343,12 @@ router.patch(
                 entityType: 'flows',
                 entityId: flowId,
                 oldValue: null,
-                newValue: { name: data.name, active_module: data.active_module, rules_count: data.stage_rules?.length },
+                newValue: {
+                    name: data.name,
+                    active_module: data.active_module,
+                    rules_count: data.stage_rules?.length,
+                    stage_rules: auditableRules(data.stage_rules),
+                },
                 req,
             });
 

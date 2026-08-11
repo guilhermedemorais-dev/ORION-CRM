@@ -7,6 +7,8 @@ import { useConfirm } from '@/components/system/ConfirmDialog';
 
 type PaymentRule = 'none' | 'not_overdue' | 'requires_partial' | 'requires_paid_in_full' | 'requires_refunded';
 type StageRole = 'none' | 'in_production' | 'finalized' | 'cancelled';
+type StockAction = 'none' | 'reservar' | 'baixar_insumo' | 'baixar_peca' | 'retornar';
+type MinRole = 'ROOT' | 'ADMIN' | 'GERENTE' | 'VENDEDOR' | 'ATENDENTE' | 'PRODUCAO' | 'FINANCEIRO';
 type ActiveModule = 'pedidos' | 'producao';
 
 interface Pipeline {
@@ -30,6 +32,8 @@ interface FlowRule {
     payment_rule: PaymentRule;
     stage_role: StageRole;
     notify_on_enter: boolean;
+    stock_action: StockAction;
+    min_role_to_move: MinRole | null;
 }
 
 interface FlowListItem {
@@ -63,6 +67,26 @@ const STAGE_ROLE_LABEL: Record<StageRole, string> = {
     in_production: 'Em produção (KPI)',
     finalized: 'Finalizado (KPI)',
     cancelled: 'Cancelado (KPI)',
+};
+
+// A execução da ação de estoque na transição é entregue nas próximas fatias do
+// EPIC Make-to-Order — aqui só se configura o comportamento desejado da etapa.
+const STOCK_ACTION_LABEL: Record<StockAction, string> = {
+    none: 'Nenhuma',
+    reservar: 'Reservar insumo',
+    baixar_insumo: 'Baixar insumo reservado (fabricação)',
+    baixar_peca: 'Baixar peça pronta',
+    retornar: 'Retornar ao estoque',
+};
+
+const MIN_ROLE_LABEL: Record<MinRole, string> = {
+    ROOT: 'Root',
+    ADMIN: 'Administrador',
+    GERENTE: 'Gerente',
+    VENDEDOR: 'Vendedor',
+    ATENDENTE: 'Atendente',
+    PRODUCAO: 'Produção',
+    FINANCEIRO: 'Financeiro',
 };
 
 const MODULE_LABEL: Record<ActiveModule, string> = {
@@ -120,6 +144,8 @@ function FlowEditorModal({
                     payment_rule: 'none',
                     stage_role: 'none',
                     notify_on_enter: false,
+                    stock_action: 'none',
+                    min_role_to_move: null,
                 })));
             })
             .catch(() => { if (!cancelled) toast.push('error', 'Não foi possível carregar as etapas do pipeline.'); })
@@ -152,6 +178,8 @@ function FlowEditorModal({
                 payment_rule: s.payment_rule,
                 stage_role: s.stage_role,
                 notify_on_enter: s.notify_on_enter,
+                stock_action: s.stock_action,
+                min_role_to_move: s.min_role_to_move,
             })),
         };
 
@@ -275,6 +303,31 @@ function FlowEditorModal({
                                                     ))}
                                                 </select>
                                             </div>
+                                            <div>
+                                                <label className="block text-[9px] uppercase tracking-wide text-[#7A7774] mb-1">Ação de estoque</label>
+                                                <select
+                                                    value={stage.stock_action}
+                                                    onChange={(e) => updateRule(stage.stage_id, { stock_action: e.target.value as StockAction })}
+                                                    className="h-9 w-full rounded-[8px] border border-white/10 bg-[#111114] px-2 text-[12px] text-[#F0EDE8] outline-none"
+                                                >
+                                                    {(Object.keys(STOCK_ACTION_LABEL) as StockAction[]).map(k => (
+                                                        <option key={k} value={k}>{STOCK_ACTION_LABEL[k]}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[9px] uppercase tracking-wide text-[#7A7774] mb-1">Quem pode mover (papel mínimo)</label>
+                                                <select
+                                                    value={stage.min_role_to_move ?? ''}
+                                                    onChange={(e) => updateRule(stage.stage_id, { min_role_to_move: (e.target.value || null) as MinRole | null })}
+                                                    className="h-9 w-full rounded-[8px] border border-white/10 bg-[#111114] px-2 text-[12px] text-[#F0EDE8] outline-none"
+                                                >
+                                                    <option value="">Qualquer papel</option>
+                                                    {(Object.keys(MIN_ROLE_LABEL) as MinRole[]).map(k => (
+                                                        <option key={k} value={k}>{MIN_ROLE_LABEL[k]}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                         </div>
 
                                         <label className="flex items-center gap-2 mt-3 text-[11px] text-[#C8C4BE] cursor-pointer">
@@ -371,7 +424,7 @@ export function FluxoTab() {
                 <div>
                     <h2 className="text-base font-semibold text-[#EDE8E0]" style={{ fontFamily: 'Playfair Display, serif' }}>Fluxos</h2>
                     <p className="mt-1 text-[11px] text-[#7A7774]">
-                        Configure como cada módulo do sistema usa os pipelines: etapas, regras de pagamento e notificações automáticas.
+                        Configure como cada módulo do sistema usa os pipelines: etapas, regras de pagamento, ação de estoque, quem pode mover e notificações automáticas.
                     </p>
                 </div>
                 <button

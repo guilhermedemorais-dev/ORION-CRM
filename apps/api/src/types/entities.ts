@@ -46,6 +46,9 @@ export type StoreBadge = 'novo' | 'sale' | 'hot';
 export type StoreOrderStatus = 'pending' | 'approved' | 'rejected' | 'refunded' | 'cancelled';
 
 export type FlowStatus = 'draft' | 'active' | 'inactive' | 'error';
+// Ação de estoque por etapa do fluxo (flow_stage_rules.stock_action, mig 063).
+// A execução da ação na transição é fatia posterior — aqui é só a config.
+export type FlowStockAction = 'none' | 'reservar' | 'baixar_insumo' | 'baixar_peca' | 'retornar';
 export type ExecutionStatus = 'running' | 'success' | 'failed' | 'timeout';
 
 export type PlanType = 'starter' | 'professional' | 'enterprise';
