@@ -4,8 +4,12 @@
 🟡 EM ANDAMENTO — implementacao concluida no branch `claude/distracted-meitner-9b9576`.
 Aguardando QA de `ui-ux-standard` / `security-standard` e review do orquestrador.
 
-- Status Kanban: Build In Progress (vai para In Review quando houver PR; o board
-  do GitHub estava com este item **sem Status** — corrigido em 07/08/2026)
+- Status Kanban: In Review — PR #58 aberto em 07/08/2026
+- PR: https://github.com/guilhermedemorais-dev/ORION-CRM/pull/58
+- Branch: `feat/flow-stage-stock-action`
+- Historico do card: o item estava no board **sem Status** (invisivel nas colunas)
+  e foi **fechado indevidamente** em 07/08/2026 21:23 UTC. Reaberto, relatorio
+  publicado como comentario na issue #57 e Status corrigido.
 - Status da claim: `claimed` — Claude Code, 07/08/2026
 - Gate `minimal-implementation-gate`: `LIBERAR IMPLEMENTACAO` (07/08/2026)
 
