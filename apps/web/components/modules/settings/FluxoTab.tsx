@@ -304,7 +304,7 @@ function FlowEditorModal({
                                                 </select>
                                             </div>
                                             <div>
-                                                <label className="block text-[9px] uppercase tracking-wide text-[#7A7774] mb-1">Ação de estoque</label>
+                                                <label className="block text-[9px] uppercase tracking-wide text-[#7A7774] mb-1">Ação de estoque <span className="text-[#C8A97A]">(ainda não aplicada)</span></label>
                                                 <select
                                                     value={stage.stock_action}
                                                     onChange={(e) => updateRule(stage.stage_id, { stock_action: e.target.value as StockAction })}
@@ -316,7 +316,7 @@ function FlowEditorModal({
                                                 </select>
                                             </div>
                                             <div>
-                                                <label className="block text-[9px] uppercase tracking-wide text-[#7A7774] mb-1">Quem pode mover (papel mínimo)</label>
+                                                <label className="block text-[9px] uppercase tracking-wide text-[#7A7774] mb-1">Quem pode mover (papel mínimo) <span className="text-[#C8A97A]">(ainda não aplicado)</span></label>
                                                 <select
                                                     value={stage.min_role_to_move ?? ''}
                                                     onChange={(e) => updateRule(stage.stage_id, { min_role_to_move: (e.target.value || null) as MinRole | null })}
@@ -329,6 +329,18 @@ function FlowEditorModal({
                                                 </select>
                                             </div>
                                         </div>
+
+                                        {/* Config-only: a execução (baixa de estoque e gate de papel) é fatia
+                                            seguinte do EPIC. Sem este aviso, o operador configura e acredita
+                                            que o sistema já está bloqueando/baixando — falsa garantia. */}
+                                        <p className="mt-2 flex items-start gap-1.5 rounded-[8px] border border-amber-500/20 bg-amber-500/5 px-2 py-1.5 text-[10px] text-amber-200/80">
+                                            <AlertCircle size={11} className="mt-0.5 flex-shrink-0" />
+                                            <span>
+                                                <strong>Ação de estoque</strong> e <strong>Quem pode mover</strong> ficam apenas
+                                                salvos por enquanto: o sistema ainda não movimenta o estoque nem bloqueia
+                                                a mudança de etapa por papel. Não use como trava de permissão.
+                                            </span>
+                                        </p>
 
                                         <label className="flex items-center gap-2 mt-3 text-[11px] text-[#C8C4BE] cursor-pointer">
                                             <input

@@ -339,6 +339,26 @@ spec e `locked_paths` proprios (`AjustesClient.tsx` + a rota `/ajustes`).
 Ate la, a config permanece acessivel apenas a ROOT pela interface — sem risco de
 exposicao indevida, apenas funcionalidade nao alcancavel por ADMIN/GERENTE.
 
+### Correcoes vindas do review do PR #58 (Codex)
+- **P1 — falsa garantia de autorizacao (procede).** A ajuda e a UI apresentavam
+  "Quem pode mover" e "Acao de estoque" como controles ativos, mas `checkFlowRules`
+  so avalia `payment_rule` e `PATCH /orders/:id/stage` segue aceitando ATENDENTE
+  (`requireRole(['ROOT','ADMIN','ATENDENTE'])`). Um operador poderia configurar
+  "so GERENTE move pro Caixa" e confiar num bloqueio inexistente. Corrigido: os
+  dois campos passaram a ser rotulados "(ainda nao aplicado)" no `FluxoTab`, com
+  aviso ambar explicito sob os dropdowns, e a Central de Ajuda agora diz que o
+  valor apenas fica salvo. Falha do gate `security-standard` desta task: validei
+  o controle novo isoladamente e nao verifiquei se ele era *aplicado*.
+- **P2 — corrida no guard da migracao (procede).** `count(*)` pega so ACCESS
+  SHARE, que nao bloqueia INSERT: em deploy rolling, uma instancia antiga da API
+  podia inserir entre o count e o `DROP`, e a linha seria apagada em silencio.
+  Corrigido com `LOCK TABLE pipeline_stage_settings IN ACCESS EXCLUSIVE MODE`
+  antes do count, na mesma transacao. Revalidado em clones: vazio -> aplica e
+  dropa; com 1 linha -> aborta e preserva.
+  **Atencao no deploy:** a 063 ja consta aplicada no banco de dev, entao la o
+  arquivo corrigido nao roda de novo. Producao, que ainda nao aplicou, recebe a
+  versao com o LOCK.
+
 ### Bloqueios ou riscos remanescentes
 - **Print dos dropdowns pendente com o humano (decidido 07/08/2026):** a aba Fluxo
   exige sessao ROOT e nao ha credencial de QA nesta sessao (criar usuario ROOT

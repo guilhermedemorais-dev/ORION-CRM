@@ -39,11 +39,20 @@ ALTER TABLE flow_stage_rules
 -- 3. Guard de vazio: nunca dropar cega. Se no dia do deploy houver linhas,
 --    a migração aborta (transação do runner faz rollback de tudo) e o dado
 --    precisa ser migrado manualmente antes do DROP.
+--
+--    O LOCK vem ANTES do count: um count() sozinho pega só ACCESS SHARE, que não
+--    bloqueia INSERT. Em deploy rolling, uma instância antiga da API ainda
+--    servindo PATCH /stages/:stageId/defaults poderia inserir uma linha entre o
+--    count e o DROP, e essa linha seria apagada em silêncio apesar do guard.
+--    ACCESS EXCLUSIVE segura até o fim da transação, então count e DROP viram
+--    atômicos em relação a qualquer escrita concorrente.
 DO $$
 BEGIN
-  IF to_regclass('pipeline_stage_settings') IS NOT NULL
-     AND (SELECT count(*) FROM pipeline_stage_settings) > 0 THEN
-    RAISE EXCEPTION 'pipeline_stage_settings NAO esta vazia — migrar os dados antes de dropar';
+  IF to_regclass('pipeline_stage_settings') IS NOT NULL THEN
+    EXECUTE 'LOCK TABLE pipeline_stage_settings IN ACCESS EXCLUSIVE MODE';
+    IF (SELECT count(*) FROM pipeline_stage_settings) > 0 THEN
+      RAISE EXCEPTION 'pipeline_stage_settings NAO esta vazia — migrar os dados antes de dropar';
+    END IF;
   END IF;
 END $$;
 
