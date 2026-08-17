@@ -555,6 +555,18 @@ export const HELP_CONTENT: Record<HelpContext, HelpContextData> = {
         ],
       },
       {
+        title: 'Fluxos (aba Fluxo)',
+        items: [
+          { icon: <Workflow size={13} />,     label: 'O que é um fluxo',      description: 'Um fluxo liga um pipeline a um módulo (Pedidos ou Produção) e define o comportamento de cada etapa. Só 1 fluxo ativo por módulo.' },
+          { icon: <CreditCard size={13} />,   label: 'Regra de pagamento',    description: 'Por etapa: exige sinal, pagamento total, estorno ou nada. Bloqueia mover o pedido pra etapa se a regra não for atendida.' },
+          { icon: <BarChart2 size={13} />,    label: 'Conta como (KPI)',      description: 'Marca a etapa como Em produção, Finalizado ou Cancelado para os indicadores do dashboard.' },
+          { icon: <Package size={13} />,      label: 'Ação de estoque (ainda não aplicada)', description: 'Por etapa: Reservar insumo, Baixar insumo reservado (fabricação), Baixar peça pronta ou Retornar ao estoque. Padrão: Nenhuma. ATENÇÃO: por enquanto só fica salvo — o sistema ainda NÃO executa a movimentação de estoque ao mudar de etapa. Continue dando baixa como faz hoje.' },
+          { icon: <Lock size={13} />,         label: 'Quem pode mover (ainda não aplicado)', description: 'Papel mínimo pretendido para mover um pedido pra essa etapa. ATENÇÃO: por enquanto só fica salvo — o sistema ainda NÃO bloqueia ninguém. Não confie nisso como trava de permissão: quem já podia mover o pedido continua movendo.' },
+          { icon: <MessageCircle size={13} />, label: 'Notificar no WhatsApp', description: 'Dispara mensagem automática ao cliente quando o pedido entra na etapa.' },
+          { icon: <Shield size={13} />,       label: 'Quem configura',        description: 'Configurar fluxos exige a permissão pipeline.configure (ADMIN e GERENTE por padrão). ROOT sempre pode.' },
+        ],
+      },
+      {
         title: 'Permissões da ficha do cliente (em Usuários)',
         items: [
           { icon: <Lock size={13} />,         label: '9 toggles por usuário', description: 'Em Ajustes → Usuários → editar usuário, role até "Visibilidade da Ficha do Cliente". Cada toggle controla uma aba.' },
