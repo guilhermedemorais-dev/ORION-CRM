@@ -1,21 +1,83 @@
-MIT License
+ORION CRM - LICENÇA DE SOFTWARE PROPRIETÁRIO
 
-Copyright (c) 2026 Guilherme de Morais  
+Copyright © 2026 SOPHXY - DIGITAL SYSTEMS
+52.227.187 GUILHERME DE MORAIS PEREIRA
+Todos os direitos reservados.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. TITULARIDADE
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+O software ORION CRM, incluindo seu código-fonte, código objeto,
+arquitetura, estrutura de banco de dados, interfaces, integrações,
+automações, modelos, agentes de inteligência artificial, documentação
+técnica e demais componentes desenvolvidos especificamente para o produto,
+é propriedade intelectual da SOPHXY - DIGITAL SYSTEMS.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+A disponibilização ou acesso ao código-fonte não constitui cessão,
+transferência ou renúncia de direitos de propriedade intelectual.
+
+2. DIREITOS RESERVADOS
+
+Todos os direitos não expressamente concedidos por contrato ou licença
+comercial específica permanecem reservados à SOPHXY - DIGITAL SYSTEMS.
+
+Sem autorização prévia e expressa da titular, é proibido:
+
+a) vender, revender ou comercializar o software, total ou parcialmente;
+
+b) sublicenciar, redistribuir ou disponibilizar o software a terceiros;
+
+c) publicar ou tornar público o código-fonte ou partes substanciais dele;
+
+d) utilizar o software como base para produto ou serviço destinado à
+comercialização por terceiros;
+
+e) reivindicar autoria, titularidade ou propriedade intelectual sobre
+o ORION CRM ou seus componentes proprietários;
+
+f) remover avisos de copyright, propriedade intelectual ou licenciamento.
+
+3. LICENÇAS COMERCIAIS
+
+Clientes autorizados poderão receber direitos adicionais de uso,
+instalação, manutenção ou modificação conforme contrato ou licença
+comercial específica celebrada com a SOPHXY - DIGITAL SYSTEMS.
+
+A existência de uma cópia do código-fonte em ambiente, servidor ou
+repositório controlado pelo cliente não altera a titularidade do software.
+
+4. DESENVOLVEDORES E PRESTADORES TERCEIRIZADOS
+
+Desenvolvedores, técnicos ou prestadores autorizados por um cliente
+licenciado poderão acessar e modificar a instalação licenciada
+exclusivamente para fins de manutenção, suporte ou evolução interna
+daquela instalação, dentro dos limites estabelecidos no respectivo
+contrato ou licença comercial.
+
+Tal acesso não concede ao prestador qualquer direito de propriedade,
+redistribuição, sublicenciamento ou comercialização do ORION CRM.
+
+5. COMPONENTES DE TERCEIROS
+
+Bibliotecas, frameworks, dependências e demais componentes de terceiros
+incorporados ou utilizados pelo ORION CRM permanecem sujeitos às suas
+respectivas licenças.
+
+Esta licença aplica-se exclusivamente aos componentes proprietários
+desenvolvidos pela SOPHXY - DIGITAL SYSTEMS.
+
+6. AUSÊNCIA DE LICENÇA OPEN SOURCE
+
+O ORION CRM não é distribuído como software de código aberto.
+
+Nenhuma disposição deste documento deverá ser interpretada como concessão
+dos direitos característicos de licenças open source, salvo quando
+expressamente aplicável a componentes de terceiros.
+
+7. AUTORIZAÇÃO
+
+Qualquer uso, distribuição, sublicenciamento ou exploração comercial não
+previsto expressamente em contrato exige autorização prévia e escrita da
+SOPHXY - DIGITAL SYSTEMS.
+
+Copyright © 2026 SOPHXY - DIGITAL SYSTEMS.
+Todos os direitos reservados.
