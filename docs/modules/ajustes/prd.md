@@ -1,5 +1,5 @@
 # 19 — AJUSTES (Settings)
-**ORION CRM · PRD v1.0**
+**ORION ERP · PRD v1.0**
 Rota: `/ajustes` · Role: ADMIN only
 
 ---

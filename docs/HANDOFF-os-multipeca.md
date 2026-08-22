@@ -1,4 +1,4 @@
-# 🔄 HANDOFF — Feature OS multi-peça (ORION CRM)
+# 🔄 HANDOFF — Feature OS multi-peça (ORION ERP)
 
 > Documento de continuidade entre sessões (Claude Code / Cowork / Codex).
 > Última atualização: 2026-07-07. Fonte de verdade viva = issues #9/#11/#12 no GitHub e `docs/tasks/`.

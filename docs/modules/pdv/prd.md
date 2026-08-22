@@ -1,5 +1,5 @@
 # PRD: Módulo PDV — Ponto de Venda
-**ORION CRM | Versão 1.1 | Status: APPROVED FOR IMPLEMENTATION**
+**ORION ERP | Versão 1.1 | Status: APPROVED FOR IMPLEMENTATION**
 **Changelog v1.1:** Adicionado FR-PDV-007 (Integração Maquininha — Mercado Pago Point e Cielo LIO), novos endpoints, configuração em Ajustes, estados de polling e DoD correspondente.
 
 ---

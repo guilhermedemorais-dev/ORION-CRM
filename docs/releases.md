@@ -1,4 +1,4 @@
-# ORION CRM — Histórico de Releases
+# ORION ERP — Histórico de Releases
 
 > Cada release tem um resumo curto para usuário leigo (até 350 caracteres), uma explicação do que melhora no dia a dia, a lista de novidades em linguagem clara, e os detalhes técnicos colapsáveis para quem quer ver a parte de código.
 >

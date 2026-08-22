@@ -1,5 +1,5 @@
 # 18 — ANALYTICS MODULE
-**ORION CRM · PRD v1.0**
+**ORION ERP · PRD v1.0**
 Rota: `/analytics` · Role: ADMIN only
 
 ---

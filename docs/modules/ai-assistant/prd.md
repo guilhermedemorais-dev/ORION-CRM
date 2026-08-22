@@ -1,4 +1,4 @@
-# ORION CRM — Assistente IA Interno
+# ORION ERP — Assistente IA Interno
 
 > O Assistente ORION é a única IA que roda DENTRO do CRM.
 > Ele lê dados do sistema conforme o role do usuário logado.

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ORION, Base Técnica</title>
+  <style>
+    :root { --bg:#09090b; --panel:#111116; --line:#29272b; --text:#f0ebe3; --muted:#a09a94; --gold:#bfa06a; --danger:#e77d7d; }
+    * { box-sizing:border-box; } body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font:14px Inter,Arial,sans-serif; }
+    .shell { display:grid; grid-template-columns:220px minmax(250px,330px) minmax(0,1fr); min-height:100vh; }
+    .nav,.index { background:#0e0e12; border-right:1px solid var(--line); } .nav { padding:22px 12px; }
+    .brand { color:var(--gold); font:700 21px Georgia,serif; letter-spacing:2px; padding:0 12px 26px; }
+    .section { color:#625d59; font-size:10px; font-weight:700; letter-spacing:1px; margin:20px 12px 7px; text-transform:uppercase; }
+    .nav a,.doc { display:block; border-radius:7px; color:var(--muted); padding:10px 12px; text-decoration:none; }
+    .nav a.active,.doc.active { background:rgba(191,160,106,.10); color:var(--text); border-left:2px solid var(--gold); }
+    .index { padding:22px 16px; } .index h1 { font-size:16px; margin:0 0 6px; } .index p { color:var(--muted); font-size:12px; line-height:1.5; }
+    input { width:100%; margin:15px 0; padding:11px 12px; background:#09090b; color:var(--text); border:1px solid var(--line); border-radius:7px; }
+    .doc { margin:3px 0; } .doc small { display:block; color:#716c68; margin-top:3px; }
+    main { min-width:0; padding:34px clamp(24px,5vw,70px); } .crumb { color:var(--gold); font-size:12px; font-weight:700; }
+    h2 { font-size:29px; margin:10px 0; } .lead { max-width:800px; color:var(--muted); line-height:1.65; }
+    .meta { display:flex; flex-wrap:wrap; gap:8px; margin:20px 0 28px; } .pill { border:1px solid var(--line); border-radius:99px; color:var(--muted); font-size:11px; padding:5px 9px; }
+    pre { overflow:auto; background:#0e0e12; border:1px solid var(--line); border-radius:10px; padding:18px; color:#d9d2ca; line-height:1.55; }
+    .notice { border:1px solid rgba(191,160,106,.35); background:rgba(191,160,106,.07); border-radius:9px; padding:13px; color:#dfd4c1; }
+    .forbidden { max-width:560px; margin:100px auto; text-align:center; border:1px solid rgba(231,125,125,.35); background:rgba(231,125,125,.07); border-radius:12px; padding:30px; }
+    .forbidden h2 { color:var(--danger); } @media (max-width:900px) { .shell { grid-template-columns:1fr; }.nav,.index{border-right:0;border-bottom:1px solid var(--line)} .nav{display:none}.index{padding:16px}.doc{display:inline-block}.index p{margin:0} }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <nav class="nav" aria-label="Navegação CRM">
+      <div class="brand">ORION</div>
+      <div class="section">Operação</div><a href="#">Dashboard</a><a href="#">Clientes</a><a href="#">Inbox</a>
+      <div class="section">Suporte</div><a href="#">Chamados</a><a class="active" href="#">Base Técnica</a>
+    </nav>
+    <aside class="index" aria-label="Índice da Base Técnica">
+      <h1>Base Técnica</h1><p>Referência canônica para suporte de desenvolvimento.</p>
+      <input aria-label="Buscar documentação" placeholder="Buscar módulo, endpoint, tabela..." value="">
+      <a class="doc active" href="#">Visão geral<small>baseline e leitura</small></a>
+      <a class="doc" href="#">Arquitetura<small>containers e deploy</small></a>
+      <a class="doc" href="#">API crítica<small>rotas e efeitos</small></a>
+      <a class="doc" href="#">Banco<small>entidades e relações</small></a>
+      <a class="doc" href="#">Riscos e QA<small>não homologados</small></a>
+    </aside>
+    <main>
+      <div class="crumb">SUPORTE / BASE TÉCNICA</div>
+      <h2>Visão geral do handoff</h2>
+      <p class="lead">Este painel renderiza documentos Markdown allowlisted do repositório. Não é editor, não consulta tickets e não expõe caminhos internos, segredos ou dados de clientes.</p>
+      <div class="meta"><span class="pill">Somente ADMIN</span><span class="pill">Fonte: docs/handoff</span><span class="pill">Commit: 29c1639</span></div>
+      <div class="notice">Busca retorna somente título e trecho de documentos permitidos. Um erro ou documento ausente não revela o caminho físico.</div>
+      <h3>Fluxo de leitura</h3><pre>ADMIN autenticado → índice allowlisted → documento lógico → Markdown seguro
+ADMIN autenticado → termo válido → busca server-side → hits navegáveis</pre>
+      <h3>Estados obrigatórios</h3><p class="lead">Skeleton durante carregamento, vazio em busca sem resultado, retry para erro de rede e página proibida sem conteúdo para qualquer role diferente de ADMIN, inclusive ROOT.</p>
+    </main>
+  </div>
+  <!-- Estado de referência proibido: substituir o shell por este card quando a API retornar 403. -->
+  <section class="forbidden" hidden><h2>Acesso restrito</h2><p>Esta Base Técnica é exclusiva para administradores autorizados.</p></section>
+</body>
+</html>
