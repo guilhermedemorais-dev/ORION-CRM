@@ -2,8 +2,6 @@
 
 O ORION é um **ERP operacional para joalherias**. CRM é um dos seus domínios, não a definição do produto. O sistema reúne captação e relacionamento, atendimento, orçamento, venda, encomenda, produção, estoque, PDV, financeiro, entrega, gestão e suporte em uma única operação.
 
-> `ORION-CRM` é o identificador histórico do repositório e das imagens atuais. Nesta documentação, o produto é chamado de **ORION ERP**. Renomear repositório, imagens, domínios ou infraestrutura é uma decisão futura, não parte desta entrega.
-
 ## O que este repositório entrega
 
 O código contém uma aplicação web Next.js, uma API Express, PostgreSQL, Redis, workers BullMQ, NGINX e documentação de operação técnica. O sistema foi concebido para organizar o ciclo completo abaixo.
@@ -62,7 +60,7 @@ O diagrama é o **modelo operacional pretendido**. Ele não afirma que todas as 
 
 O inventário técnico completo, incluindo telas, persistência, permissão e risco, está em [Dossiês operacionais por módulo](docs/handoff/MODULE-OPERATING-DOSSIERS.md).
 
-## Ciclos que um novo responsável precisa entender antes de alterar código
+## Ciclos que precisam ser entendidos antes de alterar código
 
 1. **Captação para cliente.** Um lead pode entrar por canal externo, avançar no pipeline e ser convertido em cliente. A deduplicação, o evento canônico de conversão e a responsabilidade de cadastro devem ser validados com a joalheria antes de mudar regras.
 2. **Atendimento para venda.** A Ficha registra blocos de atendimento e pode conter proposta. Não existe evidência de uma conversão automática universal de proposta para pedido. Não criar esse vínculo por inferência.
@@ -87,7 +85,7 @@ Navegador
 
 O `docker-compose.yml` atual declara PostgreSQL, Redis, API, Web, NGINX e Adminer. **Não declara n8n**, apesar de a API aceitar URLs e credenciais de n8n. Portanto, automações e canais externos não podem ser considerados prontos só porque há telas, rotas ou variáveis de ambiente.
 
-O PRD histórico menciona Activepieces e componentes Python. O baseline de código e Compose analisado usa TypeScript e integrações n8n. Essa divergência é uma pendência de arquitetura, não uma escolha documentada para o novo responsável. Veja [Automações e IA](docs/handoff/AUTOMACOES-E-IA-TECNICO.md).
+O PRD histórico menciona Activepieces e componentes Python. O baseline de código e Compose analisado usa TypeScript e integrações n8n. Essa divergência é uma pendência de arquitetura, não uma escolha documentada para o projeto. Veja [Automações e IA](docs/handoff/AUTOMACOES-E-IA-TECNICO.md).
 
 ## Fonte de verdade e disciplina de mudança
 
@@ -113,13 +111,13 @@ Para feature, mudança de regra, API, schema, integração, autorização ou UI,
 
 O fluxo registrado no repositório é: `push` na `main` → GitHub Actions → build das imagens Docker → push para GHCR → SSH no servidor Hostinger → `docker compose pull` → atualização de API, Web e NGINX. A Action também copia a pasta `docs` da imagem da API para o host antes de recriar os containers.
 
-Isso descreve o estado atual para facilitar a assunção. **Não impõe** GitFlow, branches, CI/CD, GHCR, Hostinger, Docker Compose ou qualquer estratégia futura. O procedimento, suas premissas e os pontos que ainda precisam de prova estão em [Runbook de operações](docs/handoff/OPERATIONS-RUNBOOK.md).
+Isso descreve o estado atual. **Não impõe** GitFlow, branches, CI/CD, GHCR, Hostinger, Docker Compose ou qualquer estratégia futura. O procedimento, suas premissas e os pontos que ainda precisam de prova estão em [Runbook de operações](docs/handoff/OPERATIONS-RUNBOOK.md).
 
-## Estado de validação desta entrega
+## Estado atual de validação
 
-- **Banco:** baseline exportado até a migration 062; banco de produção, backup, restore e rollback não foram homologados nesta entrega.
+- **Banco:** baseline analisado até a migration 062; banco de produção, backup, restore e rollback não foram homologados.
 - **API/Backend:** build e typecheck foram executados; o teste dedicado da Base Técnica passou isoladamente. Isso não substitui suíte de integração com PostgreSQL/Redis/provedores reais.
-- **Frontend/UI:** build realizado; navegador autenticado e fluxos críticos não foram homologados nesta entrega.
+- **Frontend/UI:** build realizado; navegador autenticado e fluxos críticos não foram homologados.
 - **Integrações:** Meta/WhatsApp, Mercado Pago, n8n, IA e transportadoras dependem de credenciais e recursos externos deliberadamente excluídos.
 - **Risco prioritário:** não automatizar reserva/baixa/devolução de estoque ou conciliação financeira até que o evento de negócio, transação e prova end-to-end estejam definidos.
 
@@ -127,7 +125,7 @@ Isso descreve o estado atual para facilitar a assunção. **Não impõe** GitFlo
 
 - **Gestor da joalheria:** ciclos acima e [Fluxo operacional](docs/handoff/FLUXO-OPERACIONAL-END-TO-END.md).
 - **Desenvolvedor de ERP:** [Manual operacional do ERP](docs/handoff/ERP-OPERATING-MANUAL.md), banco, contratos e dossiês de módulo.
-- **Suporte técnico:** [Portal de handoff](docs/handoff/README.md), runbook, RBAC e Base Técnica `/base-tecnica` para ADMIN.
+- **Suporte técnico:** [Documentação técnica](docs/handoff/README.md), runbook, RBAC e Base Técnica `/base-tecnica` para ADMIN.
 - **Responsável por infraestrutura:** Compose, Action de deploy e runbook, sempre distinguindo o que está documentado do que foi homologado.
 
 ## Licença

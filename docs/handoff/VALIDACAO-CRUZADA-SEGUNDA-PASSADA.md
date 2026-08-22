@@ -28,7 +28,7 @@
 | QA/gaps/traceability | PARCIAL | `QA-E-GAPS-PRD-CODIGO.md` | matriz completa feature por feature pendente |
 | Comentários/docstrings críticos | PARCIAL | comentários existentes em OS, PDV e middleware foram revisados | auditoria linha a linha e mudanças mínimas pendentes |
 | Base Técnica | IMPLEMENTADA, NÃO HOMOLOGADA | task #62, rota/service/página, teste unitário e matriz HTTP do ZIP | browser autenticado e produção pendentes |
-| Snapshot final | CONCLUÍDO | `ORION-CRM-handoff-2026-08-22.zip` e `DELIVERY-MANIFEST.md` | novo responsável cria repositório privado e primeiro commit |
+| Snapshot final | CONCLUÍDO | `ORION-CRM-handoff-2026-08-22.zip` e `DELIVERY-MANIFEST.md` | equipe cria repositório privado e primeiro commit quando necessário |
 
 ## Inconsistências confirmadas durante a validação
 

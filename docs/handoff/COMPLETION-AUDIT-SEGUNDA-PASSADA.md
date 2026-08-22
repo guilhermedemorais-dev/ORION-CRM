@@ -33,7 +33,7 @@ fonte foi mapeada, mas falta profundidade, cobertura ou evidência runtime.
 | 22. Documentação canônica | CONCLUÍDO | `docs/handoff/` e spec/task no repo | nenhum artefato só no snapshot |
 | 23. Validação cruzada | CONCLUÍDO documental | releitura de código, catálogo API/DB/RBAC e runtime isolado do ZIP | integrações externas e produção |
 | 24. Relatório final | CONCLUÍDO com lacunas declaradas | esta auditoria e validação cruzada | homologação externa continua pendente |
-| 25. Snapshot | CONCLUÍDO | ZIP, checksum e manifesto | novo responsável cria o repositório privado |
+| 25. Snapshot | CONCLUÍDO | ZIP, checksum e manifesto | equipe cria o repositório privado quando necessário |
 
 ## Conclusão operacional
 

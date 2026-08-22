@@ -2,10 +2,10 @@
 
 ## Limite e responsabilidade
 
-Este documento descreve o processo utilizado pela **SOPHXY até o handoff**,
+Este documento descreve o processo atualmente documentado para o projeto,
 conforme `docker-compose.yml` e `.github/workflows/deploy.yml` no baseline
-`29c1639`. Não impõe GitFlow, CI/CD, deploy ou infraestrutura ao novo
-responsável. Comandos marcados **NÃO VALIDADOS localmente nesta passada** são
+`29c1639`. Não impõe GitFlow, CI/CD, deploy ou infraestrutura à equipe.
+Comandos marcados **NÃO VALIDADOS localmente nesta passada** são
 derivados do Compose/Action, não executados contra produção.
 
 ## Topologia e pré-requisitos
@@ -119,7 +119,7 @@ Evite colar tokens, cookies, CPF, payloads de clientes ou dumps em tickets/logs.
 | Restore | nenhum runbook/script homologado localizado | NÃO VALIDADO |
 | Recuperação de migration | ledger `_migrations` e logs existem | PARCIAL, sem rollback documentado |
 
-O novo responsável deve definir, testar e registrar RPO/RTO, criptografia e
+A equipe deve definir, testar e registrar RPO/RTO, criptografia e
 retenção antes de considerar o ambiente operável para produção.
 
 ## Checklist pós-deploy recomendado
