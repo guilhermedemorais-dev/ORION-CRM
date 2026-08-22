@@ -8,6 +8,7 @@ import { authenticate } from '../middleware/auth.js';
 import { createAuditLog } from '../middleware/audit.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { requireRole } from '../middleware/rbac.js';
+import { userCan } from '../middleware/permissions.js';
 import { sendWhatsAppMessage } from '../services/whatsapp-sender.service.js';
 import { checkFlowRules } from '../services/flow-rules.service.js';
 import type { DeliveryType, OrderStatus, OrderType } from '../types/entities.js';
@@ -914,6 +915,26 @@ router.patch(
 
             assertCanAccessOrder(req, order.assigned_user_id);
             validateOrderStatusTransition(order.status, parsed.data.status);
+
+            // Aprovar / enviar para producao exige permissao order.approve
+            // (default ADMIN/GERENTE; ROOT bypassa; liberavel por usuario via toggle).
+            // As demais transicoes seguem as roles do requireRole da rota.
+            if (parsed.data.status === 'APROVADO' || parsed.data.status === 'EM_PRODUCAO') {
+                if (req.user) {
+                    const permsResult = await query<{ custom_permissions: Record<string, boolean> | null }>(
+                        'SELECT custom_permissions FROM users WHERE id = $1 LIMIT 1',
+                        [req.user.id]
+                    );
+                    const canApprove = userCan(
+                        { role: req.user.role, custom_permissions: permsResult.rows[0]?.custom_permissions ?? {} },
+                        'order.approve'
+                    );
+                    if (!canApprove) {
+                        next(AppError.forbidden('Apenas ADMIN/GERENTE (ou com permissão liberada) podem aprovar e enviar o pedido para produção.'));
+                        return;
+                    }
+                }
+            }
 
             if (
                 order.type === 'PERSONALIZADO'

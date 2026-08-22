@@ -1,4 +1,4 @@
-# PRD: ORION CRM
+# PRD: ORION ERP
 
 > **Modelo de Entrega**: SaaS com instância Docker isolada por cliente. Cada cliente contratante recebe seu próprio container — sem multi-tenancy no código. Branding (logo, cores, dados da empresa) configurável por instância. Gestão centralizada via Painel de Assinatura do Operador (projeto separado, comunica via webhooks).
 
@@ -28,7 +28,7 @@ Uma joalheria opera hoje sem sistema: leads chegam pelo WhatsApp e somem sem reg
 
 ### 1.2 A Solução
 
-ORION CRM é um sistema operacional completo para joalherias — CRM, gestão de pedidos (pronta entrega + personalizado), controle de produção, PDV, estoque, financeiro e analytics — integrado com WhatsApp Business API (Meta Cloud), Mercado Pago e um assistente IA por role com acesso contextualizado e seguro aos dados do sistema via Function Calling. Toda a operação passa pelo sistema, com audit log imutável de cada ação.
+ORION ERP é um sistema operacional completo para joalherias — CRM, gestão de pedidos (pronta entrega + personalizado), controle de produção, PDV, estoque, financeiro e analytics — integrado com WhatsApp Business API (Meta Cloud), Mercado Pago e um assistente IA por role com acesso contextualizado e seguro aos dados do sistema via Function Calling. Toda a operação passa pelo sistema, com audit log imutável de cada ação.
 
 ### 1.3 Métricas de Sucesso
 - [ ] Zero lead recebido por WhatsApp sem registro no sistema após deploy
@@ -370,7 +370,7 @@ ORION CRM é um sistema operacional completo para joalherias — CRM, gestão de
 - DADO o ADMIN QUANDO faz upload de logo ENTÃO aceita PNG/SVG, máx 2MB, armazena em `/uploads/branding/logo.{ext}` e exibe na navbar e tela de login
 - DADO branding configurado QUANDO qualquer usuário acessa o sistema ENTÃO vê nome da joalheria, logo e cor primária aplicada globalmente (CSS custom property `--brand-primary`)
 - DADO um dado de branding atualizado QUANDO salvo ENTÃO reflete em < 5 segundos sem necessidade de reload (invalidar cache Redis da configuração)
-- DADO a tela de login QUANDO acessada ENTÃO exibe logo da joalheria (não logo do ORION CRM) e nome da empresa
+- DADO a tela de login QUANDO acessada ENTÃO exibe logo da joalheria (não logo do ORION ERP) e nome da empresa
 **Campos configuráveis**:
 
 | Campo | Tipo | Obrigatório | Descrição |
@@ -390,7 +390,7 @@ ORION CRM é um sistema operacional completo para joalherias — CRM, gestão de
 **Edge Cases**:
 - Cor primária inválida (não hex): retorna VALIDATION_ERROR, mantém cor anterior
 - Logo corrompido no upload: retorna erro, não substitui logo atual
-- Instância sem branding configurado: usa defaults do ORION CRM (nome "Minha Joalheria", cor #C8A97A) para não quebrar a interface
+- Instância sem branding configurado: usa defaults do ORION ERP (nome "Minha Joalheria", cor #C8A97A) para não quebrar a interface
 **Dependências**: FR-001, FR-002 (apenas ADMIN configura)
 
 ---
@@ -1715,14 +1715,14 @@ Usado pelo NGINX e pelo Docker healthcheck.
 | Builder de automações | Canvas React Flow próprio + Activepieces API | Embed SDK do Activepieces ($2.5k/mês), fork do n8n | Sem licença comercial; UX curada para joalheria; controle total do produto | 2026-02-26 |
 | IA para automações | Python container (FastAPI + LangChain) | IA direto no Node.js, Cloud Functions | Isolamento do ambiente Python; reutilizável entre flows; escala independente do Node.js | 2026-02-26 |
 | Modelo de deploy SaaS | Container isolado por cliente, branding por instância | Multi-tenant no mesmo banco (tenant_id) | Isolamento total de dados; sem risco de data leak entre clientes; complexidade muito menor | 2026-02-26 |
-| Painel do Operador | Projeto separado, comunica via webhook HMAC | Embutido no ORION CRM | Separação de responsabilidades; o CRM não precisa saber de cobrança e contratos | 2026-02-26 |
+| Painel do Operador | Projeto separado, comunica via webhook HMAC | Embutido no ORION ERP | Separação de responsabilidades; o CRM não precisa saber de cobrança e contratos | 2026-02-26 |
 | WhatsApp Provider | Meta Cloud API direta | Evolution API, Twilio | Oficial, sem risco de ban, custo previsível | 2026-02-26 |
 | Assistente IA | OpenAI Function Calling | RAG, contexto direto | Dados transacionais em tempo real requerem Function Calling; RAG inadequado para dados mutáveis | 2026-02-26 |
 | Fila de jobs | BullMQ + Redis | SQS, RabbitMQ | Já tem Redis no stack, BullMQ é maduro, zero dependência externa | 2026-02-26 |
 | Banco de dados | PostgreSQL | MySQL, MongoDB | Integridade transacional crítica (estoque + pagamentos); JSONB para campos flexíveis quando necessário | 2026-02-26 |
 | Valores financeiros | INTEGER (centavos) | DECIMAL, FLOAT | FLOAT causa erros de arredondamento em dinheiro; DECIMAL mais lento; INTEGER é canônico | 2026-02-26 |
 | n8n isolado | Container isolado, só HTTP para API | Acesso direto ao banco | Segurança: n8n não deve ter credenciais do banco; RBAC aplicado mesmo para automações | 2026-02-26 |
-| Loja Online | Projeto separado | Parte do ORION CRM | Escopo, prazo e stack diferentes; não bloqueia operação do CRM | 2026-02-26 |
+| Loja Online | Projeto separado | Parte do ORION ERP | Escopo, prazo e stack diferentes; não bloqueia operação do CRM | 2026-02-26 |
 
 ---
 
@@ -1881,7 +1881,7 @@ ADMIN: Todas as funções acima, mais:
 ## 🤖 AI Agent Implementation Instructions
 
 ### Contexto
-ORION CRM é um sistema operacional completo para joalheria: CRM com WhatsApp, pedidos (pronta entrega e personalizados), produção, PDV, estoque, financeiro e assistente IA. É software de produção — não MVP. Erros em pagamento, estoque ou autenticação têm impacto direto no negócio.
+ORION ERP é um sistema operacional completo para joalheria: CRM com WhatsApp, pedidos (pronta entrega e personalizados), produção, PDV, estoque, financeiro e assistente IA. É software de produção — não MVP. Erros em pagamento, estoque ou autenticação têm impacto direto no negócio.
 
 ### Ordem de Leitura (obrigatória)
 1. **Seção 5 (Data Model)** — leia COMPLETO antes de escrever qualquer código

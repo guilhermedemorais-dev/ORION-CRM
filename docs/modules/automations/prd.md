@@ -1,4 +1,4 @@
-# ORION CRM — Módulo de Automações (Builder n8n)
+# ORION ERP — Módulo de Automações (Builder n8n)
 
 > O módulo de Automações do ORION é um canvas drag-and-drop que lê e escreve
 > workflows diretamente no n8n via REST API. O n8n é o único container de automação.

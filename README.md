@@ -1,183 +1,139 @@
-# ORION CRM
+# ORION ERP para Joalherias
 
-**Sistema operacional completo para joalherias** — CRM, pedidos, produção, PDV, estoque, financeiro, analytics e assistente IA, entregue como instância Docker isolada por cliente.
+O ORION é um **ERP operacional para joalherias**. CRM é um dos seus domínios, não a definição do produto. O sistema reúne captação e relacionamento, atendimento, orçamento, venda, encomenda, produção, estoque, PDV, financeiro, entrega, gestão e suporte em uma única operação.
 
----
+> `ORION-CRM` é o identificador histórico do repositório e das imagens atuais. Nesta documentação, o produto é chamado de **ORION ERP**. Renomear repositório, imagens, domínios ou infraestrutura é uma decisão futura, não parte desta entrega.
 
-## O Problema que o ORION Resolve
+## O que este repositório entrega
 
-Uma joalheria sem sistema perde dinheiro todo dia: leads chegam pelo WhatsApp e somem sem registro, atendimentos não têm histórico, pedidos personalizados são controlados em planilha, a produção não tem rastreio, o PDV é feito na mão e o dono não tem visão financeira real.
+O código contém uma aplicação web Next.js, uma API Express, PostgreSQL, Redis, workers BullMQ, NGINX e documentação de operação técnica. O sistema foi concebido para organizar o ciclo completo abaixo.
 
-**ORION centraliza toda a operação em um único sistema**, com audit log imutável de cada ação.
-
----
-
-## Módulos
-
-### CRM & Vendas
-- **Pipeline de Leads** — Kanban visual com arrastar e soltar, filtros por etapa e atendente, importação/exportação CSV, view lista para mobile
-- **Gestão de Clientes** — Painel completo com histórico de pedidos, ordens de serviço, propostas, LTV e atendimento
-- **Inbox WhatsApp** — Conversas em tempo real via Meta Cloud API, atribuição, encerramento e fila BullMQ para zero perda de mensagem
-
-### Pedidos & Produção
-- **Pedidos de Pronta Entrega** — Carrinho, confirmação, baixa automática de estoque e link de pagamento Mercado Pago
-- **Pedidos Personalizados** — Upload de design, aprovação, ordens de produção com etapas e fotos de evidência
-- **Fila de Produção** — Dashboard por ourives, avanço por etapa, rastreio de prazo e alerta de vencimento
-
-### Operação
-- **PDV (Ponto de Venda)** — Busca de produtos com debounce, carrinho, finalização de venda, cálculo de troco e recibo imprimível
-- **Controle de Estoque** — Entradas e saídas com controle de concorrência, alerta de estoque mínimo e histórico de movimentações
-- **Módulo Financeiro** — Entradas automáticas via webhook de pagamento, despesas manuais, comprovantes, comissões por atendente e relatórios por período
-
-### Inteligência & Automação
-- **Assistente IA** — Painel lateral com acesso contextualizado por role via Function Calling — cada usuário vê apenas os dados do seu escopo
-- **Agenda Completa** — 6 visualizações estilo Google Calendar (Mês, Semana, Dia, 4 Dias, Agenda, Programação) com CRUD completo e integração com pipeline
-- **Automações** — Canvas visual com Activepieces self-hosted (MIT), sem custo de plataforma externa
-
-### Dashboard & Analytics
-- **Dashboard Adaptativo por Role** — Admin vê visão geral, produção vê fila, financeiro vê fluxo de caixa
-- **KPIs em Tempo Real** — Faturamento mensal, novos leads, pedidos em aberto, ticket médio
-- **Analytics de Vendas** — Gráficos de faturamento, top clientes, aniversariantes com link WhatsApp pré-preenchido
-
-### Configurações & Segurança
-- **RBAC Completo** — 5 roles (ROOT, ADMIN, GERENTE, VENDEDOR, PRODUCAO) com permissões validadas em cada endpoint da API
-- **Segurança Avançada** — Timeout de sessão configurável, restrição de login por horário, rate limiting e proteção contra força bruta
-- **Webhooks** — Geração de chaves para integrações externas com validação HMAC
-- **Branding por Instância** — Logo, nome da empresa e cor primária configuráveis por cliente
-
-### Suporte
-- **Módulo de Suporte** — Registro de bugs e sugestões com upload de arquivos, linha do tempo visual do desenvolvimento e gráfico de atividade anual
-
----
-
-## Stack
-
-| Camada | Tecnologia |
-|--------|-----------|
-| Frontend | Next.js 14 App Router + TypeScript strict |
-| UI | shadcn/ui + Tailwind CSS 3.x |
-| Backend | Node.js 20 + Express + TypeScript strict |
-| Banco | PostgreSQL 16 |
-| Cache / Fila | Redis + BullMQ |
-| Automações | Activepieces self-hosted (MIT) |
-| WhatsApp | Meta Cloud API (Graph API v19.0+) |
-| Pagamentos | Mercado Pago |
-| Containerização | Docker + Docker Compose |
-| Proxy | NGINX alpine + Traefik (produção) |
-| CI/CD | GitHub Actions + GHCR |
-
----
-
-## Modelo de Entrega
-
-**SaaS com instância Docker isolada por cliente** — cada cliente recebe seu próprio container com banco, cache e fila independentes. Sem multi-tenancy no código, sem interferência entre clientes.
-
-O operador gerencia clientes, contratos e provisionamento via webhooks a partir de um painel central separado.
-
----
-
-## Deploy Rápido (Desenvolvimento)
-
-```bash
-# 1. Clone o repositório
-git clone https://github.com/guilhermedemorais-dev/ORION-CRM.git
-cd ORION-CRM
-
-# 2. Configure as variáveis de ambiente
-cp .env.example .env
-# Edite .env com suas credenciais
-
-# 3. Suba o stack completo
-docker compose up -d --build
+```mermaid
+flowchart LR
+  A[Captação e relacionamento<br/>WhatsApp, balcão, indicação] --> B[CRM<br/>Lead, pipeline, agenda]
+  B --> C[Cliente e atendimento<br/>Ficha, bloco, proposta]
+  C --> D{Tipo de venda}
+  D -->|Pronta entrega| E[Pedido ou PDV<br/>separação e pagamento]
+  D -->|Personalizada ou serviço| F[Pedido, OS ou produção<br/>material, etapas e qualidade]
+  E --> G[Estoque, financeiro e entrega]
+  F --> G
+  G --> H[Gestão<br/>KPIs, auditoria e suporte]
 ```
 
-**Acessos locais:**
-- `http://localhost` — CRM + Landing pública
-- `http://localhost/api/v1` — API REST
-- `http://localhost/health` — Health check
+O diagrama é o **modelo operacional pretendido**. Ele não afirma que todas as setas sejam automáticas ou homologadas. As transições confirmadas, as rotas e as lacunas estão em [Fluxo operacional ponta a ponta](docs/handoff/FLUXO-OPERACIONAL-END-TO-END.md).
 
-**Credenciais de teste:**
+## Posicionamento e limites do produto
+
+| É | Não é |
+| --- | --- |
+| ERP vertical de joalheria, cobrindo da captação à gestão pós-venda | Somente um CRM de leads ou uma agenda de WhatsApp |
+| Operação instalada por cliente, com banco, cache e uploads próprios | Multi-tenant lógico comprovado no código |
+| Base de código com módulos de operação comercial e administrativa | Prova de que todos os fluxos estão homologados em produção |
+| Fundamento para evolução por regras de negócio, specs e tarefas | Autorização para tratar telas ou endpoints como processo de negócio concluído |
+
+## Domínios do ERP
+
+### 1. Relacionamento e vendas
+
+| Domínio | O que resolve | Núcleo técnico observado | Situação de entrega |
+| --- | --- | --- | --- |
+| Leads e pipeline | Captação, qualificação, dono e evolução comercial | `leads`, `pipelines`, `pipeline_stages`; rotas `leads` e `pipeline(s)` | Implementado em código, validar operação real |
+| Clientes | Cadastro 360, preferências, histórico e carteira | `customers`, tags, anexos e timeline | Implementado em código, com fluxos de conversão a homologar |
+| Inbox e agenda | Atendimento, atribuição de conversa e compromissos | `conversations`, `messages`, `appointments`, Redis/workers | Parcial, depende de canal e workers externos |
+| Atendimento e proposta | Registro técnico/comercial de cada demanda de joalheria | `attendance_blocks`, `proposals`, peças e materiais | Parcial, sem ponte automática comprovada para todos os pedidos |
+
+### 2. Venda, oficina e entrega
+
+| Domínio | O que resolve | Núcleo técnico observado | Situação de entrega |
+| --- | --- | --- | --- |
+| Pedidos | Venda pronta-entrega e personalizada | `orders`, itens, detalhes customizados | Implementado em código; pagamento e efeitos posteriores exigem prova |
+| PDV | Venda de balcão, pagamento e recibo | rotas `pdv`, pedidos, pagamentos, financeiro e estoque | Implementado em código, não homologado com operação real |
+| Ordem de serviço e produção | Execução, materiais, etapas e acompanhamento de oficina | `service_orders`, `production_orders`, steps e materiais | Parcial, a fronteira OS versus produção precisa de regra de negócio única |
+| Entregas | Retirada, despacho, status e rastreio | `deliveries`, `carriers_config`, adapters | Parcial, transportadoras e tracking são externos |
+
+### 3. Controle e gestão
+
+| Domínio | O que resolve | Núcleo técnico observado | Situação de entrega |
+| --- | --- | --- | --- |
+| Estoque e catálogo | Produtos, categorias, saldo e movimentação | `products`, `stock_movements`, categorias | Implementado em código; reserva, devolução e baixa de personalizado são lacunas críticas |
+| Financeiro e pagamentos | Receitas, despesas, pagamentos, comissões e leitura gerencial | `financial_entries`, `payments`, serviços financeiros | Parcial, conciliação e callbacks externos não homologados |
+| Gestão | Dashboard, analytics, usuários, permissões e configurações | rotas de dashboard, analytics, settings e users | Implementado em código, métricas devem ser conciliadas com dados reais |
+| Suporte e rastreabilidade | Tickets, erros, roadmap e Base Técnica | tickets, system errors e documentação allowlisted | Parcial; Base Técnica foi testada na API, não no navegador ou produção |
+
+O inventário técnico completo, incluindo telas, persistência, permissão e risco, está em [Dossiês operacionais por módulo](docs/handoff/MODULE-OPERATING-DOSSIERS.md).
+
+## Ciclos que um novo responsável precisa entender antes de alterar código
+
+1. **Captação para cliente.** Um lead pode entrar por canal externo, avançar no pipeline e ser convertido em cliente. A deduplicação, o evento canônico de conversão e a responsabilidade de cadastro devem ser validados com a joalheria antes de mudar regras.
+2. **Atendimento para venda.** A Ficha registra blocos de atendimento e pode conter proposta. Não existe evidência de uma conversão automática universal de proposta para pedido. Não criar esse vínculo por inferência.
+3. **Pronta entrega.** Pedido e PDV podem tocar pagamento, estoque e financeiro. A transação esperada existe no serviço de PDV, mas o ciclo completo com concorrência, callback de pagamento e operação humana ainda requer homologação.
+4. **Personalizado, ajuste e oficina.** Pedido personalizado aprovado pode gerar produção. Ordem de serviço, bloco de atendimento e ordem de produção coexistem, são entidades distintas e não devem ser tratadas como sinônimos.
+5. **Estoque e financeiro.** Movimentar peça ou insumo e lançar valor em caixa têm impacto de negócio. Configuração de fluxo, como `stock_action`, não é execução de reserva ou baixa. Qualquer automação nesses domínios exige transação, regra aprovada e teste de rollback.
+6. **Entrega e pós-venda.** O registro local de entrega existe, mas emissão, rastreio, transportadora, pagamento e notificação dependem de integrações não exportadas neste pacote.
+
+## Arquitetura que existe hoje
+
+```text
+Navegador
+  └─ NGINX
+      ├─ Next.js (apps/web)
+      └─ Express API (apps/api)
+          ├─ PostgreSQL 16
+          ├─ Redis 7 + BullMQ workers
+          ├─ uploads persistentes
+          └─ conectores externos: n8n, WhatsApp, Mercado Pago, IA,
+             ViaCEP e transportadoras
 ```
-Email:  admin.inbox@orion.local
-Senha:  SenhaForte123!
-```
 
-> Para deploy em produção (VPS, SSL, Traefik), consulte [README-DEPLOY.md](README-DEPLOY.md).
+O `docker-compose.yml` atual declara PostgreSQL, Redis, API, Web, NGINX e Adminer. **Não declara n8n**, apesar de a API aceitar URLs e credenciais de n8n. Portanto, automações e canais externos não podem ser considerados prontos só porque há telas, rotas ou variáveis de ambiente.
 
----
+O PRD histórico menciona Activepieces e componentes Python. O baseline de código e Compose analisado usa TypeScript e integrações n8n. Essa divergência é uma pendência de arquitetura, não uma escolha documentada para o novo responsável. Veja [Automações e IA](docs/handoff/AUTOMACOES-E-IA-TECNICO.md).
 
-## Variáveis de Ambiente
+## Fonte de verdade e disciplina de mudança
 
-```env
-# Banco
-POSTGRES_USER=orion
-POSTGRES_PASSWORD=
-POSTGRES_DB=orion_db
+| Pergunta | Fonte que deve ser consultada |
+| --- | --- |
+| Qual é a regra de negócio pretendida? | `docs/product/` e o PRD do módulo |
+| O que está implementado no baseline? | rotas, services, migrations e componentes citados no handoff |
+| Qual é a estrutura real do dado? | migrations e [Banco, entidades e relacionamentos](docs/handoff/BANCO-ENTIDADES-E-RELACIONAMENTOS.md) |
+| Qual contrato HTTP pode ser alterado? | [Catálogo de rotas](docs/handoff/API-ROUTE-CATALOG.md) e contratos críticos |
+| O que foi apenas identificado, não provado? | documentos marcados como **PARCIAL** ou **NÃO HOMOLOGADO** |
 
-# Auth
-JWT_SECRET=
+Para feature, mudança de regra, API, schema, integração, autorização ou UI, crie primeiro a spec e a task em `docs/specs/` e `docs/tasks/`. O código não é autorização para inventar regra comercial.
 
-# WhatsApp (Meta Cloud API)
-WHATSAPP_TOKEN=
-WHATSAPP_PHONE_NUMBER_ID=
-WHATSAPP_VERIFY_TOKEN=
+## Início seguro para desenvolvimento
 
-# Mercado Pago
-MP_ACCESS_TOKEN=
-MP_WEBHOOK_SECRET=
+1. Copie `.env.example` para `.env` e preencha valores locais. Nunca use os defaults de desenvolvimento do Compose em servidor acessível.
+2. Suba o ambiente com `docker compose up -d --build` e acompanhe `docker compose logs -f api web`.
+3. As migrations são aplicadas pelo comando do container da API: `node dist/db/migrate.js`. Não aplique SQL manual sem reconciliar a tabela `_migrations` e o dump autorizado do ambiente.
+4. Valide rotas e UI com dados sintéticos. Não importe dump de outro cliente, credenciais ou automações de produção neste repositório.
+5. Antes de mexer em estoque, financeiro, pedido, produção ou permissões, leia o fluxo ponta a ponta e a migration relacionada. Teste tanto o sucesso quanto falha, concorrência e rollback.
 
-# IA
-OPENAI_API_KEY=
+## Deploy atualmente observado, somente referência
 
-# App
-NODE_ENV=production
-ORION_COOKIE_SECURE=true
-```
+O fluxo registrado no repositório é: `push` na `main` → GitHub Actions → build das imagens Docker → push para GHCR → SSH no servidor Hostinger → `docker compose pull` → atualização de API, Web e NGINX. A Action também copia a pasta `docs` da imagem da API para o host antes de recriar os containers.
 
-Todas as variáveis estão documentadas em `.env.example`.
+Isso descreve o estado atual para facilitar a assunção. **Não impõe** GitFlow, branches, CI/CD, GHCR, Hostinger, Docker Compose ou qualquer estratégia futura. O procedimento, suas premissas e os pontos que ainda precisam de prova estão em [Runbook de operações](docs/handoff/OPERATIONS-RUNBOOK.md).
 
----
+## Estado de validação desta entrega
 
-## Arquitetura
+- **Banco:** baseline exportado até a migration 062; banco de produção, backup, restore e rollback não foram homologados nesta entrega.
+- **API/Backend:** build e typecheck foram executados; o teste dedicado da Base Técnica passou isoladamente. Isso não substitui suíte de integração com PostgreSQL/Redis/provedores reais.
+- **Frontend/UI:** build realizado; navegador autenticado e fluxos críticos não foram homologados nesta entrega.
+- **Integrações:** Meta/WhatsApp, Mercado Pago, n8n, IA e transportadoras dependem de credenciais e recursos externos deliberadamente excluídos.
+- **Risco prioritário:** não automatizar reserva/baixa/devolução de estoque ou conciliação financeira até que o evento de negócio, transação e prova end-to-end estejam definidos.
 
-```
-[Browser] ──HTTPS──► NGINX
-                       │
-              ┌────────┴────────┐
-              │                 │
-           Next.js          Express API
-           :3000              :4000
-                                │
-                    ┌───────────┼───────────┐
-                    │           │           │
-                PostgreSQL    Redis      BullMQ
-                  :5432       :6379      Workers
-                                │
-                          Activepieces
-                             :8080
-```
+## Leitura por responsabilidade
 
-**Segurança:**
-- JWT com refresh token rotativo e detecção de roubo de token
-- Middleware de suspensão de conta roda antes da autenticação
-- Audit log imutável em toda operação de escrita (INSERT/UPDATE/DELETE)
-- Webhooks WhatsApp e Mercado Pago validados por HMAC antes de qualquer processamento
-- Valores monetários sempre em inteiros (centavos) — nunca float
-- Secrets nunca aparecem em código, logs ou respostas de erro
-
----
-
-## Histórico de Versões
-
-Veja o changelog completo em [docs/releases.md](docs/releases.md) — também disponível no módulo Suporte do sistema (aba Linha do Tempo).
-
----
+- **Gestor da joalheria:** ciclos acima e [Fluxo operacional](docs/handoff/FLUXO-OPERACIONAL-END-TO-END.md).
+- **Desenvolvedor de ERP:** [Manual operacional do ERP](docs/handoff/ERP-OPERATING-MANUAL.md), banco, contratos e dossiês de módulo.
+- **Suporte técnico:** [Portal de handoff](docs/handoff/README.md), runbook, RBAC e Base Técnica `/base-tecnica` para ADMIN.
+- **Responsável por infraestrutura:** Compose, Action de deploy e runbook, sempre distinguindo o que está documentado do que foi homologado.
 
 ## Licença
 
-Proprietário — todos os direitos reservados.  
-Para licenciamento comercial, entre em contato.
+Proprietário, todos os direitos reservados. Consulte [LICENSE](LICENSE).
 
 ---
 
-*ORION CRM — desenvolvido para joalherias que levam a sério cada peça e cada cliente.*
+**ORION ERP para Joalherias:** relacionamento, venda, oficina, estoque, financeiro e gestão sob uma operação rastreável, sem confundir promessa de produto com evidência de produção.

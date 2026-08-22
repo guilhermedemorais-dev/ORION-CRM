@@ -34,6 +34,9 @@ const PERMISSIONS: Record<string, UserRole[]> = {
     'order.create':             ['ADMIN', 'GERENTE', 'ATENDENTE'],
     'order.edit':               ['ADMIN', 'GERENTE'],
     'order.delete':             ['ADMIN'],
+    // Aprovar pedido / enviar para producao (APROVADO, EM_PRODUCAO).
+    // Default ADMIN e GERENTE; liberavel por usuario via toggle.
+    'order.approve':            ['ADMIN', 'GERENTE'],
 
     // OS
     'so.view':                  ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],
@@ -45,6 +48,11 @@ const PERMISSIONS: Record<string, UserRole[]> = {
     // Entrega
     'delivery.view':            ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],
     'delivery.update_status':   ['ADMIN', 'GERENTE', 'ATENDENTE', 'PRODUCAO'],
+
+    // Estoque / Produto — dados sensiveis
+    // Custo de aquisicao + margem de lucro. Default so ADMIN (ROOT bypassa).
+    // Liberavel por usuario via toggle no modal (custom_permissions).
+    'product.cost.view':        ['ADMIN'],
 
     // Financeiro / NF-e
     'nfe.emit':                 ['ADMIN', 'GERENTE'],

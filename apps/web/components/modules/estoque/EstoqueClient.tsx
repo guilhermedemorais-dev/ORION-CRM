@@ -7,7 +7,7 @@ interface Product {
   id: string; code: string; name: string;
   category: string | null; category_id: string | null;
   collection: string | null; description: string | null;
-  price_cents: number; cost_price_cents: number;
+  price_cents: number; cost_price_cents: number | null;
   stock_quantity: number; minimum_stock: number;
   metal: string | null; weight_grams: number | null;
   location: string | null; size_info: string | null; stones: string | null;
@@ -30,7 +30,7 @@ interface StockMovement {
   created_at: string; created_by: { id: string; name: string };
 }
 
-interface Stats { active: number; critical: number; out_of_stock: number; total_cost_cents: number; }
+interface Stats { active: number; critical: number; out_of_stock: number; total_cost_cents: number | null; }
 interface Meta { total: number; page: number; limit: number; pages: number; }
 
 interface EstoqueClientProps {
@@ -61,9 +61,10 @@ const btnGold = 'h-9 px-4 rounded-lg bg-[#C8A97A] text-black text-xs font-bold h
 const btnGhost = 'h-9 px-3 rounded-lg bg-[#18181C] border border-white/[0.07] text-[#888480] text-xs font-semibold hover:border-white/[0.11] hover:text-[#EDE8E0] transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer';
 
 // ── Product Modal ─────────────────────────────────────────────────────────────
-function ProductModal({ product, categories, onManageCategories, onClose, onSaved, showToast }: {
+function ProductModal({ product, categories, canViewCost, onManageCategories, onClose, onSaved, showToast }: {
   product: Product | null;
   categories: ProductCategory[];
+  canViewCost: boolean;
   onManageCategories: () => void;
   onClose: () => void;
   onSaved: () => void;
@@ -84,7 +85,7 @@ function ProductModal({ product, categories, onManageCategories, onClose, onSave
     collection: product?.collection ?? '',
     description: product?.description ?? '',
     price: product ? String(product.price_cents / 100) : '',
-    cost: product ? String(product.cost_price_cents / 100) : '',
+    cost: product?.cost_price_cents != null ? String(product.cost_price_cents / 100) : '',
     stock_quantity: product ? String(product.stock_quantity) : '0',
     minimum_stock: product ? String(product.minimum_stock) : '5',
     location: product?.location ?? '',
@@ -264,17 +265,22 @@ function ProductModal({ product, categories, onManageCategories, onClose, onSave
                 <label className={lbl}>Preço de Venda (R$) *</label>
                 <input className={ic} type="number" min="0.01" step="0.01" value={f.price} onChange={e => set('price', e.target.value)} placeholder="0,00" />
               </div>
-              <div>
-                <label className={lbl}>Custo de Aquisição (R$)</label>
-                <input className={ic} type="number" min="0" step="0.01" value={f.cost} onChange={e => set('cost', e.target.value)} placeholder="0,00" />
-              </div>
-              <div>
-                <label className={lbl}>Margem Estimada</label>
-                <div className="h-[38px] flex items-center px-3 rounded-lg text-sm font-semibold"
-                  style={{ background: '#202026', border: '1px solid rgba(255,255,255,0.07)', color: margin != null && parseFloat(margin) >= 0 ? '#4CAF82' : '#E05252' }}>
-                  {margin != null ? `${margin}%` : '—'}
-                </div>
-              </div>
+              {/* Custo e margem: dados sensiveis — so quem tem product.cost.view (canViewCost) */}
+              {canViewCost && (
+                <>
+                  <div>
+                    <label className={lbl}>Custo de Aquisição (R$)</label>
+                    <input className={ic} type="number" min="0" step="0.01" value={f.cost} onChange={e => set('cost', e.target.value)} placeholder="0,00" />
+                  </div>
+                  <div>
+                    <label className={lbl}>Margem Estimada</label>
+                    <div className="h-[38px] flex items-center px-3 rounded-lg text-sm font-semibold"
+                      style={{ background: '#202026', border: '1px solid rgba(255,255,255,0.07)', color: margin != null && parseFloat(margin) >= 0 ? '#4CAF82' : '#E05252' }}>
+                      {margin != null ? `${margin}%` : '—'}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -659,6 +665,9 @@ export default function EstoqueClient({ initialProducts, initialMeta, initialSta
   const [products, setProducts] = useState(initialProducts);
   const [meta, setMeta] = useState(initialMeta);
   const [stats, setStats] = useState(initialStats);
+  // Custo/margem sao sensiveis: o backend devolve null (custo e total_cost_cents)
+  // para quem nao tem product.cost.view. Derivamos a permissao disso.
+  const canViewCost = stats.total_cost_cents !== null;
   const [loading, setLoading] = useState(false);
 
   const [search, setSearch] = useState('');
@@ -858,12 +867,13 @@ export default function EstoqueClient({ initialProducts, initialMeta, initialSta
   return (
     <div style={{ background: '#0A0A0B', color: '#EDE8E0', minHeight: '100%', fontFamily: 'Inter, sans-serif' }}>
       {/* KPI Row */}
-      <div className="grid grid-cols-4 gap-3 p-6 pb-4">
+      <div className={`grid ${canViewCost ? 'grid-cols-4' : 'grid-cols-3'} gap-3 p-6 pb-4`}>
         {[
           { label: 'Produtos Ativos', value: stats.active, sub: 'Disponíveis para venda', color: '#4CAF82' },
           { label: 'Estoque Crítico', value: stats.critical, sub: 'Abaixo do mínimo', color: '#F0A040' },
           { label: 'Sem Estoque', value: stats.out_of_stock, sub: 'Ruptura — reposição urgente', color: '#E05252' },
-          { label: 'Valor em Estoque', value: fmtCurrency(stats.total_cost_cents), sub: 'Custo total × quantidade', color: '#4A9EFF' },
+          // Valor em Estoque (custo agregado) — so com permissao de custo.
+          ...(canViewCost ? [{ label: 'Valor em Estoque', value: fmtCurrency(stats.total_cost_cents ?? 0), sub: 'Custo total × quantidade', color: '#4A9EFF' }] : []),
         ].map(k => (
           <div key={k.label} className="relative rounded-[10px] overflow-hidden" style={{ background: '#18181C', border: '1px solid rgba(255,255,255,0.07)', padding: '14px 16px' }}>
             <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: k.color }} />
@@ -1055,7 +1065,9 @@ export default function EstoqueClient({ initialProducts, initialMeta, initialSta
                 ['Coleção', detailProduct.collection ?? '—'], ['Metal', detailProduct.metal ?? '—'],
                 ['Peso', fmtWeight(detailProduct.weight_grams)], ['Tamanho', detailProduct.size_info ?? '—'],
                 ['Pedras', detailProduct.stones ?? '—'], ['Localização', detailProduct.location ?? '—'],
-                ['Preço de venda', fmtCurrency(detailProduct.price_cents)], ['Custo', fmtCurrency(detailProduct.cost_price_cents)],
+                ['Preço de venda', fmtCurrency(detailProduct.price_cents)],
+                // Custo: dado sensivel — so aparece se o backend enviou (permissao).
+                ...(detailProduct.cost_price_cents != null ? [['Custo', fmtCurrency(detailProduct.cost_price_cents)]] : []),
                 ['Estoque atual', `${detailProduct.stock_quantity} un.`], ['Estoque mínimo', String(detailProduct.minimum_stock)],
                 ['PDV habilitado', detailProduct.pdv_enabled ? 'Sim' : 'Não'], ['Requer produção', detailProduct.requires_production ? 'Sim' : 'Não'],
               ].map(([label, value]) => (
@@ -1094,6 +1106,7 @@ export default function EstoqueClient({ initialProducts, initialMeta, initialSta
         <ProductModal
           product={editProduct}
           categories={categories}
+          canViewCost={canViewCost}
           onManageCategories={() => setShowCategoryManager(true)}
           onClose={() => { setShowCreate(false); setEditProduct(null); }}
           onSaved={() => {

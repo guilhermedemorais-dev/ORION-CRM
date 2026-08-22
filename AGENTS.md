@@ -1,4 +1,4 @@
-# ORION CRM - AGENTS.md
+# ORION ERP - AGENTS.md
 
 > Lido automaticamente pelo Codex. Este arquivo deve ser curto para economizar
 > contexto. Regras detalhadas ficam em `docs/`.

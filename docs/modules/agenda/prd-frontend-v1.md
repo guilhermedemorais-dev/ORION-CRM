@@ -1,4 +1,4 @@
-# ORION CRM — PRD Frontend: Módulo Agenda (4 Telas)
+# ORION ERP — PRD Frontend: Módulo Agenda (4 Telas)
 
 **Versão:** 1.0  
 **Data:** 2026-03-23  

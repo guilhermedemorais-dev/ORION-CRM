@@ -2,7 +2,7 @@
 
 > **Entrega completa em 6 dias.**
 > WhatsApp via Evolution API self-hosted — se número banir, troca o número e sobe de novo.
-> Esta base conecta diretamente ao ORION CRM Fase 1 sem retrabalho.
+> Esta base conecta diretamente ao ORION ERP Fase 1 sem retrabalho.
 
 | Campo | Valor |
 |-------|-------|
@@ -611,7 +611,7 @@ orion-fase0/
 ## 🤖 Instruções para o Agente de IA
 
 ### Contexto
-Landing page de joalheria + automação WhatsApp completa via Evolution API + n8n. Fase 0 do ORION CRM — tudo deve ser construído sem retrabalho quando o CRM Fase 1 conectar. Google Sheets é o "banco de dados" temporário desta fase.
+Landing page de joalheria + automação WhatsApp completa via Evolution API + n8n. Fase 0 do ORION ERP — tudo deve ser construído sem retrabalho quando o CRM Fase 1 conectar. Google Sheets é o "banco de dados" temporário desta fase.
 
 ### Ordem de Implementação (siga exatamente — não reordenar)
 

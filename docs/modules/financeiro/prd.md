@@ -1,4 +1,4 @@
-# ORION CRM — PRD: Financeiro
+# ORION ERP — PRD: Financeiro
 
 > Baseado no mockup aprovado em 07/03/2026.
 > Substituição do financeiro/page.tsx atual (3 KPIs + tabela simples).

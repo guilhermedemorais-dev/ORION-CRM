@@ -1,4 +1,4 @@
-# ORION CRM — Guia de Construção para IA
+# ORION ERP — Guia de Construção para IA
 
 > Este documento define EXATAMENTE como cada tela deve ser construída.
 > Sem isso, a IA entrega componentes genéricos.
@@ -79,7 +79,7 @@ export default {
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    ORION CRM Shell                       │
+│                    ORION ERP Shell                       │
 ├──────────┬──────────────────────────────────────────────┤
 │          │  Topbar (h-14, border-b, bg-white)           │
 │          │  [Breadcrumb]          [Search] [Notif] [Avatar]│

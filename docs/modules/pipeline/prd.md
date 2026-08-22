@@ -1,4 +1,4 @@
-# ORION CRM — PRD: Módulo Pipeline Completo
+# ORION ERP — PRD: Módulo Pipeline Completo
 
 > Baseado nos mockups aprovados em 07/03/2026.
 > Unifica menu lateral, kanban do funcionário e builder do mestre.
@@ -34,7 +34,7 @@ FUNCIONÁRIO → Kanban → opera leads → IA orquestra automaticamente
 ### Estrutura nova
 
 ```
-ORION CRM
+ORION ERP
 
 [Dashboard]
 

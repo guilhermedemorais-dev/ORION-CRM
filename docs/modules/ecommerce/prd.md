@@ -1,5 +1,5 @@
 # 17 — E-COMMERCE · LOJA PÚBLICA
-**ORION CRM · PRD v2.0 · 08/03/2026**
+**ORION ERP · PRD v2.0 · 08/03/2026**
 
 ---
 

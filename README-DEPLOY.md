@@ -1,82 +1,97 @@
-# ORION CRM — Deploy Operacional
+# ORION ERP para Joalherias, deploy atualmente observado
 
-## 1. Preparacao do VPS
+> Este documento registra o deploy que está configurado hoje no repositório para
+> facilitar a transição. Não define a estratégia futura do ORION ERP. O próximo
+> responsável pode alterar branches, CI/CD, registry, infraestrutura e processo
+> de deploy mediante planejamento e validação próprios.
 
-- Instale Docker Engine e Docker Compose plugin
-- Garanta DNS apontando para o servidor
-- Libere portas `80` e `443`
-- Crie o diretório de deploy e copie o repositório
+## Fluxo atual
 
-## 2. Ambiente
-
-Crie `.env` a partir de `.env.example` e preencha:
-
-- obrigatorios do core:
-  - `POSTGRES_PASSWORD`
-  - `DATABASE_URL`
-  - `REDIS_URL`
-  - `JWT_SECRET`
-  - `JWT_REFRESH_SECRET`
-  - `OPERATOR_WEBHOOK_SECRET`
-  - `APP_URL`
-  - `FRONTEND_URL`
-- integrações:
-  - `META_*`
-  - `MP_*`
-  - `OPENAI_API_KEY`
-  - `N8N_API_KEY`
-  - `N8N_WEBHOOK_URL`
-
-## 3. Build e subida
-
-```bash
-docker compose config
-docker compose up -d --build
+```text
+push na main
+  → GitHub Actions
+  → build das imagens Docker (API, Web e NGINX)
+  → push para GitHub Container Registry, GHCR
+  → SSH no servidor Hostinger
+  → docker compose pull api web nginx
+  → atualização dos containers
 ```
 
-## 4. Verificacoes pos-deploy
+A fonte do fluxo é `.github/workflows/deploy.yml`. O workflow só é disparado
+por push na branch `main`.
+
+## O que o workflow faz
+
+1. Faz checkout do código.
+2. Autentica no GHCR com o token do GitHub Actions.
+3. Copia `docs/` para o contexto de build da API, pois a imagem serve a
+   documentação técnica e a infraestrutura monta `./docs:/app/docs:ro`.
+4. Constrói e publica as imagens `api:latest`, `web:latest` e
+   `nginx:latest` no namespace configurado no workflow.
+5. Conecta por SSH ao host atualmente configurado no secret do GitHub.
+6. Entra no diretório de deploy existente, autentica o Docker no GHCR,
+   executa `docker compose pull api web nginx`.
+7. Cria temporariamente um container da imagem da API, extrai `/app/docs`
+   para o diretório `./docs/` do host e o remove.
+8. Recria somente API, Web e NGINX com
+   `docker compose up -d --no-build api web nginx`.
+9. Executa `docker image prune -f` para liberar imagens não usadas.
+
+PostgreSQL e Redis não são recriados nesse passo, portanto seus volumes
+persistentes permanecem no host.
+
+## Pré-requisitos do host atual
+
+- Docker Engine e Docker Compose plugin.
+- Diretório de deploy contendo `docker-compose.yml`, `.env`, volumes e a
+  pasta `docs/` que será atualizada pelo workflow.
+- Rede externa `traefik-proxy`, declarada como external no Compose.
+- Secrets de deploy no GitHub Actions, inclusive chave SSH e token de leitura
+  do GHCR. Eles não fazem parte do repositório nem deste snapshot.
+- Variáveis obrigatórias em `.env` ou ambiente do host:
+  `POSTGRES_PASSWORD`, `JWT_SECRET`, `JWT_REFRESH_SECRET` e
+  `OPERATOR_WEBHOOK_SECRET`. O Compose entregue falha de propósito se elas
+  não forem fornecidas.
+
+## Topologia usada pelo Compose
+
+| Serviço | Papel | Persistência/observação |
+| --- | --- | --- |
+| PostgreSQL | dados do ERP | volume `postgres_data` |
+| Redis | cache e filas | volume `redis_data` |
+| API | Express, migrations e workers | executa migrations no start; volume de uploads e docs read-only |
+| Web | Next.js | chama API pela rede interna |
+| NGINX | ponto de entrada HTTP(S) | conecta à rede externa Traefik |
+| Adminer | ferramenta administrativa de banco | exposta pelo roteamento Traefik configurado |
+
+O Compose atual **não declara um serviço n8n**. A API aceita configuração para
+n8n e outras integrações externas, mas elas são recursos externos a este
+Compose e devem ser instaladas, autenticadas e homologadas separadamente.
+
+## Verificações pós-deploy ainda necessárias
+
+O workflow não executa smoke test HTTP explícito. Depois de qualquer deploy,
+quem operar deve validar, no mínimo:
 
 ```bash
-curl -I http://SEU_DOMINIO/health
-curl -I http://SEU_DOMINIO/login
-curl -I http://SEU_DOMINIO/catalogo
+docker compose ps
+docker compose logs --tail=200 api web nginx
+curl -fsS https://SEU_DOMINIO/health
+curl -fsSI https://SEU_DOMINIO/login
 ```
 
-Checks esperados:
-- landing publica carregando
-- login do CRM carregando
-- API respondendo
-- `n8n` sem porta publica exposta
+Também validar migration aplicada, login autenticado, leitura/escrita em banco,
+uploads e o fluxo de negócio alterado. Integrações com Meta, Mercado Pago, n8n,
+IA e transportadoras devem ter testes próprios autorizados.
 
-## 5. SSL
+## Limites conhecidos
 
-O `nginx/nginx.conf` ja deixa o bloco preparado para ativar SSL.
-
-Passos:
-- montar certificados em `nginx/ssl`
-- descomentar `listen 443 ssl http2`
-- descomentar `ssl_certificate` e `ssl_certificate_key`
-- opcionalmente reativar redirecionamento `80 -> 443`
-- rebuild do `nginx`
-
-## 6. n8n
-
-- O container `n8n` roda apenas na rede interna do Compose
-- Nao existe publish de porta
-- Importe os workflows em `n8n/workflows/`
-- Configure credencial HTTP Header Auth com `Authorization: Bearer <N8N_API_KEY>`
-
-## 7. Restore basico
-
-- Banco: restore em `postgres`
-- Uploads: restaurar volume `uploads_data`
-- n8n: restaurar volume `n8n_data`
-
-## 8. Observacao operacional
-
-Servicos internos nao devem ser expostos diretamente:
-- `postgres`
-- `redis`
-- `n8n`
-
-Todo trafego externo deve entrar apenas por `nginx`.
+- Este documento não prova acesso atual ao servidor Hostinger, nem backups,
+  restore, rollback, DNS, certificados ou observabilidade.
+- A documentação antiga que descrevia n8n como container do Compose não
+  representa a configuração encontrada em `docker-compose.yml`.
+- O mecanismo atual usa tags `latest`; não há evidência nesta entrega de tag
+  imutável por release, rollback automatizado ou promotion entre ambientes.
+- Não há obrigação de preservar GHCR, SSH, Traefik ou Hostinger na próxima
+  operação. A mudança só precisa ser planejada para proteger banco, uploads,
+  secrets, migrations e rollback.

@@ -1,6 +1,13 @@
-# Documentação do ORION CRM
+# Documentação do ORION ERP para Joalherias
 
-Este diretório é a única raiz canônica da documentação do projeto.
+Este diretório é a única raiz canônica da documentação do projeto. O nome
+histórico de alguns PRDs e do repositório usa `ORION CRM`; o produto deve ser
+tratado como **ORION ERP para Joalherias**, com CRM como um de seus domínios.
+
+Para assumir os processos de negócio antes de ler documentos de requisito
+históricos, consulte [`handoff/ERP-OPERATING-MANUAL.md`](handoff/ERP-OPERATING-MANUAL.md).
+Para a regra de nomenclatura, identificadores legados e limite entre ERP e CRM,
+consulte [`product/ORION-ERP-PRODUCT-IDENTITY.md`](product/ORION-ERP-PRODUCT-IDENTITY.md).
 
 ## Ordem de Leitura Obrigatória
 

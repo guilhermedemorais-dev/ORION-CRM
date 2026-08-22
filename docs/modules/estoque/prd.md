@@ -1,5 +1,5 @@
 # PRD: Módulo Estoque — Catálogo & Controle de Inventário
-**ORION CRM | Versão 1.0 | Status: APPROVED FOR IMPLEMENTATION**
+**ORION ERP | Versão 1.0 | Status: APPROVED FOR IMPLEMENTATION**
 
 ---
 
