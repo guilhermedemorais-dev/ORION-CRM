@@ -4,8 +4,8 @@
 
 O fluxo abaixo combina contratos de código no commit `29c1639`. Uma seta só é
 automática quando o código efetivamente escreve o próximo registro. Fluxos
-externos, transições humanas e runtime não verificado estão marcados para que o
-novo responsável não trate um desenho de tela como automação entregue.
+externos, transições humanas e runtime não verificado estão marcados para que a
+equipe não trate um desenho de tela como automação entregue.
 
 ```mermaid
 flowchart TD

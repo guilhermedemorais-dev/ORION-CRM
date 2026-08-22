@@ -1,8 +1,8 @@
-# Manual de assunção do ORION ERP para Joalherias
+# Manual operacional e técnico do ORION ERP para Joalherias
 
 ## Objetivo deste manual
 
-Este manual existe para que o próximo responsável assuma o ORION como um **ERP de joalheria**, não como uma coleção de telas de CRM. Ele explica onde começa e termina cada processo, qual registro sustenta cada decisão, que efeito deveria ocorrer, onde o código já executa esse efeito e onde ainda há uma lacuna.
+Este manual existe para que qualquer pessoa da equipe trabalhe no ORION como um **ERP de joalheria**, não como uma coleção de telas de CRM. Ele explica onde começa e termina cada processo, qual registro sustenta cada decisão, que efeito deveria ocorrer, onde o código já executa esse efeito e onde ainda há uma lacuna.
 
 O baseline técnico desta documentação é o commit `29c1639`. A documentação distingue:
 
@@ -287,8 +287,8 @@ No deploy, a Action extrai `/app/docs` da imagem da API e atualiza os docs do
 host para que o bind mount não mantenha documentação antiga. Isso é uma
 característica relevante do fluxo atual.
 
-Este processo é **referência de assunção**, não obrigação futura. O novo
-responsável pode adotar outro GitFlow, CI/CD, registry, host ou mecanismo de
+Este processo é **referência do funcionamento atual**, não obrigação futura. A
+equipe pode adotar outro GitFlow, CI/CD, registry, host ou mecanismo de
 deploy, desde que trate migração, rollback, backup e secrets como requisitos
 explícitos.
 

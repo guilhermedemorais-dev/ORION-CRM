@@ -1,8 +1,8 @@
-# Assunção técnica do ORION ERP para Joalherias
+# Documentação técnica do ORION ERP para Joalherias
 
 ## Comece pela operação, não pela árvore de arquivos
 
-O ORION deve ser assumido como um ERP vertical de joalheria. CRM é o domínio
+O ORION é um ERP vertical de joalheria. CRM é o domínio
 que inicia parte da jornada, mas a responsabilidade do sistema alcança cliente,
 venda, peça, oficina, estoque, caixa, entrega e gestão.
 
@@ -14,17 +14,17 @@ A leitura recomendada depende da decisão que será tomada:
 | Corrigir uma venda, encomenda, OS ou produção | `FLUXO-OPERACIONAL-END-TO-END.md` | estoque/financeiro/PDV e banco |
 | Alterar dados, migration ou relação entre módulos | `BANCO-ENTIDADES-E-RELACIONAMENTOS.md` | API, migration concreta e spec |
 | Alterar endpoint ou permissão | `API-ROUTE-CATALOG.md` | RBAC, contrato crítico e teste negativo |
-| Assumir deploy, incidente ou atualização | `OPERATIONS-RUNBOOK.md` | arquitetura, Compose e workflow atual |
+| Trabalhar em deploy, incidente ou atualização | `OPERATIONS-RUNBOOK.md` | arquitetura, Compose e workflow atual |
 | Avaliar se algo está realmente pronto | `QA-E-GAPS-PRD-CODIGO.md` | matriz de rastreabilidade e evidências |
 | Atender suporte administrativo | rota `/base-tecnica` para ADMIN | documentos allowlisted e runbook |
 
-## Ordem de assunção recomendada
+## Ordem de leitura recomendada
 
 1. Leia `ERP-OPERATING-MANUAL.md`. Ele define unidades de trabalho, registros
    canônicos e as fronteiras entre CRM, venda, oficina, estoque e financeiro.
-2. Leia `SECOND-PASS-BASELINE.md`. Ele separa o commit entregue do WIP local
-   que não foi transportado.
-3. Escolha o ciclo de negócio que você vai assumir e siga-o de ponta a ponta em
+2. Leia `SECOND-PASS-BASELINE.md`. Ele separa o commit analisado do WIP local
+   que não deve ser tratado como comportamento validado.
+3. Escolha o ciclo de negócio que será alterado e siga-o de ponta a ponta em
    `FLUXO-OPERACIONAL-END-TO-END.md`. Não comece por um componente isolado.
 4. Só então abra a rota, service, migration e tela referidos nos dossiês. A
    documentação aponta o caminho, mas o código continua sendo a verdade da
@@ -32,11 +32,11 @@ A leitura recomendada depende da decisão que será tomada:
 5. Antes de mudança de regra, crie spec e task. Estoque, financeiro, pedido,
    produção, autorização e integrações não admitem alteração por inferência.
 
-## Estado honesto da entrega
+## Estado atual documentado
 
-O baseline de código é o commit `29c1639`. O pacote de entrega inclui
-documentação e Base Técnica de suporte como overlay auditado, sem histórico Git
-e sem WIP de outras frentes.
+O baseline de código analisado é o commit `29c1639`. A documentação separa
+esse ponto de referência do WIP local para não misturar comportamento
+verificado com mudanças ainda em andamento.
 
 - O código demonstra módulos de relacionamento, venda, oficina, estoque,
   financeiro, gestão, integrações e suporte.
@@ -54,7 +54,7 @@ e sem WIP de outras frentes.
 
 ### Produto, ciclo e módulos
 
-- `ERP-OPERATING-MANUAL.md`: manual completo de assunção do ERP, ciclos,
+- `ERP-OPERATING-MANUAL.md`: manual operacional e técnico do ERP, ciclos,
   entidades canônicas, decisões pendentes e checklist de mudança.
 - `FLUXO-OPERACIONAL-END-TO-END.md`: caminhos confirmados de WhatsApp até
   entrega, com transições humanas, automáticas e parciais separadas.
@@ -110,7 +110,7 @@ de suporte para leitura, não um substituto de revisão de código ou homologaç
 A feature foi validada com teste API isolado; navegador autenticado e produção
 continuam não homologados.
 
-## Próxima ação para quem assume
+## Próxima ação da equipe
 
 Escolha um único ciclo de negócio crítico, normalmente **venda personalizada →
 produção → estoque → financeiro**, valide-o com dados sintéticos em banco

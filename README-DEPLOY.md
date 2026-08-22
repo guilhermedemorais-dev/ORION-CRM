@@ -1,8 +1,8 @@
 # ORION ERP para Joalherias, deploy atualmente observado
 
 > Este documento registra o deploy que está configurado hoje no repositório para
-> facilitar a transição. Não define a estratégia futura do ORION ERP. O próximo
-> responsável pode alterar branches, CI/CD, registry, infraestrutura e processo
+> registrar o funcionamento atual. Não define a estratégia futura do ORION ERP.
+> A equipe pode alterar branches, CI/CD, registry, infraestrutura e processo
 > de deploy mediante planejamento e validação próprios.
 
 ## Fluxo atual
@@ -92,6 +92,6 @@ IA e transportadoras devem ter testes próprios autorizados.
   representa a configuração encontrada em `docker-compose.yml`.
 - O mecanismo atual usa tags `latest`; não há evidência nesta entrega de tag
   imutável por release, rollback automatizado ou promotion entre ambientes.
-- Não há obrigação de preservar GHCR, SSH, Traefik ou Hostinger na próxima
-  operação. A mudança só precisa ser planejada para proteger banco, uploads,
+- Não há obrigação de preservar GHCR, SSH, Traefik ou Hostinger. A mudança só
+  precisa ser planejada para proteger banco, uploads,
   secrets, migrations e rollback.
