@@ -2,6 +2,75 @@
 
 O ORION é um **ERP operacional para joalherias**. CRM é um dos seus domínios, não a definição do produto. O sistema reúne captação e relacionamento, atendimento, orçamento, venda, encomenda, produção, estoque, PDV, financeiro, entrega, gestão e suporte em uma única operação.
 
+## Índice de documentação
+
+Escolha o assunto e abra o documento correspondente. Os documentos de estado,
+QA e auditoria descrevem evidência encontrada, não promessa de produto.
+
+### Começar pelo estado real
+
+- [Estado real do produto, riscos e vulnerabilidades](docs/handoff/ESTADO-REAL-DO-PRODUTO-E-RISCOS.md)
+- [Índice técnico de handoff](docs/handoff/README.md)
+- [Índice canônico de documentação](docs/README.md)
+- [Identidade e terminologia do ORION ERP](docs/product/ORION-ERP-PRODUCT-IDENTITY.md)
+- [Manual operacional do ERP](docs/handoff/ERP-OPERATING-MANUAL.md)
+- [Fluxo operacional ponta a ponta](docs/handoff/FLUXO-OPERACIONAL-END-TO-END.md)
+
+### Produto e regras de negócio
+
+- [PRD principal](docs/product/ORION-CRM-PRD-v1.2.md)
+- [Guia de construção e design](docs/product/ORION-BUILD-GUIDE.md)
+- [PRD histórico da Fase 0](docs/product/ORION-Fase0-PRD.md)
+- [Catálogo de módulos e PRDs canônicos](docs/modules/README.md)
+- [Roadmap principal](docs/roadmap/master-roadmap.md)
+- [Rastreabilidade PRD](docs/roadmap/prd-traceability.md)
+
+### Arquitetura, dados e API
+
+- [Arquitetura e operações atuais](docs/handoff/ARQUITETURA-E-OPERACOES-ATUAL.md)
+- [Decisões de arquitetura](docs/handoff/ARCHITECTURE-DECISIONS.md)
+- [Visão geral de arquitetura](docs/architecture/overview.md)
+- [Banco, entidades e relacionamentos](docs/handoff/BANCO-ENTIDADES-E-RELACIONAMENTOS.md)
+- [Inventário de API por domínio](docs/handoff/API-INVENTARIO-DE-NEGOCIO.md)
+- [Catálogo de rotas da API](docs/handoff/API-ROUTE-CATALOG.md)
+- [Contratos críticos da API](docs/handoff/API-CONTRATOS-CRITICOS.md)
+- [Ficha do cliente, visão técnica](docs/handoff/FICHA-DO-CLIENTE-TECNICA.md)
+- [Mapa técnico do frontend](docs/handoff/FRONTEND-MAPA-TECNICO.md)
+
+### Operação, módulos e integrações
+
+- [Dossiês operacionais por módulo](docs/handoff/MODULE-OPERATING-DOSSIERS.md)
+- [Catálogo técnico dos módulos](docs/handoff/MODULOS-CATALOGO-TECNICO.md)
+- [Operação central: Inbox, Agenda, Pipeline e Produção](docs/handoff/OPERACAO-CENTRAL-INBOX-AGENDA-PIPELINE-PRODUCAO.md)
+- [Estoque, financeiro e PDV](docs/handoff/ESTOQUE-FINANCEIRO-PDV-TECNICO.md)
+- [Gestão, analytics e suporte](docs/handoff/GESTAO-LOJA-ANALYTICS-SUPORTE-TECNICO.md)
+- [Automações e IA](docs/handoff/AUTOMACOES-E-IA-TECNICO.md)
+- [RBAC e integrações](docs/handoff/RBAC-E-INTEGRACOES-TECNICO.md)
+- [Runbook de operações e deploy](docs/handoff/OPERATIONS-RUNBOOK.md)
+- [Ambiente e variáveis](docs/operations/environment.md)
+
+### Qualidade, segurança e mudanças
+
+- [QA, gaps entre PRD e código](docs/handoff/QA-E-GAPS-PRD-CODIGO.md)
+- [Matriz de rastreabilidade](docs/handoff/TRACEABILITY-MATRIX.md)
+- [Baseline da segunda passada](docs/handoff/SECOND-PASS-BASELINE.md)
+- [Validação cruzada da segunda passada](docs/handoff/VALIDACAO-CRUZADA-SEGUNDA-PASSADA.md)
+- [Auditoria de conclusão](docs/handoff/COMPLETION-AUDIT-SEGUNDA-PASSADA.md)
+- [Padrões de desenvolvimento](docs/DEVELOPMENT_STANDARDS.md)
+- [Fluxo de desenvolvimento](docs/DEVELOPMENT_WORKFLOW.md)
+- [Protocolo de correção de bugs](docs/BUG_FIX_PROTOCOL.md)
+- [Padrões de componentes](docs/COMPONENT_STANDARDS.md)
+- [Índice de specs](docs/specs/README.md) e [índice de tasks](docs/tasks/README.md)
+
+### Design e histórico documental
+
+- [Índice de design](docs/design/README.md)
+- [Inventário de componentes](docs/design/component-inventory.md)
+- [Mapa de runtime de design](docs/design/runtime-map.md)
+- [Plano de migração documental](docs/DOCUMENTATION_MIGRATION_PLAN.md)
+- [Histórico de releases](docs/releases.md)
+- [Handoff histórico de OS multi-peça](docs/HANDOFF-os-multipeca.md)
+
 ## O que este repositório entrega
 
 O código contém uma aplicação web Next.js, uma API Express, PostgreSQL, Redis, workers BullMQ, NGINX e documentação de operação técnica. O sistema foi concebido para organizar o ciclo completo abaixo.
@@ -115,7 +184,9 @@ Isso descreve o estado atual. **Não impõe** GitFlow, branches, CI/CD, GHCR, Ho
 
 ## Estado atual de validação
 
-- **Banco:** baseline analisado até a migration 062; banco de produção, backup, restore e rollback não foram homologados.
+- **Banco:** os relatórios históricos usam o baseline até a migration 062; o
+  código atual também contém a migration 063. Banco de produção, backup,
+  restore e rollback não foram homologados.
 - **API/Backend:** build e typecheck foram executados; o teste dedicado da Base Técnica passou isoladamente. Isso não substitui suíte de integração com PostgreSQL/Redis/provedores reais.
 - **Frontend/UI:** build realizado; navegador autenticado e fluxos críticos não foram homologados.
 - **Integrações:** Meta/WhatsApp, Mercado Pago, n8n, IA e transportadoras dependem de credenciais e recursos externos deliberadamente excluídos.
