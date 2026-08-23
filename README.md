@@ -8,14 +8,14 @@ O código contém uma aplicação web Next.js, uma API Express, PostgreSQL, Redi
 
 ```mermaid
 flowchart LR
-  A[Captação e relacionamento<br/>WhatsApp, balcão, indicação] --> B[CRM<br/>Lead, pipeline, agenda]
-  B --> C[Cliente e atendimento<br/>Ficha, bloco, proposta]
-  C --> D{Tipo de venda}
-  D -->|Pronta entrega| E[Pedido ou PDV<br/>separação e pagamento]
-  D -->|Personalizada ou serviço| F[Pedido, OS ou produção<br/>material, etapas e qualidade]
-  E --> G[Estoque, financeiro e entrega]
+  A["Captação e relacionamento: WhatsApp, balcão e indicação"] --> B["CRM: Lead, pipeline e agenda"]
+  B --> C["Cliente e atendimento: Ficha, bloco e proposta"]
+  C --> D{"Tipo de venda?"}
+  D -->|"Pronta entrega"| E["Pedido ou PDV: separação e pagamento"]
+  D -->|"Personalizada ou serviço"| F["Pedido, OS ou produção: material, etapas e qualidade"]
+  E --> G["Estoque, financeiro e entrega"]
   F --> G
-  G --> H[Gestão<br/>KPIs, auditoria e suporte]
+  G --> H["Gestão: KPIs, auditoria e suporte"]
 ```
 
 O diagrama é o **modelo operacional pretendido**. Ele não afirma que todas as setas sejam automáticas ou homologadas. As transições confirmadas, as rotas e as lacunas estão em [Fluxo operacional ponta a ponta](docs/handoff/FLUXO-OPERACIONAL-END-TO-END.md).
