@@ -20,21 +20,15 @@ consulte [`product/ORION-ERP-PRODUCT-IDENTITY.md`](product/ORION-ERP-PRODUCT-IDE
 
 ## Fluxo Oficial de Trabalho
 
-O projeto usa o plugin
-[`Dev-workflow`](https://github.com/guilhermedemorais-dev/Dev-workflow) em
-**todo trabalho de desenvolvimento**, inclusive documentação técnica, Git,
-auditoria, CI/CD, infraestrutura, validação e entrega. Nenhuma dessas frentes
-é exceção.
+O projeto usa o fluxo do plugin
+[`Dev-workflow`](https://github.com/guilhermedemorais-dev/Dev-workflow):
 
 ```text
-demanda -> dev-workflow-v2 -> spec -> task/Issue -> aprovação
-        -> implementação -> PR -> QA/revisão
+demanda -> spec -> task -> aprovação -> implementação -> PR -> QA/revisão
 ```
 
 Papéis:
 
-- `dev-workflow-v2`: controlador do estado da entrega, fonte de verdade,
-  branch/remoto, gates e evidências.
 - `dev-workflow-standard`: orquestra escopo, riscos, delegação e revisão final.
 - `sdd-spec-factory`: cria specs e task executável.
 - `dev-implementation-standard`: implementa somente a task aprovada.
@@ -42,10 +36,8 @@ Papéis:
 - `security-standard`: valida auth, permissões, dados sensíveis, uploads,
   pagamentos, webhooks, tenant, tokens e integrações externas.
 
-Antes de iniciar uma tarefa, confirme que o plugin está disponível e registre
-na task/Issue: skills invocadas, documentos consultados, branch/remoto
-validado, `locked_paths`, validações e resultado. Sem esse registro, a tarefa
-não pode sair de `Discovery / SDD`.
+Outro dev que for trabalhar neste projeto deve baixar o repositório completo do
+plugin acima antes de assumir tasks que dependem desse fluxo.
 
 ## Índice
 
