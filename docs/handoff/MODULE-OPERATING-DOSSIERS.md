@@ -69,4 +69,4 @@ operacional só são considerados homologados quando a evidência é declarada.
   neste dossiê antes de escrever SQL.
 - Quem opera incidente: RBAC/integrações, runbook, suporte e matriz de QA.
 - Quem planeja feature: traceability matrix, PRD/spec/task e estado real acima;
-  tela ou endpoint não é autorização para assumir fluxo de negócio completo.
+  tela ou endpoint não é autorização para inferir fluxo de negócio completo.

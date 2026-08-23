@@ -16,6 +16,7 @@ A leitura recomendada depende da decisão que será tomada:
 | Alterar endpoint ou permissão | `API-ROUTE-CATALOG.md` | RBAC, contrato crítico e teste negativo |
 | Trabalhar em deploy, incidente ou atualização | `OPERATIONS-RUNBOOK.md` | arquitetura, Compose e workflow atual |
 | Avaliar se algo está realmente pronto | `QA-E-GAPS-PRD-CODIGO.md` | matriz de rastreabilidade e evidências |
+| Entender o estado real, demos, riscos e vulnerabilidades | `ESTADO-REAL-DO-PRODUTO-E-RISCOS.md` | auditoria técnica e plano de correção |
 | Atender suporte administrativo | rota `/base-tecnica` para ADMIN | documentos allowlisted e runbook |
 
 ## Ordem de leitura recomendada
@@ -82,6 +83,8 @@ verificado com mudanças ainda em andamento.
 ### Qualidade e rastreabilidade
 
 - `QA-E-GAPS-PRD-CODIGO.md`: lacunas entre expectativa, PRD e código.
+- `ESTADO-REAL-DO-PRODUTO-E-RISCOS.md`: classificação do que existe, do que é
+  parcial/demo, riscos funcionais e achados de segurança/dependências.
 - `TRACEABILITY-MATRIX.md`: PRD, spec, task, issue e superfície de código.
 - `VALIDACAO-CRUZADA-SEGUNDA-PASSADA.md`: comandos e evidências executadas.
 - `COMPLETION-AUDIT-SEGUNDA-PASSADA.md`: cobertura e limites da auditoria.

@@ -1,5 +1,6 @@
 import { query } from '../db/pool.js';
 import type { OrderPaymentStatus } from './payment-status.service.js';
+import type { FlowStockAction, UserRole } from '../types/entities.js';
 
 export type FlowPaymentRule =
     | 'none'
@@ -85,6 +86,9 @@ interface OrderForCheckRow {
 interface RuleRow {
     payment_rule: FlowPaymentRule;
     stage_role: FlowStageRole;
+    // Config da TASK-054; a execução (reserva/baixa/gate de papel) é fatia posterior.
+    stock_action: FlowStockAction;
+    min_role_to_move: UserRole | null;
 }
 
 interface StageRow {
@@ -148,7 +152,7 @@ export async function checkFlowRules(input: FlowRuleCheckInput): Promise<FlowRul
 
     // Busca regra cadastrada pra (flow, stage).
     const ruleRes = await query<RuleRow>(
-        `SELECT payment_rule, stage_role
+        `SELECT payment_rule, stage_role, stock_action, min_role_to_move
          FROM flow_stage_rules
          WHERE flow_id = $1 AND stage_id = $2
          LIMIT 1`,
