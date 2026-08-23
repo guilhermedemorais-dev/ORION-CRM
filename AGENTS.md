@@ -21,7 +21,20 @@ precisa declarar escopo, risco e validacao.
 Repositorio dos plugins:
 `https://github.com/guilhermedemorais-dev/Dev-workflow`
 
-Fluxo obrigatorio:
+**Todo trabalho relacionado a desenvolvimento deve invocar o plugin de
+workflow antes da primeira acao.** Isso inclui descoberta, auditoria,
+documentacao tecnica, Git/branch/commit/push, CI/CD, infraestrutura, bugfix,
+feature, UI, banco, API, integracao e validacao. Documentacao e Git nao sao
+excecoes para esse controle.
+
+Controlador obrigatorio:
+
+```text
+demanda -> dev-workflow-v2: estado, fonte de verdade, escopo, branch/remoto,
+            gates e rastreabilidade
+```
+
+Depois, aplicar o fluxo especializado:
 
 ```text
 demanda
@@ -35,8 +48,14 @@ demanda
   -> dev-workflow-standard: revisao final contra spec/task/PR
 ```
 
-Se o plugin nao estiver instalado, o dev deve baixar o repositorio completo acima
-e instalar as skills necessarias antes de assumir tarefas deste projeto.
+Se o plugin nao estiver instalado, baixe o repositorio completo acima e instale
+as skills necessarias antes de iniciar qualquer trabalho neste projeto.
+
+O uso do plugin deve ficar registrado na task e na Issue: skill invocada,
+fonte de verdade consultada, branch/remoto validado, `locked_paths`, comandos
+de validacao e resultado. Sem esse registro, a tarefa permanece em
+`Discovery / SDD` ou `Blocked`; nao e considerada pronta para implementacao,
+commit, push, PR, merge ou deploy.
 
 ## Ordem de leitura
 

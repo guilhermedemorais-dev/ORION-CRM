@@ -1,11 +1,34 @@
 # Fluxo de Desenvolvimento
 
+## 0. Controle obrigatório por plugin
+
+Antes da primeira ação, inclusive leitura técnica, alteração de Markdown,
+`git commit`, `git push`, auditoria, CI/CD ou infraestrutura, invoque
+`dev-workflow-v2`. Ele é obrigatório para toda frente de desenvolvimento,
+sem exceção para documentação ou Git.
+
+Registre na task e na Issue:
+
+- skill invocada e objetivo;
+- fonte de verdade consultada;
+- branch local, referência remota e estado de `git status`;
+- `locked_paths` e conflitos conhecidos;
+- comandos de validação e resultado;
+- próximo passo determinístico.
+
+Em seguida, `dev-workflow-standard` conduz escopo, riscos e revisão. Use
+`sdd-spec-factory` para specs/tasks; `dev-implementation-standard` apenas
+depois da aprovação humana. Acione `ui-ux-standard` e `security-standard`
+quando os gatilhos respectivos existirem.
+
 ## 1. Descoberta
 
 - Verificar `git log --oneline -10` e `git status`.
 - Ler os três documentos centrais em `docs/product/`.
 - Ler o PRD, estado atual, especificação e mockups do módulo.
 - Inspecionar runtime, código e testes existentes.
+- Validar a referência remota que será lida ou alterada. Uma cópia local ou
+  uma branch de trabalho não prova o estado de `main`.
 
 ## 2. Contrato da Mudança
 
@@ -72,3 +95,18 @@ Reportar separadamente:
 - Riscos e lacunas
 
 Marque `NAO VALIDADO` quando uma camada não foi verificada em runtime real.
+
+## Registro mínimo de execução por plugin
+
+```markdown
+## Registro de plugins
+- dev-workflow-v2: INVOCADO | fonte de verdade: ... | branch/remoto: ...
+- dev-workflow-standard: INVOCADO | gate: PASS/BLOCKED | motivo: ...
+- sdd-spec-factory: INVOCADO/N/A | motivo: ...
+- dev-implementation-standard: INVOCADO/N/A | motivo: ...
+- ui-ux-standard: INVOCADO/N/A | motivo: ...
+- security-standard: INVOCADO/N/A | motivo: ...
+```
+
+`N/A` exige motivo verificável. Ausência de registro não equivale a plugin
+dispensado.
